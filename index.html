@@ -10,11 +10,148 @@
   TakeOS — Sistema operativo de producción audiovisual
   ════════════════════════════════════════════════════════════════════
 
-  Versión:        V5.2.2 — Bloqueo de cotizados post-aprobación + bugs
-  Fecha:          Mayo 2026
+  Versión:        V8.3.0 — nuevo módulo Legal + BD de Legal + bloque Derechos (ver changelog abajo)
+  Fecha:          Junio 2026
   Autor:          Agustín Ignacio Muñoz Rocha
   Razón social:   La Hectárea SpA
   Marca:          Primate Films
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.2.0 → V8.3.0 (módulo nuevo + bloque Derechos)
+  ════════════════════════════════════════════════════════════════════
+  MAYORES
+  - NUEVO MÓDULO LEGAL (tab de proyecto). Dos sub-pestañas: Documentos
+    (generador + archivo del proyecto) y Plantillas (set fijo de 4).
+    Genera documentos legales desde plantillas fijas autollenando
+    variables desde BD Personas, Presupuesto, Info Proyecto y el bloque
+    Derechos; vista previa en vivo, ciclo Borrador→Generado→Enviado→
+    Firmado, versionado y export a PDF con marca.
+  - NUEVA CATEGORÍA "BD DE LEGAL" (BD_LEGAL), transversal y consultable,
+    junto a Personas/Empresas/Locaciones. Los documentos no mueren con el
+    proyecto: viven en el archivo global (Firestore + localStorage). El
+    tab del proyecto es una vista filtrada de BD_LEGAL.
+  - NUEVO BLOQUE "DERECHOS" en Info Proyecto (Tiempo · Plataformas ·
+    Países/territorio). Fuente única para cesiones, contratos, cotización
+    y futuras alertas de vencimiento.
+  MENORES
+  - Vista previa en vivo del documento con identidad de marca y variables
+    resaltadas; etiquetas de origen por variable (BD / Presupuesto /
+    Info Proyecto / Derechos); filtros de la vista (tipo, estado, búsqueda
+    por nombre o RUT).
+  PLANTILLAS (estado legal)
+  - Cesión de derechos / modelaje: VALIDADA (basada en el contrato real de
+    Primate).
+  - Contrato de servicios, NDA, Arriendo de locación: BORRADOR redactado
+    por TakeOS — DEBEN validarse con un abogado antes de producción. El
+    generador y la pestaña Plantillas muestran la advertencia.
+  - En V1 las plantillas son fijas (se rellenan, no se editan). Editar o
+    agregar advierte sobre validación legal; a futuro será solo Admin.
+  DECISIONES ESTRUCTURALES
+  - Documento legal = entidad de BD transversal (BD_LEGAL), no data que
+    muere con el proyecto. Versionado: cada regeneración crea versión
+    nueva (la última manda; las anteriores quedan en histórico). Nunca se
+    elimina. Datos de empresa/representante se leen de EMPRESA_PERFIL
+    (Primate Films / La Hectárea SpA), no hardcodeados.
+  - Firma electrónica: integración futura (en V1 se exporta PDF y se marca
+    el estado a mano).
+  BREAKING: ninguno (módulo nuevo). Info Proyecto suma el objeto
+  "derechos"; el render tolera su ausencia en proyectos viejos.
+  PENDIENTES: validación legal de los 3 borradores; firma electrónica;
+  almacenamiento de PDFs (base64 vs Firebase Storage/Blaze); editor de
+  plantillas (futuro, solo Admin).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.1.1 → V8.2.0 (módulo nuevo + correcciones)
+  ════════════════════════════════════════════════════════════════════
+  MAYORES
+  - NUEVO MÓDULO LOCACIONES (tab de proyecto, entre Rodajes y Hoja de
+    Llamado). Dos sub-pestañas: Repositorio (fichas + galería de fotos +
+    estados Candidata/Confirmada/Descartada) y Plan de Scouting (hoja de
+    ruta de visitas con el mismo motor de tiempos del Plan de Rodaje).
+  - NUEVA ENTIDAD "BD DE LOCACIONES" (BD_LOC), transversal y canónica,
+    al mismo nivel que Personas/Empresas: sobrevive al cierre del
+    proyecto y se persiste en el store global (Firestore + localStorage).
+    El proyecto guarda solo su USO (project.data.locaciones / PROJ_LOC):
+    estado, costo, contratación, notas del proyecto.
+  MENORES
+  - Galería de fotos comprimidas (máx 1280 px, q0.6) con lightbox y borrado;
+    carga múltiple con feedback de ahorro. Filtros por estado y KPI bar.
+  - "Quiénes van" del Plan de Scouting: campos agregables con el mismo
+    combobox de la Base de Datos que usa el resto del sistema.
+  CORRECCIONES
+  1. HOJA DE LLAMADO — advertencia NO bloqueante antes de exportar si
+     faltan datos clave (PE, Director, Jefe de Producción, Cliente,
+     Productora, Llamado General, Hospital). Mismo patrón visual que el
+     Plan de Rodaje: "Corregir" o "Exportar de todas formas".
+  2. CREW — las advertencias "Sin BD" / "Agregar persona a la BD" ahora
+     son clickeables: abren el alta de Nueva persona con el nombre ya
+     rellenado.
+  3. CREW — columna de teléfono más ancha (sin cortar los números; la
+     tabla hace scroll horizontal si hace falta).
+  BREAKING
+  - Migración de project.data.hojaLlamado.locaciones → BD_LOC + PROJ_LOC
+    (conservando los LOC-NN). La Hoja de Llamado y el Plan de Rodaje dejan
+    de tener lista propia y consumen las locaciones CONFIRMADAS del módulo.
+    La asignación locación↔citación/día sigue ocurriendo en esos tabs.
+  PENDIENTES
+  - Almacenamiento de fotos: base64/Spark (acotado) vs Firebase Storage
+    (Blaze). Decisión a tomar con Agustín antes de uso intensivo.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.1.0 → V8.1.1 (ajustes operacionales)
+  ════════════════════════════════════════════════════════════════════
+  1. PLAN DE RODAJE — la hora del primer plano es EDITABLE. Antes se
+     heredaba forzada del Llamado General (Hoja de Llamado) y quedaba
+     bloqueada. Ahora hay un campo "Inicio del 1.er plano" por plan:
+     propone el Llamado General como valor por defecto pero se puede
+     adelantar/atrasar (montaje, maquillaje, prep). Vacío = vuelve a
+     heredar. El motor de tiempos cascadea desde esa hora efectiva.
+     (prEffectiveStartMin / prSetHoraInicio)
+  2. HOJA DE LLAMADO — los campos vacíos ya NO aparecen. Se eliminan los
+     rellenos "No aplica" / "—" en Información general; si un campo no
+     tiene dato, su fila se oculta, y si un bloque completo queda vacío,
+     se oculta también su encabezado.
+  3. GASTOS — crear un presupuesto se autoriza con el RUT (sin DV) del
+     jefe de producción O con Modo administrador activo. El modal lo
+     refleja (contraseña opcional con Modo admin).
+
+  Sin breaking changes. Los saves de V8.1.0 abren sin migración.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.0.0 → V8.1.0 (paquete de 9 correcciones)
+  ════════════════════════════════════════════════════════════════════
+  1. HOJA DE LLAMADO — versionado por cambio real: la versión de un día
+     solo avanza al exportar SI el contenido cambió respecto de la última
+     exportación (firma de contenido vía hash). Reimprimir lo mismo
+     mantiene la versión. (_hashStr / _callSheetSignature / exportHojaLlamadoPDF)
+  2. PRESUPUESTO — notas por fila: botón ✎ en cada fila abre una nota
+     interna (item.nota). No aparece en cotización ni documentos al cliente.
+  3. PRESUPUESTO — la columna "Confirmado" solo existe post-aprobación
+     (Preproducción+). En etapa Venta no se muestra (no hay nada que confirmar).
+  4. PRESUPUESTO/FINANZAS — comisiones en $ o %: mismo control que Riesgos.
+     Cálculo y lectura tolerantes; normalización idempotente al render.
+     Saves antiguos {label,pct} se migran a {label,mode,value} sin pérdida.
+  5a. PRESUPUESTO — sub-secciones dinámicas en Servicios: crear / renombrar
+      / eliminar. Borrado bloqueado si hay filas cotizadas post-aprobación
+      (regla madre). Nombres sanitizados (sin comillas ni < >).
+  5b. PRESUPUESTO — "Equipos" renombrado a "Técnica" (solo etiquetas
+      visibles; la clave de datos interna sigue siendo "equipos").
+  6. BASE DE DATOS — formulario completo de personas (crear): todos los
+     campos canónicos (identidad, roles, empresa, ubicación, datos de pago
+     con auto-código SBIF, perfil de talento condicional).
+  7. BASE DE DATOS — editar ficha existente, gated por Modo administrador.
+     Botón ✎ en la ficha expandida; sin Modo admin, explica y no edita.
+  8. FINANZAS (Reembolsos) — exportar nómina de transferencias masivas en
+     formato Santander (.xlsx, 13 columnas exactas). Datos del beneficiario
+     desde BD o datosPago; código de banco SBIF; cuenta origen desde Perfil
+     de empresa. Omite y avisa los reembolsos sin cuenta de destino.
+  9. GASTOS — el dropdown "Asociar a línea" lista las filas de "Gastos de
+     producción" del Presupuesto; "Crear nueva línea" agrega una fila ahí
+     (parte en $0, marcada EXTRA, sin tocar el cotizado).
+
+  REGLA MADRE: verificada. Ninguna corrección abre un camino para modificar
+  el cotizado tras aprobar (comisiones readonly post-aprobación; borrado de
+  sub-sección bloqueado con filas cotizadas; líneas nuevas de gasto en $0 EXTRA).
 
   ════════════════════════════════════════════════════════════════════
   CAMBIOS V5.2.1 → V5.2.2 (resumen — changelog completo aparte)
@@ -1381,6 +1518,35 @@ a { color: inherit; text-decoration: none; }
   cursor: help;
 }
 
+/* V8.1 (#2): botón de nota contextual por fila del Presupuesto.
+   Tenue cuando la fila no tiene nota; en color de acento cuando sí la tiene. */
+.row-note-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-left: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink-faint);
+  opacity: 0.5;
+  flex-shrink: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.row-note-btn:hover { opacity: 1; background: var(--bg-surface-soft); }
+.row-note-btn.has-note {
+  opacity: 1;
+  color: var(--accent-deep);
+  background: var(--accent-bg);
+  border-color: var(--accent-soft);
+}
+
 /* V5.2.2: filas bloqueadas (cotizados aprobados) */
 .data-table tbody tr.is-locked .cell-input[readonly],
 .data-table tbody tr.is-locked .cell-select[disabled] {
@@ -1640,6 +1806,21 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-secondary);
   font-weight: 600;
 }
+/* V8.1 (#5): controles de sub-sección (renombrar / eliminar) */
+.subdept-ctl {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 4px; padding: 0;
+  border: 1px solid transparent; border-radius: 4px;
+  background: none; cursor: pointer;
+  font-size: 11px; line-height: 1;
+  color: var(--ink-faint); opacity: 0.55;
+  vertical-align: middle;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.subdept:hover .subdept-ctl { opacity: 1; }
+.subdept-ctl:hover { background: var(--bg-surface); color: var(--ink-secondary); }
+.subdept-ctl.danger:hover { color: var(--negative); background: var(--negative-bg); }
+.subdept-add-row { color: var(--ink-muted); border-style: dashed !important; }
 .subdept-totals {
   display: flex; gap: 16px;
   font-variant-numeric: tabular-nums;
@@ -3436,6 +3617,10 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
           <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           Rodajes
         </div>
+        <div class="sidebar-item" data-module="locaciones" onclick="navigateToModule('locaciones')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Locaciones
+        </div>
         <div class="sidebar-item" data-module="hoja-llamado" onclick="navigateToModule('hoja-llamado')">
           <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Hoja de Llamado
@@ -3443,6 +3628,10 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
         <div class="sidebar-item" data-module="plan-rodaje" onclick="navigateToModule('plan-rodaje')">
           <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="21"/><line x1="12" y1="13" x2="17" y2="13"/><line x1="12" y1="17" x2="17" y2="17"/></svg>
           Plan de Rodaje
+        </div>
+        <div class="sidebar-item" data-module="legal" onclick="navigateToModule('legal')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4"/></svg>
+          Legal
         </div>
       </div>
 
@@ -3579,6 +3768,58 @@ const BD_EMPRESAS_BYID = {};   // CANÓNICO (id-keyed)
 const BD_PERSONAS = {};        // proyección name-keyed (UI)
 const BD_TALENTOS = {};        // proyección name-keyed (UI)
 const BD_EMPRESAS = {};        // proyección name-keyed por nombreFantasia (UI)
+
+/* V8.2 — BD DE LOCACIONES (transversal, canónica). Misma jerarquía que
+   Personas/Empresas: vive en el store global y sobrevive al cierre del
+   proyecto. El uso por-proyecto vive en project.data.locaciones (PROJ_LOC).
+   Esquema BD_LOC: { locId:'LOC-NN', nombre, direccion, comuna, ciudad, maps,
+   orientacion, dueno:{nombre,mail,tel}, notas, fotos:[{url}] }. */
+const BD_LOC = [];
+const LOC_ORIENTACIONES = ['—', 'Norte', 'Sur', 'Oriente', 'Poniente', 'Nororiente', 'Norponiente', 'Suroriente', 'Surponiente'];
+const LOC_ESTADOS = { candidata: 'Candidata', confirmada: 'Confirmada', descartada: 'Descartada' };
+
+function bdLocFind(locId) { return BD_LOC.find(l => l.locId === locId) || null; }
+function projLocList(project) { const d = project && project.data; if (!d) return []; if (!Array.isArray(d.locaciones)) d.locaciones = []; return d.locaciones; }
+function projLocFind(project, locId) { return projLocList(project).find(u => u.locId === locId) || null; }
+function nextLocIdBD() { let m = 0; BD_LOC.forEach(l => { const x = /LOC-(\d+)/.exec(l.locId || ''); if (x) m = Math.max(m, +x[1]); }); return 'LOC-' + String(m + 1).padStart(2, '0'); }
+function locNombre(locId) { const l = bdLocFind(locId); return l ? (l.nombre || 'sin nombre') : (locId || '—'); }
+/* Locaciones del proyecto en estado Confirmada (las únicas que ofrecen
+   Hoja de Llamado y Plan de Rodaje). */
+function projLocConfirmadas(project) { return projLocList(project).filter(u => u.estado === 'confirmada' && bdLocFind(u.locId)); }
+
+/* Migración V8.2: locaciones que vivían en hojaLlamado.locaciones (LOC-NN)
+   pasan a BD_LOC (canónico) + project.data.locaciones (uso). Idempotente:
+   se ejecuta al render y al cargar; conserva los LOC-NN existentes. */
+function migrateProjectLocaciones(project) {
+  if (!project || !project.data) return;
+  const d = project.data;
+  if (!Array.isArray(d.locaciones)) d.locaciones = [];
+  const hl = d.hojaLlamado;
+  const legacy = hl && Array.isArray(hl.locaciones) ? hl.locaciones : [];
+  if (!legacy.length || d._locMigrated) { d._locMigrated = true; return; }
+  legacy.forEach(old => {
+    const locId = old.id || nextLocIdBD();
+    if (!bdLocFind(locId)) {
+      BD_LOC.push({ locId: locId, nombre: old.nombre || '', direccion: old.direccion || '', comuna: old.comuna || '', ciudad: old.ciudad || 'Santiago', maps: old.maps || '', orientacion: old.orientacion || '—', dueno: { nombre: '', mail: '', tel: '' }, notas: old.notas || '', fotos: [] });
+    }
+    if (!projLocFind(project, locId)) {
+      d.locaciones.push({ locId: locId, estado: 'confirmada', costo: 0, contratacion: '', notasProy: '' });
+    }
+  });
+  d._locMigrated = true;
+  // hl.locaciones queda como campo legado (ya no se renderiza ni edita).
+}
+function ensureProjectLoc(project) { if (project && project.data) { if (!Array.isArray(project.data.locaciones)) project.data.locaciones = []; if (!project.data._locMigrated) migrateProjectLocaciones(project); } return project ? project.data.locaciones : []; }
+
+/* V8.3 — BD DE LEGAL (transversal, canónica). Cuarta categoría de la BD,
+   junto a Personas/Empresas/Locaciones. Los documentos legales no mueren
+   con el proyecto: viven en este archivo global y consultable. Cada
+   registro referencia un proyecto y una contraparte (persona o locación).
+   El tab Legal de un proyecto es una vista filtrada de BD_LEGAL. */
+const BD_LEGAL = [];
+function nextLegalId() { let m = 0; BD_LEGAL.forEach(d => { const x = /LEG-(\d+)/.exec(d.docId || ''); if (x) m = Math.max(m, +x[1]); }); return 'LEG-' + String(m + 1).padStart(4, '0'); }
+function legalDocsForProject(projectId) { return BD_LEGAL.filter(d => d.proyectoId === projectId); }
+
 
 const ROLES_OPERATIVOS = ['Crew', 'Interno', 'Contacto cliente', 'Proveedor individual'];
 
@@ -3958,6 +4199,8 @@ function buildDefaultProjectData() {
       nombreProyecto: '',
       servicio: 'Producción',
       productora: 'Primate Films',
+      // V8.3: bloque DERECHOS (fuente única para Legal/cesiones, cotización, alertas de vencimiento, etc.)
+      derechos: { tiempo: '', plataformas: '', territorio: '' },
       contactoCliente: '',
       mailContactoCliente: '',
       telefonoContactoCliente: '',
@@ -3991,8 +4234,8 @@ function buildDefaultProjectData() {
       gastosAdminPct: 0.05,
       frozen: null,  // V5.11 (Nota 3): {admin, riesgos[]} congelados al aprobar
       comisiones: [
-        { label: 'Comisión',   pct: 0 },
-        { label: 'Comisión',   pct: 0 }
+        { label: 'Comisión',   mode: 'pct', value: 0 },
+        { label: 'Comisión',   mode: 'pct', value: 0 }
       ],
       riesgos: [],
       /* V5.3 (Nota 3): EXTRAS DE INGRESO post-aprobación.
@@ -4064,9 +4307,12 @@ function buildDefaultProjectData() {
          - version: se incrementa al marcar cambios relevantes (§5.9).
        ════════════════════════════════════════════════════════════════ */
     rodajes: [],
+    // V8.2: uso por-proyecto de locaciones (PROJ_LOC). Lo canónico vive en BD_LOC.
+    // [{ locId:'LOC-NN', estado:'candidata|confirmada|descartada', costo, contratacion, notasProy }]
+    locaciones: [],
     hojaLlamado: {
       version: 1,
-      locaciones: [],          // [{ id:'LOC-01', nombre, direccion, maps, notas }]
+      locaciones: [],          // LEGADO V8.1- (migrado a BD_LOC/PROJ_LOC en V8.2; ya no se edita aquí)
       dias: {}                 // diaId → { infoGeneral, citacionesExternas:[], crewOverrides:{} }
     }
   };
@@ -4136,6 +4382,7 @@ const DEMO_PROJECTS = [
         cliente: "Watt's",
         nombreProyecto: 'Lanzamiento Yogurt Griego de Watt\'s',
         servicio: 'Spot 30s + 6s para RRSS',
+        derechos: { tiempo: '6 meses', plataformas: 'Full Digital (Instagram, TikTok, YouTube) y PoP', territorio: 'Chile' },
         contactoCliente: 'Rodrigo Salinas',
         mailContactoCliente: 'rsalinas@watts.cl',
         telefonoContactoCliente: '+56 2 2380 4400',
@@ -4870,6 +5117,15 @@ const MODULES = {
     render: () => renderRodajes(),
     description: 'Cada día tiene fecha, estado, descripción e identificador único. Soporta múltiples días, activación y desactivación sin eliminar. Vinculado con Hoja de Llamado.'
   },
+  'locaciones': {
+    title: 'Locaciones',
+    subtitle: 'Perfiles, fotos de scouting y estados del proyecto.',
+    eyebrow: 'Producción',
+    layer: 'Implementado · V8.2 Capa 3',
+    scope: 'project',
+    render: () => renderLocaciones(),
+    description: 'Fuente de verdad de las locaciones del proyecto. Repositorio con galería de fotos comprimidas y estados (Candidata/Confirmada/Descartada), más un Plan de Scouting. Las locaciones canónicas viven en la BD de Locaciones (transversal); el proyecto guarda solo su uso.'
+  },
   'hoja-llamado': {
     title: 'Hoja de Llamado',
     subtitle: 'Documento operativo del día de rodaje.',
@@ -4887,6 +5143,15 @@ const MODULES = {
     scope: 'project',
     render: () => renderPlanRodaje(),
     description: 'Un plan por día de rodaje (Plan A / Plan B). Filas Plano · Situación · Marcador, anclas con detección de choque, paralelos que no mueven el reloj, columnas modulares, banco de planos y versión por documento. La cabecera se alimenta de Info Proyecto, RODAJES y Hoja de Llamado.'
+  },
+  'legal': {
+    title: 'Legal',
+    subtitle: 'Contratos, cesiones de derechos y NDAs del proyecto.',
+    eyebrow: 'Legal',
+    layer: 'Implementado · V8.3 Capa 3',
+    scope: 'project',
+    render: () => renderLegal(),
+    description: 'Genera documentos legales desde plantillas fijas, autollenando variables desde la BD de Personas, el Presupuesto, Info Proyecto y el bloque Derechos. Ciclo de vida Borrador→Generado→Enviado→Firmado, versionado, export a PDF con marca y archivo trazable. Los documentos viven en la BD de Legal (transversal).'
   },
   'correos': {
     title: 'Notificaciones',
@@ -5075,6 +5340,18 @@ function prDiaInfo(project, diaId) {
   return { r: r, n: idx >= 0 ? idx + 1 : 1, total: dias.length || 1 };
 }
 function prStartMin(project, diaId) { const hd = ((project.data.hojaLlamado || {}).dias || {})[diaId]; const lg = hd && hd.infoGeneral ? hd.infoGeneral.llamadoGeneral : null; return prParseHM(lg); }
+/* V8.1.1 (#2): la hora del primer plano es editable por plan. Si el plan tiene
+   horaInicio propia, manda; si no, cae al Llamado General de la Hoja de Llamado. */
+function prEffectiveStartMin(project, diaId, plan) {
+  if (plan && plan.horaInicio) { const m = prParseHM(plan.horaInicio); if (m != null) return m; }
+  return prStartMin(project, diaId);
+}
+function prSetHoraInicio(v) {
+  const plan = prCurrentPlan(); if (!plan) return;
+  const nv = (typeof normalizeTime24 === 'function') ? normalizeTime24(v) : (v || '');
+  plan.horaInicio = (nv || '').trim();   // vacío = volver a heredar del Llamado General
+  markDirty(); renderPlanRodaje();
+}
 
 function prActiveCols(project) {
   const c = ensurePlanRodaje(project).columnas; const out = [];
@@ -5179,13 +5456,26 @@ function prSwitcherHTML(project, dias, diaId, u, plan) {
 function prHeaderHTML(project, diaId) {
   const ip = project.data.infoProyecto || {}; const di = prDiaInfo(project, diaId); const dd = project.data.planRodaje.dias[diaId];
   const hd = ((project.data.hojaLlamado || {}).dias || {})[diaId]; const ig = (hd && hd.infoGeneral) ? hd.infoGeneral : {};
+  const plan = prCurrentPlan() || {};
   const ro = (label, val) => `<div class="pr-h-field"><label>${label}</label><div class="pr-h-ro">${escapeHtml(val || '—')}</div></div>`;
   return `<div class="cot-card pr-header"><div class="pr-header-grid">
     ${ro('Cliente', ip.cliente)}${ro('Proyecto', ip.nombreProyecto || project.name)}${ro('Pieza / formato', ip.servicio)}
     ${ro('Día', `Día ${di.n} de ${di.total} · ${di.r.fecha ? prFechaLarga(di.r.fecha) : ((di.r.diaId || '') + ' · sin fecha (ponla en Rodajes)')}`)}
-    <div class="pr-h-field"><label>Locación / campamento base</label><input class="cot-input" value="${escapeHtml(dd.header.locacion || '')}" placeholder="Dónde se rueda" onchange="prSetHeader('locacion', this.value)"></div>
+    ${(() => {
+      ensureProjectLoc(project);
+      const confs = projLocConfirmadas(project);
+      if (!confs.length) {
+        return `<div class="pr-h-field"><label>Locación / campamento base</label><input class="cot-input" value="${escapeHtml(dd.header.locacion || '')}" placeholder="Confírmala en Locaciones" onchange="prSetHeader('locacion', this.value)"></div>`;
+      }
+      const cur = dd.header.locacion || '';
+      const opts = `<option value="">(sin asignar)</option>` + confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<option value="${escapeHtml(u.locId)}" ${cur === u.locId ? 'selected' : ''}>${escapeHtml(u.locId)} · ${escapeHtml(l.nombre || 'sin nombre')}</option>`; }).join('');
+      // si el valor guardado es texto legado (no un locId), lo mostramos como opción para no perderlo
+      const legacy = (cur && !bdLocFind(cur)) ? `<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)} (texto)</option>` : '';
+      return `<div class="pr-h-field"><label>Locación / campamento base</label><select class="cot-input" onchange="prSetHeader('locacion', this.value)">${opts}${legacy}</select></div>`;
+    })()}
     <div class="pr-h-field"><label>Salida del sol <span class="tt" data-tip="La hora real viene de la Hoja de Llamado. El 'útil en set' lo defines aquí.">?</span></label><div class="pr-h-sol"><span class="pr-h-ro pr-h-real">${escapeHtml(ig.amanecer || '—')}</span><input class="cot-input pr-h-util" value="${escapeHtml(dd.header.solUtilAmanecer || '')}" placeholder="útil ~" onchange="prSetHeader('solUtilAmanecer', this.value)"></div></div>
     <div class="pr-h-field"><label>Puesta del sol</label><div class="pr-h-sol"><span class="pr-h-ro pr-h-real">${escapeHtml(ig.atardecer || '—')}</span><input class="cot-input pr-h-util" value="${escapeHtml(dd.header.solUtilAtardecer || '')}" placeholder="útil ~" onchange="prSetHeader('solUtilAtardecer', this.value)"></div></div>
+    <div class="pr-h-field"><label>Inicio del 1.er plano <span class="tt" data-tip="Hora a la que parte el primer plano del día. Por defecto hereda el Llamado General, pero puedes adelantarla o atrasarla según el día (montaje, maquillaje, preparación). Déjala vacía para volver a heredar el Llamado General.">?</span></label><input class="cot-input" inputmode="numeric" maxlength="5" value="${escapeHtml(plan.horaInicio || '')}" placeholder="${escapeHtml(ig.llamadoGeneral || 'HH:MM')}" onchange="prSetHoraInicio(this.value)"></div>
     ${ro('Llamado general', ig.llamadoGeneral)}${ro('Wrap cámara (est.)', ig.wrapCamara)}${ro('Wrap locación (est.)', ig.wrapLocacion)}
     <div class="pr-h-field"><label>Responsable del plan (AD) <span class="tt" data-tip="Quién responde por este plan. Normalmente el Asistente de Dirección. Selecciónalo de la Base de Datos y se autocompletan su teléfono y mail. Aparece en el pie del PDF.">?</span>
       <div class="combobox-wrap person-combobox">
@@ -5255,7 +5545,7 @@ function prRowHTML(f, i, cols, t, n) {
 }
 function prTableHTML(project, plan) {
   const cols = prActiveCols(project);
-  const times = prComputeTimes(plan.filas, prStartMin(project, STATE.prDiaSel));
+  const times = prComputeTimes(plan.filas, prEffectiveStartMin(project, STATE.prDiaSel, plan));
   const span = prSpanDia(plan.filas, times); const n = plan.filas.length;
   const head = `<tr>${cols.map(c => `<th class="pr-th pr-th-${c.key}">${c.key === 'dur' ? 'Dur. ✎' : escapeHtml(c.label)}</th>`).join('')}<th class="pr-th"></th></tr>`;
   const body = plan.filas.map((f, i) => prRowHTML(f, i, cols, times[i], n)).join('');
@@ -5370,7 +5660,7 @@ function prSetDur(id, value) { const f = prFindFila(id); if (f) { f.dur = prNorm
 function prToggleAnchor(id) {
   const f = prFindFila(id); if (!f) return;
   if (f.anchor != null) f.anchor = null;
-  else { const plan = prCurrentPlan(); const times = prComputeTimes(plan.filas, prStartMin(STATE.currentProject, STATE.prDiaSel)); const idx = plan.filas.findIndex(x => x.id === id); const t = times[idx]; f.anchor = (t && t.inicio != null) ? prFmtClock(t.inicio) : '08:00'; }
+  else { const plan = prCurrentPlan(); const times = prComputeTimes(plan.filas, prEffectiveStartMin(STATE.currentProject, STATE.prDiaSel, plan)); const idx = plan.filas.findIndex(x => x.id === id); const t = times[idx]; f.anchor = (t && t.inicio != null) ? prFmtClock(t.inicio) : '08:00'; }
   markDirty(); renderPlanRodaje();
 }
 function prSetAnchor(id, value) { const f = prFindFila(id); if (f) { f.anchor = prNormalizeClock(value); markDirty(); renderPlanRodaje(); } }
@@ -5814,6 +6104,9 @@ function renderPersonRow(nombre) {
           <div class="field"><div class="field-label">Banco</div><div class="field-value">${escapeHtml(p.banco || '—')}${(p.codigoBanco) ? ' <span style="color:var(--ink-faint);">(cód. ' + escapeHtml(p.codigoBanco) + ')</span>' : ''}</div></div>
           <div class="field"><div class="field-label">Tipo de cuenta</div><div class="field-value">${escapeHtml(p.tipoCuenta || '—')}</div></div>
           <div class="field"><div class="field-label">N° de cuenta</div><div class="field-value">${escapeHtml(p.numeroCuenta || p.nCuenta || '—')}</div></div>` : ''}
+        </div>
+        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+          <button class="btn btn-secondary btn-sm" onclick="requestEditPersona('${escapeHtml(p._id || '')}')">✎ Editar ficha</button>
         </div>
       </div>
     ` : ''}
@@ -6618,6 +6911,26 @@ function renderInfoProyecto() {
       </div>
     </div>
 
+    <!-- DERECHOS (V8.3) -->
+    <div class="form-section">
+      <div class="form-section-title">Derechos de uso del material</div>
+      <div class="form-section-subtitle">Tiempo, plataformas y territorio de exhibición acordados. Fuente única para cesiones de derechos, contratos, cotización y futuras alertas de vencimiento. Se recopila en la entrevista de cotización.</div>
+      <div class="form-grid cols-3">
+        <div class="field">
+          <label class="field-label">Tiempo de exhibición</label>
+          <input class="input" value="${escapeHtml((ip.derechos || {}).tiempo || '')}" oninput="updateDerechos('tiempo', this.value)" placeholder="Ej: 6 meses · 1 año · perpetuo">
+        </div>
+        <div class="field">
+          <label class="field-label">Plataformas</label>
+          <input class="input" value="${escapeHtml((ip.derechos || {}).plataformas || '')}" oninput="updateDerechos('plataformas', this.value)" placeholder="Ej: Instagram, TikTok, YouTube, PoP, TV">
+        </div>
+        <div class="field">
+          <label class="field-label">Países / territorio</label>
+          <input class="input" value="${escapeHtml((ip.derechos || {}).territorio || '')}" oninput="updateDerechos('territorio', this.value)" placeholder="Ej: Chile · Latam · Mundial">
+        </div>
+      </div>
+    </div>
+
     <!-- CONTACTO CLIENTE -->
     <div class="form-section">
       <div class="form-section-title">Contacto del cliente</div>
@@ -6771,6 +7084,14 @@ function updateInfoField(field, value) {
   STATE.currentProject.data.infoProyecto[field] = value;
   // Para campos que afectan el resumen financiero, re-render del KPI bar.
   // Para campos que no, ningún re-render (el usuario está tipeando).
+}
+
+/* V8.3: setter del bloque Derechos (objeto anidado en infoProyecto). */
+function updateDerechos(field, value) {
+  const ip = STATE.currentProject.data.infoProyecto;
+  if (!ip.derechos || typeof ip.derechos !== 'object') ip.derechos = { tiempo: '', plataformas: '', territorio: '' };
+  ip.derechos[field] = value;
+  markDirty();
 }
 
 function updateProjectHeader() {
@@ -7378,10 +7699,10 @@ function renderPresupuesto() {
       <div class="dept-body" id="dept-body-gastos"></div>
     </div>
 
-    <!-- EQUIPOS -->
+    <!-- TÉCNICA (antes "Equipos") -->
     <div class="dept ${isCollapsed('equipos') ? 'collapsed' : ''}" data-dept-key="equipos">
       <div class="dept-header" onclick="toggleDept('equipos')">
-        <div class="dept-title"><span class="dept-chevron">▾</span> Equipos</div>
+        <div class="dept-title"><span class="dept-chevron">▾</span> Técnica</div>
         <div class="dept-summary" id="dept-summary-equipos"></div>
       </div>
       <div class="dept-body" id="dept-body-equipos"></div>
@@ -7429,10 +7750,15 @@ function renderServiciosBody() {
   const showReal = STATES_WITH_REAL_COST.includes(project.state);
 
   let html = '';
+  let _deptIdx = 0;
   for (const dept in d) {
+    const di = _deptIdx;
     html += `
       <div class="subdept" data-subdept="${escapeHtml(dept)}">
-        <div class="subdept-name">${escapeHtml(dept)}</div>
+        <div class="subdept-name">${escapeHtml(dept)}
+          <button type="button" class="subdept-ctl" title="Renombrar sub-sección" onclick="renameServiceDept(${di})">✎</button>
+          <button type="button" class="subdept-ctl danger" title="Eliminar sub-sección" onclick="deleteServiceDept(${di})">×</button>
+        </div>
         <div class="subdept-totals" id="subdept-totals-${escapeHtml(dept)}"></div>
       </div>
       <div style="overflow-x: auto;">
@@ -7442,13 +7768,95 @@ function renderServiciosBody() {
         + Agregar rol a ${escapeHtml(dept)}
       </div>
     `;
+    _deptIdx++;
   }
+  // V8.1 (#5): crear nuevas sub-secciones dinámicamente.
+  html += `
+    <div class="row-add subdept-add-row" onclick="addServiceDept()" style="margin: 6px 12px 14px;">
+      + Agregar sub-sección
+    </div>
+  `;
   document.getElementById('dept-body-servicios').innerHTML = html;
 
   // Calcular subtotales de cada sub-depto
   for (const dept in d) {
     recalcSubdeptTotals(dept);
   }
+}
+
+/* ─── V8.1 (#5): SUB-SECCIONES DINÁMICAS DE SERVICIOS ────────────────
+   Crear / renombrar / eliminar sub-secciones. Se referencian por índice
+   (no por nombre) en los controles para evitar problemas con caracteres
+   especiales. Los nombres se sanitizan (sin comillas ni < > para no
+   romper los handlers basados en nombre del resto de la tabla). */
+function _sanitizeDeptName(s) {
+  return String(s == null ? '' : s).replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim();
+}
+function addServiceDept() {
+  const project = STATE.currentProject;
+  const d = project.data.servicios;
+  const raw = window.prompt('Nombre de la nueva sub-sección (ej: Sonido, Grip, Maquillaje):', '');
+  if (raw === null) return;
+  const name = _sanitizeDeptName(raw);
+  if (!name) { showToast({ kind: 'warning', title: 'Nombre inválido', body: 'Escribe un nombre para la sub-sección.' }); return; }
+  if (d[name]) { showToast({ kind: 'warning', title: 'Ya existe', body: `Ya hay una sub-sección llamada «${name}».` }); return; }
+  d[name] = [];
+  markDirty();
+  renderServiciosBody();
+  recalcAllDeptSummaries();
+  showToast({ kind: 'success', title: 'Sub-sección creada', body: `«${name}» agregada a Servicios. Usa "+ Agregar rol" para sumarle filas.` });
+}
+function renameServiceDept(idx) {
+  const project = STATE.currentProject;
+  const d = project.data.servicios;
+  const names = Object.keys(d);
+  const oldName = names[idx];
+  if (!oldName) return;
+  const raw = window.prompt('Nuevo nombre de la sub-sección:', oldName);
+  if (raw === null) return;
+  const newName = _sanitizeDeptName(raw);
+  if (!newName) { showToast({ kind: 'warning', title: 'Nombre inválido', body: 'El nombre no puede quedar vacío.' }); return; }
+  if (newName === oldName) return;
+  if (d[newName]) { showToast({ kind: 'warning', title: 'Ya existe', body: `Ya hay una sub-sección llamada «${newName}».` }); return; }
+  // Reconstruir preservando el orden (renombrar solo cambia la etiqueta;
+  // los montos cotizados de las filas no se tocan → respeta la regla madre).
+  const rebuilt = {};
+  names.forEach(n => { rebuilt[n === oldName ? newName : n] = d[n]; });
+  project.data.servicios = rebuilt;
+  markDirty();
+  renderServiciosBody();
+  recalcAllDeptSummaries();
+  showToast({ kind: 'success', title: 'Sub-sección renombrada', body: `«${oldName}» → «${newName}».` });
+}
+function deleteServiceDept(idx) {
+  const project = STATE.currentProject;
+  const d = project.data.servicios;
+  const names = Object.keys(d);
+  const dept = names[idx];
+  if (!dept) return;
+  const rows = d[dept] || [];
+  const hasCotizadoRows = rows.some(r => !r.extra);
+  // Regla madre: tras aprobar, no se puede borrar una sub-sección con filas
+  // cotizadas (cambiaría el cotizado congelado).
+  if (cotizadoLocked(project) && hasCotizadoRows) {
+    showToast({ kind: 'error', title: 'No se puede eliminar', body: 'Tras aprobar, una sub-sección con filas cotizadas no se puede eliminar (regla madre: el cotizado no cambia). Renómbrala si necesitas reorganizar.' });
+    return;
+  }
+  const doDelete = () => {
+    delete project.data.servicios[dept];
+    markDirty();
+    renderServiciosBody();
+    recalcAllDeptSummaries();
+    showToast({ kind: 'success', title: 'Sub-sección eliminada', body: `«${dept}» fue eliminada.` });
+  };
+  if (rows.length === 0) { doDelete(); return; }
+  showModal({
+    title: 'Eliminar sub-sección',
+    body: `«${escapeHtml(dept)}» tiene ${rows.length} fila(s). Si la eliminas, se borran junto con la sub-sección. ¿Continuar?`,
+    confirmLabel: 'Eliminar',
+    danger: true,
+    onConfirm: doDelete
+  });
 }
 
 /* ─── GASTOS / EQUIPOS / TALENTOS (sin sub-departamentos) ──────────── */
@@ -7460,7 +7868,7 @@ function renderSimpleSection(sectionKey) {
 
   const labels = {
     gastos:   { firstCol: 'Ítem',  addLabel: '+ Agregar gasto' },
-    equipos:  { firstCol: 'Ítem',  addLabel: '+ Agregar equipo' },
+    equipos:  { firstCol: 'Ítem',  addLabel: '+ Agregar ítem técnico' },
     talentos: { firstCol: 'Rol',   addLabel: '+ Agregar talento' }
   };
   const cfg = labels[sectionKey];
@@ -7492,6 +7900,13 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
   let budgetStateClass = '';
   if (showReal) budgetStateClass = (STATE.ui.budgetCollapseCotizado !== false) ? 'collapse-cot' : 'cot-expanded';
 
+  // V8.1 (#3): la columna "Confirmado" solo existe después de aprobar el
+  // proyecto (Preproducción+). En etapa Venta no hay nada que confirmar.
+  const showConfirmado = cotizadoLocked(STATE.currentProject);
+  const confHeaderHTML = showConfirmado
+    ? `<th class="ctr" style="width: 5%;">Conf. <span class="tt" data-tip="Marcar como confirmado significa que esta persona/ítem está cerrado en su negociación. Al marcar:\n\n• Aparece en el módulo Crew.\n• Entra en los correos automáticos de producción.\n• Cuenta en el KPI de personas confirmadas.">?</span></th>`
+    : '';
+
   return `
     <table class="data-table budget-table ${budgetStateClass}" id="${tableId}">
       <thead>
@@ -7505,7 +7920,7 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
           <th class="num">Costo cotizado</th>
           ${showReal ? '<th class="num">Costo real <span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para Primate.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span></th>' : ''}
           ${showReal ? '<th style="width: 11%;">DTE real <span class="tt" data-tip="Documento tributario realmente emitido por el proveedor. Por defecto coincide con el DTE cotizado. Cambiarlo NO altera el cotizado (congelado al aprobar); es declarativo, para pagos y trazabilidad.">?</span></th>' : ''}
-          <th class="ctr" style="width: 5%;">Conf. <span class="tt" data-tip="Marcar como confirmado significa que esta persona/ítem está cerrado en su negociación. Al marcar:\n\n• Aparece en el módulo Crew.\n• Entra en los correos automáticos de producción.\n• Cuenta en el KPI de personas confirmadas.">?</span></th>
+          ${confHeaderHTML}
           <th style="width: 32px;"></th>
         </tr>
       </thead>
@@ -7535,6 +7950,8 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   // es declarativo y NO toca el cotizado.
   const locked = cotizadoLocked(STATE.currentProject) && !item.extra;
   const isExtra = item.extra === true;
+  // V8.1 (#3): la celda "Confirmado" solo se muestra post-aprobación.
+  const showConfirmado = cotizadoLocked(STATE.currentProject);
   // V5.10 (Nota 1): el delta del ítem se calcula también cuando el cotizado
   // es $0 (ej. un rol que iba gratis y al final se paga). Antes solo se
   // mostraba si el cotizado era > 0, ocultando deltas reales válidos.
@@ -7566,10 +7983,11 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
                    onchange="updateRowField(${ref}, 'nombre', this.value); afterRowChange(${ref});">
             <div class="combobox-dropdown" hidden></div>
           </div>
-          ${(nameNotInBD || isExtra) ? `<div class="cell-name-meta">
+          <div class="cell-name-meta">
             ${nameNotInBD ? '<span class="cell-name-warn" data-tip="Este registro (persona o empresa) no está en la Base de Datos. Puedes usarlo igual, pero sus datos de contacto no estarán disponibles. Para agregarlo, usa &quot;+ Nueva persona&quot; en la BD.">●</span>' : ''}
             ${isExtra ? '<span class="extra-badge" data-tip="Ítem agregado después de la aprobación del proyecto. Editable libremente. No afecta la cotización original.">EXTRA</span>' : ''}
-          </div>` : ''}
+            <button type="button" class="row-note-btn ${item.nota ? 'has-note' : ''}" title="${item.nota ? escapeHtml(item.nota) : 'Agregar nota a esta fila (contexto interno, no aparece en cotización)'}" onclick="openRowNote(${ref})">✎</button>
+          </div>
         </div>
       </td>
       <td>
@@ -7629,10 +8047,10 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
           </select>
         </td>
       ` : ''}
-      <td class="ctr">
+      ${showConfirmado ? `<td class="ctr">
         <input type="checkbox" ${isConfirmed ? 'checked' : ''}
                onchange="updateRowField(${ref}, 'confirmado', this.checked); afterRowConfirmToggle(${ref});">
-      </td>
+      </td>` : ''}
       <td>
         ${locked ? '' : `<button class="row-delete" title="Eliminar"
                 onclick="deleteRow(${ref})">×</button>`}
@@ -7650,6 +8068,58 @@ function updateRowField(sectionKey, dept, idx, field, value) {
   } else {
     project.data[sectionKey][idx][field] = value;
   }
+}
+
+/* ─── V8.1 (#2): NOTAS CONTEXTUALES POR FILA DEL PRESUPUESTO ──────────
+   Cada fila puede llevar una nota interna (item.nota). No es una columna
+   permanente: se accede con el botón ✎ de la fila. Sirve para explicar
+   decisiones (ej. "va en $0 porque el cliente provee el recurso"). No
+   aparece en la cotización ni en documentos al cliente. */
+function _rowNoteItem(sectionKey, dept, idx) {
+  const project = STATE.currentProject;
+  if (!project) return null;
+  return sectionKey === 'servicios'
+    ? (project.data.servicios[dept] || [])[idx]
+    : (project.data[sectionKey] || [])[idx];
+}
+function openRowNote(sectionKey, dept, idx) {
+  const item = _rowNoteItem(sectionKey, dept, idx);
+  if (!item) return;
+  const nombre = item.nombre || item.rol || item.item || 'esta fila';
+  const deptArg = dept === null || dept === undefined ? 'null' : `'${escapeHtml(dept)}'`;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header">
+          <div class="modal-title">Nota de fila</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Contexto interno para «${escapeHtml(nombre)}». No aparece en la cotización ni en documentos al cliente.</div>
+        </div>
+        <div class="modal-body">
+          <textarea id="rowNoteText" class="input" rows="4" style="width: 100%; resize: vertical;" placeholder="Ej: va en $0 porque el cliente provee este recurso.">${escapeHtml(item.nota || '')}</textarea>
+        </div>
+        <div class="modal-footer">
+          ${item.nota ? `<button class="btn" style="margin-right: auto; color: var(--negative);" onclick="saveRowNote('${sectionKey}', ${deptArg}, ${idx}, true)">Borrar nota</button>` : ''}
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="saveRowNote('${sectionKey}', ${deptArg}, ${idx}, false)">Guardar nota</button>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(() => { const t = document.getElementById('rowNoteText'); if (t) t.focus(); }, 50);
+}
+function saveRowNote(sectionKey, dept, idx, clear) {
+  const item = _rowNoteItem(sectionKey, dept, idx);
+  if (!item) { closeModal(); return; }
+  if (clear) {
+    delete item.nota;
+  } else {
+    const t = document.getElementById('rowNoteText');
+    const v = t ? t.value.trim() : '';
+    if (v) item.nota = v; else delete item.nota;
+  }
+  markDirty();
+  closeModal();
+  if (sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(sectionKey);
 }
 
 /* CORE DEL BUG FIX: en lugar de renderPresupuesto(), hacemos updates
@@ -7946,12 +8416,16 @@ function calcSummaryFin(project) {
   const gananciaParcialCot = presupCliente - costoProdCot;
   const gananciaParcialReal = presupClienteEfectivo - costoProdReal;
 
-  const comisionesCalc = fin.comisiones.map(c => ({
-    label: c.label,
-    pct: c.pct,
-    cot: gananciaParcialCot * c.pct,
-    real: gananciaParcialReal * c.pct
-  }));
+  /* V8.1: comisiones pueden ser % (sobre ganancia parcial) o monto fijo,
+     igual que riesgos. Lectura tolerante: saves antiguos traen {label, pct}
+     y se interpretan como modo '%'. */
+  const comisionesCalc = fin.comisiones.map(c => {
+    const mode = c.mode || 'pct';
+    const value = (c.value != null) ? c.value : (c.pct || 0);
+    const cot = mode === 'pct' ? (gananciaParcialCot * value) : value;
+    const real = mode === 'pct' ? (gananciaParcialReal * value) : value;
+    return { label: c.label, mode: mode, value: value, cot: cot, real: real };
+  });
 
   const totalComisionesCot = comisionesCalc.reduce((s, c) => s + c.cot, 0);
   const totalComisionesReal = comisionesCalc.reduce((s, c) => s + c.real, 0);
@@ -7963,7 +8437,7 @@ function calcSummaryFin(project) {
     rows: [
       { label: 'Servicios',                     cot: servCot,           real: servReal,         hasReal: anyReal },
       { label: 'Gastos de producción',          cot: g.cot,             real: g.real,           hasReal: anyReal },
-      { label: 'Equipos',                       cot: e.cot,             real: e.real,           hasReal: anyReal },
+      { label: 'Técnica',                       cot: e.cot,             real: e.real,           hasReal: anyReal },
       { label: 'Talentos',                      cot: t.cot,             real: t.real,           hasReal: anyReal }
     ],
     subtotal: { cot: subtotalCot, real: subtotalReal },
@@ -7991,6 +8465,15 @@ function renderSummaryFin() {
   const lockedSelectAttr = locked ? 'disabled' : '';
   const s = calcSummaryFin(project);
   const fin = project.data.finanzas;
+  // V8.1: normaliza comisiones al esquema {label, mode, value} (idempotente).
+  // Migra en sitio cualquier comisión antigua {label, pct} sin perder datos.
+  if (Array.isArray(fin.comisiones)) {
+    fin.comisiones = fin.comisiones.map(c => ({
+      label: c.label,
+      mode: c.mode || 'pct',
+      value: (c.value != null) ? c.value : (c.pct || 0)
+    }));
+  }
 
   // V5.3 (Nota 3): el denominador del margen es el Presupuesto Cliente
   // EFECTIVO (original + extras de ingreso), no solo el original.
@@ -8248,10 +8731,17 @@ function renderSummaryFin() {
                       onclick="deleteComision(${idx}); renderSummaryFin();">×</button>`}
             </td>
             <td class="input-cell-narrow">
-              <input type="number" step="0.5" min="0" max="100"
-                     value="${(c.pct * 100).toFixed(1)}"
+              <select class="riesgo-mode-select"
+                      ${lockedSelectAttr}
+                      onchange="updateComisionMode(${idx}, this.value); renderSummaryFin();">
+                <option value="monto" ${c.mode === 'monto' ? 'selected' : ''}>$</option>
+                <option value="pct" ${c.mode === 'pct' ? 'selected' : ''}>%</option>
+              </select>
+              <input type="${c.mode === 'pct' ? 'number' : 'text'}" ${c.mode === 'pct' ? 'step="0.5"' : 'inputmode="numeric"'} min="0"
+                     value="${c.mode === 'pct' ? ((c.value || 0) * 100).toFixed(1) : displayMoneyInputValue(c.value)}"
                      ${lockedAttr}
-                     onchange="updateComisionPct(${idx}, (parseFloat(this.value)||0)/100); renderSummaryFin();">%
+                     onchange="updateComisionValue(${idx}, ${c.mode === 'pct' ? '(parseFloat(this.value)||0)/100' : 'parseMoneyCLP(this.value)||0'}); renderSummaryFin();">
+              ${c.mode === 'pct' ? '%' : ''}
             </td>
             <td class="num">${fmtMoney(c.cot)}</td>
             ${showReal ? `<td class="num">${s.anyReal ? fmtMoney(c.real) : '—'}</td>` : ''}
@@ -8287,8 +8777,17 @@ function updateFinanzasField(field, value) {
   STATE.currentProject.data.finanzas[field] = value;
 }
 
-function updateComisionPct(idx, value) {
-  STATE.currentProject.data.finanzas.comisiones[idx].pct = value;
+/* V8.1: comisiones soportan modo % (sobre ganancia parcial) o monto fijo. */
+function updateComisionMode(idx, mode) {
+  const c = STATE.currentProject.data.finanzas.comisiones[idx];
+  c.mode = mode;
+  c.value = 0;            // reset al cambiar modo (% y $ tienen magnitudes distintas)
+  if ('pct' in c) delete c.pct;
+}
+function updateComisionValue(idx, value) {
+  const c = STATE.currentProject.data.finanzas.comisiones[idx];
+  c.value = value;
+  if ('pct' in c) delete c.pct;
 }
 
 /* V5.1.1: comisiones dinámicas */
@@ -8296,7 +8795,7 @@ function updateComisionLabel(idx, value) {
   STATE.currentProject.data.finanzas.comisiones[idx].label = value || 'Comisión';
 }
 function addComision() {
-  STATE.currentProject.data.finanzas.comisiones.push({ label: 'Comisión', pct: 0 });
+  STATE.currentProject.data.finanzas.comisiones.push({ label: 'Comisión', mode: 'pct', value: 0 });
 }
 function deleteComision(idx) {
   STATE.currentProject.data.finanzas.comisiones.splice(idx, 1);
@@ -8366,7 +8865,7 @@ function recalcAlerts() {
     checkSection(project.data.servicios[dept], `Servicios > ${dept}`, true);
   }
   checkSection(project.data.gastos,   'Gastos',   false);  // V5.1.1: DTE opcional
-  checkSection(project.data.equipos,  'Equipos',  false);  // V5.1.1: DTE opcional
+  checkSection(project.data.equipos,  'Técnica',  false);  // V5.1.1: DTE opcional
   checkSection(project.data.talentos, 'Talentos', true);
 
   const el = document.getElementById('presupuestoAlerts');
@@ -8693,7 +9192,7 @@ function snapshotFromBudget(project) {
   return {
     servicios: stripServ, gastos: arr(d.gastos), equipos: arr(d.equipos), talentos: arr(d.talentos),
     gastosAdminPct: (d.finanzas.gastosAdminPct != null) ? d.finanzas.gastosAdminPct : 0.05,
-    comisiones: (d.finanzas.comisiones || []).map(c => ({ label: c.label, pct: c.pct })),
+    comisiones: (d.finanzas.comisiones || []).map(c => ({ label: c.label, mode: c.mode || 'pct', value: (c.value != null) ? c.value : (c.pct || 0) })),
     riesgos: (d.finanzas.riesgos || []).map(r => ({ label: r.label, mode: r.mode, value: r.value }))
   };
 }
@@ -9007,7 +9506,7 @@ function cotSnapEditorHTML(project, o) {
     <div class="cot-snap-section-name">Gastos de producción</div>
     ${cotSnapTableHTML(o.id, 'gastos', '', snap.gastos, 'Ítem')}
     <div class="row-add" style="margin:0 0 8px;" onclick="cotSnapAdd('${o.id}','gastos','')">+ Agregar gasto</div>
-    <div class="cot-snap-section-name">Equipos</div>
+    <div class="cot-snap-section-name">Técnica</div>
     ${cotSnapTableHTML(o.id, 'equipos', '', snap.equipos, 'Ítem')}
     <div class="row-add" style="margin:0 0 8px;" onclick="cotSnapAdd('${o.id}','equipos','')">+ Agregar equipo</div>
     <div class="cot-snap-section-name">Talentos</div>
@@ -9462,7 +9961,7 @@ function cotBudgetRows(project, o) {
     seccion: label, dept: '', concepto: r.item || '', nombre: useSnap ? '' : (r.nombre || ''),
     valor: r.valor, cantidad: r.cantidad, unidad: r.unidad || '', dte: r.dte || '', sectionKey: key
   }));
-  pushArr('gastos', 'Gastos'); pushArr('equipos', 'Equipos'); pushArr('talentos', 'Talentos');
+  pushArr('gastos', 'Gastos'); pushArr('equipos', 'Técnica'); pushArr('talentos', 'Talentos');
   return rows;
 }
 function _csvCell(v) {
@@ -10043,7 +10542,7 @@ function renderCrew() {
           <tr>
             <th>Nombre</th>
             <th>Rol / Departamento</th>
-            <th>Teléfono</th>
+            <th style="min-width: 158px; white-space: nowrap;">Teléfono</th>
             <th>Mail</th>
             <th>Restricción alimenticia</th>
             <th>Dirección / comuna</th>
@@ -10076,10 +10575,10 @@ function renderCrewRow(p, transportOpts) {
     <tr>
       <td><strong>${escapeHtml(p.nombre)}</strong></td>
       <td class="auto">${escapeHtml(p.rol || '—')} · ${escapeHtml(p.source)}</td>
-      <td class="auto">${bd?.telefono || '<span style="color: var(--negative);">⚠ Sin BD</span>'}</td>
+      <td class="auto" style="white-space: nowrap;">${bd?.telefono || `<a role="button" tabindex="0" class="crew-bd-link" style="color: var(--negative); cursor: pointer; text-decoration: underline dotted;" onclick="crewAddToBD('${escapeHtml(p.nombre)}')" title="Agregar a la Base de Datos">⚠ Sin BD</a>`}</td>
       <td class="auto">${bd?.mail || '—'}</td>
       <td class="auto">${bd?.restriccion || '—'}</td>
-      <td class="auto">${bd ? `${escapeHtml(bd.direccion)}<br><span style="color: var(--ink-faint); font-size: 11px;">${escapeHtml(bd.comuna)}</span>` : '<span style="color: var(--negative); font-size: 11px;">Agregar persona a la BD</span>'}</td>
+      <td class="auto">${bd ? `${escapeHtml(bd.direccion)}<br><span style="color: var(--ink-faint); font-size: 11px;">${escapeHtml(bd.comuna)}</span>` : `<a role="button" tabindex="0" class="crew-bd-link" style="color: var(--negative); font-size: 11px; cursor: pointer; text-decoration: underline dotted;" onclick="crewAddToBD('${escapeHtml(p.nombre)}')" title="Crear ficha en la Base de Datos">+ Agregar persona a la BD</a>`}</td>
       <td>
         <select class="cell-select" onchange="STATE.currentProject.data.crewExtra['${escapeHtml(p.nombre)}'].medioTransporte = this.value;">
           ${transportOpts.map(t =>
@@ -10542,17 +11041,810 @@ function nextLocId(locaciones) {
 }
 
 function locacionOptions(project, selectedId) {
-  const locs = project.data.hojaLlamado.locaciones;
-  // V5.5 (Nota 4): por defecto todos llegan a la Locación 1 (base / punto de
-  // encuentro), y solo se ajustan las excepciones. Cuando no hay locaciones
-  // definidas, la única opción es "Llamado General".
-  if (locs.length === 0) {
+  // V8.2: las opciones salen de las locaciones CONFIRMADAS del proyecto
+  // (módulo Locaciones), no de una lista propia de la Hoja de Llamado.
+  ensureProjectLoc(project);
+  const confs = projLocConfirmadas(project);
+  if (confs.length === 0) {
     return `<option value="" selected>Llamado General</option>`;
   }
-  const effId = selectedId || locs[0].id; // sin override → primera locación
-  return locs.map(l =>
-    `<option value="${escapeHtml(l.id)}" ${effId === l.id ? 'selected' : ''}>${escapeHtml(l.id)} · ${escapeHtml(l.nombre || 'sin nombre')}</option>`
-  ).join('');
+  const ids = confs.map(u => u.locId);
+  const effId = (selectedId && ids.indexOf(selectedId) !== -1) ? selectedId : ids[0];
+  return confs.map(u => {
+    const l = bdLocFind(u.locId) || {};
+    return `<option value="${escapeHtml(u.locId)}" ${effId === u.locId ? 'selected' : ''}>${escapeHtml(u.locId)} · ${escapeHtml(l.nombre || 'sin nombre')}</option>`;
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   V8.2 · MÓDULO LOCACIONES
+   Repositorio (fichas + fotos + estados) y Plan de Scouting (motor de
+   tiempos del Plan de Rodaje). Fuente de verdad: BD_LOC (canónico) +
+   project.data.locaciones (uso). Hoja de Llamado y Plan de Rodaje
+   consumen las locaciones Confirmadas de este módulo.
+   ════════════════════════════════════════════════════════════════════ */
+function _locState() { if (!STATE.loc) STATE.loc = { sub: 'repo', filtro: 'todas' }; return STATE.loc; }
+function locSetSub(s) { _locState().sub = s; renderLocaciones(); }
+function locSetFiltro(f) { _locState().filtro = f; renderLocaciones(); }
+function locMoney(n) { return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
+function locEnsureScout(project) {
+  const d = project.data;
+  if (!d.scouting || typeof d.scouting !== 'object') d.scouting = { fecha: '', inicio: '09:00', quienes: [], filas: [] };
+  if (!Array.isArray(d.scouting.quienes)) d.scouting.quienes = [];
+  if (!Array.isArray(d.scouting.filas)) d.scouting.filas = [];
+  return d.scouting;
+}
+
+const LOC_CSS = `<style>
+.loc-kpi{display:flex;gap:1px;background:var(--border,#2a2a28);border:1px solid var(--border,#2a2a28);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.loc-kpi-cell{flex:1;background:var(--bg-elev,#1b1b19);padding:13px 16px;}
+.loc-kpi-label{font-size:10.5px;color:var(--ink-faint,#8a8a82);text-transform:uppercase;letter-spacing:.06em;}
+.loc-kpi-val{font-size:22px;font-weight:700;margin-top:3px;}
+.loc-kpi-sub{font-size:10.5px;color:var(--ink-faint,#8a8a82);margin-top:1px;}
+.loc-subtabs{display:flex;gap:6px;margin-bottom:16px;}
+.loc-subtab{padding:8px 16px;border-radius:8px;border:1px solid var(--border,#2a2a28);background:transparent;color:var(--ink-mut,#b5b5ad);cursor:pointer;font-size:13px;font-weight:600;}
+.loc-subtab.on{background:var(--accent,#c8a04a);color:#161410;border-color:var(--accent,#c8a04a);}
+.loc-filters{display:flex;gap:6px;margin:6px 0 14px;flex-wrap:wrap;}
+.loc-chip{padding:5px 12px;border-radius:999px;border:1px solid var(--border,#2a2a28);background:transparent;color:var(--ink-mut,#b5b5ad);cursor:pointer;font-size:12px;}
+.loc-chip.on{background:var(--ink,#e9e9e2);color:#161410;border-color:var(--ink,#e9e9e2);}
+.loc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px;}
+.loc-card{background:var(--bg-elev,#1b1b19);border:1px solid var(--border,#2a2a28);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s;}
+.loc-card:hover{border-color:var(--accent,#c8a04a);}
+.loc-card-img{height:138px;background:#22221f;position:relative;display:flex;align-items:center;justify-content:center;color:var(--ink-faint,#777);font-size:12px;}
+.loc-card-img img{width:100%;height:100%;object-fit:cover;display:block;}
+.loc-card-fotos{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border-radius:999px;padding:2px 9px;font-size:11px;}
+.loc-card-body{padding:11px 13px 13px;}
+.loc-card-name{font-weight:700;font-size:14.5px;margin-bottom:2px;}
+.loc-card-place{font-size:12px;color:var(--ink-mut,#b5b5ad);}
+.loc-card-badges{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center;}
+.loc-est{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;}
+.loc-est.candidata{background:rgba(90,150,210,.16);color:#7fb2e0;}
+.loc-est.confirmada{background:rgba(90,180,120,.16);color:#74c486;}
+.loc-est.descartada{background:rgba(160,160,160,.14);color:#9a9a92;}
+.loc-tag{font-size:11px;color:var(--ink-faint,#8a8a82);border:1px solid var(--border,#2a2a28);border-radius:999px;padding:1px 8px;}
+.loc-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.loc-block{border:1px solid var(--border,#2a2a28);border-radius:10px;padding:13px;margin-bottom:13px;}
+.loc-block-h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint,#8a8a82);margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;}
+.loc-block-tag{font-size:10px;font-weight:700;border-radius:999px;padding:2px 8px;}
+.loc-block-tag.bd{background:rgba(200,160,74,.16);color:var(--accent,#c8a04a);}
+.loc-block-tag.proj{background:rgba(120,120,200,.16);color:#9a9ad0;}
+.loc-field{margin-bottom:9px;}
+.loc-field label{display:block;font-size:11px;color:var(--ink-mut,#b5b5ad);margin-bottom:3px;}
+.loc-gallery{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
+.loc-thumb{position:relative;width:84px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--border,#2a2a28);cursor:pointer;}
+.loc-thumb img{width:100%;height:100%;object-fit:cover;}
+.loc-thumb-x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:12px;line-height:1;}
+.loc-foto-add{width:84px;height:64px;border:1px dashed var(--border,#3a3a36);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-faint,#8a8a82);font-size:22px;}
+.loc-scout-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.loc-scout-tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint,#8a8a82);padding:6px 8px;border-bottom:1px solid var(--border,#2a2a28);}
+.loc-scout-tbl td{padding:5px 8px;border-bottom:1px solid var(--border,#222);vertical-align:top;}
+.loc-scout-tbl tr.traslado td{background:rgba(255,255,255,.02);color:var(--ink-mut,#b5b5ad);}
+.loc-time{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;}
+.loc-quienes{display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
+.loc-quien-row{display:flex;align-items:center;gap:3px;}
+.loc-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;}
+.loc-lightbox img{max-width:92vw;max-height:92vh;border-radius:6px;}
+.loc-lightbox-x{position:absolute;top:18px;right:24px;background:none;border:none;color:#fff;font-size:34px;cursor:pointer;}
+</style>`;
+
+function renderLocaciones() {
+  const project = STATE.currentProject; if (!project) return;
+  ensureProjectLoc(project);
+  const st = _locState();
+  const content = document.getElementById('moduleContent');
+  const subtabs = `<div class="loc-subtabs">
+    <button class="loc-subtab ${st.sub === 'repo' ? 'on' : ''}" onclick="locSetSub('repo')">Repositorio</button>
+    <button class="loc-subtab ${st.sub === 'scout' ? 'on' : ''}" onclick="locSetSub('scout')">Plan de Scouting</button>
+  </div>`;
+  content.innerHTML = LOC_CSS + subtabs + (st.sub === 'scout' ? locScoutingHTML(project) : locRepoHTML(project));
+}
+
+function locRepoHTML(project) {
+  const st = _locState();
+  const usos = projLocList(project);
+  const conf = usos.filter(u => u.estado === 'confirmada').length;
+  const cand = usos.filter(u => u.estado === 'candidata').length;
+  const fotos = usos.reduce((s, u) => { const l = bdLocFind(u.locId); return s + (l && Array.isArray(l.fotos) ? l.fotos.length : 0); }, 0);
+  let list = usos.slice();
+  if (st.filtro !== 'todas') list = list.filter(u => u.estado === st.filtro);
+  const kpi = `<div class="loc-kpi">
+    <div class="loc-kpi-cell"><div class="loc-kpi-label">Locaciones</div><div class="loc-kpi-val">${usos.length}</div><div class="loc-kpi-sub">en este proyecto</div></div>
+    <div class="loc-kpi-cell"><div class="loc-kpi-label">Confirmadas</div><div class="loc-kpi-val" style="color:#74c486;">${conf}</div><div class="loc-kpi-sub">oficiales para rodaje</div></div>
+    <div class="loc-kpi-cell"><div class="loc-kpi-label">Candidatas</div><div class="loc-kpi-val" style="color:#7fb2e0;">${cand}</div><div class="loc-kpi-sub">en scouting</div></div>
+    <div class="loc-kpi-cell"><div class="loc-kpi-label">Fotos</div><div class="loc-kpi-val">${fotos}</div><div class="loc-kpi-sub">comprimidas en repo</div></div>
+  </div>`;
+  const filtros = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="loc-filters">${['todas', 'confirmada', 'candidata', 'descartada'].map(f => `<button class="loc-chip ${st.filtro === f ? 'on' : ''}" onclick="locSetFiltro('${f}')">${f === 'todas' ? 'Todas' : LOC_ESTADOS[f]}</button>`).join('')}</div>
+    <button class="btn btn-primary btn-sm" onclick="openLocAdd()">+ Agregar locación</button>
+  </div>`;
+  let grid;
+  if (!list.length) {
+    grid = `<div class="alert alert-info" style="margin-top:6px;"><span class="alert-icon">ℹ</span><div>${usos.length ? 'Ninguna locación con ese estado.' : 'Aún no hay locaciones en este proyecto. Usa <strong>+ Agregar locación</strong> para crear una nueva o reutilizar una de la Base de Datos.'}</div></div>`;
+  } else {
+    grid = `<div class="loc-grid">${list.map(u => locCardHTML(u)).join('')}</div>`;
+  }
+  return kpi + filtros + grid;
+}
+
+function locCardHTML(uso) {
+  const l = bdLocFind(uso.locId); if (!l) return '';
+  const portada = (l.fotos && l.fotos[0] && l.fotos[0].url) ? `<img src="${l.fotos[0].url}" alt="">` : 'Sin fotos';
+  const nFotos = (l.fotos || []).length;
+  const orient = (l.orientacion && l.orientacion !== '—') ? `<span class="loc-tag">☉ ${escapeHtml(l.orientacion)}</span>` : '';
+  return `<div class="loc-card" onclick="openLocDetail('${l.locId}')">
+    <div class="loc-card-img">${portada}${nFotos ? `<span class="loc-card-fotos">${nFotos} 📷</span>` : ''}</div>
+    <div class="loc-card-body">
+      <div class="loc-card-name">${escapeHtml(l.nombre || 'sin nombre')}</div>
+      <div class="loc-card-place">${escapeHtml([l.comuna, l.ciudad].filter(Boolean).join(', ') || '—')}</div>
+      <div class="loc-card-badges"><span class="loc-est ${uso.estado}">${LOC_ESTADOS[uso.estado]}</span>${orient}<span class="loc-tag">${escapeHtml(l.locId)}</span></div>
+    </div>
+  </div>`;
+}
+
+function openLocDetail(locId) {
+  const project = STATE.currentProject;
+  const l = bdLocFind(locId); const uso = projLocFind(project, locId);
+  if (!l || !uso) return;
+  const e = escapeHtml;
+  const orientOpts = LOC_ORIENTACIONES.map(o => `<option ${l.orientacion === o ? 'selected' : ''}>${o}</option>`).join('');
+  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb"><img src="${f.url}" onclick="locLightbox('${locId}',${i})"><button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button></div>`).join('');
+  const estadoChips = Object.keys(LOC_ESTADOS).map(s => `<button class="loc-chip ${uso.estado === s ? 'on' : ''}" onclick="locSetEstado('${locId}','${s}')">${LOC_ESTADOS[s]}</button>`).join('');
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:760px;width:94vw;max-height:88vh;overflow:auto;">
+    <div class="modal-header"><div class="modal-title">${e(l.nombre || 'Locación')} · ${e(l.locId)}</div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
+    <div class="modal-body">
+      <div class="loc-block">
+        <div class="loc-block-h">Estado en este proyecto</div>
+        <div class="loc-filters" style="margin:0;">${estadoChips}</div>
+      </div>
+      <div class="loc-modal-grid">
+        <div>
+          <div class="loc-block">
+            <div class="loc-block-h">Datos de la locación <span class="loc-block-tag bd">BD · reutilizable</span></div>
+            <div class="loc-field"><label>Nombre</label><input class="input" value="${e(l.nombre || '')}" onchange="locSetBD('${locId}','nombre',this.value)"></div>
+            <div class="loc-field"><label>Dirección</label><input class="input" value="${e(l.direccion || '')}" onchange="locSetBD('${locId}','direccion',this.value)"></div>
+            <div class="loc-field" style="display:flex;gap:8px;"><span style="flex:1;"><label>Comuna</label><input class="input" value="${e(l.comuna || '')}" onchange="locSetBD('${locId}','comuna',this.value)"></span><span style="flex:1;"><label>Ciudad</label><input class="input" value="${e(l.ciudad || '')}" onchange="locSetBD('${locId}','ciudad',this.value)"></span></div>
+            <div class="loc-field"><label>Link Google Maps</label><input class="input" value="${e(l.maps || '')}" placeholder="https://maps.google.com/…" onchange="locSetBD('${locId}','maps',this.value)"></div>
+            <div class="loc-field"><label>Orientación</label><select class="input" onchange="locSetBD('${locId}','orientacion',this.value)">${orientOpts}</select></div>
+            <div class="loc-field"><label>Dueño · nombre</label><input class="input" value="${e((l.dueno || {}).nombre || '')}" onchange="locSetDueno('${locId}','nombre',this.value)"></div>
+            <div class="loc-field" style="display:flex;gap:8px;"><span style="flex:1;"><label>Dueño · mail</label><input class="input" value="${e((l.dueno || {}).mail || '')}" onchange="locSetDueno('${locId}','mail',this.value)"></span><span style="flex:1;"><label>Dueño · teléfono</label><input class="input" value="${e((l.dueno || {}).tel || '')}" onchange="locSetDueno('${locId}','tel',this.value)"></span></div>
+            <div class="loc-field"><label>Notas generales</label><textarea class="input" rows="2" onchange="locSetBD('${locId}','notas',this.value)">${e(l.notas || '')}</textarea></div>
+          </div>
+        </div>
+        <div>
+          <div class="loc-block">
+            <div class="loc-block-h">Galería de scouting <span class="loc-block-tag bd">BD · reutilizable</span></div>
+            <div class="loc-gallery">${galeria}<label class="loc-foto-add" title="Agregar fotos (se comprimen solas)">+<input type="file" accept="image/*" multiple style="display:none" onchange="locAddFotos('${locId}',this)"></label></div>
+            <div style="font-size:11px;color:var(--ink-faint);margin-top:7px;">Las fotos se comprimen a máx. 1280 px. Click para ampliar.</div>
+          </div>
+          <div class="loc-block">
+            <div class="loc-block-h">Uso en este proyecto <span class="loc-block-tag proj">solo de este proyecto</span></div>
+            <div class="loc-field"><label>Costo negociado (CLP)</label><input class="input" inputmode="numeric" value="${uso.costo || 0}" onchange="locSetProj('${locId}','costo',this.value)"></div>
+            <div class="loc-field"><label>Estado de contratación</label><input class="input" value="${e(uso.contratacion || '')}" placeholder="Contrato firmado / En conversación / Propia…" onchange="locSetProj('${locId}','contratacion',this.value)"></div>
+            <div class="loc-field"><label>Notas del proyecto</label><textarea class="input" rows="2" onchange="locSetProj('${locId}','notasProy',this.value)">${e(uso.notasProy || '')}</textarea></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:4px;"><button class="btn btn-secondary btn-sm" style="color:#d08;border-color:rgba(210,0,80,.4);" onclick="locRemoveFromProject('${locId}')">Quitar de este proyecto</button> <span style="font-size:11px;color:var(--ink-faint);">No se borra de la Base de Datos; solo deja de usarse en este proyecto.</span></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Listo</button></div>
+  </div></div>`;
+}
+
+function locSetEstado(locId, estado) { const u = projLocFind(STATE.currentProject, locId); if (!u) return; u.estado = estado; markDirty(); renderLocaciones(); openLocDetail(locId); showToast({ kind: 'info', title: 'Estado actualizado', body: 'Locación marcada como ' + LOC_ESTADOS[estado].toLowerCase() + '.' }); }
+function locSetBD(locId, field, value) { const l = bdLocFind(locId); if (!l) return; l[field] = value; markDirty(); autosaveNow(); }
+function locSetDueno(locId, field, value) { const l = bdLocFind(locId); if (!l) return; if (!l.dueno) l.dueno = { nombre: '', mail: '', tel: '' }; l.dueno[field] = value; markDirty(); autosaveNow(); }
+function locSetProj(locId, field, value) { const u = projLocFind(STATE.currentProject, locId); if (!u) return; u[field] = (field === 'costo') ? (parseInt(String(value).replace(/\D/g, ''), 10) || 0) : value; markDirty(); autosaveNow(); }
+function locRemoveFromProject(locId) {
+  const project = STATE.currentProject;
+  showModal({
+    title: 'Quitar locación del proyecto', body: 'La locación dejará de usarse en este proyecto. Sus datos y fotos se conservan en la Base de Datos de Locaciones. ¿Continuar?',
+    confirmLabel: 'Quitar', cancelLabel: 'Cancelar', danger: true,
+    onConfirm: () => {
+      project.data.locaciones = projLocList(project).filter(u => u.locId !== locId);
+      // limpiar referencias en citaciones de la Hoja de Llamado
+      const dias = ((project.data.hojaLlamado || {}).dias) || {};
+      Object.keys(dias).forEach(k => {
+        const dd = dias[k];
+        Object.keys(dd.crewOverrides || {}).forEach(nm => { if (dd.crewOverrides[nm].locacionId === locId) dd.crewOverrides[nm].locacionId = ''; });
+        (dd.citacionesExternas || []).forEach(c => { if (c.locacionId === locId) c.locacionId = ''; });
+      });
+      markDirty(); closeModal(); renderLocaciones();
+      showToast({ kind: 'info', title: 'Locación quitada', body: 'Sigue disponible en la BD de Locaciones.' });
+    }
+  });
+}
+async function locAddFotos(locId, inputEl) {
+  const l = bdLocFind(locId); if (!l) return; if (!Array.isArray(l.fotos)) l.fotos = [];
+  const files = Array.from(inputEl.files || []); if (!files.length) return;
+  let saved = 0;
+  for (const f of files) {
+    const before = f.size;
+    try { const url = await prCompressImage(f, 1280, 0.6); const after = Math.round(url.length * 0.75); saved += Math.max(0, before - after); l.fotos.push({ url }); }
+    catch (e) { /* omitir archivo problemático */ }
+  }
+  markDirty(); autosaveNow();
+  showToast({ kind: 'success', title: 'Fotos agregadas', body: files.length + ' foto(s) comprimida(s). Ahorro aprox. ' + Math.round(saved / 1024) + ' KB.' });
+  openLocDetail(locId);
+}
+function locDelFoto(locId, i) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return; l.fotos.splice(i, 1); markDirty(); autosaveNow(); openLocDetail(locId); }
+function locLightbox(locId, i) {
+  const l = bdLocFind(locId); if (!l || !l.fotos[i]) return;
+  const old = document.getElementById('locLb'); if (old) old.remove();
+  const div = document.createElement('div'); div.id = 'locLb'; div.className = 'loc-lightbox';
+  div.onclick = () => div.remove();
+  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${l.fotos[i].url}" alt="">`;
+  document.body.appendChild(div);
+}
+
+function openLocAdd() {
+  const project = STATE.currentProject;
+  const libres = BD_LOC.filter(l => !projLocFind(project, l.locId));
+  const e = escapeHtml;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">
+    <div class="modal-header"><div class="modal-title">Agregar locación</div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
+    <div class="modal-body">
+      <div class="loc-filters" style="margin:0 0 12px;"><button class="loc-chip on" id="lam_new" onclick="locAddMode('new')">Crear nueva</button><button class="loc-chip" id="lam_bd" onclick="locAddMode('bd')">Reutilizar de la BD</button></div>
+      <div id="locAddNew">
+        <div class="loc-field"><label>Nombre</label><input class="input" id="la_nombre" placeholder="ej. Casa Vitacura"></div>
+        <div class="loc-field"><label>Dirección</label><input class="input" id="la_dir" placeholder="Calle 123, Comuna"></div>
+        <div class="loc-field" style="display:flex;gap:8px;"><span style="flex:1;"><label>Comuna</label><input class="input" id="la_comuna"></span><span style="flex:1;"><label>Ciudad</label><input class="input" id="la_ciudad" value="Santiago"></span></div>
+        <div class="loc-field"><label>Orientación</label><select class="input" id="la_orient">${LOC_ORIENTACIONES.map(o => `<option>${o}</option>`).join('')}</select></div>
+        <div style="font-size:11px;color:var(--ink-faint);">Se crea en la BD de Locaciones con estado <b>Candidata</b>. Las fotos y el resto se completan después en la ficha.</div>
+      </div>
+      <div id="locAddBD" style="display:none;">
+        <div class="loc-field"><label>Elige una locación existente</label><select class="input" id="la_bd">${libres.length ? libres.map(l => `<option value="${e(l.locId)}">${e(l.nombre || l.locId)} — ${e(l.comuna || '')}</option>`).join('') : '<option value="">(todas las locaciones de la BD ya están en este proyecto)</option>'}</select></div>
+        <div style="font-size:11px;color:var(--ink-faint);">Trae la locación con sus datos y fotos. Aquí solo defines su uso (entra como Candidata).</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveLocAdd()">Agregar</button></div>
+  </div></div>`;
+  STATE.loc._addMode = 'new';
+}
+function locAddMode(m) {
+  STATE.loc._addMode = m;
+  document.getElementById('lam_new').classList.toggle('on', m === 'new');
+  document.getElementById('lam_bd').classList.toggle('on', m === 'bd');
+  document.getElementById('locAddNew').style.display = m === 'new' ? 'block' : 'none';
+  document.getElementById('locAddBD').style.display = m === 'bd' ? 'block' : 'none';
+}
+function saveLocAdd() {
+  const project = STATE.currentProject;
+  const v = id => (document.getElementById(id) || {}).value || '';
+  if (STATE.loc._addMode === 'bd') {
+    const id = v('la_bd'); if (!id) { showToast({ kind: 'warning', title: 'Sin locaciones libres', body: 'No hay locaciones en la BD que no estén ya en este proyecto.' }); return; }
+    project.data.locaciones.push({ locId: id, estado: 'candidata', costo: 0, contratacion: '', notasProy: '' });
+    markDirty(); closeModal(); renderLocaciones(); showToast({ kind: 'success', title: 'Locación traída de la BD', body: locNombre(id) + ' agregada como candidata.' });
+    return;
+  }
+  const id = nextLocIdBD();
+  BD_LOC.push({ locId: id, nombre: v('la_nombre') || '(sin nombre)', direccion: v('la_dir'), comuna: v('la_comuna'), ciudad: v('la_ciudad') || 'Santiago', maps: '', orientacion: v('la_orient'), dueno: { nombre: '', mail: '', tel: '' }, notas: '', fotos: [] });
+  project.data.locaciones.push({ locId: id, estado: 'candidata', costo: 0, contratacion: '', notasProy: '' });
+  markDirty(); autosaveNow(); closeModal(); renderLocaciones(); openLocDetail(id);
+  showToast({ kind: 'success', title: 'Locación creada', body: id + ' agregada a la BD y al proyecto.' });
+}
+
+/* ── Plan de Scouting ── motor de tiempos del Plan de Rodaje (cascada) ── */
+function locScoutTimes(project) {
+  const s = locEnsureScout(project);
+  const filas = s.filas.map(f => ({ tipo: f.tipo, dur: f.dur, anchor: null }));
+  return prComputeTimes(filas, prParseHM(s.inicio));
+}
+function locScoutSet(field, value) { const s = locEnsureScout(STATE.currentProject); s[field] = (field === 'inicio') ? (normalizeTime24 ? normalizeTime24(value) : value) : value; markDirty(); if (field === 'inicio') renderLocaciones(); }
+function locScoutSetFila(i, field, value, reflow) { const s = locEnsureScout(STATE.currentProject); if (!s.filas[i]) return; s.filas[i][field] = (field === 'dur') ? prNormalizeDur(value) : value; markDirty(); if (reflow) renderLocaciones(); }
+function locScoutAddParada() { const s = locEnsureScout(STATE.currentProject); const first = projLocList(STATE.currentProject)[0]; s.filas.push({ tipo: 'parada', locId: first ? first.locId : '', dur: '0:30', revisar: '', resp: '' }); markDirty(); renderLocaciones(); }
+function locScoutAddTraslado() { const s = locEnsureScout(STATE.currentProject); s.filas.push({ tipo: 'traslado', dur: '0:20', nota: '' }); markDirty(); renderLocaciones(); }
+function locScoutDelFila(i) { const s = locEnsureScout(STATE.currentProject); s.filas.splice(i, 1); markDirty(); renderLocaciones(); }
+function locScoutAddQuien() { const s = locEnsureScout(STATE.currentProject); s.quienes.push(''); markDirty(); renderLocaciones(); }
+function locScoutSetQuien(i, value) { const s = locEnsureScout(STATE.currentProject); s.quienes[i] = value; markDirty(); }
+function locScoutDelQuien(i) { const s = locEnsureScout(STATE.currentProject); s.quienes.splice(i, 1); markDirty(); renderLocaciones(); }
+
+function locScoutingHTML(project) {
+  const s = locEnsureScout(project);
+  const e = escapeHtml;
+  const usos = projLocList(project);
+  const times = locScoutTimes(project);
+  const fin = times.length ? prFmtClock(times[times.length - 1].termino != null ? times[times.length - 1].termino : times[times.length - 1].inicio) : (s.inicio || '—');
+  const nParadas = s.filas.filter(f => f.tipo === 'parada').length;
+  const totalMin = (prParseHM(fin) != null && prParseHM(s.inicio) != null) ? (prParseHM(fin) - prParseHM(s.inicio)) : null;
+  const quienes = s.quienes.map((q, i) => `<span class="loc-quien-row"><span class="combobox-wrap person-combobox" style="min-width:160px;"><input class="input combobox-input" value="${e(q)}" placeholder="Buscar en la Base de Datos…" autocomplete="off" onfocus="comboboxOpen(this)" oninput="comboboxFilter(this)" onblur="comboboxCloseDelayed(this)" onchange="locScoutSetQuien(${i}, this.value)"><div class="combobox-dropdown" hidden></div></span><button class="btn btn-secondary btn-sm" onclick="locScoutDelQuien(${i})" title="Quitar">×</button></span>`).join('');
+  const locOpts = u => usos.map(x => `<option value="${e(x.locId)}" ${x.locId === u.locId ? 'selected' : ''}>${e(locNombre(x.locId))}</option>`).join('') || '<option value="">(sin locaciones)</option>';
+  const filasHTML = s.filas.map((f, i) => {
+    const clock = times[i] && times[i].inicio != null ? prFmtClock(times[i].inicio) : '—';
+    if (f.tipo === 'traslado') {
+      return `<tr class="traslado"><td class="loc-time">${clock}</td><td><input class="input" style="width:64px;" value="${e(f.dur || '')}" title="HHMM: 100 = 1 hora" onchange="locScoutSetFila(${i},'dur',this.value,true)"></td><td colspan="4">⤷ Traslado <input class="input" style="display:inline-block;width:auto;min-width:200px;" value="${e(f.nota || '')}" placeholder="de … a …" onchange="locScoutSetFila(${i},'nota',this.value)"></td><td><button class="btn btn-secondary btn-sm" onclick="locScoutDelFila(${i})">×</button></td></tr>`;
+    }
+    const l = bdLocFind(f.locId) || {};
+    const dir = l.maps ? `<a href="${e(l.maps)}" target="_blank" rel="noopener">${e(l.direccion || 'Maps')}</a>` : e(l.direccion || '—');
+    const cont = [(l.dueno || {}).nombre, (l.dueno || {}).tel].filter(Boolean).join(' · ') || '—';
+    return `<tr><td class="loc-time">${clock}</td>
+      <td><input class="input" style="width:64px;" value="${e(f.dur || '')}" title="HHMM: 100 = 1 hora" onchange="locScoutSetFila(${i},'dur',this.value,true)"></td>
+      <td><select class="input" onchange="locScoutSetFila(${i},'locId',this.value,true)">${locOpts(f)}</select></td>
+      <td style="font-size:12px;">${dir}</td>
+      <td style="font-size:12px;">${e(cont)}</td>
+      <td><input class="input" value="${e(f.revisar || '')}" placeholder="Qué revisar" onchange="locScoutSetFila(${i},'revisar',this.value)"></td>
+      <td style="white-space:nowrap;"><input class="input" style="width:120px;" value="${e(f.resp || '')}" placeholder="Responsable" onchange="locScoutSetFila(${i},'resp',this.value)"> <button class="btn btn-secondary btn-sm" onclick="locScoutDelFila(${i})">×</button></td></tr>`;
+  }).join('');
+  return `<div class="cot-card" style="padding:16px;margin-bottom:14px;">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="loc-field" style="margin:0;"><label>Fecha de scouting</label><input type="date" class="input" value="${e(s.fecha || '')}" onchange="locScoutSet('fecha',this.value)"></div>
+      <div class="loc-field" style="margin:0;"><label>Hora de inicio</label><input class="input" style="width:90px;" inputmode="numeric" maxlength="5" value="${e(s.inicio || '')}" placeholder="09:00" onchange="locScoutSet('inicio',this.value)"></div>
+      <div class="loc-field" style="margin:0;flex:1;min-width:260px;"><label>Quiénes van</label><div class="loc-quienes">${quienes}<button class="btn btn-secondary btn-sm" onclick="locScoutAddQuien()">+ Persona</button></div></div>
+    </div>
+    <div style="margin-top:10px;font-size:12.5px;color:var(--ink-mut);">${nParadas} parada(s) · ${totalMin != null ? prFmtDur(totalMin) + ' total' : 'duración —'} · término aprox. <b>${fin}</b></div>
+  </div>
+  <div class="cot-card" style="padding:12px 16px;overflow-x:auto;">
+    <table class="loc-scout-tbl"><thead><tr><th>Hora</th><th>Dur.</th><th>Locación</th><th>Dirección / Maps</th><th>Contacto</th><th>Qué revisar</th><th>Responsable</th></tr></thead>
+    <tbody>${filasHTML || `<tr><td colspan="7" style="color:var(--ink-faint);padding:12px;">Sin paradas todavía. Agrega una parada o un traslado.</td></tr>`}</tbody></table>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="locScoutAddParada()">+ Parada</button>
+      <button class="btn btn-secondary btn-sm" onclick="locScoutAddTraslado()">+ Traslado</button>
+      <button class="btn btn-primary btn-sm" onclick="exportScoutingPDF()" style="margin-left:auto;">Exportar PDF</button>
+    </div>
+  </div>`;
+}
+
+function exportScoutingPDF() {
+  const project = STATE.currentProject; if (!project) return;
+  const s = locEnsureScout(project); const e = escapeHtml;
+  if (!s.filas.length) { showToast({ kind: 'warning', title: 'Plan vacío', body: 'Agrega al menos una parada antes de exportar.' }); return; }
+  const ip = project.data.infoProyecto || {};
+  const times = locScoutTimes(project);
+  const rows = s.filas.map((f, i) => {
+    const clock = times[i] && times[i].inicio != null ? prFmtClock(times[i].inicio) : '—';
+    if (f.tipo === 'traslado') return `<tr class="tr"><td>${clock}</td><td>${e(prFmtDur(prParseHM(f.dur)))}</td><td colspan="4">⤷ Traslado — ${e(f.nota || '')}</td></tr>`;
+    const l = bdLocFind(f.locId) || {};
+    const cont = [(l.dueno || {}).nombre, (l.dueno || {}).tel].filter(Boolean).join(' · ');
+    return `<tr><td>${clock}</td><td>${e(prFmtDur(prParseHM(f.dur)))}</td><td><b>${e(l.nombre || '—')}</b><br><span class="mut">${e(l.direccion || '')}</span></td><td>${e(cont)}</td><td>${e(f.revisar || '')}</td><td>${e(f.resp || '')}</td></tr>`;
+  }).join('');
+  const fin = times.length ? prFmtClock(times[times.length - 1].termino != null ? times[times.length - 1].termino : times[times.length - 1].inicio) : '';
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Plan de Scouting</title>
+  <style>body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a1a17;margin:32px;}h1{font-size:19px;margin:0 0 2px;}.sub{color:#666;font-size:12px;margin-bottom:14px;}
+  .meta{font-size:12.5px;margin-bottom:14px;}.meta b{color:#000;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}th{text-align:left;background:#f3f1ec;padding:6px 8px;border:1px solid #ddd;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
+  td{padding:6px 8px;border:1px solid #e3e3df;vertical-align:top;}tr.tr td{background:#faf9f6;color:#555;}.mut{color:#777;}
+  .foot{margin-top:22px;font-size:10.5px;color:#888;display:flex;justify-content:space-between;}</style></head>
+  <body><h1>Plan de Scouting</h1><div class="sub">${e(ip.cliente || '')}${ip.nombreProyecto ? ' · ' + e(ip.nombreProyecto) : ''}</div>
+  <div class="meta">Fecha: <b>${e(s.fecha ? fmtFechaLarga(s.fecha) : '—')}</b> · Inicio: <b>${e(s.inicio || '—')}</b> · Término aprox.: <b>${e(fin)}</b><br>Quiénes van: <b>${e((s.quienes || []).filter(Boolean).join(', ') || '—')}</b></div>
+  <table><thead><tr><th>Hora</th><th>Dur.</th><th>Locación</th><th>Contacto</th><th>Qué revisar</th><th>Responsable</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="foot"><span>Primate Films · Plan de Scouting</span><span>${e(new Date().toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))}</span></div>
+  </body></html>`;
+  printViaIframe(html, 'Plan de Scouting');
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   V8.3 · MÓDULO LEGAL
+   Genera, versiona y archiva documentos legales (cesión de derechos,
+   contrato de servicios, NDA, arriendo de locación) desde plantillas
+   fijas + datos del sistema (BD Personas, Presupuesto, Info Proyecto,
+   bloque Derechos). Los documentos viven en BD_LEGAL (transversal); el
+   tab del proyecto es una vista filtrada. Ciclo Borrador→Generado→
+   Enviado→Firmado, versionado, export a PDF con marca.
+   ⚠ Contenido legal: la Cesión está basada en el contrato real de
+   Primate; Servicios, NDA y Arriendo son BORRADORES y deben validarse
+   con un abogado antes de usarse en producción.
+   ════════════════════════════════════════════════════════════════════ */
+const LEGAL_TPL = {
+  servicios: { nombre: 'Contrato de prestación de servicios', desc: 'Crew y proveedores independientes', target: 'persona', draft: true },
+  cesion: { nombre: 'Cesión de derechos / modelaje', desc: 'Talento — servicios + derechos de imagen', target: 'persona', draft: false },
+  nda: { nombre: 'Acuerdo de confidencialidad (NDA)', desc: 'Cualquier contraparte', target: 'persona', draft: true },
+  arriendo: { nombre: 'Arriendo de locación', desc: 'Dueño de la locación', target: 'locacion', draft: true }
+};
+const LEGAL_EST = { borrador: 'Borrador', generado: 'Generado', enviado: 'Enviado', firmado: 'Firmado' };
+const LEGAL_FLOW = ['borrador', 'generado', 'enviado', 'firmado'];
+
+const LEGAL_CSS = `<style>
+.lgl-kpi{display:flex;gap:1px;background:var(--border,#2a2a28);border:1px solid var(--border,#2a2a28);border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.lgl-kpi-cell{flex:1;background:var(--bg-elev,#1b1b19);padding:13px 16px;}
+.lgl-kpi-label{font-size:10.5px;color:var(--ink-faint,#8a8a82);text-transform:uppercase;letter-spacing:.06em;}
+.lgl-kpi-val{font-size:22px;font-weight:700;margin-top:3px;}
+.lgl-kpi-sub{font-size:10.5px;color:var(--ink-faint,#8a8a82);margin-top:1px;}
+.lgl-subtabs{display:flex;gap:6px;margin-bottom:16px;}
+.lgl-subtab{padding:8px 16px;border-radius:8px;border:1px solid var(--border,#2a2a28);background:transparent;color:var(--ink-mut,#b5b5ad);cursor:pointer;font-size:13px;font-weight:600;}
+.lgl-subtab.on{background:var(--accent,#c8a04a);color:#161410;border-color:var(--accent,#c8a04a);}
+.lgl-filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.lgl-filtros select,.lgl-filtros input{background:var(--bg-elev,#1b1b19);border:1px solid var(--border,#2a2a28);border-radius:7px;color:var(--ink,#e9e9e2);padding:6px 9px;font-size:12.5px;}
+.lgl-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.lgl-tbl th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint,#8a8a82);padding:7px 9px;border-bottom:1px solid var(--border,#2a2a28);}
+.lgl-tbl td{padding:8px 9px;border-bottom:1px solid var(--border,#222);vertical-align:middle;}
+.lgl-pill{display:inline-block;background:rgba(200,160,74,.14);color:var(--accent,#c8a04a);border-radius:999px;padding:2px 10px;font-size:11.5px;font-weight:600;}
+.lgl-est{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;}
+.lgl-est.borrador{background:rgba(160,160,160,.16);color:#a8a89e;}
+.lgl-est.generado{background:rgba(90,150,210,.16);color:#7fb2e0;}
+.lgl-est.enviado{background:rgba(200,160,74,.16);color:#d9b256;}
+.lgl-est.firmado{background:rgba(90,180,120,.16);color:#74c486;}
+.lgl-tplcard{border:1px solid var(--border,#2a2a28);border-radius:10px;padding:13px 15px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.lgl-tplcard .nm{font-weight:700;font-size:14px;}
+.lgl-tplcard .ds{font-size:12px;color:var(--ink-mut,#b5b5ad);margin-top:2px;}
+.lgl-lock,.lgl-warn{display:flex;gap:9px;align-items:flex-start;border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.5;margin-bottom:13px;}
+.lgl-lock{background:rgba(120,120,200,.10);border:1px solid rgba(120,120,200,.3);color:#b9b9e0;}
+.lgl-warn{background:rgba(210,150,40,.10);border:1px solid rgba(210,150,40,.35);color:#e0b66a;}
+.lgl-gen-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;}
+@media(max-width:820px){ .lgl-gen-grid{grid-template-columns:1fr;} }
+.lgl-tplpick{display:flex;flex-direction:column;gap:7px;margin-bottom:12px;}
+.lgl-tplbtn{text-align:left;border:1px solid var(--border,#2a2a28);background:transparent;border-radius:9px;padding:9px 11px;cursor:pointer;color:var(--ink,#e9e9e2);}
+.lgl-tplbtn.on{border-color:var(--accent,#c8a04a);background:rgba(200,160,74,.08);}
+.lgl-tplbtn .tn{font-weight:700;font-size:13px;}
+.lgl-tplbtn .td{font-size:11px;color:var(--ink-mut,#b5b5ad);}
+.lgl-tplbtn .draft{font-size:10.5px;color:#e0b66a;margin-top:3px;}
+.lgl-tplbtn .vald{font-size:10.5px;color:#74c486;margin-top:3px;}
+.lgl-field{margin-bottom:9px;}
+.lgl-field label{display:block;font-size:11px;color:var(--ink-mut,#b5b5ad);margin-bottom:3px;}
+.lgl-field .src{font-size:9.5px;border-radius:999px;padding:1px 7px;margin-left:6px;font-weight:700;}
+.lgl-field .src.bd{background:rgba(200,160,74,.16);color:var(--accent,#c8a04a);}
+.lgl-field .src.pres{background:rgba(90,180,120,.16);color:#74c486;}
+.lgl-field .src.info{background:rgba(90,150,210,.16);color:#7fb2e0;}
+.lgl-field .src.der{background:rgba(120,120,200,.16);color:#9a9ad0;}
+.lgl-frow{display:flex;gap:8px;}
+.lgl-frow .lgl-field{flex:1;}
+.lgl-paper{background:#fbfaf7;color:#1a1a17;border-radius:8px;padding:26px 30px;font-family:Georgia,'Times New Roman',serif;font-size:12px;line-height:1.6;max-height:60vh;overflow:auto;border:1px solid var(--border,#2a2a28);}
+.lgl-paper .logo{font-family:-apple-system,'Segoe UI',sans-serif;font-weight:800;letter-spacing:.04em;font-size:15px;color:#161410;margin-bottom:14px;}
+.lgl-paper h4{font-size:13px;text-align:center;text-transform:uppercase;letter-spacing:.03em;margin:0 0 14px;}
+.lgl-paper .cl{font-weight:700;margin-top:11px;}
+.lgl-paper p{margin:5px 0;text-align:justify;}
+.lgl-paper .firmas{display:flex;justify-content:space-around;margin-top:30px;text-align:center;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10.5px;}
+.lgl-paper .firmas .ln{border-top:1px solid #222;padding-top:5px;width:46%;}
+.lgl-v{background:rgba(200,160,74,.28);border-radius:3px;padding:0 2px;}
+</style>`;
+
+function _legalState() { if (!STATE.legal) STATE.legal = { sub: 'docs', filtroTipo: '', filtroEstado: '', q: '', fDesde: '', fHasta: '', gen: null }; return STATE.legal; }
+function legalSetSub(s) { _legalState().sub = s; renderLegal(); }
+function legalSetFiltro(k, v) { _legalState()[k] = v; renderLegal(); }
+
+function legalRep() {
+  const e = EMPRESA_PERFIL || {};
+  const dom = [e.direccion, e.comuna].filter(Boolean).join(', ');
+  return {
+    razon: e.razonSocial || 'La Hectárea SpA',
+    rutEmp: e.rut || '77.398.011-K',
+    marca: e.nombreFicticio || 'Primate Films',
+    rep: e.representante || 'Agustín Ignacio Muñoz Rocha',
+    rutRep: e.repRut || '20.287.686-2',
+    domEmp: dom || 'Santiago'
+  };
+}
+function legalFindContact(nombre) {
+  if (!nombre) return null;
+  const ids = Object.keys(BD_CONTACTOS);
+  for (const id of ids) { const c = BD_CONTACTOS[id]; if (c && c.nombre === nombre) return c; }
+  return null;
+}
+function legalAllContactNames() {
+  return Array.from(new Set(Object.keys(BD_CONTACTOS).map(id => BD_CONTACTOS[id] && BD_CONTACTOS[id].nombre).filter(Boolean))).sort();
+}
+function legalPersonData(nombre) {
+  // Resuelve desde la BD canónica (BD_CONTACTOS): tiene RUT y domicilio de
+  // TODOS, incluidos los talentos (que en la proyección BD_TALENTOS no los traen).
+  const c = legalFindContact(nombre);
+  const roles = (c && Array.isArray(c.roles)) ? c.roles : [];
+  let calidad = 'proveedor';
+  if (roles.indexOf('Talento') !== -1) calidad = 'modelo';
+  else if (roles.indexOf('Contacto cliente') !== -1) calidad = 'cliente';
+  return {
+    nombre: nombre || '',
+    rut: (c && c.rut) || '',
+    dom: c ? [c.direccion, c.comuna].filter(Boolean).join(', ') : '',
+    rol: (c && (c.rolHabitual || (roles[0] || ''))) || '',
+    calidad
+  };
+}
+function legalFindBudgetRow(project, nombre) {
+  if (!project || !nombre) return null;
+  const d = project.data || {};
+  const pools = [];
+  if (d.servicios && typeof d.servicios === 'object') Object.keys(d.servicios).forEach(dep => { (d.servicios[dep] || []).forEach(r => pools.push(r)); });
+  ['talentos', 'equipos', 'gastos'].forEach(k => { if (Array.isArray(d[k])) d[k].forEach(r => pools.push(r)); });
+  return pools.find(r => r && r.nombre === nombre) || null;
+}
+function legalBudgetData(project, nombre) {
+  const r = legalFindBudgetRow(project, nombre);
+  if (!r) return { monto: null, jornadas: 1 };
+  const monto = (r.costoReal != null && r.costoReal !== '') ? r.costoReal : r.valor;
+  return { monto: monto || null, jornadas: r.cantidad || 1 };
+}
+function legalDerechos(project) { return (project.data.infoProyecto || {}).derechos || { tiempo: '', plataformas: '', territorio: '' }; }
+function legalHoyLargo() { return 'Santiago, ' + new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }); }
+
+/* Reúne todas las variables del generador, con overrides del documento. */
+function legalVars(gen) {
+  const project = STATE.currentProject;
+  const tpl = LEGAL_TPL[gen.tpl];
+  const base = {};
+  if (tpl.target === 'locacion') {
+    const l = bdLocFind(gen.locId) || {};
+    base.locNombre = l.nombre || ''; base.locDir = [l.direccion, l.comuna].filter(Boolean).join(', ');
+    base.duenoNombre = (l.dueno || {}).nombre || ''; base.duenoRut = '';
+  } else {
+    const p = legalPersonData(gen.persName);
+    const b = legalBudgetData(project, gen.persName);
+    base.nombre = p.nombre; base.rut = p.rut; base.dom = p.dom; base.rol = p.rol; base.calidad = p.calidad;
+    base.monto = b.monto; base.jornadas = b.jornadas;
+    base.horaExtra = gen.tpl === 'cesion' ? '10%' : '150%';
+    base.pago = gen.tpl === 'cesion' ? 60 : 30;
+  }
+  const ip = project.data.infoProyecto || {};
+  const der = legalDerechos(project);
+  base.cliente = ip.cliente || ''; base.proyecto = ip.nombreProyecto || project.name || ''; base.campaña = ip.campaña || ip.nombreProyecto || '';
+  base.tiempo = der.tiempo || ''; base.plataformas = der.plataformas || ''; base.territorio = der.territorio || '';
+  return Object.assign(base, gen.ov || {});
+}
+
+function renderLegal() {
+  const project = STATE.currentProject; if (!project) return;
+  const st = _legalState();
+  const content = document.getElementById('moduleContent');
+  const subtabs = `<div class="lgl-subtabs">
+    <button class="lgl-subtab ${st.sub === 'docs' ? 'on' : ''}" onclick="legalSetSub('docs')">Documentos</button>
+    <button class="lgl-subtab ${st.sub === 'tpl' ? 'on' : ''}" onclick="legalSetSub('tpl')">Plantillas</button>
+  </div>`;
+  content.innerHTML = LEGAL_CSS + subtabs + (st.sub === 'tpl' ? legalTplView() : legalDocsView(project));
+}
+
+function legalDocsView(project) {
+  const st = _legalState();
+  const e = escapeHtml;
+  let docs = legalDocsForProject(project.id);
+  const firm = docs.filter(d => d.estado === 'firmado').length;
+  const pend = docs.filter(d => d.estado !== 'firmado').length;
+  if (st.filtroTipo) docs = docs.filter(d => d.tipo === st.filtroTipo);
+  if (st.filtroEstado) docs = docs.filter(d => d.estado === st.filtroEstado);
+  if (st.fDesde) docs = docs.filter(d => (d.fechaGeneracion || '') >= st.fDesde);
+  if (st.fHasta) docs = docs.filter(d => (d.fechaGeneracion || '') <= st.fHasta);
+  if (st.q) { const q = st.q.toLowerCase(); docs = docs.filter(d => (d.contraparteNombre || '').toLowerCase().includes(q) || (d.rut || '').toLowerCase().includes(q)); }
+  const kpi = `<div class="lgl-kpi">
+    <div class="lgl-kpi-cell"><div class="lgl-kpi-label">Documentos</div><div class="lgl-kpi-val">${legalDocsForProject(project.id).length}</div><div class="lgl-kpi-sub">en este proyecto</div></div>
+    <div class="lgl-kpi-cell"><div class="lgl-kpi-label">Firmados</div><div class="lgl-kpi-val" style="color:#74c486;">${firm}</div><div class="lgl-kpi-sub">cerrados</div></div>
+    <div class="lgl-kpi-cell"><div class="lgl-kpi-label">En proceso</div><div class="lgl-kpi-val" style="color:#d9b256;">${pend}</div><div class="lgl-kpi-sub">por enviar o firmar</div></div>
+    <div class="lgl-kpi-cell"><div class="lgl-kpi-label">Plantillas</div><div class="lgl-kpi-val">${Object.keys(LEGAL_TPL).length}</div><div class="lgl-kpi-sub">disponibles</div></div>
+  </div>`;
+  const filtros = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <div class="lgl-filtros">
+      <input placeholder="Buscar nombre o RUT…" value="${e(st.q)}" oninput="clearTimeout(window._lglQT);window._lglQT=setTimeout(()=>legalSetFiltro('q',this.value),250)">
+      <select onchange="legalSetFiltro('filtroTipo',this.value)"><option value="">Todos los tipos</option>${Object.keys(LEGAL_TPL).map(k => `<option value="${k}" ${st.filtroTipo === k ? 'selected' : ''}>${e(LEGAL_TPL[k].nombre)}</option>`).join('')}</select>
+      <select onchange="legalSetFiltro('filtroEstado',this.value)"><option value="">Todos los estados</option>${LEGAL_FLOW.map(s => `<option value="${s}" ${st.filtroEstado === s ? 'selected' : ''}>${LEGAL_EST[s]}</option>`).join('')}</select>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-faint);">Generado entre <input type="date" value="${e(st.fDesde)}" onchange="legalSetFiltro('fDesde',this.value)"> y <input type="date" value="${e(st.fHasta)}" onchange="legalSetFiltro('fHasta',this.value)"></span>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openLegalGen()">+ Generar documento</button>
+  </div>`;
+  let tabla;
+  if (!docs.length) {
+    tabla = `<div class="alert alert-info"><span class="alert-icon">ℹ</span><div>${legalDocsForProject(project.id).length ? 'Ningún documento con esos filtros.' : 'Aún no hay documentos en este proyecto. Genera el primero desde una plantilla con <strong>+ Generar documento</strong>.'}</div></div>`;
+  } else {
+    tabla = `<div class="cot-card" style="padding:6px 10px;overflow-x:auto;"><table class="lgl-tbl"><thead><tr><th>Documento</th><th>Contraparte</th><th>Estado</th><th>Versión</th><th>Fecha</th><th></th></tr></thead><tbody>${docs.map(d => `<tr>
+      <td><span class="lgl-pill">${e((LEGAL_TPL[d.tipo] || {}).nombre || d.tipo)}</span>${(LEGAL_TPL[d.tipo] || {}).draft ? ' <span style="color:#e0b66a;font-size:10.5px;">· borrador</span>' : ''}</td>
+      <td>${e(d.contraparteNombre || '—')}<div style="font-size:11px;color:var(--ink-faint);">${e(d.rolCalidad || '')}${d.rut ? ' · ' + e(d.rut) : ''}</div></td>
+      <td><span class="lgl-est ${d.estado}">${LEGAL_EST[d.estado]}</span></td>
+      <td style="color:var(--ink-faint);">v${d.version}</td>
+      <td style="color:var(--ink-faint);white-space:nowrap;">${e(d.fechaGeneracion || '')}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="openLegalGenDoc('${d.docId}')">Ver</button>
+        ${d.estado !== 'firmado' ? `<button class="btn btn-secondary btn-sm" onclick="legalAdvance('${d.docId}')">${d.estado === 'generado' ? 'Marcar enviado' : d.estado === 'enviado' ? 'Marcar firmado' : 'Avanzar'}</button>` : ''}
+      </td></tr>`).join('')}</tbody></table></div>
+    <div class="config-hint" style="margin-top:8px;">Cada documento queda archivado en la BD de Legal (transversal) y es trazable por persona: ves quién firmó qué y en qué versión. Ciclo: Borrador → Generado → Enviado → Firmado.</div>`;
+  }
+  return kpi + filtros + tabla;
+}
+
+function legalTplView() {
+  const e = escapeHtml;
+  const cards = Object.keys(LEGAL_TPL).map(k => {
+    const t = LEGAL_TPL[k];
+    return `<div class="lgl-tplcard">
+      <div><div class="nm">${e(t.nombre)}</div><div class="ds">${e(t.desc)}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;white-space:nowrap;">
+        ${t.draft ? '<span class="lgl-est borrador">Borrador · validar con abogado</span>' : '<span class="lgl-est firmado">Validada</span>'}
+        <button class="btn btn-secondary btn-sm" onclick="openLegalGenTpl('${k}')">Ver</button>
+        <button class="btn btn-secondary btn-sm" onclick="legalEditTplWarn()">Editar</button>
+      </div></div>`;
+  }).join('');
+  return `<div class="lgl-lock">🔒 <div>En el futuro, <b>solo un Administrador</b> podrá editar o agregar plantillas legales (cuando exista autenticación por rol). El resto de los usuarios solo las usa para generar documentos.</div></div>
+    ${cards}
+    <button class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="legalEditTplWarn()">+ Agregar plantilla</button>`;
+}
+function legalEditTplWarn() {
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <div class="modal-header"><div class="modal-title">Editar / agregar plantilla</div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
+    <div class="modal-body"><div class="lgl-warn">⚠ <div>Modificar o agregar una plantilla legal es delicado. <b>Eres responsable de que el contenido sea validado por un abogado</b> antes de usarlo en producción. Con backend, esta acción quedará restringida a Administradores.</div></div>
+    <p style="margin:0;color:var(--ink-mut);font-size:12.5px;">En esta versión las plantillas son fijas. El editor de plantillas con variables llega más adelante.</p></div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Entendido</button></div></div></div>`;
+}
+
+/* ── Generador ── */
+function openLegalGen() { const first = legalAllContactNames()[0] || ''; _legalState().gen = { tpl: 'cesion', persName: first, locId: (BD_LOC[0] || {}).locId || '', docId: null, ov: {} }; drawLegalGen(); }
+function openLegalGenTpl(tpl) { const first = legalAllContactNames()[0] || ''; _legalState().gen = { tpl: tpl, persName: first, locId: (BD_LOC[0] || {}).locId || '', docId: null, ov: {} }; drawLegalGen(); }
+function openLegalGenDoc(docId) {
+  const d = BD_LEGAL.find(x => x.docId === docId); if (!d) return;
+  _legalState().gen = { tpl: d.tipo, persName: d.contraparteNombre, locId: d.locacionId || '', docId: docId, ov: Object.assign({}, d.vars || {}) };
+  drawLegalGen();
+}
+function legalGenPickTpl(tpl) { const g = _legalState().gen; g.tpl = tpl; g.ov = {}; drawLegalGen(); }
+function legalGenSetPers(name) { const g = _legalState().gen; g.persName = name; g.ov = {}; drawLegalGen(); }
+function legalGenSetLoc(locId) { const g = _legalState().gen; g.locId = locId; g.ov = {}; drawLegalGen(); }
+function legalGenSetOv(key, value) { const g = _legalState().gen; if (!g.ov) g.ov = {}; g.ov[key] = value; const pv = document.getElementById('lglPreview'); if (pv) pv.innerHTML = legalRenderBody(g, false); }
+
+function drawLegalGen() {
+  const g = _legalState().gen; const t = LEGAL_TPL[g.tpl]; const e = escapeHtml;
+  const tplPick = `<div class="lgl-tplpick">${Object.keys(LEGAL_TPL).map(k => `<button class="lgl-tplbtn ${g.tpl === k ? 'on' : ''}" onclick="legalGenPickTpl('${k}')"><div class="tn">${e(LEGAL_TPL[k].nombre)}</div><div class="td">${e(LEGAL_TPL[k].desc)}</div>${LEGAL_TPL[k].draft ? '<div class="draft">borrador · validar</div>' : '<div class="vald">validada</div>'}</button>`).join('')}</div>`;
+  let contraparte;
+  if (t.target === 'locacion') {
+    const opts = BD_LOC.length ? BD_LOC.map(l => `<option value="${e(l.locId)}" ${g.locId === l.locId ? 'selected' : ''}>${e(l.nombre || l.locId)}</option>`).join('') : '<option value="">(no hay locaciones en la BD)</option>';
+    contraparte = `<div class="lgl-field"><label>Locación (contraparte = dueño) <span class="src bd">BD Locaciones</span></label><select class="input" onchange="legalGenSetLoc(this.value)">${opts}</select></div>`;
+  } else {
+    const _names = legalAllContactNames();
+    const _personaOpts = _names.length ? _names.map(n => `<option value="${e(n)}" ${g.persName === n ? 'selected' : ''}>${e(n)}</option>`).join('') : '<option value="">(no hay personas en la BD)</option>';
+    const _personaExtra = (g.persName && _names.indexOf(g.persName) === -1) ? `<option value="${e(g.persName)}" selected>${e(g.persName)}</option>` : '';
+    contraparte = `<div class="lgl-field"><label>Contraparte <span class="src bd">BD Personas</span></label><select class="input" onchange="legalGenSetPers(this.value)">${_personaOpts}${_personaExtra}</select></div>`;
+  }
+  const body = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:960px;width:96vw;max-height:90vh;overflow:auto;">
+    <div class="modal-header"><div><div class="modal-title">${g.docId ? 'Ver / editar documento' : 'Generar documento'}</div><div style="font-size:12px;color:var(--ink-mut);margin-top:3px;">Plantilla fija · variables autollenadas desde el sistema · exporta a PDF con marca</div></div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
+    <div class="modal-body">
+      ${t.draft ? `<div class="lgl-warn">⚠ <div>Esta plantilla es un <b>borrador redactado por TakeOS</b>. Antes de usarla en producción, valídala con un abogado. El contenido legal es responsabilidad del usuario.</div></div>` : ''}
+      <div class="lgl-gen-grid">
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:7px;">Plantilla</div>
+          ${tplPick}
+          ${contraparte}
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin:12px 0 7px;">Variables</div>
+          ${legalGenFields(g)}
+          <div class="config-hint" style="margin-top:8px;">Las variables se traen del sistema; puedes ajustarlas aquí para este documento sin tocar la fuente.</div>
+        </div>
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:7px;">Vista previa</div>
+          <div class="lgl-paper" id="lglPreview">${legalRenderBody(g, false)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><span class="config-hint" style="margin-right:auto;">Exporta a PDF con identidad de marca · se versiona al generar.</span>
+      <button class="btn btn-secondary" onclick="legalExportPDF()">Exportar PDF</button>
+      <button class="btn btn-primary" onclick="legalDoGenerate()">${g.docId ? 'Guardar nueva versión' : 'Generar'}</button>
+    </div>
+  </div></div>`;
+  document.getElementById('modalRoot').innerHTML = body;
+}
+
+function legalGenFields(g) {
+  const e = escapeHtml; const t = LEGAL_TPL[g.tpl]; const vr = legalVars(g);
+  const fld = (key, label, src, val) => `<div class="lgl-field"><label>${label} <span class="src ${src}">${src === 'bd' ? 'BD' : src === 'pres' ? 'Presupuesto' : src === 'info' ? 'Info Proyecto' : 'Derechos'}</span></label><input class="input" value="${e(val == null ? '' : String(val))}" onchange="legalGenSetOv('${key}', this.value)"></div>`;
+  if (t.target === 'locacion') {
+    return fld('locNombre', 'Locación', 'bd', vr.locNombre) + fld('locDir', 'Dirección', 'bd', vr.locDir) + `<div class="lgl-frow">${fld('duenoNombre', 'Dueño', 'bd', vr.duenoNombre)}${fld('duenoRut', 'RUT dueño', 'bd', vr.duenoRut)}</div>` + fld('proyecto', 'Proyecto', 'info', vr.proyecto);
+  }
+  let f = `<div class="lgl-frow">${fld('nombre', 'Nombre', 'bd', vr.nombre)}${fld('rut', 'RUT', 'bd', vr.rut)}</div>` + fld('dom', 'Domicilio', 'bd', vr.dom);
+  if (g.tpl === 'servicios' || g.tpl === 'cesion') {
+    f += `<div class="lgl-frow">${fld('monto', 'Honorario neto', 'pres', vr.monto != null ? locMoney(vr.monto) : '')}${fld('jornadas', 'Jornadas', 'pres', vr.jornadas)}</div>`;
+    f += `<div class="lgl-frow">${fld('horaExtra', 'Hora extra', 'pres', vr.horaExtra)}${fld('pago', 'Pago a (días)', 'pres', vr.pago)}</div>`;
+  }
+  if (g.tpl === 'cesion') {
+    f += `<div class="lgl-frow">${fld('cliente', 'Cliente', 'info', vr.cliente)}${fld('campaña', 'Campaña', 'info', vr.campaña)}</div>`;
+    f += `<div class="lgl-frow">${fld('tiempo', 'Tiempo derechos', 'der', vr.tiempo)}${fld('plataformas', 'Plataformas', 'der', vr.plataformas)}</div>` + fld('territorio', 'Territorio', 'der', vr.territorio);
+  }
+  if (g.tpl === 'nda') { f += fld('cliente', 'Cliente / proyecto', 'info', (vr.cliente || '') + (vr.proyecto ? ' — ' + vr.proyecto : '')); }
+  if (g.tpl === 'servicios') { f += fld('rol', 'Rol / servicio', 'bd', vr.rol); }
+  return f;
+}
+
+/* Cuerpo del documento. forPrint=true → sin resaltado de variables. */
+function legalRenderBody(g, forPrint) {
+  const R = legalRep(); const e = escapeHtml;
+  const vv = (t) => forPrint ? e(t == null ? '' : String(t)) : `<span class="lgl-v">${e(t == null ? '' : String(t))}</span>`;
+  const vr = legalVars(g);
+  const head = `<div class="logo">▲ ${e(R.marca)}</div>`;
+  const partes = `<p>En ${e(legalHoyLargo())}, entre <b>${e(R.razon)}</b>, RUT N° ${e(R.rutEmp)}, representada por don ${e(R.rep)}, RUT N° ${e(R.rutRep)}, domiciliado en ${e(R.domEmp)}, en adelante <b>${e(R.marca)}</b>, por una parte; y por la otra ${vv(vr.nombre)}, RUT N° ${vv(vr.rut)}, domiciliado en ${vv(vr.dom)}, en adelante "la Contraparte", se ha convenido el siguiente contrato:</p>`;
+  const montoTxt = vr.monto != null && vr.monto !== '' ? (typeof vr.monto === 'number' ? locMoney(vr.monto) + ' neto' : String(vr.monto)) : '$___';
+  const firmasPers = `<div class="firmas"><div class="ln">${e(vr.nombre || '')}<br>RUT: ${e(vr.rut || '')}</div><div class="ln">${e(R.marca)}<br>RUT: ${e(R.rutEmp)}</div></div>`;
+  if (g.tpl === 'cesion') {
+    return head + `<h4>Contrato de prestación de servicios de modelaje publicitario</h4>
+    ${partes}
+    <div class="cl">Primero: Antecedentes</div><p>El Modelo declara que ocasional o esporádicamente desarrolla actividades como modelo publicitario y que no tiene vigentes trabajos similares ni relativos a productos o servicios competitivos.</p>
+    <div class="cl">Segundo: Servicios</div><p>${e(R.marca)} contrata al modelo para prestar servicios profesionales en ${vv(vr.campaña)} para el cliente ${vv(vr.cliente)}, coordinándose con quien ${e(R.marca)} designe, sin relación de subordinación ni dependencia.</p>
+    <div class="cl">Tercero: Honorarios</div><p>${e(R.marca)} pagará al modelo la suma de ${vv(montoTxt)} por ${vv((vr.jornadas || 1) + ' jornada(s)')} de filmación de 10 horas más una de colación. La hora extra tendrá un valor del ${vv(vr.horaExtra || '10%')} del monto contratado. El pago se realizará dentro de ${vv((vr.pago || 60) + ' días')} desde la recepción conforme del documento tributario.</p>
+    <div class="cl">Cuarto: Naturaleza de la relación</div><p>Las partes declaran que el Modelo no es trabajador dependiente de ${e(R.marca)}; presta servicios en calidad de independiente. ${e(R.marca)} actúa como intermediario entre el Modelo y el cliente final.</p>
+    <div class="cl">Quinto · Sexto: Titularidad de derechos</div><p>Las producciones en que participe el Modelo son de propiedad exclusiva del cliente respectivo, con carácter de obra colectiva, con validez solo durante el período del presente contrato (el modelo no puede renunciar a los derechos de su imagen).</p>
+    <div class="cl">Séptimo: Autorización</div><p>El Modelo autoriza expresamente la exhibición del comercial por ${vv(vr.tiempo || '___')} en ${vv(vr.plataformas || '___')} en territorio de ${vv(vr.territorio || '___')}, incluyendo reducciones y versiones, a contar de la salida al aire.</p>
+    <div class="cl">Noveno: Confidencialidad · Décimo: Arbitraje (CCS) · Undécimo: Legislación chilena</div><p>Confidencialidad durante y después del contrato; arbitraje ante la Cámara de Comercio de Santiago; regido por las leyes de Chile. Se firma en tres ejemplares del mismo tenor.</p>
+    ${firmasPers}`;
+  }
+  if (g.tpl === 'servicios') {
+    return head + `<h4>Contrato de prestación de servicios profesionales (borrador)</h4>
+    ${partes}
+    <div class="cl">Primero: Objeto</div><p>${e(R.marca)} contrata a la Contraparte para prestar servicios de ${vv(vr.rol || 'servicios')} en el proyecto ${vv(vr.proyecto)} para el cliente ${vv(vr.cliente)}, en calidad de prestador independiente.</p>
+    <div class="cl">Segundo: Honorarios</div><p>Se pagará la suma de ${vv(montoTxt)} por ${vv((vr.jornadas || 1) + ' jornada(s)')}. Hora extra al ${vv(vr.horaExtra || '150%')}. Pago dentro de ${vv((vr.pago || 30) + ' días')} desde la recepción conforme del documento tributario.</p>
+    <div class="cl">Tercero: Naturaleza de la relación</div><p>No existe vínculo de subordinación ni dependencia. La Contraparte declara conocer y cumplir las disposiciones legales que regulan su actividad.</p>
+    <div class="cl">Cuarto: Propiedad intelectual</div><p>Todo resultado del servicio es de propiedad del cliente respectivo; la Contraparte cede los derechos patrimoniales que correspondan para los fines del proyecto.</p>
+    <div class="cl">Quinto: Confidencialidad · Sexto: Arbitraje (CCS) · Séptimo: Legislación chilena</div><p>Obligación de confidencialidad; arbitraje ante la Cámara de Comercio de Santiago; regido por las leyes de Chile. Se firma en dos ejemplares del mismo tenor.</p>
+    ${firmasPers}`;
+  }
+  if (g.tpl === 'nda') {
+    return head + `<h4>Acuerdo de confidencialidad (borrador)</h4>
+    ${partes}
+    <div class="cl">Primero: Información confidencial</div><p>Toda información técnica, comercial, creativa u operativa relativa al proyecto ${vv(vr.proyecto)} (cliente ${vv(vr.cliente)}) y a ${e(R.marca)}, en cualquier formato.</p>
+    <div class="cl">Segundo: Obligaciones</div><p>La Contraparte se obliga a no divulgar ni utilizar la información salvo para los fines del proyecto, con la misma diligencia con que protege la propia, durante la vigencia y una vez finalizado el acuerdo.</p>
+    <div class="cl">Tercero: Exclusiones · Cuarto: Devolución · Quinto: Plazo</div><p>Se excluye la información de dominio público. Al término, la Contraparte devolverá o destruirá la información. La obligación se mantiene por el plazo que las partes acuerden.</p>
+    <div class="cl">Sexto: Arbitraje (CCS) · Séptimo: Legislación chilena</div><p>Arbitraje ante la Cámara de Comercio de Santiago; regido por las leyes de Chile.</p>
+    ${firmasPers}`;
+  }
+  // arriendo
+  return head + `<h4>Contrato de arriendo de locación (borrador)</h4>
+  <p>En ${e(legalHoyLargo())}, entre ${vv(vr.duenoNombre || '___')}, RUT N° ${vv(vr.duenoRut || '___')}, en adelante "el Arrendador"; y <b>${e(R.razon)}</b>, RUT N° ${e(R.rutEmp)}, en adelante <b>${e(R.marca)}</b>, se conviene:</p>
+  <div class="cl">Primero: Objeto</div><p>El Arrendador da en arriendo el inmueble ubicado en ${vv(vr.locDir || '___')} para su uso como locación de rodaje del proyecto ${vv(vr.proyecto)}.</p>
+  <div class="cl">Segundo: Plazo y horarios</div><p>El uso se acuerda para la(s) fecha(s) y horarios que las partes definan, considerando montaje, rodaje y desmontaje.</p>
+  <div class="cl">Tercero: Condiciones</div><p>${e(R.marca)} se hace cargo de cualquier daño ocasionado y del aseo posterior al rodaje, dejando la locación en igual o mejor estado.</p>
+  <div class="cl">Cuarto: Precio · Quinto: Legislación chilena</div><p>El precio del arriendo será el acordado entre las partes. Regido por las leyes de Chile. Se firma en dos ejemplares.</p>
+  <div class="firmas"><div class="ln">${e(vr.duenoNombre || '')}<br>RUT: ${e(vr.duenoRut || '')}</div><div class="ln">${e(R.marca)}<br>RUT: ${e(R.rutEmp)}</div></div>`;
+}
+
+function legalDoGenerate() {
+  const project = STATE.currentProject; const g = _legalState().gen; if (!g) return;
+  const t = LEGAL_TPL[g.tpl];
+  const vr = legalVars(g);
+  const hoy = new Date().toISOString().slice(0, 10);
+  const monto = (typeof vr.monto === 'number') ? vr.monto : (parseInt(String(vr.monto || '').replace(/\D/g, ''), 10) || null);
+  const vigencia = g.tpl === 'cesion' ? [vr.tiempo, vr.plataformas, vr.territorio].filter(Boolean).join(' · ') : '';
+  if (g.docId) {
+    const d = BD_LEGAL.find(x => x.docId === g.docId);
+    if (d) {
+      if (!Array.isArray(d.historial)) d.historial = [];
+      d.historial.push({ version: d.version, at: d.fechaGeneracion, vars: d.vars });
+      d.version = (d.version || 1) + 1;
+      d.fechaGeneracion = hoy;
+      d.vars = Object.assign({}, g.ov);
+      d.monto = monto; d.vigencia = vigencia;
+      if (t.target === 'persona') { d.contraparteNombre = vr.nombre; d.rut = vr.rut; }
+      markDirty(); autosaveNow(); closeModal(); renderLegal();
+      showToast({ kind: 'success', title: 'Nueva versión guardada', body: 'Documento ' + d.docId + ' · v' + d.version + '.' });
+    }
+    return;
+  }
+  const rec = {
+    docId: nextLegalId(),
+    tipo: g.tpl,
+    plantillaId: g.tpl + (t.draft ? ' (borrador)' : ' (validada)'),
+    proyectoId: project.id,
+    proyectoNombre: (project.data.infoProyecto || {}).nombreProyecto || project.name || '',
+    cliente: (project.data.infoProyecto || {}).cliente || '',
+    estado: 'generado',
+    version: 1,
+    fechaGeneracion: hoy,
+    fechaFirma: '',
+    monto: monto,
+    vigencia: vigencia,
+    responsable: (project.data.infoProyecto || {}).productorEjecutivo || '',
+    pdfUrl: null,
+    vars: Object.assign({}, g.ov)
+  };
+  if (t.target === 'locacion') {
+    rec.locacionId = g.locId; const l = bdLocFind(g.locId) || {};
+    rec.contraparteId = g.locId; rec.contraparteNombre = (vr.duenoNombre || l.nombre || 'Locación'); rec.rut = vr.duenoRut || ''; rec.rolCalidad = 'Dueño de locación';
+  } else {
+    rec.contraparteId = (legalFindContact(g.persName) || {}).id || ''; rec.contraparteNombre = vr.nombre; rec.rut = vr.rut; rec.rolCalidad = vr.calidad;
+  }
+  BD_LEGAL.unshift(rec);
+  markDirty(); autosaveNow(); closeModal(); renderLegal();
+  showToast({ kind: 'success', title: 'Documento generado', body: rec.docId + ' · ' + (LEGAL_TPL[rec.tipo] || {}).nombre + ' · v1 (Generado).' });
+}
+
+function legalAdvance(docId) {
+  const d = BD_LEGAL.find(x => x.docId === docId); if (!d) return;
+  const i = LEGAL_FLOW.indexOf(d.estado);
+  if (i < LEGAL_FLOW.length - 1) { d.estado = LEGAL_FLOW[i + 1]; if (d.estado === 'firmado') d.fechaFirma = new Date().toISOString().slice(0, 10); markDirty(); autosaveNow(); renderLegal(); showToast({ kind: 'info', title: 'Documento actualizado', body: 'Estado: ' + LEGAL_EST[d.estado] + '.' }); }
+}
+
+function legalExportPDF() {
+  const g = _legalState().gen; if (!g) return; const e = escapeHtml;
+  const R = legalRep();
+  const inner = legalRenderBody(g, true);
+  const ip = (STATE.currentProject.data.infoProyecto) || {};
+  const tplNombre = (LEGAL_TPL[g.tpl] || {}).nombre || 'Documento';
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${e(tplNombre)}</title>
+  <style>@page{size:A4;margin:20mm;} *{box-sizing:border-box;} body{font-family:Georgia,'Times New Roman',serif;color:#1a1a17;margin:0;font-size:12.5px;line-height:1.65;}
+  .logo{font-family:-apple-system,'Segoe UI',Arial,sans-serif;font-weight:800;letter-spacing:.04em;font-size:17px;color:#161410;margin-bottom:18px;}
+  h4{font-size:14px;text-align:center;text-transform:uppercase;letter-spacing:.03em;margin:0 0 16px;}
+  .cl{font-weight:700;margin-top:13px;} p{margin:6px 0;text-align:justify;}
+  .firmas{display:flex;justify-content:space-around;margin-top:48px;text-align:center;font-family:-apple-system,'Segoe UI',Arial,sans-serif;font-size:11px;}
+  .firmas .ln{border-top:1px solid #222;padding-top:6px;width:44%;}
+  .foot{margin-top:26px;font-size:9.5px;color:#888;font-family:-apple-system,'Segoe UI',Arial,sans-serif;border-top:1px solid #ccc;padding-top:8px;display:flex;justify-content:space-between;}</style></head>
+  <body>${inner}
+  <div class="foot"><span>${e(R.marca)} · ${e(ip.nombreProyecto || '')}${ip.cliente ? ' · ' + e(ip.cliente) : ''}</span><span>${e(new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }))}</span></div>
+  </body></html>`;
+  printViaIframe(html, tplNombre + (g.docId ? ' - ' + g.docId : ''));
 }
 
 function renderHojaLlamado() {
@@ -10688,34 +11980,19 @@ function renderHojaLlamado() {
         </div>
       </div>
 
-      <!-- LOCACIONES (nivel proyecto) -->
+      <!-- LOCACIONES (V8.2: gestionadas en el módulo Locaciones) -->
       <div class="hl-block">
         <div class="hl-block-title">Locaciones
-          <button class="hl-add-inline" onclick="addLocacion()">+ Agregar locación</button>
+          <button class="hl-add-inline" onclick="navigateToModule('locaciones')">Gestionar en Locaciones →</button>
         </div>
-        ${hl.locaciones.length === 0 ? `
-          <div class="hl-empty">Sin locaciones. Agrega al menos una para poder asignarla a las citaciones.</div>
-        ` : `
-          <div style="overflow-x: auto;">
-            <table class="data-table hl-loc-table">
-              <thead>
-                <tr><th style="width:80px;">ID</th><th>Nombre</th><th>Dirección</th><th>Google Maps</th><th>Notas</th><th style="width:40px;"></th></tr>
-              </thead>
-              <tbody>
-                ${hl.locaciones.map((l, idx) => `
-                  <tr>
-                    <td><span class="dia-id-badge">${escapeHtml(l.id)}</span></td>
-                    <td><input class="cell-input" value="${escapeHtml(l.nombre || '')}" placeholder="Nombre" onchange="updateLocacionField(${idx}, 'nombre', this.value); renderHojaLlamado();"></td>
-                    <td><input class="cell-input" value="${escapeHtml(l.direccion || '')}" placeholder="Dirección exacta" onchange="updateLocacionField(${idx}, 'direccion', this.value);"></td>
-                    <td><input class="cell-input" value="${escapeHtml(l.maps || '')}" placeholder="Link" onchange="updateLocacionField(${idx}, 'maps', this.value);"></td>
-                    <td><input class="cell-input" value="${escapeHtml(l.notas || '')}" placeholder="Acceso, estacionamiento, seguridad…" onchange="updateLocacionField(${idx}, 'notas', this.value);"></td>
-                    <td><button class="row-delete" title="Eliminar locación" onclick="deleteLocacion(${idx})">×</button></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `}
+        ${(() => {
+          const confs = projLocConfirmadas(project);
+          if (!confs.length) {
+            const total = projLocList(project).length;
+            return `<div class="hl-empty">${total ? 'Hay locaciones en el proyecto, pero ninguna está <strong>Confirmada</strong>. Solo las confirmadas se pueden asignar a las citaciones.' : 'Sin locaciones confirmadas.'} Gestiónalas en el módulo <strong>Locaciones</strong>.</div>`;
+          }
+          return `<div style="overflow-x:auto;"><table class="data-table hl-loc-table"><thead><tr><th style="width:80px;">ID</th><th>Nombre</th><th>Dirección</th><th>Comuna</th></tr></thead><tbody>${confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<tr><td><span class="dia-id-badge">${escapeHtml(u.locId)}</span></td><td>${escapeHtml(l.nombre || 'sin nombre')}</td><td>${escapeHtml(l.direccion || '—')}</td><td>${escapeHtml(l.comuna || '—')}</td></tr>`; }).join('')}</tbody></table></div><div class="config-hint" style="margin-top:6px;">Solo lectura. Las locaciones (datos, fotos, estado) se editan en el módulo <strong>Locaciones</strong>. Aquí se asignan a cada citación abajo.</div>`;
+        })()}
       </div>
 
       <!-- CITACIONES CREW (auto desde Presupuesto) -->
@@ -10873,11 +12150,14 @@ function deleteLocacion(idx) {
    versión y sella el timestamp. Solo se incluyen las personas CITADAS. */
 
 function resolveLocName(project, locacionId) {
-  const locs = project.data.hojaLlamado.locaciones;
-  if (!locs.length) return 'Llamado General';
-  const eff = locacionId || locs[0].id;
-  const l = locs.find(x => x.id === eff);
-  return l ? `${l.id} · ${l.nombre || 'sin nombre'}` : (locacionId || '—');
+  // V8.2: resuelve contra las locaciones CONFIRMADAS del proyecto (BD_LOC).
+  ensureProjectLoc(project);
+  const confs = projLocConfirmadas(project);
+  if (!confs.length) return 'Llamado General';
+  const ids = confs.map(u => u.locId);
+  const eff = (locacionId && ids.indexOf(locacionId) !== -1) ? locacionId : ids[0];
+  const l = bdLocFind(eff);
+  return l ? `${eff} · ${l.nombre || 'sin nombre'}` : (locacionId || '—');
 }
 
 function buildHojaLlamadoPrintHTML(project, sel) {
@@ -10892,6 +12172,29 @@ function buildHojaLlamadoPrintHTML(project, sel) {
   const fecha = rodaje.fecha ? fmtFechaLarga(rodaje.fecha) : '';
 
   const igRow = (label, val) => val ? `<div class="ig"><span class="k">${e(label)}</span><span class="v">${e(val)}</span></div>` : '';
+
+  // V8.1.1 (#3): los campos vacíos NO aparecen (sin "No aplica", "N/A" ni "—").
+  // Si un bloque completo queda sin datos, se oculta junto a su encabezado.
+  const infoGeneralRows = [
+    igRow('Cliente', ip.cliente),
+    igRow('Agencia', ip.agencia),
+    igRow('Productora', ip.productora),
+    igRow('Productor(a) Ejecutivo(a)', ip.productorEjecutivo),
+    igRow('Director(a)', ip.director),
+    igRow('Jefe de Producción', ip.jefeProduccion),
+    igRow('Contacto Cliente', ip.contactoCliente),
+    igRow('Contacto Agencia', ip.contactoAgencia)
+  ].join('');
+  const horariosRows = [
+    igRow('Llamado general', ig.llamadoGeneral),
+    igRow('Almuerzo', ig.almuerzo),
+    igRow('Amanecer', ig.amanecer),
+    igRow('Atardecer', ig.atardecer),
+    igRow('Wrap cámara', ig.wrapCamara),
+    igRow('Wrap locación', ig.wrapLocacion),
+    igRow('Hospital cercano', ig.hospital),
+    igRow('Clima', ig.clima)
+  ].join('');
 
   // Crew: solo citados
   const crew = getConfirmedCrew(project).filter(c => isCrewPresente(dia, c.nombre));
@@ -10921,11 +12224,14 @@ function buildHojaLlamadoPrintHTML(project, sel) {
   const mapsHref = (l) => l.maps && l.maps.trim()
     ? l.maps.trim()
     : (l.direccion ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(l.direccion) : '');
-  const locRows = hl.locaciones.map(l => `<tr>
-      <td><strong>${e(l.id)}</strong></td>
+  // V8.2: las locaciones del PDF salen de las CONFIRMADAS del proyecto (BD_LOC).
+  ensureProjectLoc(project);
+  const _printLocs = projLocConfirmadas(project).map(u => Object.assign({ _proy: u }, bdLocFind(u.locId) || {}));
+  const locRows = _printLocs.map(l => `<tr>
+      <td><strong>${e(l.locId)}</strong></td>
       <td>${e(l.nombre || '—')}</td>
-      <td>${l.direccion ? `<a href="${e(mapsHref(l))}" class="maplink">${e(l.direccion)}</a>` : '—'}</td>
-      <td>${e(l.notas || '')}</td>
+      <td>${l.direccion ? `<a href="${e(mapsHref(l))}" class="maplink">${e([l.direccion, l.comuna].filter(Boolean).join(', '))}</a>` : '—'}</td>
+      <td>${e(((l._proy && l._proy.notasProy) || l.notas || ''))}</td>
     </tr>`).join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>CALL SHEET · ${e(ip.nombreProyecto || project.name || '')} · ${e(rodaje.diaId)} · ${e(verLabel)}</title>
@@ -10967,31 +12273,13 @@ function buildHojaLlamadoPrintHTML(project, sel) {
       </div>
     </div>
 
-    <h2>Información general</h2>
-    <div class="info">
-      ${igRow('Cliente', ip.cliente || '—')}
-      ${igRow('Agencia', ip.agencia || 'No aplica')}
-      ${igRow('Productora', ip.productora || 'Primate Films')}
-      ${igRow('Productor(a) Ejecutivo(a)', ip.productorEjecutivo || '—')}
-      ${igRow('Director(a)', ip.director || '—')}
-      ${igRow('Jefe de Producción', ip.jefeProduccion || '—')}
-      ${igRow('Contacto Cliente', ip.contactoCliente || '—')}
-      ${igRow('Contacto Agencia', ip.contactoAgencia)}
-    </div>
+    ${infoGeneralRows ? `<h2>Información general</h2>
+    <div class="info">${infoGeneralRows}</div>` : ''}
 
-    <h2>Horarios y referencias del día</h2>
-    <div class="info">
-      ${igRow('Llamado general', ig.llamadoGeneral)}
-      ${igRow('Almuerzo', ig.almuerzo)}
-      ${igRow('Amanecer', ig.amanecer)}
-      ${igRow('Atardecer', ig.atardecer)}
-      ${igRow('Wrap cámara', ig.wrapCamara)}
-      ${igRow('Wrap locación', ig.wrapLocacion)}
-      ${igRow('Hospital cercano', ig.hospital)}
-      ${igRow('Clima', ig.clima)}
-    </div>
+    ${horariosRows ? `<h2>Horarios y referencias del día</h2>
+    <div class="info">${horariosRows}</div>` : ''}
 
-    ${hl.locaciones.length ? `<h2>Locaciones</h2>
+    ${_printLocs.length ? `<h2>Locaciones</h2>
     <table><thead><tr><th style="width:60px;">ID</th><th>Nombre</th><th>Dirección</th><th>Notas</th></tr></thead>
     <tbody>${locRows}</tbody></table>` : ''}
 
@@ -11033,11 +12321,82 @@ function printViaIframe(html, docTitle) {
   }, 300);
 }
 
+/* ─── V8.1 (#1): VERSIONADO DE HOJA DE LLAMADO POR CAMBIO REAL ───────
+   La versión de un día solo avanza cuando cambió algo que el documento
+   refleja: datos del día (info general, citaciones, overrides de crew),
+   locaciones del proyecto, el crew confirmado (que sale del Presupuesto y
+   la BD) o los datos de proyecto/rodaje. Si no cambió nada, re-exportar
+   mantiene la versión (no se inflan versiones por reimprimir lo mismo). */
+function _hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) + h) + s.charCodeAt(i); h |= 0; }
+  return (h >>> 0).toString(36);
+}
+function _callSheetSignature(project, diaId) {
+  const d = project.data;
+  ensureProjectLoc(project);   // V8.2: garantizar migración antes de firmar
+  const hl = d.hojaLlamado || {};
+  const dia = (hl.dias && hl.dias[diaId]) || {};
+  const ip = d.infoProyecto || {};
+  const rodaje = (d.rodajes || []).find(r => r.diaId === diaId) || null;
+  const sig = {
+    diaId: diaId,
+    infoGeneral: dia.infoGeneral || null,
+    citacionesExternas: dia.citacionesExternas || [],
+    crewOverrides: dia.crewOverrides || {},
+    // V8.2: la firma usa las locaciones CONFIRMADAS del proyecto (BD_LOC + uso),
+    // para que un cambio de locación siga avanzando la versión tras la migración.
+    locaciones: projLocConfirmadas(project).map(u => { const l = bdLocFind(u.locId) || {}; return { locId: u.locId, nombre: l.nombre, direccion: l.direccion, comuna: l.comuna, maps: l.maps, costo: u.costo, contratacion: u.contratacion, notasProy: u.notasProy }; }),
+    crew: getCrewForExport(project),   // captura cambios de Crew, Presupuesto y BD
+    rodaje: rodaje ? { fecha: rodaje.fecha, descripcion: rodaje.descripcion, activo: rodaje.activo } : null,
+    ip: {
+      cliente: ip.cliente, agencia: ip.agencia, nombreProyecto: ip.nombreProyecto, productora: ip.productora,
+      contactoCliente: ip.contactoCliente, mailContactoCliente: ip.mailContactoCliente, telefonoContactoCliente: ip.telefonoContactoCliente,
+      contactoAgencia: ip.contactoAgencia, mailContactoAgencia: ip.mailContactoAgencia, telefonoContactoAgencia: ip.telefonoContactoAgencia,
+      productorEjecutivo: ip.productorEjecutivo, director: ip.director, jefeProduccion: ip.jefeProduccion
+    }
+  };
+  return _hashStr(JSON.stringify(sig));
+}
+
 function exportHojaLlamadoPDF() {
+  // V8.2 (#1): advertencia NO bloqueante si faltan datos clave (mismo patrón
+  // visual que el Plan de Rodaje). Solo advierte; nunca impide exportar.
+  const sel = STATE.ui.hojaDiaSel;
+  const project = STATE.currentProject;
+  const ip = project.data.infoProyecto || {};
+  const dia = ensureHojaDia(sel);
+  const ig = dia.infoGeneral || {};
+  const v = x => (x == null ? '' : String(x)).trim();
+  const faltan = [];
+  if (!v(ip.productorEjecutivo)) faltan.push('Productor Ejecutivo (PE)');
+  if (!v(ip.director)) faltan.push('Director');
+  if (!v(ip.jefeProduccion)) faltan.push('Jefe de Producción');
+  if (!v(ip.cliente)) faltan.push('Cliente');
+  if (!v(ip.productora)) faltan.push('Productora');
+  if (!v(ig.llamadoGeneral)) faltan.push('Llamado General');
+  if (!v(ig.hospital)) faltan.push('Hospital Cercano');
+  if (faltan.length) { _hlExportConfirm(faltan); return; }
+  _hlDoExportPDF();
+}
+function _hlExportConfirm(faltan) {
+  const items = faltan.map(f => `<li style="margin:4px 0;"><strong>${escapeHtml(f)}</strong></li>`).join('');
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:470px;"><div class="modal-header"><div class="modal-title">Faltan datos de la Hoja de Llamado</div></div><div class="modal-body"><p style="margin:0 0 10px;">Antes de exportar conviene completar:</p><ul style="margin:0 0 6px 18px;padding:0;">${items}</ul><p style="margin:10px 0 0;color:var(--ink-faint);font-size:12.5px;">Puedes corregirlos primero o exportar igual (no es obligatorio).</p></div><div class="modal-footer"><button class="btn" onclick="closeModal()">Corregir</button><button class="btn btn-primary" onclick="closeModal(); _hlDoExportPDF();">Exportar de todas formas</button></div></div></div>`;
+}
+function _hlDoExportPDF() {
   const sel = STATE.ui.hojaDiaSel;
   const project = STATE.currentProject;
   const dia = ensureHojaDia(sel);
-  dia.version = (dia.version || 0) + 1;
+
+  // V8.1 (#1): solo avanza la versión si el contenido del documento cambió
+  // respecto a la última exportación (o si nunca se ha exportado).
+  const newSig = _callSheetSignature(project, sel);
+  const changed = (dia.exportHash !== newSig) || !((dia.version || 0) > 0);
+  if (changed) {
+    dia.version = (dia.version || 0) + 1;
+    dia.exportHash = newSig;
+  }
+
   const stamp = new Date().toLocaleString('es-CL', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
@@ -11056,7 +12415,9 @@ function exportHojaLlamadoPDF() {
   showToast({
     kind: 'success',
     title: `Hoja de Llamado · V.${dia.version}`,
-    body: `Se abrió el diálogo de impresión. Elige <strong>“Guardar como PDF”</strong> como destino. La versión avanzó a V.${dia.version} (sellada ${escapeHtml(stamp)}).`
+    body: changed
+      ? `Se abrió el diálogo de impresión. Elige <strong>“Guardar como PDF”</strong> como destino. La versión avanzó a V.${dia.version} (sellada ${escapeHtml(stamp)}).`
+      : `Se abrió el diálogo de impresión. <strong>Sin cambios</strong> desde la última versión: se mantiene en V.${dia.version}.`
   });
 }
 
@@ -11106,7 +12467,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
   const di = prDiaInfo(project, diaId);
   const hd = ((project.data.hojaLlamado || {}).dias || {})[diaId]; const ig = (hd && hd.infoGeneral) ? hd.infoGeneral : {};
   const cols = prActiveCols(project);
-  const times = prComputeTimes(plan.filas, prStartMin(project, diaId));
+  const times = prComputeTimes(plan.filas, prEffectiveStartMin(project, diaId, plan));
   const span = prSpanDia(plan.filas, times);
   const head = `<tr>${cols.map(c => `<th>${c.key === 'dur' ? 'Dur.' : e(c.label)}</th>`).join('')}</tr>`;
   const body = plan.filas.map((f, i) => _prPdfRow(f, cols, times[i])).join('');
@@ -11185,7 +12546,7 @@ function exportPlanRodajePDF() {
   const di = prDiaInfo(project, STATE.prDiaSel);
   const ig = (((project.data.hojaLlamado || {}).dias || {})[STATE.prDiaSel] || {}).infoGeneral || {};
   const faltan = [];
-  if (!ig.llamadoGeneral) faltan.push('Llamado general (en Hoja de Llamado)');
+  if (!ig.llamadoGeneral && !plan.horaInicio) faltan.push('Hora de inicio (Llamado general en Hoja de Llamado, o "Inicio del 1.er plano")');
   if (!di.r.fecha) faltan.push('Fecha del día (en Rodajes)');
   if (!(dd.header.locacion || '').trim()) faltan.push('Locación / base');
   if (!(dd.header.responsable || '').trim()) faltan.push('Responsable del plan (AD)');
@@ -11721,89 +13082,241 @@ function openGlobalBDPersonas() {
 
 /* ─── INGRESO MANUAL DE EMERGENCIA EN BD ───────────────────────────── */
 
-function openAddPersonaQuick() {
+/* ════════════════════════════════════════════════════════════════════
+   V8.1 (#6 y #7) · FORMULARIO COMPLETO DE PERSONAS (CREAR / EDITAR)
+   ════════════════════════════════════════════════════════════════════
+   Cubre TODO el esquema canónico de un contacto (identidad, roles,
+   empresa, ubicación, datos de pago y perfil de talento). Escribe al
+   modelo canónico BD_CONTACTOS y re-sincroniza las proyecciones.
+   - Crear: botón "+ Nueva persona".
+   - Editar: botón ✎ de la ficha, SOLO con Modo Administrador activo (#7).
+   ════════════════════════════════════════════════════════════════════ */
+const PF_ROLES = ['Crew', 'Interno', 'Talento', 'Contacto cliente', 'Proveedor individual'];
+
+/* Wrapper de compatibilidad: el botón "+ Nueva persona" sigue llamando esto. */
+function openAddPersonaQuick() { openPersonaForm('create', null); }
+/* V8.2 (#2): desde Crew, las advertencias "Sin BD"/"Agregar a BD" abren el
+   formulario de Nueva persona con el nombre ya rellenado. */
+function crewAddToBD(nombre) { openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre || ''; el.focus(); } }
+
+/* Apertura de edición con gate de Modo Administrador (#7). */
+function requestEditPersona(contactId) {
+  if (!STATE.adminMode) {
+    showModal({
+      title: 'Editar persona requiere Modo administrador',
+      body: 'Modificar un registro de la Base de Datos puede afectar a todos los proyectos que lo referencian.<br><br>Activa <strong>Modo administrador</strong> en la barra superior para habilitar la edición. El sistema de permisos formal llega en una versión futura.',
+      confirmLabel: 'Entendido',
+      cancelLabel: null
+    });
+    return;
+  }
+  openPersonaForm('edit', contactId);
+}
+
+function _pfField(label, id, value, opts) {
+  opts = opts || {};
+  const ph = opts.placeholder ? ` placeholder="${escapeHtml(opts.placeholder)}"` : '';
+  const span = opts.span ? ` style="grid-column: span ${opts.span};"` : '';
+  const type = opts.type || 'text';
+  return `<div class="field"${span}>
+    <label class="field-label">${escapeHtml(label)}</label>
+    <input class="input" type="${type}" id="${id}" value="${escapeHtml(value || '')}"${ph}>
+  </div>`;
+}
+function _pfHeader(t) {
+  return `<div style="grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-secondary); font-weight: 700; border-bottom: 1px solid var(--rule); padding-bottom: 4px; margin-top: 6px;">${escapeHtml(t)}</div>`;
+}
+
+function openPersonaForm(mode, contactId) {
+  const isEdit = mode === 'edit';
+  const src = (isEdit && BD_CONTACTOS[contactId]) ? BD_CONTACTOS[contactId] : {};
+  const roles = Array.isArray(src.roles) && src.roles.length ? src.roles : (isEdit ? [] : ['Crew']);
+  const pago = src.perfilPago || {};
+  const tal = src.perfilTalento || {};
+
+  const empOptions = `<option value="">— Ninguna —</option>` + Object.keys(BD_EMPRESAS).sort().map(name => {
+    const eid = BD_EMPRESAS[name]._id;
+    return `<option value="${escapeHtml(eid)}" ${src.empresaId === eid ? 'selected' : ''}>${escapeHtml(name)}</option>`;
+  }).join('');
+
+  const rolesHTML = PF_ROLES.map(r => `
+    <label style="display: inline-flex; align-items: center; gap: 5px; margin-right: 16px; font-size: 13px; white-space: nowrap;">
+      <input type="checkbox" class="pf-role" value="${escapeHtml(r)}" ${roles.indexOf(r) !== -1 ? 'checked' : ''} ${r === 'Talento' ? 'onchange="togglePfTalento()"' : ''}> ${escapeHtml(r)}
+    </label>`).join('');
+
+  const dteHTML = `<select class="select" id="pf_dte">
+    <option value="">—</option>
+    ${DTE_OPTIONS.map(o => `<option value="${o.value}" ${pago.dteHabitual === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+  </select>`;
+
+  const talHidden = roles.indexOf('Talento') !== -1 ? '' : 'display: none;';
+
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-backdrop" onclick="closeModal()">
-      <div class="modal" onclick="event.stopPropagation()" style="max-width: 540px;">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 640px;">
         <div class="modal-header">
-          <div class="modal-title">Nueva persona — ingreso rápido</div>
-          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Fallback operacional (PRD V2 §10 + feedback Agustín). El formulario completo con validación de RUT y duplicados vendrá en V6.</div>
+          <div class="modal-title">${isEdit ? 'Editar persona' : 'Nueva persona'}</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">${isEdit ? 'Editas el registro de la Base de Datos. Los cambios se reflejan en todos los proyectos que lo usan.' : 'Ficha completa. Solo el nombre es obligatorio; el resto puedes completarlo cuando lo tengas.'}</div>
         </div>
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="field">
-              <label class="field-label">Nombre completo *</label>
-              <input class="input" id="qa_nombre" placeholder="Nombre y apellido">
+        <div class="modal-body" style="max-height: 68vh; overflow: auto;">
+          <div class="form-grid cols-2">
+            ${_pfHeader('Identidad')}
+            ${_pfField('Nombre completo *', 'pf_nombre', src.nombre, { placeholder: 'Nombre y apellido', span: 2 })}
+            ${_pfField('RUT', 'pf_rut', src.rut, { placeholder: '12.345.678-9' })}
+            ${_pfField('Teléfono', 'pf_tel', src.telefono, { placeholder: '+56 9 …' })}
+            ${_pfField('Email', 'pf_email', src.email, { placeholder: 'correo@dominio.cl', type: 'email', span: 2 })}
+
+            ${_pfHeader('Clasificación')}
+            <div class="field" style="grid-column: 1 / -1;">
+              <label class="field-label">Roles</label>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px 0; padding: 4px 0;">${rolesHTML}</div>
             </div>
-            <div class="field">
-              <label class="field-label">Rol habitual</label>
-              <input class="input" id="qa_rol" placeholder="Ej: Gaffer, Vestuarista…">
-            </div>
-            <div class="field">
-              <label class="field-label">Mail</label>
-              <input class="input" type="email" id="qa_mail" placeholder="—">
-            </div>
-            <div class="field">
-              <label class="field-label">Teléfono</label>
-              <input class="input" id="qa_tel" placeholder="+56 …">
-            </div>
+            ${_pfField('Rol habitual', 'pf_rolHabitual', src.rolHabitual, { placeholder: 'Ej: Gaffer, Directora de Arte…' })}
             <div class="field">
               <label class="field-label">DTE habitual</label>
-              <select class="select" id="qa_dte">
-                <option value="">—</option>
-                ${DTE_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
-              </select>
+              ${dteHTML}
             </div>
+
+            ${_pfHeader('Empresa')}
             <div class="field">
-              <label class="field-label">RUT</label>
-              <input class="input" id="qa_rut" placeholder="12.345.678-9">
+              <label class="field-label">Empresa asociada</label>
+              <select class="select" id="pf_empresa">${empOptions}</select>
+            </div>
+            ${_pfField('Relación con la empresa', 'pf_relacionEmpresa', src.relacionEmpresa, { placeholder: 'Ej: Contacto, Empleado, Proveedor' })}
+
+            ${_pfHeader('Ubicación')}
+            ${_pfField('Dirección', 'pf_direccion', src.direccion, { placeholder: 'Calle y número', span: 2 })}
+            ${_pfField('Dirección (línea 2)', 'pf_direccionLinea2', src.direccionLinea2, { placeholder: 'Depto, block, referencia', span: 2 })}
+            ${_pfField('Comuna', 'pf_comuna', src.comuna)}
+            ${_pfField('Ciudad', 'pf_ciudad', src.ciudad)}
+
+            ${_pfHeader('Otros datos')}
+            ${_pfField('Restricción alimentaria', 'pf_restriccion', src.restriccion, { placeholder: 'Ninguna / Vegetariano / Sin gluten…' })}
+            ${_pfField('Cumpleaños', 'pf_cumpleanos', src.cumpleanos, { placeholder: 'DD-MM-AAAA' })}
+            <div class="field" style="grid-column: 1 / -1;">
+              <label class="field-label">Notas</label>
+              <textarea class="input" id="pf_notas" rows="2" style="width: 100%; resize: vertical;" placeholder="Notas internas">${escapeHtml(src.notas || '')}</textarea>
+            </div>
+
+            ${_pfHeader('Datos de pago')}
+            <div class="field">
+              <label class="field-label">Banco</label>
+              <input class="input" id="pf_banco" value="${escapeHtml(pago.banco || '')}" placeholder="Ej: Banco Santander"
+                     onchange="var c=_codigoBancoSBIF(this.value); if(c){document.getElementById('pf_codigoBanco').value=c;}">
+            </div>
+            ${_pfField('Código banco', 'pf_codigoBanco', pago.codigoBanco, { placeholder: 'SBIF (ej: 037)' })}
+            ${_pfField('Tipo de cuenta', 'pf_tipoCuenta', pago.tipoCuenta, { placeholder: 'Cuenta Corriente / Vista / RUT' })}
+            ${_pfField('N° de cuenta', 'pf_nCuenta', pago.nCuenta, { placeholder: 'Número de cuenta' })}
+
+            <div id="pf_talento_section" style="${talHidden} grid-column: 1 / -1;">
+              <div class="form-grid cols-2">
+                ${_pfHeader('Perfil de talento')}
+                ${_pfField('Género', 'pf_genero', tal.genero)}
+                ${_pfField('Edad', 'pf_edad', tal.edad)}
+                ${_pfField('Altura', 'pf_altura', tal.altura, { placeholder: 'Ej: 1,75 m' })}
+                ${_pfField('Apariencia étnica', 'pf_apariencia', tal.apariencia)}
+                ${_pfField('Áreas de interés', 'pf_areas', tal.areas, { span: 2 })}
+                ${_pfField('Talla polera', 'pf_tallaPolera', tal.tallaPolera)}
+                ${_pfField('Talla pantalón', 'pf_tallaPantalon', tal.tallaPantalon)}
+                ${_pfField('Talla calzado', 'pf_tallaCalzado', tal.tallaCalzado)}
+                ${_pfField('Fotos (link)', 'pf_fotosLink', tal.fotosLink, { placeholder: 'Drive / Dropbox', span: 2 })}
+                ${_pfField('Reel (link)', 'pf_reelLink', tal.reelLink, { placeholder: 'Vimeo / YouTube', span: 2 })}
+              </div>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn" onclick="closeModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="submitAddPersonaQuick()">Guardar persona</button>
+          <button class="btn btn-primary" onclick="submitPersonaForm('${mode}', ${isEdit ? `'${escapeHtml(contactId)}'` : 'null'})">${isEdit ? 'Guardar cambios' : 'Crear persona'}</button>
         </div>
       </div>
     </div>
   `;
+  setTimeout(() => { const n = document.getElementById('pf_nombre'); if (n && !isEdit) n.focus(); }, 50);
 }
 
-function submitAddPersonaQuick() {
-  const nombre = document.getElementById('qa_nombre').value.trim();
+function togglePfTalento() {
+  const talentoCb = Array.from(document.querySelectorAll('.pf-role')).find(c => c.value === 'Talento');
+  const sec = document.getElementById('pf_talento_section');
+  if (sec) sec.style.display = (talentoCb && talentoCb.checked) ? '' : 'none';
+}
+
+function submitPersonaForm(mode, contactId) {
+  const isEdit = mode === 'edit';
+  const val = id => (document.getElementById(id) || {}).value || '';
+  const nombre = val('pf_nombre').trim();
   if (!nombre) {
     showToast({ kind: 'warning', title: 'Falta el nombre', body: 'El nombre completo es obligatorio.' });
     return;
   }
-  if (BD_PERSONAS[nombre]) {
-    showToast({ kind: 'warning', title: 'Persona ya existe', body: `${nombre} ya está en la BD. Si necesitas modificarla, edítala desde la BD (próximamente).` });
+  // En creación, evitamos un duplicado exacto de nombre (las proyecciones
+  // de la UI son por nombre). En edición se permite mantener/cambiar el nombre.
+  if (!isEdit && BD_PERSONAS[nombre]) {
+    showToast({ kind: 'warning', title: 'Persona ya existe', body: `${nombre} ya está en la BD. Ábrela y usa el botón Editar (con Modo administrador) para modificarla.` });
     return;
   }
-  // V7.3: escribir al modelo canónico de Contactos (la UI se refresca vía proyección).
-  const _email = document.getElementById('qa_mail').value.trim();
-  const _dte = document.getElementById('qa_dte').value || '';
-  const _id = _genId('ctk', BD_CONTACTOS);
-  BD_CONTACTOS[_id] = {
-    id: _id, nombre,
-    rut: document.getElementById('qa_rut').value.trim(),
-    email: _email, telefono: document.getElementById('qa_tel').value.trim(),
-    roles: ['Crew'], rolHabitual: document.getElementById('qa_rol').value.trim(),
-    empresaId: '', relacionEmpresa: '',
-    direccion: '', direccionLinea2: '', comuna: '', ciudad: '',
-    restriccion: 'Ninguna', cumpleanos: '', notas: '',
-    perfilPago: _buildPerfilPago({ tipoDTE: _dte ? (DTE_LABEL[_dte] || _dte) : '', dteHabitual: _dte || null }),
-    perfilTalento: null
+
+  const roles = Array.from(document.querySelectorAll('.pf-role')).filter(c => c.checked).map(c => c.value);
+  if (!roles.length) roles.push('Crew');
+  const dte = val('pf_dte');
+
+  const perfilPago = _buildPerfilPago({
+    banco: val('pf_banco').trim(),
+    codigoBanco: val('pf_codigoBanco').trim(),
+    tipoCuenta: val('pf_tipoCuenta').trim(),
+    nCuenta: val('pf_nCuenta').trim(),
+    tipoDTE: dte ? (DTE_LABEL[dte] || dte) : '',
+    dteHabitual: dte || null
+  });
+
+  let perfilTalento = null;
+  if (roles.indexOf('Talento') !== -1) {
+    perfilTalento = _buildPerfilTalento({
+      genero: val('pf_genero').trim(), edad: val('pf_edad').trim(), altura: val('pf_altura').trim(),
+      apariencia: val('pf_apariencia').trim(), areas: val('pf_areas').trim(),
+      tallaPolera: val('pf_tallaPolera').trim(), tallaPantalon: val('pf_tallaPantalon').trim(),
+      tallaCalzado: val('pf_tallaCalzado').trim(), fotosLink: val('pf_fotosLink').trim(), reelLink: val('pf_reelLink').trim()
+    });
+  }
+
+  const base = {
+    nombre: nombre,
+    rut: val('pf_rut').trim(),
+    email: val('pf_email').trim(),
+    telefono: val('pf_tel').trim(),
+    roles: roles,
+    rolHabitual: val('pf_rolHabitual').trim(),
+    empresaId: val('pf_empresa'),
+    relacionEmpresa: val('pf_relacionEmpresa').trim(),
+    direccion: val('pf_direccion').trim(),
+    direccionLinea2: val('pf_direccionLinea2').trim(),
+    comuna: val('pf_comuna').trim(),
+    ciudad: val('pf_ciudad').trim(),
+    restriccion: val('pf_restriccion').trim() || 'Ninguna',
+    cumpleanos: val('pf_cumpleanos').trim(),
+    notas: val('pf_notas').trim(),
+    perfilPago: perfilPago,
+    perfilTalento: perfilTalento
   };
+
+  if (isEdit && BD_CONTACTOS[contactId]) {
+    base.id = contactId;
+    BD_CONTACTOS[contactId] = base;
+  } else {
+    const _id = _genId('ctk', BD_CONTACTOS);
+    base.id = _id;
+    BD_CONTACTOS[_id] = base;
+  }
   syncLegacyFromContactos();
   autosaveNow();
   closeModal();
+  STATE.ui.bdExpanded = nombre;
   showToast({
     kind: 'success',
-    title: 'Persona agregada',
-    body: `${nombre} fue ingresado a la base de datos.`
+    title: isEdit ? 'Persona actualizada' : 'Persona agregada',
+    body: `${nombre} ${isEdit ? 'fue actualizada' : 'fue ingresada'} en la base de datos.`
   });
-  // Si estamos viendo BD Personas, refrescar
   if (STATE.currentModule === 'bd-personas') {
     renderBDPersonas();
   }
@@ -12559,6 +14072,10 @@ function buildSaveObject() {
     // V7.3: modelo canónico unificado (fuente de verdad)
     bdContactos: BD_CONTACTOS,
     bdEmpresasById: BD_EMPRESAS_BYID,
+    // V8.2: BD de Locaciones (transversal)
+    bdLoc: BD_LOC,
+    // V8.3: BD de Legal (transversal)
+    bdLegal: BD_LEGAL,
     // Proyecciones legacy: se siguen escribiendo para que un cliente aún en
     // V7.2.x (ventana de actualización en la nube) pueda leer la BD.
     bdPersonas: BD_PERSONAS,
@@ -12599,6 +14116,10 @@ function applyLoadedState(obj) {
     Object.keys(obj.bdTalentos).forEach(k => { BD_TALENTOS[k] = obj.bdTalentos[k]; });
   }
   hydrateContactStore(obj);   // V7.3: reconstruir el modelo unificado (nuevo o viejo)
+  // V8.2: restaurar la BD de Locaciones (transversal)
+  if (Array.isArray(obj.bdLoc)) { BD_LOC.length = 0; obj.bdLoc.forEach(l => BD_LOC.push(l)); }
+  if (Array.isArray(obj.bdLegal)) { BD_LEGAL.length = 0; obj.bdLegal.forEach(d => BD_LEGAL.push(d)); }
+  PROJECTS.forEach(p => { if (p && p.data) { if (!Array.isArray(p.data.locaciones)) p.data.locaciones = []; } });
   STATE.currentProject = null;
   navigateToControlRoom();
   renderMetrics();
@@ -13083,7 +14604,7 @@ const CLOUD_CONFIG = IS_TEST_ENV ? CLOUD_CONFIG_TEST : CLOUD_CONFIG_PROD;
 const CLOUD_PASSWORD = "primate";   // ← contraseña compartida del equipo. Cámbiala aquí cuando quieras.
 const CLOUD_ENABLED = true;          // ← pon false para volver a modo 100% local.
 const CLOUD_DOC = { col: 'takeos', id: 'estado' };
-const TAKEOS_VERSION = 'V8.0.0';   // V8.0.0: módulo Gastos (rastreador operativo, reemplaza Rinde Gastos) + módulo CFO (consolidado, validación/reembolsos) + exportación a Chipax (.xlsx). Regla madre: el gasto solo escribe Real; el Cotizado se lee del Presupuesto.
+const TAKEOS_VERSION = 'V8.3.0';   // V8.3.0: nuevo módulo Legal (tab de proyecto, sub-pestañas Documentos y Plantillas) + nueva categoría transversal BD de Legal (BD_LEGAL) + nuevo bloque Derechos en Info Proyecto. Generador de documentos desde 4 plantillas fijas (Cesión validada; Servicios/NDA/Arriendo en borrador) autollenando desde BD Personas, Presupuesto, Info Proyecto y Derechos; vista previa en vivo, ciclo Borrador→Generado→Enviado→Firmado, versionado y export PDF con marca. Aditivo, sin breaking changes.
 
 let _cloudDb = null;
 let _cloudReady = false;
@@ -13171,6 +14692,8 @@ function cloudCommitRemote(obj) {
       Object.keys(obj.bdTalentos).forEach(k => { BD_TALENTOS[k] = obj.bdTalentos[k]; });
     }
     hydrateContactStore(obj);   // V7.3: reconstruir el modelo unificado desde el remoto
+    if (Array.isArray(obj.bdLoc)) { BD_LOC.length = 0; obj.bdLoc.forEach(l => BD_LOC.push(l)); }   // V8.2
+    if (Array.isArray(obj.bdLegal)) { BD_LEGAL.length = 0; obj.bdLegal.forEach(d => BD_LEGAL.push(d)); }   // V8.3
     if (STATE.currentView !== 'project') { renderKanban(); renderMetrics(); }
   } catch (e) { console.error('[nube] commit remoto', e); }
   _cloudApplying = false;
@@ -13530,24 +15053,45 @@ function goVerComprobante(id) {
 }
 
 /* ---------- modal: crear presupuesto (sobre) ---------- */
+/* V8.1 (#9): las líneas de presupuesto disponibles son las filas dentro de
+   "Gastos de producción" del Presupuesto (project.data.gastos): ahí van los
+   fondos reales (Gastos de Arte, Gastos de Locación, Gastos de Vestuario…).
+   También sembramos el mapeo a Chipax ("Gastos de Producción") para no romper
+   la exportación. */
+function goGastosLineas(project) {
+  const gastos = (project && project.data && Array.isArray(project.data.gastos)) ? project.data.gastos : [];
+  const out = [];
+  gastos.forEach(r => {
+    const name = (r.item || '').trim();
+    if (name && out.indexOf(name) < 0) {
+      out.push(name);
+      if (!CHIPAX_CUENTA[name]) CHIPAX_CUENTA[name] = 'Gastos de Producción';
+    }
+  });
+  return out;
+}
 function goOpenPresup() {
   const project = STATE.currentProject; const jp = goJefeProd(project);
-  const lineas = GO_LINEAS_BASE;
+  const lineas = goGastosLineas(project);
   const contactos = goContactos(project);
+  const isAdmin = !!STATE.adminMode;
+  const passHelp = isAdmin
+    ? '✓ <b>Modo administrador activo</b>: puedes crear el presupuesto sin contraseña. (Opcional: igual puedes ingresar el RUT del jefe de producción.)'
+    : (jp.nombre ? ('Solo el jefe de producción (<b>' + escapeHtml(jp.nombre) + '</b>, según INFO PROYECTO) puede crear presupuestos. También se autoriza con Modo administrador.') : '⚠ No hay jefe de producción asignado en INFO PROYECTO. Asígnalo primero, o activa el Modo administrador.');
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Crear presupuesto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb">
       <div class="go-field"><label>Nombre del presupuesto</label><input class="go-inp" id="pp_nombre" placeholder="ej. Compras Súper día 3"></div>
       <div class="go-field"><label>Asociar a línea del Presupuesto</label>
         <select class="go-inp" id="pp_linea" onchange="goPpLineaChange()"><option value="">— elige una línea —</option>${lineas.map(l => '<option>' + escapeHtml(l) + '</option>').join('')}<option value="__new__">+ Crear nueva línea (parte en $0)…</option></select>
         <div class="go-field" id="pp_newWrap" style="display:none;margin-top:10px;"><label>Nombre de la nueva línea</label><input class="go-inp" id="pp_newName" placeholder="ej. Maquillaje"></div>
-        <div class="go-help">Si la categoría no estaba contemplada, crea una nueva: verás cuánto se pasa el proyecto.</div>
+        <div class="go-help">Estas son las filas de <b>Gastos de producción</b> del Presupuesto. Si falta una, crea una nueva: se agrega al Presupuesto (parte en $0, marcada como EXTRA) y verás cuánto se pasa el proyecto.</div>
       </div>
       <div class="go-frow">
         <div class="go-field half"><label>Responsable</label><input class="go-inp" id="pp_resp" list="go_dl_contactos" placeholder="nombre"></div>
         <div class="go-field half"><label>Monto asignado (CLP)</label><input class="go-inp" id="pp_monto" placeholder="0" inputmode="numeric"></div>
       </div>
-      <div class="go-field"><label>Contraseña del jefe de producción</label><input class="go-inp" id="pp_pass" type="password" placeholder="RUT sin puntos ni dígito verificador">
-        <div class="go-help">${jp.nombre ? ('Solo el jefe de producción (<b>' + escapeHtml(jp.nombre) + '</b>, según INFO PROYECTO) puede crear presupuestos.') : '⚠ No hay jefe de producción asignado en INFO PROYECTO. Asígnalo primero.'}</div></div>
+      <div class="go-field"><label>Contraseña del jefe de producción${isAdmin ? ' <span style="font-weight:400;opacity:.7;">(opcional)</span>' : ''}</label><input class="go-inp" id="pp_pass" type="password" placeholder="${isAdmin ? 'No requerida con Modo administrador' : 'RUT sin puntos ni dígito verificador'}">
+        <div class="go-help">${passHelp}</div></div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
     <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSavePresup()">Crear presupuesto</button></div></div>`);
@@ -13556,12 +15100,24 @@ function goPpLineaChange() { const el = document.getElementById('pp_linea'); doc
 function goSavePresup() {
   const project = STATE.currentProject; const d = goData(project); const jp = goJefeProd(project);
   const val = id => (document.getElementById(id) || {}).value || '';
-  if (!jp.pass) { showToast({ kind: 'error', title: 'Falta el RUT del jefe de producción', body: 'No se puede validar la contraseña sin el RUT en la BD. Revisa INFO PROYECTO y la Base de Datos.' }); return; }
-  if (val('pp_pass') !== jp.pass) { showToast({ kind: 'error', title: 'Contraseña incorrecta', body: 'Solo el jefe de producción puede crear presupuestos.' }); return; }
+  // V8.1.1 (#4): autoriza la creación si el Modo Administrador está activo,
+  // O si se ingresa correctamente el RUT (sin DV) del jefe de producción.
+  const isAdmin = !!STATE.adminMode;
+  if (!isAdmin) {
+    if (!jp.pass) { showToast({ kind: 'error', title: 'Falta el RUT del jefe de producción', body: 'No se puede validar la contraseña sin el RUT en la BD. Revisa INFO PROYECTO y la Base de Datos, o activa el Modo administrador.' }); return; }
+    if (val('pp_pass') !== jp.pass) { showToast({ kind: 'error', title: 'Contraseña incorrecta', body: 'Para crear un presupuesto, ingresa el RUT del jefe de producción o activa el Modo administrador.' }); return; }
+  }
   let linea = val('pp_linea');
   if (linea === '__new__') {
     linea = (val('pp_newName') || '').trim() || 'Nueva línea';
-    if (GO_LINEAS_BASE.indexOf(linea) < 0 && d.lineasExtra.indexOf(linea) < 0) d.lineasExtra.push(linea);
+    // V8.1 (#9): crear una línea nueva = crear una fila dentro de "Gastos de
+    // producción" del Presupuesto (project.data.gastos). Parte en $0 y se
+    // marca como EXTRA: editable y sin tocar el cotizado congelado (regla madre).
+    const gastos = project.data.gastos = Array.isArray(project.data.gastos) ? project.data.gastos : [];
+    const existe = gastos.some(r => (r.item || '').trim().toLowerCase() === linea.toLowerCase());
+    if (!existe) {
+      gastos.push({ nombre: '', item: linea, valor: 0, cantidad: 0, unidad: 'Tarifa Plana', dte: null, dteReal: null, confirmado: false, costoReal: null, extra: true });
+    }
     if (!CHIPAX_CUENTA[linea]) CHIPAX_CUENTA[linea] = 'Gastos de Producción';
   }
   if (!linea) { showToast({ kind: 'warning', title: 'Elige o crea una línea', body: 'Cada presupuesto se asocia a una línea del Presupuesto.' }); return; }
@@ -13783,8 +15339,88 @@ function goCfoReembolsos() {
     ${pagados.map(o => `<tr><td><input type="date" class="go-dateinp" value="${o.m.fechaPago}" onchange="goSetFechaPago('${o.m.id}',this.value)"></td><td>${escapeHtml(o.m.quien)}</td><td class="go-sub">${escapeHtml(goProjName(o.project))}</td><td class="go-num">${fmtMoney(o.m.monto)}</td><td><button class="go-mini" onclick="goSetFechaPago('${o.m.id}','')">deshacer</button></td></tr>`).join('')}
     </tbody></table></div></div>` : '';
   return `<div class="go-card"><div class="go-card-h"><h3>Reembolsos pendientes <span class="go-faint">· fecha de pago editable · se avisa lo que vence hoy o está vencido</span></h3>
-      ${pend.length ? '<button class="btn btn-primary btn-sm" onclick="goPagarTodos()">Marcar todos pagados (hoy)</button>' : ''}</div>
+      ${pend.length ? '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm" onclick="goExportSantander()">⬇ Exportar transferencias (Santander)</button><button class="btn btn-primary btn-sm" onclick="goPagarTodos()">Marcar todos pagados (hoy)</button></div>' : ''}</div>
     <div class="go-card-b go-tablewrap"><table class="go-tbl"><thead><tr><th>Gasto</th><th>A quién pagar</th><th>Proyecto</th><th class="go-num">Monto</th><th>Fecha de pago</th><th></th></tr></thead><tbody>${pendRows}</tbody></table></div></div>${pagBlock}`;
+}
+/* ════════════════════════════════════════════════════════════════════
+   V8.1 (#8) · EXPORTAR NÓMINA DE TRANSFERENCIAS MASIVAS (SANTANDER)
+   ════════════════════════════════════════════════════════════════════
+   Toma los reembolsos PENDIENTES (de todos los proyectos) y arma el Excel
+   con el formato exacto del Office Banking de Santander (13 columnas).
+   Datos bancarios del beneficiario: primero la Base de Datos (perfil de
+   pago), luego los datosPago capturados en el gasto. El código de banco
+   es el SBIF de 3 dígitos (037 Santander, 012 BancoEstado, etc.).
+   La cuenta de ORIGEN sale del Perfil de empresa (bancoNumero); si falta,
+   se pide y se guarda.
+   ════════════════════════════════════════════════════════════════════ */
+function goSantanderBankFor(project, m) {
+  const nombre = (m.quien || '').trim();
+  const bd = (typeof BD_PERSONAS !== 'undefined' && nombre) ? BD_PERSONAS[nombre] : null;
+  const dp = m.datosPago || {};
+  const banco = (bd && bd.banco) || dp.banco || '';
+  const codigoBanco = (bd && bd.codigoBanco) || _codigoBancoSBIF(banco) || '';
+  const tipoCuenta = (bd && bd.tipoCuenta) || dp.tipoCuenta || '';
+  const nCuenta = (bd && (bd.nCuenta || bd.numeroCuenta)) || dp.nCuenta || '';
+  const rut = (bd && bd.rut) || dp.rut || '';
+  const email = (bd && (bd.mail || bd.email)) || dp.email || '';
+  return { nombre, banco, codigoBanco, tipoCuenta, nCuenta, rut, email };
+}
+function goExportSantander() {
+  const pend = []; PROJECTS.forEach(p => goReembPend(p).forEach(m => pend.push({ project: p, m: m })));
+  if (!pend.length) { showToast({ kind: 'warning', title: 'Sin reembolsos', body: 'No hay reembolsos pendientes para exportar.' }); return; }
+
+  // Cuenta de ORIGEN (cuenta Santander de la empresa).
+  let cuentaOrigen = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL.bancoNumero) ? String(EMPRESA_PERFIL.bancoNumero).replace(/\s/g, '').trim() : '';
+  if (!cuentaOrigen) {
+    const v = window.prompt('N° de cuenta de ORIGEN (cuenta Santander de la empresa desde donde se transfiere):', '');
+    if (v === null) return;
+    cuentaOrigen = String(v).replace(/\s/g, '').trim();
+    if (cuentaOrigen && typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.bancoNumero = cuentaOrigen; markDirty(); }
+  }
+  if (!cuentaOrigen) { showToast({ kind: 'error', title: 'Falta cuenta de origen', body: 'Sin la cuenta de origen no se puede generar la nómina. Configúrala en el Perfil de empresa.' }); return; }
+
+  const rows = []; const skipped = [];
+  pend.forEach(o => {
+    const b = goSantanderBankFor(o.project, o.m);
+    const cuentaDestino = String(b.nCuenta || '').replace(/\s/g, '').trim();
+    if (!cuentaDestino) { skipped.push(b.nombre || '(sin nombre)'); return; }
+    const rut = String(b.rut || '').replace(/\./g, '').trim();   // sin puntos, conserva el dígito verificador
+    const glosa = ('Reembolso ' + goProjName(o.project)).slice(0, 40);
+    rows.push([
+      cuentaOrigen, 'CLP', cuentaDestino, 'CLP',
+      b.codigoBanco || '', rut, b.nombre || '',
+      o.m.monto || 0, glosa, b.email || '', '', glosa, ''
+    ]);
+  });
+  if (!rows.length) { showToast({ kind: 'error', title: 'Sin datos bancarios', body: 'Ningún reembolso pendiente tiene cuenta de destino. Completa los datos de pago de los beneficiarios en la Base de Datos.' }); return; }
+
+  const header = [
+    'Cuenta origen\n(obligatorio)',
+    'Moneda origen\n(obligatorio)',
+    'Cuenta destino\n(obligatorio)',
+    'Moneda destino\n(obligatorio)',
+    'Código banco destino\n(obligatorio solo si banco destino no es Santander)',
+    'RUT beneficiario\n(obligatorio solo si banco destino no es Santander)',
+    'Nombre beneficiario\n(obligatorio solo si banco destino no es Santander)',
+    'Monto transferencia\n(obligatorio)',
+    'Glosa personalizada transferencia\n(opcional)',
+    'Correo beneficiario\n(opcional)',
+    'Mensaje correo beneficiario\n(opcional)',
+    'Glosa cartola originador\n(opcional)',
+    'Glosa cartola beneficiario\n(opcional, solo aplica si cuenta destino es Santander)'
+  ];
+  try {
+    if (typeof XLSX === 'undefined') throw new Error('SheetJS no disponible');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([header].concat(rows));
+    XLSX.utils.book_append_sheet(wb, ws, 'Transferencias');
+    XLSX.writeFile(wb, 'Transferencias Santander - ' + goToday() + '.xlsx');
+    let body = rows.length + ' transferencia(s) en el archivo.';
+    if (skipped.length) body += ' ⚠ Omitidos por falta de cuenta de destino: ' + skipped.join(', ') + '. Completa sus datos de pago y vuelve a exportar.';
+    showToast({ kind: skipped.length ? 'warning' : 'success', title: 'Nómina Santander generada', body: body });
+  } catch (e) {
+    showToast({ kind: 'error', title: 'No se pudo generar', body: 'La descarga necesita la librería de planillas (SheetJS). Revisa tu conexión y reintenta.' });
+  }
 }
 function goCfoProyectos() {
   const rows = PROJECTS.length ? PROJECTS.map(p => {
