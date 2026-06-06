@@ -7156,7 +7156,7 @@ function renderModule(key) {
    `BD_PERSONAS[nombre]` directamente.
    ════════════════════════════════════════════════════════════════════ */
 
-function bdSetFormLink(v) { if (typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.linkFormularioPago = (v || '').trim(); markDirty(); } }
+function bdSetFormLink(v) { if (typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.linkFormularioPago = (v || '').trim(); markDirty(); _dalPerfilSaveSoon(); } }
 function renderBDPersonas() {
   const content = document.getElementById('moduleContent');
   const tab = STATE.ui.bdTab || 'personas';
@@ -7316,7 +7316,7 @@ function saveBDLocAdd() {
   if (dup) { closeModal(); openLocDetail(dup.locId); showToast({ kind: 'info', title: 'Ya existía en la BD', body: dup.locId + ' · ' + (dup.nombre || '') + ' — se abrió en vez de crear un duplicado.' }); return; }
   const id = nextLocIdBD();
   BD_LOC.push({ locId: id, nombre: nombre, direccion: v('bla_dir'), direccion2: v('bla_dir2'), comuna: v('bla_comuna'), ciudad: v('bla_ciudad') || 'Santiago', region: v('bla_region'), maps: '', orientacion: '—', contactos: [], notas: '', fotos: [] });
-  markDirty(); autosaveNow(); closeModal(); openLocDetail(id);
+  markDirty(); autosaveNow(); _dalLocacionSaveSoon(id); closeModal(); openLocDetail(id);
   showToast({ kind: 'success', title: 'Locación creada', body: id + ' agregada a la Base de Datos.' });
 }
 
@@ -13161,7 +13161,8 @@ function openLocDetail(locId) {
               <div style="display:flex;gap:8px;margin-top:7px;"><span style="flex:1;"><label style="font-size:11px;color:var(--ink-mut);">Mail</label><input class="input" value="${e(c.mail || '')}" onchange="locSetContacto('${locId}',${i},'mail',this.value)"></span><span style="flex:1;"><label style="font-size:11px;color:var(--ink-mut);">Teléfono</label><input class="input" value="${e(c.tel || '')}" onchange="locSetContacto('${locId}',${i},'tel',this.value)"></span></div>
               <div style="margin-top:7px;"><label style="font-size:11px;color:var(--ink-mut);">Observaciones</label><input class="input" value="${e(c.obs || '')}" onchange="locSetContacto('${locId}',${i},'obs',this.value)"></div>
             </div>`).join('') || '<div style="font-size:12px;color:var(--ink-faint);margin-bottom:8px;">Sin contactos aún. Agrega a quien coordinas la locación.</div>';
-  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb"><img src="${f.url}" onclick="locLightbox('${locId}',${i})"><button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button></div>`).join('');
+  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb"><img id="lf_${locId}_${i}" src="${f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER}" onclick="locLightbox('${locId}',${i})"><button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button></div>`).join('');
+  try { setTimeout(function(){ _resolveLocFotoUrls(locId); }, 0); } catch (e) {}
   const estadoChips = uso ? Object.keys(LOC_ESTADOS).map(s => `<button class="loc-chip ${uso.estado === s ? 'on' : ''}" onclick="locSetEstado('${locId}','${s}')">${LOC_ESTADOS[s]}</button>`).join('') : '';
   document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:760px;width:94vw;max-height:88vh;overflow:auto;">
     <div class="modal-header"><div class="modal-title">${e(l.nombre || 'Locación')} · ${e(l.locId)}</div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
@@ -13215,11 +13216,11 @@ function openLocDetail(locId) {
 }
 
 function locSetEstado(locId, estado) { const u = projLocFind(STATE.currentProject, locId); if (!u) return; u.estado = estado; markDirty(); renderLocaciones(); openLocDetail(locId); showToast({ kind: 'info', title: 'Estado actualizado', body: 'Locación marcada como ' + LOC_ESTADOS[estado].toLowerCase() + '.' }); }
-function locSetBD(locId, field, value) { const l = bdLocFind(locId); if (!l) return; l[field] = value; markDirty(); autosaveNow(); }
-function locSetDueno(locId, field, value) { const l = bdLocFind(locId); if (!l) return; if (!l.dueno) l.dueno = { nombre: '', mail: '', tel: '' }; l.dueno[field] = value; markDirty(); autosaveNow(); }
-function locAddContacto(locId) { const l = bdLocFind(locId); if (!l) return; if (!Array.isArray(l.contactos)) l.contactos = []; l.contactos.push({ nombre: '', mail: '', tel: '', obs: '', relacion: '' }); markDirty(); autosaveNow(); openLocDetail(locId); }
-function locSetContacto(locId, i, field, value) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.contactos) || !l.contactos[i]) return; l.contactos[i][field] = value; markDirty(); autosaveNow(); }
-function locDelContacto(locId, i) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.contactos)) return; l.contactos.splice(i, 1); markDirty(); autosaveNow(); openLocDetail(locId); }
+function locSetBD(locId, field, value) { const l = bdLocFind(locId); if (!l) return; l[field] = value; markDirty(); autosaveNow(); _dalLocacionSaveSoon(locId); }
+function locSetDueno(locId, field, value) { const l = bdLocFind(locId); if (!l) return; if (!l.dueno) l.dueno = { nombre: '', mail: '', tel: '' }; l.dueno[field] = value; markDirty(); autosaveNow(); _dalLocacionSaveSoon(locId); }
+function locAddContacto(locId) { const l = bdLocFind(locId); if (!l) return; if (!Array.isArray(l.contactos)) l.contactos = []; l.contactos.push({ nombre: '', mail: '', tel: '', obs: '', relacion: '' }); markDirty(); autosaveNow(); _dalLocacionSaveSoon(locId); openLocDetail(locId); }
+function locSetContacto(locId, i, field, value) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.contactos) || !l.contactos[i]) return; l.contactos[i][field] = value; markDirty(); autosaveNow(); _dalLocacionSaveSoon(locId); }
+function locDelContacto(locId, i) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.contactos)) return; l.contactos.splice(i, 1); markDirty(); autosaveNow(); _dalLocacionSaveSoon(locId); openLocDetail(locId); }
 function locSetProj(locId, field, value) { const u = projLocFind(STATE.currentProject, locId); if (!u) return; u[field] = (field === 'costo') ? (parseInt(String(value).replace(/\D/g, ''), 10) || 0) : value; markDirty(); autosaveNow(); }
 function locRemoveFromProject(locId) {
   const project = STATE.currentProject;
@@ -13240,26 +13241,79 @@ function locRemoveFromProject(locId) {
     }
   });
 }
+/* ── V9.5.0 · Fotos de locaciones en Supabase Storage ─────────────────────
+   Bucket PRIVADO 'fotos-locaciones'; la BD guarda la RUTA (no una URL), y al
+   mostrar se pide una URL firmada. FAIL-SAFE: si el bucket no existe o Storage
+   no está disponible, la subida cae al comportamiento previo (base64 en
+   localStorage), así desplegar esto NO cambia nada hasta que el bucket exista. */
+const STORAGE_BUCKET_FOTOS = 'fotos-locaciones';
+const _LOC_FOTO_PLACEHOLDER = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90"><rect width="120" height="90" fill="%23e6e3dd"/></svg>';
+function _dataUrlToBlob(dataUrl) {
+  const parts = String(dataUrl).split(','); const mime = ((parts[0] || '').match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(parts[1] || ''); const len = bin.length; const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function _locFotoStoragePath(locId, name) {
+  const safe = String(name || 'foto').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+  return ORG_ID + '/' + locId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + safe;
+}
+async function _uploadLocFoto(locId, dataUrl, name) {
+  if (!sb || LOCATIONS_SOURCE !== 'supabase' || !sb.storage) return null;
+  try {
+    const blob = _dataUrlToBlob(dataUrl);
+    const path = _locFotoStoragePath(locId, name);
+    const { error } = await sb.storage.from(STORAGE_BUCKET_FOTOS).upload(path, blob, { contentType: blob.type, upsert: false });
+    if (error) throw error;
+    return { path: path, nombre_original: name || '' };
+  } catch (e) { console.warn('[storage] subida de foto no disponible; se guarda local', e); return null; }
+}
+/* Pinta las fotos {path} con URL firmada, post-render (las {url} base64 ya se ven). */
+async function _resolveLocFotoUrls(locId) {
+  if (!sb || !sb.storage) return;
+  const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return;
+  for (let i = 0; i < l.fotos.length; i++) {
+    const fto = l.fotos[i]; if (!fto || !fto.path) continue;
+    try {
+      let url = fto._signedUrl;
+      if (!url) { const { data, error } = await sb.storage.from(STORAGE_BUCKET_FOTOS).createSignedUrl(fto.path, 3600); if (error) throw error; url = data && data.signedUrl; fto._signedUrl = url; }
+      if (url) { const img = document.getElementById('lf_' + locId + '_' + i); if (img) img.src = url; }
+    } catch (e) { /* deja el placeholder */ }
+  }
+}
+
 async function locAddFotos(locId, inputEl) {
   const l = bdLocFind(locId); if (!l) return; if (!Array.isArray(l.fotos)) l.fotos = [];
   const files = Array.from(inputEl.files || []); if (!files.length) return;
-  let saved = 0;
+  let nube = 0, local = 0;
   for (const f of files) {
-    const before = f.size;
-    try { const url = await prCompressImage(f, 1280, 0.6); const after = Math.round(url.length * 0.75); saved += Math.max(0, before - after); l.fotos.push({ url }); }
-    catch (e) { /* omitir archivo problemático */ }
+    try {
+      const url = await prCompressImage(f, 1280, 0.6); if (!url) continue;
+      const up = await _uploadLocFoto(locId, url, f.name);
+      if (up) { up._signedUrl = url; l.fotos.push(up); nube++; }   // preview inmediato con el dataURL recién comprimido
+      else { l.fotos.push({ url: url }); local++; }
+    } catch (e) { /* omitir archivo problemático */ }
   }
   markDirty(); autosaveNow();
-  showToast({ kind: 'success', title: 'Fotos agregadas', body: files.length + ' foto(s) comprimida(s). Ahorro aprox. ' + Math.round(saved / 1024) + ' KB.' });
+  if (nube) { try { _dalLocacionSaveSoon(locId); } catch (e) {} }   // sincroniza las RUTAS (no el binario)
+  const msg = (nube && local) ? (nube + ' a la nube y ' + local + ' local(es)') : nube ? (nube + ' foto(s) en la nube') : (local + ' foto(s) (local, este navegador)');
+  showToast({ kind: 'success', title: 'Fotos agregadas', body: msg + '.' });
   openLocDetail(locId);
 }
-function locDelFoto(locId, i) { const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return; l.fotos.splice(i, 1); markDirty(); autosaveNow(); openLocDetail(locId); }
+function locDelFoto(locId, i) {
+  const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return;
+  const f = l.fotos[i];
+  if (f && f.path && sb && sb.storage) { try { sb.storage.from(STORAGE_BUCKET_FOTOS).remove([f.path]); } catch (e) {} }
+  l.fotos.splice(i, 1); markDirty(); autosaveNow();
+  if (f && f.path) { try { _dalLocacionSaveSoon(locId); } catch (e) {} }
+  openLocDetail(locId);
+}
 function locLightbox(locId, i) {
   const l = bdLocFind(locId); if (!l || !l.fotos[i]) return;
   const old = document.getElementById('locLb'); if (old) old.remove();
   const div = document.createElement('div'); div.id = 'locLb'; div.className = 'loc-lightbox';
   div.onclick = () => div.remove();
-  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${l.fotos[i].url}" alt="">`;
+  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${l.fotos[i].url || l.fotos[i]._signedUrl || _LOC_FOTO_PLACEHOLDER}" alt="">`;
   document.body.appendChild(div);
 }
 
@@ -13317,7 +13371,7 @@ function saveLocAdd() {
   const id = nextLocIdBD();
   BD_LOC.push({ locId: id, nombre: v('la_nombre') || '(sin nombre)', direccion: v('la_dir'), direccion2: v('la_dir2'), comuna: v('la_comuna'), ciudad: v('la_ciudad') || 'Santiago', region: v('la_region'), maps: '', orientacion: '—', contactos: [], notas: '', fotos: [] });
   project.data.locaciones.push({ locId: id, estado: 'candidata', costo: 0, contratacion: '', notasProy: '' });
-  markDirty(); autosaveNow(); closeModal(); renderLocaciones(); openLocDetail(id);
+  markDirty(); autosaveNow(); _dalLocacionSaveSoon(id); closeModal(); renderLocaciones(); openLocDetail(id);
   showToast({ kind: 'success', title: 'Locación creada', body: id + ' agregada a la BD y al proyecto.' });
 }
 
@@ -13792,12 +13846,12 @@ function legalTplSave(id) {
   const desc = v('ltpl_desc');
   if (id) {
     const t = BD_LEGAL_TPL.find(x => x.id === id);
-    if (t) { t.nombre = nombre; t.desc = desc; t.target = target; t.completar = completar; t.cuerpo = cuerpo; }
+    if (t) { t.nombre = nombre; t.desc = desc; t.target = target; t.completar = completar; t.cuerpo = cuerpo; } _dalLegalTplSaveSoon(id);
     markDirty(); autosaveNow(); closeModal(); renderLegal();
     showToast({ kind: 'success', title: 'Plantilla actualizada', body: nombre });
     return;
   }
-  BD_LEGAL_TPL.push({ id: legalTplNuevoId(), nombre: nombre, desc: desc, target: target, completar: completar, cuerpo: cuerpo, custom: true });
+  const _ntid = legalTplNuevoId(); BD_LEGAL_TPL.push({ id: _ntid, nombre: nombre, desc: desc, target: target, completar: completar, cuerpo: cuerpo, custom: true }); _dalLegalTplSaveSoon(_ntid);
   markDirty(); autosaveNow(); closeModal(); renderLegal();
   showToast({ kind: 'success', title: 'Plantilla creada', body: nombre });
 }
@@ -13805,7 +13859,7 @@ function legalTplDelete(id) {
   if (!STATE.adminMode) { showToast({ kind: 'warning', title: 'Solo Administrador', body: 'Activa el Modo Administrador.' }); return; }
   const t = BD_LEGAL_TPL.find(x => x.id === id); if (!t) return;
   showModal({ title: 'Eliminar plantilla', body: '\u00bfEliminar la plantilla personalizada "' + (t.nombre || id) + '"? Los documentos ya generados con ella se conservan, pero no podr\u00e1s generar nuevos.', confirmLabel: 'Eliminar', cancelLabel: 'Cancelar', danger: true, onConfirm: function () {
-    const i = BD_LEGAL_TPL.findIndex(x => x.id === id); if (i >= 0) BD_LEGAL_TPL.splice(i, 1);
+    const i = BD_LEGAL_TPL.findIndex(x => x.id === id); if (i >= 0) BD_LEGAL_TPL.splice(i, 1); dalEliminarLegalTpl(id);
     markDirty(); autosaveNow(); closeModal(); renderLegal();
     showToast({ kind: 'success', title: 'Plantilla eliminada', body: t.nombre || id });
   } });
@@ -14097,7 +14151,7 @@ function legalDoGenerate() {
       d.vars = Object.assign({}, g.ov);
       d.monto = monto; d.vigencia = vigencia;
       if (t.target === 'persona') { d.contraparteNombre = vr.nombre; d.rut = vr.rut; }
-      markDirty(); autosaveNow(); closeModal(); renderLegal();
+      markDirty(); autosaveNow(); _dalLegalDocSaveSoon(d.docId); closeModal(); renderLegal();
       showToast({ kind: 'success', title: 'Nueva versión guardada', body: 'Documento ' + d.docId + ' · v' + d.version + '.' });
     }
     return;
@@ -14125,7 +14179,7 @@ function legalDoGenerate() {
   } else {
     rec.contraparteId = (legalFindContact(g.persName) || {}).id || ''; rec.contraparteNombre = vr.nombre; rec.rut = vr.rut; rec.rolCalidad = vr.calidad;
   }
-  BD_LEGAL.unshift(rec);
+  BD_LEGAL.unshift(rec); _dalLegalDocSaveSoon(rec.docId);
   markDirty(); autosaveNow(); closeModal(); renderLegal();
   showToast({ kind: 'success', title: 'Documento generado', body: rec.docId + ' · ' + (legalTplGet(rec.tipo) || {}).nombre + ' · v1 (Generado).' });
 }
@@ -14133,14 +14187,14 @@ function legalDoGenerate() {
 function legalAdvance(docId) {
   const d = BD_LEGAL.find(x => x.docId === docId); if (!d) return;
   const i = LEGAL_FLOW.indexOf(d.estado);
-  if (i < LEGAL_FLOW.length - 1) { d.estado = LEGAL_FLOW[i + 1]; if (d.estado === 'firmado') d.fechaFirma = new Date().toISOString().slice(0, 10); markDirty(); autosaveNow(); renderLegal(); showToast({ kind: 'info', title: 'Documento actualizado', body: 'Estado: ' + LEGAL_EST[d.estado] + '.' }); }
+  if (i < LEGAL_FLOW.length - 1) { d.estado = LEGAL_FLOW[i + 1]; if (d.estado === 'firmado') d.fechaFirma = new Date().toISOString().slice(0, 10); markDirty(); autosaveNow(); _dalLegalDocSaveSoon(docId); renderLegal(); showToast({ kind: 'info', title: 'Documento actualizado', body: 'Estado: ' + LEGAL_EST[d.estado] + '.' }); }
 }
 
 /* V8.3.1 — eliminar documento. No exportado: se borra directo. Exportado:
    pide confirmación (ya salió como PDF y figura en el archivo del proyecto). */
 function legalDeleteDoc(docId) {
   const d = BD_LEGAL.find(x => x.docId === docId); if (!d) return;
-  const doDelete = () => { const i = BD_LEGAL.findIndex(x => x.docId === docId); if (i !== -1) BD_LEGAL.splice(i, 1); markDirty(); autosaveNow(); closeModal(); renderLegal(); showToast({ kind: 'info', title: 'Documento eliminado', body: docId + ' fue eliminado.' }); };
+  const doDelete = () => { const i = BD_LEGAL.findIndex(x => x.docId === docId); if (i !== -1) BD_LEGAL.splice(i, 1); dalEliminarLegalDoc(docId); markDirty(); autosaveNow(); closeModal(); renderLegal(); showToast({ kind: 'info', title: 'Documento eliminado', body: docId + ' fue eliminado.' }); };
   if (d.exported) {
     showModal({ title: 'Eliminar documento exportado', body: 'El documento ' + docId + ' (' + ((legalTplGet(d.tipo) || {}).nombre || d.tipo) + ', ' + (d.contraparteNombre || '') + ') ya fue exportado a PDF. Si lo eliminas, desaparece del archivo de este proyecto y de la BD de Legal. ¿Eliminar de todas formas?', confirmLabel: 'Eliminar', cancelLabel: 'Cancelar', danger: true, onConfirm: doDelete });
   } else {
@@ -14155,7 +14209,7 @@ function legalExportPDF() {
     const _miss = legalMissingRequired(g);
     if (_miss.length) { legalShowMissing(_miss); return; }
   }
-  if (g.docId) { const _d = BD_LEGAL.find(x => x.docId === g.docId); if (_d && !_d.exported) { _d.exported = true; markDirty(); autosaveNow(); } }
+  if (g.docId) { const _d = BD_LEGAL.find(x => x.docId === g.docId); if (_d && !_d.exported) { _d.exported = true; markDirty(); autosaveNow(); _dalLegalDocSaveSoon(g.docId); } }
   const R = legalRep();
   const inner = legalRenderBody(g, true);
   const ip = (STATE.currentProject.data.infoProyecto) || {};
@@ -15194,7 +15248,7 @@ function openEmpresaPerfil() {
 function saveEmpresaPerfil() {
   const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
   keys.forEach(k => { const el = document.getElementById('emp_' + k); if (el) EMPRESA_PERFIL[k] = el.value.trim(); });
-  markDirty();
+  markDirty(); _dalPerfilSaveSoon();
   showToast({ kind: 'success', title: 'Perfil guardado', body: 'Los datos de la empresa se aplicarán a los documentos. Recuerda Guardar OS para respaldarlo.' });
   openConfigPanel();
 }
@@ -17123,6 +17177,12 @@ window.confirmLogout = function () {
    ════════════════════════════════════════════════════════════════════ */
 const ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // Primate Films (tenant)
 let CONTACTS_SOURCE = 'firebase';   // pasa a 'supabase' SOLO tras una lectura exitosa (fail-safe)
+let LOCATIONS_SOURCE = 'firebase';  // V9.4.4: idem para la BD de locaciones (BD_LOC)
+const DAL_KNOWN_LOC_IDS = new Set();
+let LEGAL_SOURCE = 'firebase';      // V9.4.7: idem para la BD de Legal (documentos + plantillas)
+const DAL_KNOWN_LEGAL_DOC_IDS = new Set();
+const DAL_KNOWN_LEGAL_TPL_IDS = new Set();
+let PERFIL_SOURCE = 'firebase';     // V9.4.8: idem para el perfil de empresa (EMPRESA_PERFIL, singleton)
 
 /* Mapeos codigo (Postgres) -> etiqueta de la app (lo que la UI ya espera). */
 const _DAL_ROLE_LABEL = { crew: 'Crew', interno: 'Interno', talento: 'Talento', contacto_cliente: 'Contacto cliente', proveedor_individual: 'Proveedor individual' };
@@ -17259,6 +17319,136 @@ async function dalBootContactos() {
 function dalBulkFrozen() {
   if (CONTACTS_SOURCE !== 'supabase') return false;
   try { showToast({ kind: 'info', title: 'Importación en bloque pendiente', body: 'La importación/reemplazo masivo de la BD hacia Supabase llega en una próxima versión. Por ahora edita por ficha: esos cambios sí se guardan en Supabase.', duration: 6500 }); } catch (e) {}
+  return true;
+}
+
+/* ── V9.4.4 · BD de Locaciones (BD_LOC), transversal ──────────────────────
+   Lectura desde la tabla `locations`. Las FOTOS no viven en Supabase todavía
+   (siguen en localStorage por el blindaje de Firestore); por eso tras reemplazar
+   BD_LOC se llama restoreLocalLocPhotos(), igual que en el camino de Firebase. */
+function _dalLocacionMap(row) {
+  return {
+    locId: row.loc_id,
+    nombre: row.nombre || '', direccion: row.direccion || '', direccion2: row.direccion2 || '',
+    comuna: row.comuna || '', ciudad: row.ciudad || '', region: row.region || '',
+    maps: row.maps || '', orientacion: row.orientacion || '—', notas: row.notas || '',
+    dueno: row.dueno || { nombre: '', mail: '', tel: '' },
+    contactos: Array.isArray(row.contactos) ? row.contactos : [],
+    fotos: Array.isArray(row.fotos) ? row.fotos : []
+  };
+}
+async function dalLoadLocaciones() {
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from('locations')
+      .select('loc_id,nombre,direccion,direccion2,comuna,ciudad,region,maps,orientacion,notas,dueno,contactos,fotos')
+      .eq('organization_id', ORG_ID);
+    if (error) throw error;
+    if (!Array.isArray(data)) return null;
+    return data.map(_dalLocacionMap);
+  } catch (e) { console.error('[dal] excepcion al leer locaciones', e); return null; }
+}
+function dalApplyLocaciones(locs) {
+  BD_LOC.length = 0;
+  locs.forEach(function(l){ BD_LOC.push(l); });
+  DAL_KNOWN_LOC_IDS.clear();
+  locs.forEach(function(l){ DAL_KNOWN_LOC_IDS.add(l.locId); });
+  LOCATIONS_SOURCE = 'supabase';
+}
+async function dalBootLocaciones(opts) {
+  const silent = opts && opts.silent;
+  const locs = await dalLoadLocaciones();
+  if (!locs) { if (!silent) console.warn('[dal] sin locaciones de Supabase; BD_LOC sigue desde Firebase'); return false; }
+  dalApplyLocaciones(locs);
+  try { restoreLocalLocPhotos(); } catch (e) {}   // reinyecta fotos de localStorage
+  if (!silent) {
+    try { if (typeof renderLocaciones === 'function') renderLocaciones(); } catch (e) {}
+    try { showToast({ kind: 'success', title: 'Locaciones desde Supabase', body: locs.length + ' locación(es) en línea (lectura y escritura).', duration: 6000 }); } catch (e) {}
+  }
+  return true;
+}
+
+/* ── V9.4.7 · BD de Legal (documentos + plantillas), transversal ───────────
+   Lectura desde legal_documents + legal_templates. Tablas planas (vars jsonb).
+   El PDF no se almacena todavía (pdf_path NULL; Storage pendiente). */
+function _dalLegalDocMap(r) {
+  const doc = {
+    docId: r.doc_id, tipo: r.tipo || '', plantillaId: r.plantilla_id || '',
+    proyectoId: r.project_id || '', proyectoNombre: r.proyecto_nombre || '', cliente: r.cliente || '',
+    estado: r.estado || '', version: (r.version != null ? Number(r.version) : 1),
+    fechaGeneracion: r.fecha_generacion || '', fechaFirma: r.fecha_firma || '',
+    monto: (r.monto != null ? Number(r.monto) : 0), vigencia: r.vigencia || '',
+    responsable: r.responsable || '', pdfUrl: r.pdf_path || null,
+    contraparteId: r.contraparte_id || '', contraparteNombre: r.contraparte_nombre || '',
+    rut: r.rut || '', rolCalidad: r.rol_calidad || '',
+    vars: (r.vars && typeof r.vars === 'object') ? r.vars : {},
+    exported: !!r.exported
+  };
+  if (r.locacion_id) doc.locacionId = r.locacion_id;
+  return doc;
+}
+function _dalLegalTplMap(r) {
+  return { id: r.id, nombre: r.nombre || '', desc: r.descripcion || '', target: r.target || 'persona',
+           completar: r.completar || 'sistema', cuerpo: r.cuerpo || '', custom: !!r.custom };
+}
+async function dalLoadLegal() {
+  if (!sb) return null;
+  try {
+    const dq = await sb.from('legal_documents')
+      .select('doc_id,tipo,plantilla_id,project_id,proyecto_nombre,cliente,estado,version,fecha_generacion,fecha_firma,monto,vigencia,responsable,pdf_path,contraparte_id,contraparte_nombre,rut,rol_calidad,vars,exported,locacion_id')
+      .eq('organization_id', ORG_ID);
+    if (dq.error) throw dq.error;
+    const tq = await sb.from('legal_templates')
+      .select('id,nombre,descripcion,target,completar,cuerpo,custom')
+      .eq('organization_id', ORG_ID);
+    if (tq.error) throw tq.error;
+    if (!Array.isArray(dq.data) || !Array.isArray(tq.data)) return null;
+    return { docs: dq.data.map(_dalLegalDocMap), tpls: tq.data.map(_dalLegalTplMap) };
+  } catch (e) { console.error('[dal] excepcion al leer legal', e); return null; }
+}
+function dalApplyLegal(data) {
+  BD_LEGAL.length = 0; data.docs.forEach(function(d){ BD_LEGAL.push(d); });
+  BD_LEGAL_TPL.length = 0; data.tpls.forEach(function(t){ BD_LEGAL_TPL.push(t); });
+  DAL_KNOWN_LEGAL_DOC_IDS.clear(); data.docs.forEach(function(d){ DAL_KNOWN_LEGAL_DOC_IDS.add(d.docId); });
+  DAL_KNOWN_LEGAL_TPL_IDS.clear(); data.tpls.forEach(function(t){ DAL_KNOWN_LEGAL_TPL_IDS.add(t.id); });
+  LEGAL_SOURCE = 'supabase';
+}
+async function dalBootLegal(opts) {
+  const silent = opts && opts.silent;
+  const data = await dalLoadLegal();
+  if (!data) { if (!silent) console.warn('[dal] sin legal de Supabase; sigue desde Firebase'); return false; }
+  dalApplyLegal(data);
+  if (!silent) {
+    try { if (typeof renderLegal === 'function' && STATE.currentModule === 'legal') renderLegal(); } catch (e) {}
+    try { showToast({ kind: 'success', title: 'Legal desde Supabase', body: data.docs.length + ' documento(s) y ' + data.tpls.length + ' plantilla(s) en línea.', duration: 6000 }); } catch (e) {}
+  }
+  return true;
+}
+
+/* ── V9.4.8 · Perfil de empresa (EMPRESA_PERFIL), singleton transversal ────
+   organization_profile: 1 fila por organización, todo el bloque en `profile`
+   jsonb (28 campos heterogéneos que el cliente lee/escribe como bloque). */
+async function dalLoadPerfil() {
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.from('organization_profile').select('profile').eq('organization_id', ORG_ID).maybeSingle();
+    if (error) throw error;
+    if (!data || !data.profile || typeof data.profile !== 'object') return null;
+    return data.profile;
+  } catch (e) { console.error('[dal] excepcion al leer perfil', e); return null; }
+}
+function dalApplyPerfil(profile) {
+  Object.assign(EMPRESA_PERFIL, profile);   // bloque sobre los valores actuales (igual que el camino de Firebase)
+  PERFIL_SOURCE = 'supabase';
+}
+async function dalBootPerfil(opts) {
+  const silent = opts && opts.silent;
+  const profile = await dalLoadPerfil();
+  if (!profile) { if (!silent) console.warn('[dal] sin perfil de Supabase; sigue desde Firebase'); return false; }
+  dalApplyPerfil(profile);
+  if (!silent) {
+    try { showToast({ kind: 'success', title: 'Perfil de empresa desde Supabase', body: 'Datos de la organización en línea (lectura y escritura).', duration: 5000 }); } catch (e) {}
+  }
   return true;
 }
 
@@ -17448,6 +17638,152 @@ function _dalEmpresaSaveSoon(id) {
   _dalSaveTimers['e:' + id] = setTimeout(function(){ const e = BD_EMPRESAS_BYID[id]; if (e) dalGuardarEmpresa(e); }, 900);
 }
 
+/* --- V9.4.4 · Escritura de una locación (BD_LOC) a Supabase --------------
+   Tabla `locations` plana: dueno/contactos son columnas jsonb (sin tablas
+   satélite). Las FOTOS NO se mandan (siguen en localStorage; su columna queda
+   en su default hasta que se implemente Supabase Storage). Insert vs update por
+   el set de IDs conocidos. La tabla no tiene columnas de auditoría. */
+function _dalLocacionRowPayload(l) {
+  return {
+    nombre: l.nombre || null, direccion: l.direccion || null, direccion2: l.direccion2 || null,
+    comuna: l.comuna || null, ciudad: l.ciudad || null, region: l.region || null,
+    maps: l.maps || null, orientacion: l.orientacion || null, notas: l.notas || null,
+    dueno: l.dueno || null,
+    contactos: Array.isArray(l.contactos) ? l.contactos : [],
+    fotos: (Array.isArray(l.fotos) ? l.fotos.filter(function(f){ return f && f.path; }).map(function(f){ return { path: f.path, nombre_original: f.nombre_original || '' }; }) : []),
+    updated_at: new Date().toISOString()
+  };
+}
+async function dalGuardarLocacion(l) {
+  if (!sb || LOCATIONS_SOURCE !== 'supabase' || !l || !l.locId) return { ok: false, skipped: true };
+  const isNew = !DAL_KNOWN_LOC_IDS.has(l.locId);
+  const row = _dalLocacionRowPayload(l);
+  try {
+    if (isNew) {
+      const ins = await sb.from('locations').insert(Object.assign({ loc_id: l.locId, organization_id: ORG_ID }, row));
+      if (ins.error) throw ins.error;
+      DAL_KNOWN_LOC_IDS.add(l.locId);
+    } else {
+      const upd = await sb.from('locations').update(row).eq('loc_id', l.locId);
+      if (upd.error) throw upd.error;
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error('[dal] guardar locacion', l.locId, e);
+    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: '«' + (l.nombre || l.locId) + '» se guardó localmente pero no se pudo sincronizar con Supabase. Reintenta al editar.', duration: 7000 }); } catch (x) {}
+    return { ok: false, error: e };
+  }
+}
+function _dalLocacionSaveSoon(locId) {
+  if (LOCATIONS_SOURCE !== 'supabase' || !locId) return;
+  clearTimeout(_dalSaveTimers['loc:' + locId]);
+  _dalSaveTimers['loc:' + locId] = setTimeout(function(){ const l = bdLocFind(locId); if (l) dalGuardarLocacion(l); }, 900);
+}
+
+/* --- V9.4.7 · Escritura/borrado de la BD de Legal a Supabase --------------
+   Documentos y plantillas: upsert directo (tablas planas, vars jsonb). El PDF
+   NO se manda (pdf_path queda como esté; binario de Storage pendiente). Las
+   tablas no tienen columnas de auditoría. */
+function _dalLegalDocRowPayload(d) {
+  return {
+    tipo: d.tipo || null, plantilla_id: d.plantillaId || null, project_id: d.proyectoId || null,
+    proyecto_nombre: d.proyectoNombre || null, cliente: d.cliente || null, estado: d.estado || null,
+    version: (d.version != null ? d.version : 1),
+    fecha_generacion: d.fechaGeneracion || null, fecha_firma: d.fechaFirma || null,
+    monto: (d.monto != null ? d.monto : null), vigencia: d.vigencia || null, responsable: d.responsable || null,
+    pdf_path: d.pdfUrl || null, contraparte_id: d.contraparteId || null, contraparte_nombre: d.contraparteNombre || null,
+    rut: d.rut || null, rol_calidad: d.rolCalidad || null,
+    vars: (d.vars && typeof d.vars === 'object') ? d.vars : {},
+    exported: !!d.exported, locacion_id: d.locacionId || null,
+    updated_at: new Date().toISOString()
+  };
+}
+async function dalGuardarLegalDoc(d) {
+  if (!sb || LEGAL_SOURCE !== 'supabase' || !d || !d.docId) return { ok: false, skipped: true };
+  const isNew = !DAL_KNOWN_LEGAL_DOC_IDS.has(d.docId);
+  const row = _dalLegalDocRowPayload(d);
+  try {
+    if (isNew) {
+      const ins = await sb.from('legal_documents').insert(Object.assign({ doc_id: d.docId, organization_id: ORG_ID }, row));
+      if (ins.error) throw ins.error;
+      DAL_KNOWN_LEGAL_DOC_IDS.add(d.docId);
+    } else {
+      const upd = await sb.from('legal_documents').update(row).eq('doc_id', d.docId);
+      if (upd.error) throw upd.error;
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error('[dal] guardar documento legal', d.docId, e);
+    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: '«' + (d.docId) + '» se guardó localmente pero no se pudo sincronizar con Supabase. Reintenta.', duration: 7000 }); } catch (x) {}
+    return { ok: false, error: e };
+  }
+}
+async function dalEliminarLegalDoc(docId) {
+  if (!sb || LEGAL_SOURCE !== 'supabase' || !docId) return;
+  try { const r = await sb.from('legal_documents').delete().eq('doc_id', docId); if (r.error) throw r.error; DAL_KNOWN_LEGAL_DOC_IDS.delete(docId); }
+  catch (e) { console.error('[dal] eliminar documento legal', docId, e); }
+}
+function _dalLegalTplRowPayload(t) {
+  return { nombre: t.nombre || null, descripcion: t.desc || null, target: t.target || null,
+           completar: t.completar || null, cuerpo: t.cuerpo || null, custom: !!t.custom,
+           updated_at: new Date().toISOString() };
+}
+async function dalGuardarLegalTpl(t) {
+  if (!sb || LEGAL_SOURCE !== 'supabase' || !t || !t.id) return { ok: false, skipped: true };
+  const isNew = !DAL_KNOWN_LEGAL_TPL_IDS.has(t.id);
+  const row = _dalLegalTplRowPayload(t);
+  try {
+    if (isNew) {
+      const ins = await sb.from('legal_templates').insert(Object.assign({ id: t.id, organization_id: ORG_ID }, row));
+      if (ins.error) throw ins.error;
+      DAL_KNOWN_LEGAL_TPL_IDS.add(t.id);
+    } else {
+      const upd = await sb.from('legal_templates').update(row).eq('id', t.id);
+      if (upd.error) throw upd.error;
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error('[dal] guardar plantilla legal', t.id, e);
+    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: '«' + (t.nombre || t.id) + '» se guardó localmente pero no se pudo sincronizar con Supabase. Reintenta.', duration: 7000 }); } catch (x) {}
+    return { ok: false, error: e };
+  }
+}
+async function dalEliminarLegalTpl(tplId) {
+  if (!sb || LEGAL_SOURCE !== 'supabase' || !tplId) return;
+  try { const r = await sb.from('legal_templates').delete().eq('id', tplId); if (r.error) throw r.error; DAL_KNOWN_LEGAL_TPL_IDS.delete(tplId); }
+  catch (e) { console.error('[dal] eliminar plantilla legal', tplId, e); }
+}
+function _dalLegalDocSaveSoon(docId) {
+  if (LEGAL_SOURCE !== 'supabase' || !docId) return;
+  clearTimeout(_dalSaveTimers['legaldoc:' + docId]);
+  _dalSaveTimers['legaldoc:' + docId] = setTimeout(function(){ const d = BD_LEGAL.find(function(x){ return x.docId === docId; }); if (d) dalGuardarLegalDoc(d); }, 900);
+}
+function _dalLegalTplSaveSoon(tplId) {
+  if (LEGAL_SOURCE !== 'supabase' || !tplId) return;
+  clearTimeout(_dalSaveTimers['legaltpl:' + tplId]);
+  _dalSaveTimers['legaltpl:' + tplId] = setTimeout(function(){ const t = BD_LEGAL_TPL.find(function(x){ return x.id === tplId; }); if (t) dalGuardarLegalTpl(t); }, 900);
+}
+
+/* --- V9.4.8 · Escritura del perfil de empresa (singleton) -----------------
+   Upsert de organization_profile (PK organization_id) con el bloque completo. */
+async function dalGuardarPerfil() {
+  if (!sb || PERFIL_SOURCE !== 'supabase') return { ok: false, skipped: true };
+  try {
+    const { error } = await sb.from('organization_profile').upsert({ organization_id: ORG_ID, profile: EMPRESA_PERFIL, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    return { ok: true };
+  } catch (e) {
+    console.error('[dal] guardar perfil', e);
+    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: 'El perfil de empresa se guardó localmente pero no se pudo sincronizar con Supabase. Reintenta.', duration: 7000 }); } catch (x) {}
+    return { ok: false, error: e };
+  }
+}
+function _dalPerfilSaveSoon() {
+  if (PERFIL_SOURCE !== 'supabase') return;
+  clearTimeout(_dalSaveTimers['perfil']);
+  _dalSaveTimers['perfil'] = setTimeout(function(){ dalGuardarPerfil(); }, 900);
+}
+
 /* ════════════════════════════════════════════════════════════════════
    V9.2.0 — LECTURA Y FUSIÓN DE PROYECTOS (Tanda 3): Proyecto + Presupuesto
    Un proyecto vive a medias entre los dos backends: cabecera, finanzas y
@@ -17519,6 +17855,119 @@ function _dalCotizacionPartes(p) {
   return { cotizacion: cotizacion, cotizaciones: cotizaciones };
 }
 
+/* 1:1 embebido de PostgREST: puede venir como objeto o como arreglo de 1. */
+function _dal1to1(v) { return Array.isArray(v) ? (v[0] || null) : (v || null); }
+
+/* Operaciones 4a (rodajes + plan de rodaje + hoja de llamado) desde Supabase.
+   rodajes es relacional; plan de rodaje y hoja de llamado son documentos JSONB
+   que se devuelven completos. null si no hay nada -> Firebase queda intacto. */
+function _dalOperaciones4aPartes(p) {
+  const dias = p.project_shoot_days || [];
+  const plan = _dal1to1(p.project_shooting_plan);
+  const hoja = _dal1to1(p.project_call_sheet);
+  if (!dias.length && !plan && !hoja) return null;
+  let rodajes = null;
+  if (dias.length) {
+    rodajes = dias.slice().sort(function(a,b){ return (a.posicion||0)-(b.posicion||0); }).map(function(d){
+      return { diaId: d.dia_id, fecha: d.fecha || '', activo: !!d.activo, descripcion: d.descripcion || '' };
+    });
+  }
+  return {
+    rodajes: rodajes,
+    planRodaje: (plan && plan.plan != null) ? plan.plan : null,
+    hojaLlamado: (hoja && hoja.data != null) ? hoja.data : null
+  };
+}
+
+/* Operaciones 4b (locaciones del proyecto + crew + responsables + asistentes +
+   gastos operativos) desde Supabase. null si no hay nada -> Firebase intacto. */
+function _dalOperaciones4bPartes(p) {
+  const byPos = function(a,b){ return (a.posicion||0)-(b.posicion||0); };
+  const locs   = p.project_locations || [];
+  const crewX  = p.project_crew_extra || [];
+  const extC   = p.project_external_crew || [];
+  const resp   = p.project_section_responsibles || [];
+  const ops    = _dal1to1(p.project_operations);
+  const opBud  = p.project_op_budgets || [];
+  if (!locs.length && !crewX.length && !extC.length && !resp.length && !ops && !opBud.length) return null;
+
+  let locaciones = null;
+  if (locs.length) {
+    locaciones = locs.slice().sort(byPos).map(function(l){
+      return { locId: l.loc_id, estado: l.estado || '', costo: (l.costo != null ? Number(l.costo) : 0),
+               contratacion: l.contratacion || '', notasProy: l.notas_proy || '' };
+    });
+  }
+  let crewExtra = null;
+  if (crewX.length) {
+    crewExtra = {};
+    crewX.forEach(function(c){ crewExtra[c.nombre] = { medioTransporte: c.medio_transporte || '' }; });
+  }
+  let crewExternos = null;
+  if (extC.length) {
+    crewExternos = extC.slice().sort(byPos).map(function(c){
+      return { tipo: c.tipo || '', nombre: c.nombre || '', rol: c.rol || '', telefono: c.telefono || '',
+               restriccion: c.restriccion || '', direccion: c.direccion || '', comuna: c.comuna || '' };
+    });
+  }
+  let responsables = null;
+  if (resp.length) {
+    responsables = {};
+    resp.forEach(function(r){ responsables[r.seccion] = r.nombre || ''; });
+  }
+  let asistentes = null, gastosOp = null;
+  if (ops || opBud.length) {
+    if (ops) asistentes = { cliente: ops.asistentes_cliente || 0, agencia: ops.asistentes_agencia || 0, externo: ops.asistentes_externo || 0 };
+    const presupuestos = opBud.slice().sort(byPos).map(function(b){
+      return { id: b.id, nombre: b.nombre || '', linea: b.linea || '', resp: b.resp || '', asignado: (b.asignado != null ? Number(b.asignado) : 0) };
+    });
+    gastosOp = {
+      cajaProd: ops && ops.caja_prod != null ? Number(ops.caja_prod) : 0,
+      presupuestos: presupuestos,
+      movimientos: ops && ops.op_movimientos ? ops.op_movimientos : [],
+      lineasExtra: ops && ops.op_lineas_extra ? ops.op_lineas_extra : []
+    };
+  }
+  return { locaciones: locaciones, crewExtra: crewExtra, crewExternos: crewExternos,
+           responsables: responsables, asistentes: asistentes, gastosOp: gastosOp };
+}
+
+/* Operaciones 4c (tareas + señales) desde Supabase. Las tareas traen sus
+   comentarios y adjuntos anidados. Las señales guardan rolObjetivo en meta jsonb
+   (la columna no existe). null si no hay nada -> Firebase intacto. */
+function _dalOperaciones4cPartes(p) {
+  const byPos = function(a,b){ return (a.posicion||0)-(b.posicion||0); };
+  const tasks = p.project_tasks || [];
+  const signals = p.project_signals || [];
+  if (!tasks.length && !signals.length) return null;
+
+  let tareas = null;
+  if (tasks.length) {
+    tareas = tasks.slice().sort(byPos).map(function(t){
+      const coms = (t.task_comments || []).slice().sort(byPos).map(function(c){
+        return { id: c.id, autor: c.autor || '', texto: c.texto || '', ts: c.ts || '' };
+      });
+      const adj = (t.task_attachments || []).slice().sort(byPos).map(function(a){
+        return { name: a.nombre_original || '', type: '' };   // sin binario (Storage pendiente); type no se persiste
+      });
+      return { id: t.id, seccion: t.seccion || '', texto: t.texto || '', asignadoA: t.asignado_a || '',
+               creadoPor: t.creado_por || '', estado: t.estado || 'pendiente',
+               creadaTs: (t.creada_ts != null ? Number(t.creada_ts) : null),
+               comentarios: coms, adjuntos: adj };
+    });
+  }
+  let senales = null;
+  if (signals.length) {
+    senales = signals.slice().sort(byPos).map(function(s){
+      const meta = s.meta || {};
+      return { id: s.id, tipo: s.tipo || '', seccion: s.seccion || '', rolObjetivo: (meta.rolObjetivo != null ? meta.rolObjetivo : null),
+               descripcion: s.descripcion || '', ts: (s.creada_ts != null ? Number(s.creada_ts) : null),
+               vistoPor: Array.isArray(s.visto_por) ? s.visto_por : [] };
+    });
+  }
+  return { tareas: tareas, senales: senales };
+}
+
 /* Proyecto Supabase (con embebidos) -> partes migradas para fusionar. */
 function _dalProyectoPartes(p) {
   const asg = p.project_assignments || [];
@@ -17571,6 +18020,9 @@ function _dalProyectoPartes(p) {
   return {
     estado: p.estado || 'venta', nombre: p.nombre_proyecto || '', cliente: cliente, pe: info.productorEjecutivo,
     cotizacion: cot ? cot.cotizacion : null, cotizaciones: cot ? cot.cotizaciones : null,
+    operaciones4a: _dalOperaciones4aPartes(p),
+    operaciones4b: _dalOperaciones4bPartes(p),
+    operaciones4c: _dalOperaciones4cPartes(p),
     dataParcial: { infoProyecto: info, finanzas: finanzas, servicios: servicios, gastos: gastos, equipos: equipos, talentos: talentos }
   };
 }
@@ -17591,7 +18043,27 @@ function _dalFusionarProyecto(target, partes) {
   d.talentos = partes.dataParcial.talentos;
   if (partes.cotizacion) d.cotizacion = partes.cotizacion;          // V9.2.1: cotización viva desde Supabase
   if (partes.cotizaciones) d.cotizaciones = partes.cotizaciones;    // V9.2.1: versiones de cotización desde Supabase
-  // rodajes/locaciones/hojaLlamado/tareas/senales/crewExtra/responsables/asistentes/crewExternos: intactos (Firebase)
+  if (partes.operaciones4a) {                                       // V9.4.0: operaciones 4a desde Supabase
+    const o4 = partes.operaciones4a;
+    if (o4.rodajes) d.rodajes = o4.rodajes;
+    if (o4.planRodaje) d.planRodaje = o4.planRodaje;
+    if (o4.hojaLlamado) d.hojaLlamado = o4.hojaLlamado;
+  }
+  if (partes.operaciones4b) {                                       // V9.4.2: operaciones 4b desde Supabase
+    const ob = partes.operaciones4b;
+    if (ob.locaciones) d.locaciones = ob.locaciones;
+    if (ob.crewExtra) d.crewExtra = ob.crewExtra;
+    if (ob.crewExternos) d.crewExternos = ob.crewExternos;
+    if (ob.responsables) d.responsables = ob.responsables;
+    if (ob.asistentes) d.asistentes = ob.asistentes;
+    if (ob.gastosOp) d.gastosOp = ob.gastosOp;
+  }
+  if (partes.operaciones4c) {                                       // V9.4.5: operaciones 4c desde Supabase
+    const oc = partes.operaciones4c;
+    if (oc.tareas) d.tareas = oc.tareas;
+    if (oc.senales) d.senales = oc.senales;
+  }
+  // locaciones/tareas/senales/crewExtra/responsables/asistentes/crewExternos/gastosOp: intactos (Firebase). rodajes/planRodaje/hojaLlamado: desde Supabase (4a).
 }
 
 async function dalLoadProyectos() {
@@ -17605,7 +18077,18 @@ async function dalLoadProyectos() {
     + 'budget_line_items(section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,confirmado,costo_real,es_extra,es_pp,hora_extra,posicion,departments(nombre)),'
     + 'project_quotation(fecha_emision,representante_cliente,condiciones,descripcion_proyecto,jornadas_rodaje,meta),'
     + 'quotation_offers(id_externo,es_base,nombre,valor_cliente,descripcion,incluye,no_incluye,entregables,presupuesto_alt,posicion),'
-    + 'quotation_versions(numero,es_activa,snapshot,nota)';
+    + 'quotation_versions(numero,es_activa,snapshot,nota),'
+    + 'project_shoot_days(dia_id,fecha,activo,descripcion,posicion),'
+    + 'project_shooting_plan(plan),'
+    + 'project_call_sheet(data),'
+    + 'project_locations(loc_id,estado,costo,contratacion,notas_proy,posicion),'
+    + 'project_crew_extra(nombre,contact_id,medio_transporte),'
+    + 'project_external_crew(tipo,nombre,rol,telefono,restriccion,direccion,comuna,posicion),'
+    + 'project_section_responsibles(seccion,nombre,contact_id),'
+    + 'project_operations(asistentes_cliente,asistentes_agencia,asistentes_externo,caja_prod,op_movimientos,op_lineas_extra),'
+    + 'project_op_budgets(id,nombre,linea,resp,asignado,posicion),'
+    + 'project_tasks(id,seccion,texto,asignado_a,creado_por,estado,creada_ts,posicion,task_comments(id,autor,texto,ts,posicion),task_attachments(nombre_original,posicion)),'
+    + 'project_signals(id,tipo,seccion,descripcion,creada_ts,visto_por,meta,posicion)';
   try {
     const { data, error } = await sb.from('projects').select(sel).eq('organization_id', ORG_ID).is('deleted_at', null);
     if (error) throw error;
@@ -17722,15 +18205,126 @@ function _dalProyectoPayload(project) {
 }
 
 async function dalGuardarProyecto(project) {
-  if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return;
+  if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
   try {
     const payload = _dalProyectoPayload(project);
     const { error } = await sb.rpc('guardar_proyecto', { p: payload });
     if (error) throw error;
     DAL_KNOWN_PROJECT_IDS.add(project.id);
+    return true;
   } catch (e) {
     console.error('[dal] guardar proyecto', project && project.id, e);
-    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: 'El proyecto se guardó localmente y en Firebase, pero falló la sincronización con la base relacional. Vuelve a guardar para reintentar.', duration: 6000 }); } catch (x) {}
+    return false;   // el aviso lo coordina dalFlushProyectos (un solo toast)
+  }
+}
+
+/* Operaciones 4a (rodajes + plan de rodaje + hoja de llamado) -> payload para
+   guardar_operaciones_4a. rodajes relacional; plan/hoja son JSONB 1:1 (null si vacíos). */
+function _dalOperaciones4aPayload(project) {
+  const d = project.data || {};
+  const rodajes = (d.rodajes || []).map(function(r){
+    return { diaId: r.diaId || '', fecha: r.fecha || '', activo: !!r.activo, descripcion: r.descripcion || '' };
+  });
+  const plan = (d.planRodaje && typeof d.planRodaje === 'object' && Object.keys(d.planRodaje).length) ? d.planRodaje : null;
+  const hoja = (d.hojaLlamado && typeof d.hojaLlamado === 'object' && Object.keys(d.hojaLlamado).length) ? d.hojaLlamado : null;
+  return { id: project.id, rodajes: rodajes, planRodaje: plan, hojaLlamado: hoja };
+}
+
+async function dalGuardarOperaciones4a(project) {
+  if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  try {
+    const { error } = await sb.rpc('guardar_operaciones_4a', { p: _dalOperaciones4aPayload(project) });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('[dal] guardar operaciones 4a', project && project.id, e);
+    return false;
+  }
+}
+
+/* Operaciones 4b (locaciones + crew + responsables + asistentes + gastos op) ->
+   payload para guardar_operaciones_4b. CONTRATO: se manda el estado COMPLETO de
+   todas las piezas en cada llamada (la RPC reemplaza todo; lo que no se manda, se
+   borra). Los dicts crewExtra/responsables se aplanan a arreglos para la RPC. */
+function _dalOperaciones4bPayload(project) {
+  const d = project.data || {};
+  const locaciones = (d.locaciones || []).map(function(l){
+    return { locId: l.locId || '', estado: l.estado || '', costo: (l.costo != null ? l.costo : 0),
+             contratacion: l.contratacion || '', notasProy: l.notasProy || '' };
+  });
+  const crewExtra = Object.keys(d.crewExtra || {}).map(function(nombre){
+    const info = (d.crewExtra[nombre]) || {};
+    return { nombre: nombre, medioTransporte: info.medioTransporte || '' };
+  });
+  const crewExternos = (d.crewExternos || []).map(function(c){
+    return { tipo: c.tipo || '', nombre: c.nombre || '', rol: c.rol || '', telefono: c.telefono || '',
+             restriccion: c.restriccion || '', direccion: c.direccion || '', comuna: c.comuna || '' };
+  });
+  const responsables = Object.keys(d.responsables || {}).map(function(seccion){
+    return { seccion: seccion, nombre: d.responsables[seccion] || '' };
+  });
+  const a = d.asistentes || {};
+  const asistentes = { cliente: a.cliente || 0, agencia: a.agencia || 0, externo: a.externo || 0 };
+  const g = d.gastosOp || {};
+  const gastosOp = {
+    cajaProd: (g.cajaProd != null ? g.cajaProd : 0),
+    presupuestos: (g.presupuestos || []).map(function(b){
+      return { id: b.id || '', nombre: b.nombre || '', linea: b.linea || '', resp: b.resp || '', asignado: (b.asignado != null ? b.asignado : 0) };
+    }),
+    movimientos: g.movimientos || [],
+    lineasExtra: g.lineasExtra || []
+  };
+  return { id: project.id, locaciones: locaciones, crewExtra: crewExtra, crewExternos: crewExternos,
+           responsables: responsables, asistentes: asistentes, gastosOp: gastosOp };
+}
+
+async function dalGuardarOperaciones4b(project) {
+  if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  try {
+    const { error } = await sb.rpc('guardar_operaciones_4b', { p: _dalOperaciones4bPayload(project) });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('[dal] guardar operaciones 4b', project && project.id, e);
+    return false;
+  }
+}
+
+/* Operaciones 4c (tareas + señales) -> payload para guardar_operaciones_4c.
+   CONTRATO (igual que 4a/4b): se manda el ESTADO COMPLETO de tareas y señales en
+   cada llamada; la RPC reemplaza todo. Las tareas llevan sus comentarios y
+   adjuntos anidados (adjuntos solo-nombre; el binario es de Storage, pendiente). */
+function _dalOperaciones4cPayload(project) {
+  const d = project.data || {};
+  const tareas = (d.tareas || []).map(function(t){
+    return {
+      id: t.id || '', seccion: t.seccion || '', texto: t.texto || '', asignadoA: t.asignadoA || '',
+      creadoPor: t.creadoPor || '', estado: t.estado || 'pendiente',
+      creadaTs: (t.creadaTs != null ? t.creadaTs : null),
+      comentarios: (t.comentarios || []).map(function(c){
+        return { id: c.id || '', autor: c.autor || '', texto: c.texto || '', ts: c.ts || '' };
+      }),
+      adjuntos: (t.adjuntos || []).map(function(a){ return { name: a.name || '' }; })
+    };
+  });
+  const senales = (d.senales || []).map(function(s){
+    return { id: s.id || '', tipo: s.tipo || '', seccion: s.seccion || '',
+             rolObjetivo: (s.rolObjetivo != null ? s.rolObjetivo : null),
+             descripcion: s.descripcion || '', ts: (s.ts != null ? s.ts : null),
+             vistoPor: Array.isArray(s.vistoPor) ? s.vistoPor : [] };
+  });
+  return { id: project.id, tareas: tareas, senales: senales };
+}
+
+async function dalGuardarOperaciones4c(project) {
+  if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  try {
+    const { error } = await sb.rpc('guardar_operaciones_4c', { p: _dalOperaciones4cPayload(project) });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('[dal] guardar operaciones 4c', project && project.id, e);
+    return false;
   }
 }
 
@@ -17743,9 +18337,19 @@ function dalTouchProyecto(project) {
   clearTimeout(_dalProyFlushTimer);
   _dalProyFlushTimer = setTimeout(dalFlushProyectos, 1500);
 }
-function dalFlushProyectos() {
+async function dalFlushProyectos() {
   const ids = Array.from(_dalDirtyProjects); _dalDirtyProjects.clear();
-  ids.forEach(function(id){ const p = PROJECTS.find(function(x){ return x.id === id; }); if (p) dalGuardarProyecto(p); });
+  for (const id of ids) {
+    const p = PROJECTS.find(function(x){ return x.id === id; });
+    if (!p) continue;
+    const okCore = await dalGuardarProyecto(p);          // núcleo: cabecera+finanzas+presupuesto+cotización
+    const okOps  = await dalGuardarOperaciones4a(p);     // operaciones 4a: rodajes+plan+hoja
+    const okOps2 = await dalGuardarOperaciones4b(p);     // operaciones 4b: locaciones+crew+responsables+asistentes+gastos op
+    const okOps3 = await dalGuardarOperaciones4c(p);     // operaciones 4c: tareas+señales
+    if (okCore === false || okOps === false || okOps2 === false || okOps3 === false) {
+      try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: 'Se guardó local y en Firebase, pero falló la sincronización con la base relacional. Vuelve a guardar para reintentar.', duration: 6000 }); } catch (x) {}
+    }
+  }
 }
 
 /* Banner visible dentro del modulo Base de Datos (claridad sobre comodidad). */
@@ -17756,7 +18360,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V9.3.0';   // V9.3.0: LOGIN con GOOGLE (Google OAuth via Supabase Auth) en reemplazo del login correo+contrasena. La pantalla cloudGate ahora muestra un boton 'Iniciar sesion con Google' que llama client.auth.signInWithOAuth({provider:'google', options:{redirectTo: origin+pathname}}); el navegador va a Google y vuelve a la MISMA URL con la sesion activa. El cliente de Supabase (config por defecto: detectSessionInUrl) captura la sesion del URL al volver, asi que el getSession() que ya hacia cloudGate la detecta y entra directo. Identidad SIN cambios: dalResolveIdentidad sigue derivando currentUser desde sess.user.email (mapeo correo->contacto), identico venga de Google o de contrasena. NO cambia RLS (mvp_ valida auth.uid igual), ni el esquema, ni Firebase. Requiere que el proveedor Google este configurado en Supabase + Google Cloud Console (ya hecho por el experto de auth) y que la URL de GitHub Pages este en las URLs de redireccion permitidas. Las sesiones de contrasena previas siguen valiendo (persisten); los logins nuevos van por Google. Pendiente: retirar la doble escritura cuando Supabase sea unica fuente; Tanda 4 (Operaciones); app_users (auth.uid->contact_id, registra proveedor en app_metadata); RLS real por org+rol.   // V9.2.2: ESCRITURA de PROYECTOS a Supabase via RPC guardar_proyecto. Doble escritura durante la transicion: el blob completo sigue yendo a Firebase (red de seguridad) y ademas las partes migradas (cabecera+asignaciones+finanzas+presupuesto+cotizacion) se mandan a Supabase. _dalProyectoPayload arma el payload (inverso exacto de la lectura, resolviendo contactId por hint/_contactId o por nombre). dalGuardarProyecto llama la RPC; debounce por proyecto via _dalDirtyProjects + dalTouchProyecto enganchado en markDirty (proyecto abierto) y en syncProjectStateUI (cambios de estado). La RPC hace upsert de projects (preservando el id de Firebase y SIN pisar categoria/es_remunerado/vinculos que el cliente no gestiona) y reemplazo total de filas hijas, atomico. CIERRA el riesgo de transicion: desde V9.2.0, editar presupuesto/cotizacion iba solo a Firebase y la fusion lo pisaba al recargar; ahora Supabase se mantiene al dia. REQUIERE crear la RPC en Supabase (takeos_tanda3_rpc_guardar_proyecto.sql) para activarse. Firebase sigue como respaldo hasta validar la escritura con un proyecto real. Pendiente: retirar la doble escritura cuando Supabase sea unica fuente; RLS real; app_users; inmutabilidad del cerrado.   // V9.2.1: LECTURA de COTIZACION desde Supabase (Tanda 3), sumada a la fusion de proyectos. Se leen project_quotation + quotation_offers (cotizacion VIVA, relacional) y quotation_versions (historial como snapshot JSONB) y se re-arman data.cotizacion y data.cotizaciones (activoId + versiones). Fusion NO destructiva: si un proyecto no tiene cotizacion en Supabase, se deja la de Firebase intacta. La cotizacion viva trae campos que el esquema no tenia (esBase de la oferta, id externo de la oferta 'of_...', descripcionProyecto, jornadasRodaje, y metadata de version id/numero/label/nota/createdAt/resumen): se mapean a columnas nuevas (quotation_offers.es_base, quotation_offers.id_externo; project_quotation.descripcion_proyecto, jornadas_rodaje, meta jsonb) que la 2da migracion agrega y el experto aprueba. Las versiones se guardan como snapshot completo (sin perdida). REQUIERE la 2da pasada de migracion de cotizacion (takeos_tanda3_migracion_cotizacion.sql) para activarse con datos; sin ella, la cotizacion sigue viniendo de Firebase. Siguiente: ESCRITURA de proyectos via RPC guardar_proyecto (V9.2.2).   // V9.2.0: LECTURA de PROYECTOS + PRESUPUESTO desde Supabase (Tanda 3), con FUSION no destructiva. Un proyecto vive a medias entre backends: cabecera (projects + project_assignments para PE/JP/Director), finanzas (project_financials + comisiones/riesgos/extras) y presupuesto (budget_line_items -> servicios/gastos/tecnica==equipos/talentos) se leen de Supabase; rodajes/locaciones/hoja de llamado/cotizacion/tareas/senales siguen en Firebase. dalBootProyectos lee Supabase y FUSIONA las partes migradas sobre el proyecto de Firebase emparejando por id (un proyecto que no esta en Supabase queda 100% Firebase; si Supabase devuelve cero proyectos no se toca nada -> sin riesgo de 'desaparecer' proyectos). Se re-fusiona tras cambios remotos (cloudCommitRemote). PROJECTS_SOURCE arranca en firebase y pasa a supabase solo tras leer >=1 proyecto. GAP detectado: el esquema no tiene columna de DTE real (dteReal) ni la seccion equipos se llama igual (tecnica). La COTIZACION (cotizacion viva + versiones con snapshot) queda para V9.2.1. La lectura NO se activa hasta migrar los proyectos de Firebase a las tablas (paso siguiente, preservando el id del proyecto para poder fusionar).   // V9.1.3: REALINEACION del cliente a la Seccion 0 del SQL de Tanda 3 (cambios de esquema en tablas ya en produccion). (1) FECHA DE NACIMIENTO: la columna contacts.cumpleanos se renombro a fecha_nacimiento; el campo canonico pasa de 'DD/MM' a fecha ISO completa; la ficha captura fecha completa (input date) y el saludo se derivara de dia/mes; se elimina el centinela 1900 y el campo interno _cumpleISO; lectura tolerante (fecha_nacimiento || cumpleanos). (2) PERSONA<->EMPRESA: contact_companies elimino relacion/tipo_relacion/es_principal y agrego es_socio/es_representante/cargo; el cliente mapea relacionEmpresa<->cargo y conserva las facetas es_socio/es_representante en el round-trip (sin UI de toggle aun); lectura tolerante (cargo || relacion). (3) AGENCIA: company_relationships acepta 'agencia'; agregado al mapa de tipos y a las opciones de la UI. Despliegue coordinado con correr el SQL (mismo momento). Sin tocar Proyectos/Presupuesto todavia (V9.2.0).   // V9.1.2: BUG FIX del alta de registros desde modales. La confirmacion del modal (_modalConfirm) cerraba el modal (vaciaba el DOM) ANTES de ejecutar el onConfirm, por lo que al crear una empresa los document.getElementById(...).value venian vacios y saltaba 'Falta nombre' aunque estuviera lleno. Ahora el onConfirm corre ANTES de cerrar; si devuelve false (validacion fallida) el modal se mantiene abierto sin perder lo escrito; y si el onConfirm abrio otro modal encima, no se borra. Afecta a TODOS los modales que leen inputs en su confirmacion (alta de empresa, etc.).   // V9.1.1: identidad real + ESCRITURA de la BD a Supabase. (1) IDENTIDAD: currentUser() deja de simularse; toma la persona cuyo correo coincide con la sesion de Supabase (mapeo email->contacto), y todo lo que ya funcionaba por nombre (tareas, @menciones, responsables, senales) sigue igual. Se ELIMINA el selector 'Sesion (simulada)' del Control Room (andamio). (2) ESCRITURA: al crear/editar un contacto o empresa, el modelo canonico se descompone en sus tablas relacionales (contacts+roles+cuentas+talento+vinculos; companies+relationships) y se sincroniza a Supabase como fuente de verdad, con reemplazo total de filas satelite por registro (sin ghost data). Firebase sigue recibiendo copia como red de seguridad. Insert vs update por set de IDs conocidos; created_by/updated_by con el uid de la sesion. (3) Se preserva el ANO real del cumpleanos (la UI solo captura DD/MM): se conserva el anio ya almacenado; contactos nuevos usan 1900 como centinela. (4) Empresa: edicion inline con guardado diferido (debounce). Se quita el banner de pausa. Decisiones: escritura DIRECTA desde el cliente (no Edge Function) por ritmo, con failsafe Firebase + copias propias como red; transaccionalidad server-side queda como endurecimiento. Tipo de cuenta de texto libre no mapeable -> null (respeta el CHECK). Pendientes: campos estructurados de empresa (duenos/representante/contacto principal) no tienen columna en el esquema Tanda 1 -> se guardan los campos nucleo + tipo + notas, el resto queda en la copia de Firebase (gap de esquema a resolver); import/reemplazo en bloque .xlsx a Supabase pendiente; reemplazar RLS mvp_ por org+rol antes de un 2do tenant.   // V9.1.0: primer recableo de datos a Supabase. (1) CAPA DE ACCESO A DATOS (DAL): nueva capa que aisla de donde vienen los datos; la app pide Contactos/Empresas sin saber si es Firebase o Supabase. (2) LECTURA de la Tanda 1 (personas + empresas) desde Supabase/PostgreSQL: al arrancar, despues de cargar Firebase, se reemplazan BD_CONTACTOS/BD_EMPRESAS_BYID por la lectura relacional (joins de contacts+roles+cuentas+talento+vinculos y companies+relationships), re-armando EXACTAMENTE el modelo en memoria que la UI ya consume. FAIL-SAFE: si Supabase no responde o no hay sesion, la app sigue con los datos de Firebase (nunca peor que la V9.0.0). (3) Las actualizaciones remotas de Firebase ya NO pisan los contactos servidos por Supabase. (4) ESCRITURA de la BD en pausa (mini-congelamiento): los editores de personas/empresas e import/replace .xlsx avisan y no guardan mientras la fuente es Supabase; la escritura llega en la V9.1.1. Banner visible en el modulo Base de Datos. (5) Boton 'Salir' en la barra superior (cierre de sesion real con confirmacion), reemplaza el logoutTakeOS() por consola. Pendientes conocidos: conectar currentUser() a la identidad real de la sesion (V9.1.1); reemplazar politicas RLS mvp_ por org+rol antes de un segundo tenant; mover generacion de IDs a server-side. Sin breaking changes de datos.   // V9.0.0: migracion del login a Supabase Auth (documentada retroactivamente). Se reemplazo la contrasena compartida 'primate' por usuarios reales (correo + contrasena) via Supabase Auth, con persistencia de sesion entre recargas; se agrego el cliente @supabase/supabase-js@2 por CDN y la pantalla de login (cloudGate). Firebase seguia siendo el 100% de los datos; Supabase solo autenticaba. Esta version cierra la serie V8 y abre la V9 (migracion a Supabase/PostgreSQL).   // V8.6.0: capa de comunicacion y trazabilidad de responsabilidades. (1) TAREAS por seccion: boton 'Tareas' junto al responsable de cada seccion del proyecto (incl. BD/Documentos) con badge de tareas abiertas; modal para crear tarea (asignar a una persona del proyecto, texto, adjuntar .xlsx/PDF/imagen), responder con COMENTARIOS, y marcar completada. (2) @MENCIONES: autocompletado al escribir @ en cualquier textarea de tarea/comentario y tambien en la nota de fila del Presupuesto; sugiere personas del proyecto y resalta la mencion. (3) MEGA-REPOSITORIO en el Control Room: panel 'Mis tareas' que junta TODO lo asignado al usuario across proyectos y secciones, con autoasignacion ('Auto-asignarmela'). (4) 'Requieren atencion' del Control Room ahora es POR USUARIO: cuenta los proyectos que requieren su atencion (tareas abiertas + senales); badge por tarjeta de proyecto. (5) ATENCION mas alla de tareas: editar el guion tecnico / plan de rodaje levanta una SENAL para el AD (no para quien edita); con boton 'Visto'. Sin auth todavia: el usuario actual se SIMULA con un selector ('Sesion (simulada)') en el Control Room; cuando exista login, currentUser() lee la sesion y todo lo demas funciona igual. Notas de horizonte (solo changelog): los avisos/@menciones no notifican aun; los adjuntos guardan el nombre (no el binario) hasta el backend; las senales son extensibles a otras secciones/roles; formulario de intake nativo pendiente.   // V8.5.3: dos agregados. (1) Plantillas con SUBVERSIONES (genérico): una plantilla puede tener subversiones editables por separado y el sistema elige cuál usar por destinatario. Producción ahora tiene 'Estándar' y 'Pronto Pago' como subversiones (elige por la marca PP del Presupuesto). El editor de plantillas muestra sub-pestañas para editar cada subversión; el modelo soporta otras dimensiones a futuro (p.ej. crew/cliente/agencia para la hoja de llamado). Migración: una Producción ya guardada conserva su texto como 'Estándar' y suma 'Pronto Pago' por defecto. (2) Link del formulario en la BASE DE DATOS: nuevo campo 'Link del formulario' en la pestaña BD que alimenta {{LINK FORMULARIO}} en Notificaciones. Antes el editor de notificaciones editaba un campo distinto (cfg.linkFormulario) al que leía el sistema (EMPRESA_PERFIL.linkFormularioPago), por eso los destinatarios salían inválidos; ahora se unifica con fallback. Nota de horizonte: a futuro, formulario nativo del software en vez de Google Forms. Diferido a V8.5.4: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @, repositorio en Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario.   // V8.5.2: correcciones a Pagos Pendientes y Notificaciones. (1) Prontos Pagos en Finanzas: nuevas columnas Fecha de rodaje (desde Rodajes) y Fecha de pago (editable, por persona+proyecto), con alerta si la fecha de pago es ANTES del rodaje (evita que el CFO pague antes de que la persona trabaje). (2) BUG GRAVE corregido: el Monto de Prontos Pagos ya NO usa el costo cotizado; usa el NETO del COSTO REAL segun el DTE REAL (misma logica tributaria que los contratos: boleta retiene, factura no; via montoNetoDesde). (3) Si una fila PP aun no tiene costo real, el Monto muestra 'Proforma' y esas filas no se exportan. (4) Notificaciones: nueva columna PP en la tabla de destinatarios (a la derecha de Validacion) que marca quien tiene pronto pago (el cuerpo del correo ya adaptaba la condicion de pago via {{CONDICION DE PAGO}}). Diferido a V8.5.3: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @, repositorio en Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario.   // V8.5.1: cierra el hilo de Pronto Pago. (1) Plantilla unica de Produccion en Notificaciones: detecta automaticamente el pronto pago por destinatario via la variable {{CONDICION DE PAGO}} (se llena distinto si la persona tiene filas PP confirmadas en el Presupuesto); se elimino la plantilla separada 'Produccion Pronto Pago'. (2) Seccion Pagos Pendientes en Finanzas/CFO: nueva sub-pestana 'Prontos Pagos' junto a 'Reembolsos', derivada de las filas confirmadas marcadas con PP en el Presupuesto (agregadas por persona y proyecto), con su KPI. (3) Exportacion Office Banking de Santander para prontos pagos (solo) y consolidada (reembolsos + prontos pagos), mismo formato de 13 columnas que ya usaban los reembolsos. Cumpleanos automatico: nota de horizonte (no implementado). Diferido a V8.5.2: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @ tambien en notas de Presupuesto, repositorio de tareas en el Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario, incluyendo atencion mas alla de tareas (p.ej. cambios de guion tecnico que afectan al AD).   // V8.5.0: (1) Responsable por seccion: combobox de BD en el header de cada modulo, un unico responsable por seccion, con defaults por rol (Info Proyecto/Presupuesto/Cotizacion->PE; Crew/Rodajes/Locaciones/Legal/Notificaciones/Gastos->JP; Hoja de Llamado/Plan de Rodaje->AD; BD/Documentos->ninguno). PE y JP se resuelven desde Info Proyecto; muestra nombre/cargo/correo/telefono con click a la ficha. Sin responsables por tarea (queda para futuro). (2) Pronto Pago por fila en Presupuesto (pildora PP en cada fila); se guarda el dato, listo para Finanzas y Notificaciones. (3) Tipo de cuenta como desplegable (Cuenta Corriente/Vista/Ahorro/RUT/Chequera Electronica; preserva texto libre antiguo). (4) Cumpleanos solo DD/MM (sin ano), listo para saludo automatico futuro. (5) Hora extra ahora es monto en pesos (formato $X.XXX CLP, igual que Monto Neto). Formato Office Banking de Santander (13 columnas) registrado como insumo para la futura exportacion de Pagos Pendientes. Difiere (segun el propio documento): responsables por tarea, plantilla de Notificaciones que detecta Pronto Pago, seccion Pagos Pendientes (Reembolsos+Prontos Pagos) con export Office Banking, saludo de cumpleanos automatico.   // V8.4.8: feedback Legal + cambio de variable. (A) en el generador la X se movio a la esquina superior derecha y se agrego un boton 'Cerrar' abajo (junto a Exportar PDF y Generar). (B) los campos de monto autoformatean a '$100.000 CLP' y bloquean letras (solo numeros). (C) todas las variables _texto (monto_texto, hora_extra_texto, etc.) son automaticas: ya no aparecen como campos a tipear, se derivan de su variable base (cifra->palabras o %->'por ciento') y el monto dice 'pesos chilenos'. (D) el PDF se nombra: <documento> - <contraparte> - S-F - v<N>. (E) se eliminaron TODAS las plantillas preset; solo existen las personalizadas (los documentos ya generados con preset se conservan y se pueden ver). (F) la variable jornadas_trabajo se renombro a cantidad_jornadas (jornadas_trabajo queda como alias para compatibilidad). Nota de horizonte: documentos legales para productoras fuera de Chile (por eso el CLP explicito). Pendiente V8.5: carga de logos PNG.   // V8.4.7: feedback del editor de plantillas legales. (1) variables nuevas en grupo Productora: rut_representante_productora y domicilio_productora (ya existian en el motor, ahora son insertables). (2) monto_texto se genera AUTOMATICAMENTE desde monto_neto (cifra->palabras, ej. 'un millon quinientos mil pesos', con 'de pesos' cuando corresponde); deja de ser un campo editable. (3) fechas consolidadas: se elimina fecha_rodaje (singular); queda solo fechas_rodaje (admite una o varias fechas, autollenado desde Rodajes). (4) el titulo del documento en el preview ahora se actualiza en vivo al escribir el Nombre. (5) el generador 'Ver/Usar documento' ya no se cierra al hacer click fuera (anti-cierre, se cierra con la X). (6) se quito el triangulo del encabezado del documento (queda solo el nombre de la productora). Carga de logos PNG: anotada para V8.5 (requiere compresion en cliente para no inflar Firestore).   // V8.4.6: 'Legal editor v2'. (12) el editor de plantillas legales pasa a texto enriquecido: la negrita es real con el boton B o Command/Ctrl+B (ya no se ve **texto**); internamente se sigue guardando como **negrita** para no tocar el renderizador, el PDF ni el generador (se serializa al guardar). (10) vista previa en vivo del documento dentro del editor, al lado del cuerpo, que se actualiza mientras escribes (variables mostradas como placeholders resaltados). (13) variables de fecha (fecha_firma, fecha_rodaje, fecha_vigencia, fecha_termino) con selector de calendario al generar el documento; se guardan en ISO y se imprimen como fecha larga en espanol ('15 de marzo de 2026'). Cluster Legal completo. Proximo foco sugerido: V8.5 (Pronto Pago + Pagos Pendientes + Office Banking).   // V8.4.5: ficha de personas en la BD. (1) 'Empresa asociada' usa el combobox estandar (busca empresas de la BD). (2) Cumpleanos pasa a selector de calendario (type=date). (3) nuevo campo Region con desplegable (16 regiones). (4) Banco es desplegable con los bancos de Chile y el codigo SBIF se completa solo (read-only, no editable). (5) boton 'Cuenta extranjera / otro medio' que abre un campo de texto libre (Global66, IBAN/SWIFT, efectivo, etc.). (6) Rol habitual y DTE habitual ahora se muestran solo si el rol Crew esta marcado (igual que Talento). (7) en perfil de talento, Edad se reemplaza por Fecha de nacimiento (la edad se calcula sola en la tarjeta). (8) 'Areas de interes' pasa a 'Areas de interes / habilidad'. Pendiente 'Legal editor v2' (V8.4.6): preview en vivo (10), negritas reales Command+B (12), selectores de calendario en Legal (13).   // V8.4.4: correcciones sobre V8.4.3. (1) ARREGLADO el bug de los comboboxes de nombre en Empresas: el transform del modal rompia position:fixed; ahora usan anclaje CSS (cbx-anchored) como el de Legal y funcionan dentro de modales. (3) el desplegable ya NO se cierra al scrolear (ni al scrollear su propia lista ni al scrollear el modal). (4) el mensaje 'No esta en la BD' del combobox se reduce a solo el boton '+ Agregar a la BD' (casilla compacta, sin scroll). (2) el tooltip de comentarios del Presupuesto muestra autor + fecha al pasar el cursor (no solo al hacer clic). (5) la pelota ambar 'no esta en BD' muestra solo '+ Agregar a la BD' al hover y es clickeable: lleva a crear el contacto. (6) version visible bajo el logo TakeOS (lee TAKEOS_VERSION). Pendiente 'Legal editor v2': preview en vivo (10), negritas reales Command+B (12), selectores de calendario (13).   // V8.4.3: (5) PRIORIDAD: los modales (editor de plantillas legales, fichas, formularios) ya NO se cierran al hacer click fuera; se cierran solo con sus botones (evita perder trabajo). (1) Empresas con multiples duenos/socios (lista con agregar/quitar). (2) los campos de nombre de Empresas usan el combobox estandar (duenos, representante, contactos). (3) eliminado el mensaje redundante de 'registro minimo'. (4) la advertencia 'No esta en la BD' del combobox ahora es clickeable y abre el alta de persona (igual que Crew). (6) 'Llamado general' en Plan de Rodaje es clickeable y lleva a Hoja de Llamado (fuente unica). (7) los comentarios del Presupuesto muestran el texto al pasar el cursor (tooltip inmediato) y siguen abriendose con clic para el detalle. (8) modelo de comentario preparado para autor+fecha (registra fecha; autor al activar cuentas). (9) Datos de Cotizacion ahora muestra tiempo de derechos, plataformas y paises (solo lectura, desde Info Proyecto). (11) nueva variable legal {{fechas_rodaje}} que toma las fechas activas de Rodajes y es editable. Pendiente 'Legal editor v2': preview en vivo (10), negritas reales Command+B (12), selectores de calendario (13).   // V8.4.2: (1) Costeo Interno desglosado (Subtotal, Gastos administrativos, Contingencias, Costo de produccion, Comisiones, Valor cliente, Ganancia). (2) drag&drop para reordenar Entregables/Incluye/No incluye/Videos. (3) adjuntar PDFs reales (base64, tope ~600KB) en Documentos, sin quitar el link. (7) edicion completa de Empresas (razon social, RUT, tipo, giros, dueno, representante, observaciones) con contactos desde la BD (combobox 'No esta en BD' que crea registro minimo). (8) ficha Control Room por empresa (total pagado y margen SOLO de cerrados via finanzas reales; activos como proforma; dias de pago aun no registrado) + vinculo proyecto<->empresa por ID (clienteEmpresaId con selector en Info Proyecto y auto-sugerencia).   // V8.4.1: correcciones al cluster Legal (cursor al insertar variables, variables con nombres descriptivos, título del PDF = nombre de la plantilla, Nombre vs Descripción, 'Oficial'→'Predeterminada/Preset' con advertencia, negrita en plantillas, bloqueo de export vacío verificado) + fix del bug Ver/Editar en la BD de Locaciones.   // V8.4: (11) editor de plantillas legales en Modo Administrador — crear/editar/eliminar plantillas personalizadas con cuerpo de texto y variables {{insertables}}; las 4 oficiales se conservan literalmente (solo lectura). (12) Locaciones como categoria visible de la Base de Datos (cuarta pestana), con su propio alta a nivel BD. (13) la Base de Datos pasa a llamarse 'Base de Datos' con descripcion que refleja personas, empresas, talentos, locaciones y futuras entidades.   // V8.3.4: (corrección 1) la validación legal ahora bloquea TANTO exportar como GUARDAR/Generar, y exige todos los campos relevantes del documento (no solo 3) en modo "desde el sistema". (corrección 2) el inicio del Plan de Rodaje es una celda roja tipeable en la columna "Inicio", solo en la primera fila, sin tooltip (igual que las celdas de duración). (punto 2 pendiente) las versiones históricas de cotización ahora muestran SU presupuesto real, bloqueado (solo lectura): se guarda un snapshot completo del presupuesto al crear cada versión; las versiones creadas antes de esto muestran solo su resumen con una nota.   // V8.3.3: correcciones sobre V8.3.2. Ícono de nota → globo de comentario; comparador de versiones también en Presupuesto; combobox legal anclado al input; export legal bloqueado si faltan datos obligatorios (con modo "se completa desde el sistema / posteriormente"); campo Relación de contactos ampliado a fila propia; Región como desplegable (16 regiones de Chile); anti-duplicados de locaciones por proyecto (por locId y por nombre); Plan de Rodaje: "Inicio del 1.er plano" renombrado a "Inicio del plan" y reubicado al cronograma; blindaje de fotos (no viajan en el documento de Firestore para no romper el sync; viven en localStorage). Punto 2 (versiones históricas con su presupuesto real bloqueado) queda para V8.3.4.   // V8.3.2: núcleo de cotización (puntos 1-3). Presupuesto muestra la versión de cotización activa y permite navegar entre versiones (con aviso si es histórica; el presupuesto en vivo alimenta la última). Comparador rehecho: compara POR OFERTA emparejada por nombre (no solo la primera), con selector de oferta, etiqueta "Comparando: …", "no comparable" cuando una versión no tiene esa oferta, y deltas estilo KPI (Valor/Costo/Ganancia/Margen vs la primera versión con esa oferta). Sin cambios al cotizado (regla madre intacta).   // V8.3.1: correcciones (puntos 4-11). Legal: combobox con filtrado que incluye talentos; "Monto Neto" desde Costo Real + DTE Real con lógica tributaria CENTRAL (boleta 15,25% / factura sin retención); advertencia global de no-producción; eliminar documentos (directo si no exportado, con confirmación si exportado). Locaciones: 2ª línea de dirección + Región, orientación movida a Avanzado, y "Dueño" reemplazado por "Contactos" (varios, con relación libre). Cotización: bloque Derechos en la portada del PDF (omite campos vacíos). Aditivo, sin breaking changes.   // V8.3.0: nuevo módulo Legal (tab de proyecto, sub-pestañas Documentos y Plantillas) + nueva categoría transversal BD de Legal (BD_LEGAL) + nuevo bloque Derechos en Info Proyecto. Generador de documentos desde 4 plantillas fijas (Cesión validada; Servicios/NDA/Arriendo en borrador) autollenando desde BD Personas, Presupuesto, Info Proyecto y Derechos; vista previa en vivo, ciclo Borrador→Generado→Enviado→Firmado, versionado y export PDF con marca. Aditivo, sin breaking changes.
+const TAKEOS_VERSION = 'V9.5.0';   // V9.5.0: BINARIOS A STORAGE (fase 1: FOTOS DE LOCACIONES). Las fotos pasan de base64 en localStorage a Supabase Storage (bucket PRIVADO 'fotos-locaciones'): al agregar, se comprime (igual que antes) y se SUBE; la BD guarda solo la RUTA en locations.fotos [{path,nombre_original}] (se sincroniza via dalGuardarLocacion; el binario NO viaja en el blob). Al mostrar, la galeria pide una URL FIRMADA (createSignedUrl 1h) y la pinta post-render (placeholder mientras tanto); el preview tras subir es inmediato (reusa el dataURL recien comprimido). Borrar una foto la elimina tambien del bucket. FAIL-SAFE TOTAL: si el bucket no existe o Storage no responde, la subida CAE al comportamiento previo (base64 local), asi que desplegar esto NO cambia nada hasta que el bucket exista -> es inocuo. Soporta fotos mixtas {url} (legado/local) y {path} (Storage). DECISION: privado + URL firmada (consistente con PRD §15). DEPENDENCIA: crear el bucket 'fotos-locaciones' (privado) + politicas en Supabase (handoff). Las fotos base64 locales preexistentes NO se auto-migran (siguen locales hasta re-agregarlas; en el respaldo no hay fotos). Siguiente: mismo patron para adjuntos de tareas y PDFs legales. El retiro de Firebase queda postergado por decision de Agustin.   // V9.4.8: PERFIL DE EMPRESA (4d parte 2, CIERRA 4d). organization_profile (singleton, 1 fila por org, bloque JSONB en `profile`) a Supabase: LECTURA (dalBootPerfil lee organization_profile -> Object.assign sobre EMPRESA_PERFIL, set PERFIL_SOURCE='supabase') en la cadena de arranque tras legal; ESCRITURA con upsert del bloque completo (dalGuardarPerfil + _dalPerfilSaveSoon debounce 900ms) enganchada en los puntos de edicion del perfil (editor de datos de empresa, link de formulario, normalizacion de cuenta en Office Banking x2, mapeo Chipax). Guarda en sync remoto: si PERFIL_SOURCE='supabase', un cambio remoto de Firebase ya no pisa EMPRESA_PERFIL (re-lee de Supabase). Con esto TODO el estado operativo esta en Supabase: nucleo de proyectos (3), operaciones 4a/4b/4c, contactos/empresas (Tanda 1), locaciones, legal y perfil. Quedan PENDIENTES (fuera de datos): retirar la doble escritura a Firebase (cuando se valide todo) y subir binarios a Supabase Storage (fotos de locaciones, adjuntos de tareas, PDFs legales). REQUIERE migrar empresaPerfil a organization_profile (takeos_tanda4d_perfil_migracion.sql).   // V9.4.7: LEGAL (4d parte 1) - BD de Legal transversal (documentos + plantillas) a Supabase, LECTURA + ESCRITURA + borrados. dalBootLegal lee legal_documents + legal_templates -> BD_LEGAL/BD_LEGAL_TPL (set LEGAL_SOURCE='supabase'), en la cadena de arranque tras locaciones. Escritura con upsert directo (dalGuardarLegalDoc/dalGuardarLegalTpl + debounce 900ms) y borrados (dalEliminarLegalDoc/Tpl), enganchados en: generar documento, nueva version, avanzar estado, exportar (exported=true), eliminar documento, y crear/editar/eliminar plantilla. GAPS DE ESQUEMA detectados y resueltos en la Seccion 0 de la migracion (ALTERs): legal_documents suma exported boolean (gobierna el borrado) y locacion_id text; y se ELIMINA la FK contraparte_id->contacts porque en documentos de locacion ese campo guarda un LOC-xx (no un contacto). El PDF no se sincroniza (pdf_path queda como este; Storage pendiente). Guarda en sync remoto: si LEGAL_SOURCE='supabase', Firebase ya no pisa BD_LEGAL/TPL. REQUIERE la migracion takeos_tanda4d_legal_migracion.sql (incluye la Seccion 0). Falta el PERFIL de empresa (4d parte 2) y luego retirar Firebase.   // V9.4.6: TANDA 4c - ESCRITURA de TAREAS + SENALES por-proyecto a Supabase via RPC separada guardar_operaciones_4c. _dalOperaciones4cPayload arma {id,tareas,senales}; cada tarea lleva sus comentarios y adjuntos anidados (adjuntos solo-nombre; binario de Storage pendiente). CONTRATO (igual que 4a/4b): se manda el ESTADO COMPLETO de tareas y senales en cada llamada; la RPC reemplaza todo (borrar project_tasks -> cascada a task_comments/task_attachments por FK; borrar project_signals; reinsertar). La RPC genera id para tareas/comentarios/senales nuevos si falta, mapea rolObjetivo->meta jsonb, vistoPor->visto_por (text[]), creadaTs/ts->creada_ts (bigint). dalFlushProyectos ahora escribe NUCLEO + 4a + 4b + 4c en el mismo debounce, con un solo aviso si algo falla. Doble escritura: Firebase sigue como red de seguridad. CIERRA la ventana de la V9.4.5 (editar tareas/senales ya no se revierte). Sin auditoria en estas tablas. REQUIERE crear la RPC (takeos_tanda4c_rpc.sql). Siguiente: 4d (legal+perfil), y al final retirar Firebase.   // V9.4.5: TANDA 4c - LECTURA de TAREAS + SENALES por-proyecto desde Supabase. Se leen project_tasks (con sus task_comments y task_attachments anidados) y project_signals, y se re-arman data.tareas (cada una con comentarios[{id,autor,texto,ts}] y adjuntos[{name,type}]) y data.senales. Mapeos: asignado_a->asignadoA, creado_por->creadoPor, creada_ts->creadaTs (bigint epoch ms); en senales creada_ts->ts, visto_por->vistoPor, y rolObjetivo se lee de meta jsonb (la columna no existe en el esquema). Los adjuntos son solo-nombre (sin binario; Storage pendiente), y adjunto.type NO se persiste (se reconstruye vacio) -> gap menor sin datos hoy. Fusion NO destructiva por pieza. REQUIERE el esquema v2 + la migracion takeos_tanda4c_migracion.sql para activarse con datos; sin ella, tareas/senales siguen desde Firebase. VENTANA conocida (igual que 4a/4b en su momento): hasta la escritura de 4c, editar tareas/senales va solo a Firebase y la fusion lo revierte al recargar; la escritura es el paso siguiente (RPC guardar_operaciones_4c, mismo contrato 'manda estado completo'). Luego 4d (legal+perfil) y retirar Firebase.   // V9.4.4: COMPANION BD DE LOCACIONES (transversal). La tabla `locations` (BD_LOC) pasa a Supabase: LECTURA (dalBootLocaciones lee locations -> reemplaza BD_LOC, set LOCATIONS_SOURCE='supabase', y reinyecta fotos via restoreLocalLocPhotos porque las fotos siguen en localStorage, no en Supabase) integrada a la cadena de arranque despues de la identidad; y ESCRITURA directa con upsert (dalGuardarLocacion + _dalLocacionSaveSoon debounce 900ms, espejo de contactos/empresas) enganchada en los 6 puntos de edicion a nivel BD (locSetBD, locSetDueno, locSetContacto, locAddContacto, locDelContacto, altas saveLocAdd y alta-BD). Las FOTOS NO se sincronizan (columna fotos queda en su default; migran a Supabase Storage mas adelante). Guarda en el sync remoto: si LOCATIONS_SOURCE='supabase', un cambio remoto de Firebase ya no pisa BD_LOC (re-lee de Supabase), igual que contactos/proyectos. Las locaciones por-proyecto (data.locaciones / project_locations) NO cambian: las sigue gestionando la escritura 4b. REQUIERE migrar BD_LOC a locations (takeos_tanda4_locations_migracion.sql). Con esto las locaciones quedan 100% en Supabase. Siguiente: 4c (tareas+senales), 4d (legal+perfil), y retirar Firebase.   // V9.4.3: TANDA 4b - ESCRITURA de OPERACIONES por-proyecto a Supabase via RPC separada guardar_operaciones_4b (mismo criterio que 4a: funciones chicas y enfocadas). _dalOperaciones4bPayload arma {id,locaciones,crewExtra,crewExternos,responsables,asistentes,gastosOp}; aplana los dicts crewExtra (nombre->{medioTransporte}) y responsables (seccion->nombre) a arreglos para la RPC. CONTRATO (igual que 4a, marcado por el experto): se manda el ESTADO COMPLETO de todas las piezas en cada llamada; la RPC reemplaza todo (borrar+reinsertar las relacionales; upsert del 1:1 project_operations) -> nada de guardados parciales. La RPC resuelve contact_id de crew/responsables por nombre, y genera id para presupuestos operativos nuevos si falta. dalFlushProyectos ahora escribe NUCLEO + 4a + 4b en el mismo debounce, con un solo aviso si algo falla. Doble escritura: Firebase sigue como red de seguridad. CIERRA la ventana de la V9.4.2. Sin auditoria en estas tablas -> sin ruido. REQUIERE crear la RPC (takeos_tanda4b_rpc.sql). Siguiente: companion BD_LOC (locations) y luego 4c/4d, y al final retirar Firebase.   // V9.4.2: TANDA 4b - LECTURA de OPERACIONES por-proyecto (locaciones del proyecto + crew extra + crew externo + responsables por seccion + asistentes + gastos operativos) desde Supabase. Se leen project_locations, project_crew_extra, project_external_crew, project_section_responsibles, project_operations (1:1: conteo asistentes + caja_prod + movimientos/lineasExtra jsonb) y project_op_budgets, y se re-arman data.locaciones, data.crewExtra (dict nombre->{medioTransporte}), data.crewExternos, data.responsables (dict seccion->nombre), data.asistentes y data.gastosOp. Fusion NO destructiva por pieza. NOTA: la BD canonica de locaciones (BD_LOC, transversal) sigue viniendo de Firebase por ahora; es el paso companion siguiente (lectura+migracion de la tabla locations). REQUIERE el esquema v2 de Tanda 4 + la migracion takeos_tanda4b_migracion.sql. Siguiente: escritura de 4b (RPC guardar_operaciones_4b, mismo contrato 'manda estado completo'), luego 4c/4d, y al final retirar Firebase.   // V9.4.1: TANDA 4a - ESCRITURA de OPERACIONES a Supabase via RPC separada guardar_operaciones_4a (recomendacion del experto: no acoplar a guardar_proyecto, porque nucleo financiero y operativo se editan en momentos distintos). _dalOperaciones4aPayload arma {id,rodajes,planRodaje,hojaLlamado}; dalGuardarOperaciones4a llama la RPC. La RPC hace upsert de los 1:1 JSONB (project_shooting_plan.plan, project_call_sheet.data) y borrar-reinsertar de project_shoot_days (relacional, 'el origen manda'). dalFlushProyectos ahora escribe NUCLEO (guardar_proyecto) + OPERACIONES 4a (guardar_operaciones_4a) en el mismo debounce del proyecto tocado, con UN solo aviso 'Sincronizacion parcial' si cualquiera falla (dalGuardarProyecto/dalGuardarOperaciones4a ahora devuelven bool en vez de mostrar toast propio). Doble escritura: Firebase sigue recibiendo el blob completo (red de seguridad); se retira cuando se valide. CIERRA la ventana de la V9.4.0: editar rodajes/plan/hoja iba solo a Firebase y la fusion lo revertia al recargar. Estas tablas no tienen auditoria -> sin ruido. REQUIERE crear la RPC en Supabase (takeos_tanda4a_rpc.sql). Siguiente: 4b (locaciones+crew+responsables+gastos op), luego 4c/4d, y al final retirar Firebase.   // V9.4.0: TANDA 4a - LECTURA de OPERACIONES (rodajes + plan de rodaje + hoja de llamado) desde Supabase. Se leen project_shoot_days (rodajes, relacional), project_shooting_plan.plan y project_call_sheet.data (plan de rodaje y hoja de llamado, documentos JSONB completos) y se re-arman data.rodajes, data.planRodaje y data.hojaLlamado. Fusion NO destructiva: si un proyecto no tiene 4a en Supabase, queda lo de Firebase. Decision de diseno: lo documental y dinamico (plan/hoja) va como JSONB por fila-proyecto (con FK + RLS), no como blob global; lo de forma estable (rodajes) es relacional. REQUIERE el esquema v2 de Tanda 4 creado y la migracion takeos_tanda4a_migracion.sql corrida para activarse con datos; sin eso, 4a sigue viniendo de Firebase. Siguiente: 4b (locaciones + crew + responsables + gastos operativos), luego escritura de 4a, y al final retirar Firebase.   // V9.3.0: LOGIN con GOOGLE (Google OAuth via Supabase Auth) en reemplazo del login correo+contrasena. La pantalla cloudGate ahora muestra un boton 'Iniciar sesion con Google' que llama client.auth.signInWithOAuth({provider:'google', options:{redirectTo: origin+pathname}}); el navegador va a Google y vuelve a la MISMA URL con la sesion activa. El cliente de Supabase (config por defecto: detectSessionInUrl) captura la sesion del URL al volver, asi que el getSession() que ya hacia cloudGate la detecta y entra directo. Identidad SIN cambios: dalResolveIdentidad sigue derivando currentUser desde sess.user.email (mapeo correo->contacto), identico venga de Google o de contrasena. NO cambia RLS (mvp_ valida auth.uid igual), ni el esquema, ni Firebase. Requiere que el proveedor Google este configurado en Supabase + Google Cloud Console (ya hecho por el experto de auth) y que la URL de GitHub Pages este en las URLs de redireccion permitidas. Las sesiones de contrasena previas siguen valiendo (persisten); los logins nuevos van por Google. Pendiente: retirar la doble escritura cuando Supabase sea unica fuente; Tanda 4 (Operaciones); app_users (auth.uid->contact_id, registra proveedor en app_metadata); RLS real por org+rol.   // V9.2.2: ESCRITURA de PROYECTOS a Supabase via RPC guardar_proyecto. Doble escritura durante la transicion: el blob completo sigue yendo a Firebase (red de seguridad) y ademas las partes migradas (cabecera+asignaciones+finanzas+presupuesto+cotizacion) se mandan a Supabase. _dalProyectoPayload arma el payload (inverso exacto de la lectura, resolviendo contactId por hint/_contactId o por nombre). dalGuardarProyecto llama la RPC; debounce por proyecto via _dalDirtyProjects + dalTouchProyecto enganchado en markDirty (proyecto abierto) y en syncProjectStateUI (cambios de estado). La RPC hace upsert de projects (preservando el id de Firebase y SIN pisar categoria/es_remunerado/vinculos que el cliente no gestiona) y reemplazo total de filas hijas, atomico. CIERRA el riesgo de transicion: desde V9.2.0, editar presupuesto/cotizacion iba solo a Firebase y la fusion lo pisaba al recargar; ahora Supabase se mantiene al dia. REQUIERE crear la RPC en Supabase (takeos_tanda3_rpc_guardar_proyecto.sql) para activarse. Firebase sigue como respaldo hasta validar la escritura con un proyecto real. Pendiente: retirar la doble escritura cuando Supabase sea unica fuente; RLS real; app_users; inmutabilidad del cerrado.   // V9.2.1: LECTURA de COTIZACION desde Supabase (Tanda 3), sumada a la fusion de proyectos. Se leen project_quotation + quotation_offers (cotizacion VIVA, relacional) y quotation_versions (historial como snapshot JSONB) y se re-arman data.cotizacion y data.cotizaciones (activoId + versiones). Fusion NO destructiva: si un proyecto no tiene cotizacion en Supabase, se deja la de Firebase intacta. La cotizacion viva trae campos que el esquema no tenia (esBase de la oferta, id externo de la oferta 'of_...', descripcionProyecto, jornadasRodaje, y metadata de version id/numero/label/nota/createdAt/resumen): se mapean a columnas nuevas (quotation_offers.es_base, quotation_offers.id_externo; project_quotation.descripcion_proyecto, jornadas_rodaje, meta jsonb) que la 2da migracion agrega y el experto aprueba. Las versiones se guardan como snapshot completo (sin perdida). REQUIERE la 2da pasada de migracion de cotizacion (takeos_tanda3_migracion_cotizacion.sql) para activarse con datos; sin ella, la cotizacion sigue viniendo de Firebase. Siguiente: ESCRITURA de proyectos via RPC guardar_proyecto (V9.2.2).   // V9.2.0: LECTURA de PROYECTOS + PRESUPUESTO desde Supabase (Tanda 3), con FUSION no destructiva. Un proyecto vive a medias entre backends: cabecera (projects + project_assignments para PE/JP/Director), finanzas (project_financials + comisiones/riesgos/extras) y presupuesto (budget_line_items -> servicios/gastos/tecnica==equipos/talentos) se leen de Supabase; rodajes/locaciones/hoja de llamado/cotizacion/tareas/senales siguen en Firebase. dalBootProyectos lee Supabase y FUSIONA las partes migradas sobre el proyecto de Firebase emparejando por id (un proyecto que no esta en Supabase queda 100% Firebase; si Supabase devuelve cero proyectos no se toca nada -> sin riesgo de 'desaparecer' proyectos). Se re-fusiona tras cambios remotos (cloudCommitRemote). PROJECTS_SOURCE arranca en firebase y pasa a supabase solo tras leer >=1 proyecto. GAP detectado: el esquema no tiene columna de DTE real (dteReal) ni la seccion equipos se llama igual (tecnica). La COTIZACION (cotizacion viva + versiones con snapshot) queda para V9.2.1. La lectura NO se activa hasta migrar los proyectos de Firebase a las tablas (paso siguiente, preservando el id del proyecto para poder fusionar).   // V9.1.3: REALINEACION del cliente a la Seccion 0 del SQL de Tanda 3 (cambios de esquema en tablas ya en produccion). (1) FECHA DE NACIMIENTO: la columna contacts.cumpleanos se renombro a fecha_nacimiento; el campo canonico pasa de 'DD/MM' a fecha ISO completa; la ficha captura fecha completa (input date) y el saludo se derivara de dia/mes; se elimina el centinela 1900 y el campo interno _cumpleISO; lectura tolerante (fecha_nacimiento || cumpleanos). (2) PERSONA<->EMPRESA: contact_companies elimino relacion/tipo_relacion/es_principal y agrego es_socio/es_representante/cargo; el cliente mapea relacionEmpresa<->cargo y conserva las facetas es_socio/es_representante en el round-trip (sin UI de toggle aun); lectura tolerante (cargo || relacion). (3) AGENCIA: company_relationships acepta 'agencia'; agregado al mapa de tipos y a las opciones de la UI. Despliegue coordinado con correr el SQL (mismo momento). Sin tocar Proyectos/Presupuesto todavia (V9.2.0).   // V9.1.2: BUG FIX del alta de registros desde modales. La confirmacion del modal (_modalConfirm) cerraba el modal (vaciaba el DOM) ANTES de ejecutar el onConfirm, por lo que al crear una empresa los document.getElementById(...).value venian vacios y saltaba 'Falta nombre' aunque estuviera lleno. Ahora el onConfirm corre ANTES de cerrar; si devuelve false (validacion fallida) el modal se mantiene abierto sin perder lo escrito; y si el onConfirm abrio otro modal encima, no se borra. Afecta a TODOS los modales que leen inputs en su confirmacion (alta de empresa, etc.).   // V9.1.1: identidad real + ESCRITURA de la BD a Supabase. (1) IDENTIDAD: currentUser() deja de simularse; toma la persona cuyo correo coincide con la sesion de Supabase (mapeo email->contacto), y todo lo que ya funcionaba por nombre (tareas, @menciones, responsables, senales) sigue igual. Se ELIMINA el selector 'Sesion (simulada)' del Control Room (andamio). (2) ESCRITURA: al crear/editar un contacto o empresa, el modelo canonico se descompone en sus tablas relacionales (contacts+roles+cuentas+talento+vinculos; companies+relationships) y se sincroniza a Supabase como fuente de verdad, con reemplazo total de filas satelite por registro (sin ghost data). Firebase sigue recibiendo copia como red de seguridad. Insert vs update por set de IDs conocidos; created_by/updated_by con el uid de la sesion. (3) Se preserva el ANO real del cumpleanos (la UI solo captura DD/MM): se conserva el anio ya almacenado; contactos nuevos usan 1900 como centinela. (4) Empresa: edicion inline con guardado diferido (debounce). Se quita el banner de pausa. Decisiones: escritura DIRECTA desde el cliente (no Edge Function) por ritmo, con failsafe Firebase + copias propias como red; transaccionalidad server-side queda como endurecimiento. Tipo de cuenta de texto libre no mapeable -> null (respeta el CHECK). Pendientes: campos estructurados de empresa (duenos/representante/contacto principal) no tienen columna en el esquema Tanda 1 -> se guardan los campos nucleo + tipo + notas, el resto queda en la copia de Firebase (gap de esquema a resolver); import/reemplazo en bloque .xlsx a Supabase pendiente; reemplazar RLS mvp_ por org+rol antes de un 2do tenant.   // V9.1.0: primer recableo de datos a Supabase. (1) CAPA DE ACCESO A DATOS (DAL): nueva capa que aisla de donde vienen los datos; la app pide Contactos/Empresas sin saber si es Firebase o Supabase. (2) LECTURA de la Tanda 1 (personas + empresas) desde Supabase/PostgreSQL: al arrancar, despues de cargar Firebase, se reemplazan BD_CONTACTOS/BD_EMPRESAS_BYID por la lectura relacional (joins de contacts+roles+cuentas+talento+vinculos y companies+relationships), re-armando EXACTAMENTE el modelo en memoria que la UI ya consume. FAIL-SAFE: si Supabase no responde o no hay sesion, la app sigue con los datos de Firebase (nunca peor que la V9.0.0). (3) Las actualizaciones remotas de Firebase ya NO pisan los contactos servidos por Supabase. (4) ESCRITURA de la BD en pausa (mini-congelamiento): los editores de personas/empresas e import/replace .xlsx avisan y no guardan mientras la fuente es Supabase; la escritura llega en la V9.1.1. Banner visible en el modulo Base de Datos. (5) Boton 'Salir' en la barra superior (cierre de sesion real con confirmacion), reemplaza el logoutTakeOS() por consola. Pendientes conocidos: conectar currentUser() a la identidad real de la sesion (V9.1.1); reemplazar politicas RLS mvp_ por org+rol antes de un segundo tenant; mover generacion de IDs a server-side. Sin breaking changes de datos.   // V9.0.0: migracion del login a Supabase Auth (documentada retroactivamente). Se reemplazo la contrasena compartida 'primate' por usuarios reales (correo + contrasena) via Supabase Auth, con persistencia de sesion entre recargas; se agrego el cliente @supabase/supabase-js@2 por CDN y la pantalla de login (cloudGate). Firebase seguia siendo el 100% de los datos; Supabase solo autenticaba. Esta version cierra la serie V8 y abre la V9 (migracion a Supabase/PostgreSQL).   // V8.6.0: capa de comunicacion y trazabilidad de responsabilidades. (1) TAREAS por seccion: boton 'Tareas' junto al responsable de cada seccion del proyecto (incl. BD/Documentos) con badge de tareas abiertas; modal para crear tarea (asignar a una persona del proyecto, texto, adjuntar .xlsx/PDF/imagen), responder con COMENTARIOS, y marcar completada. (2) @MENCIONES: autocompletado al escribir @ en cualquier textarea de tarea/comentario y tambien en la nota de fila del Presupuesto; sugiere personas del proyecto y resalta la mencion. (3) MEGA-REPOSITORIO en el Control Room: panel 'Mis tareas' que junta TODO lo asignado al usuario across proyectos y secciones, con autoasignacion ('Auto-asignarmela'). (4) 'Requieren atencion' del Control Room ahora es POR USUARIO: cuenta los proyectos que requieren su atencion (tareas abiertas + senales); badge por tarjeta de proyecto. (5) ATENCION mas alla de tareas: editar el guion tecnico / plan de rodaje levanta una SENAL para el AD (no para quien edita); con boton 'Visto'. Sin auth todavia: el usuario actual se SIMULA con un selector ('Sesion (simulada)') en el Control Room; cuando exista login, currentUser() lee la sesion y todo lo demas funciona igual. Notas de horizonte (solo changelog): los avisos/@menciones no notifican aun; los adjuntos guardan el nombre (no el binario) hasta el backend; las senales son extensibles a otras secciones/roles; formulario de intake nativo pendiente.   // V8.5.3: dos agregados. (1) Plantillas con SUBVERSIONES (genérico): una plantilla puede tener subversiones editables por separado y el sistema elige cuál usar por destinatario. Producción ahora tiene 'Estándar' y 'Pronto Pago' como subversiones (elige por la marca PP del Presupuesto). El editor de plantillas muestra sub-pestañas para editar cada subversión; el modelo soporta otras dimensiones a futuro (p.ej. crew/cliente/agencia para la hoja de llamado). Migración: una Producción ya guardada conserva su texto como 'Estándar' y suma 'Pronto Pago' por defecto. (2) Link del formulario en la BASE DE DATOS: nuevo campo 'Link del formulario' en la pestaña BD que alimenta {{LINK FORMULARIO}} en Notificaciones. Antes el editor de notificaciones editaba un campo distinto (cfg.linkFormulario) al que leía el sistema (EMPRESA_PERFIL.linkFormularioPago), por eso los destinatarios salían inválidos; ahora se unifica con fallback. Nota de horizonte: a futuro, formulario nativo del software en vez de Google Forms. Diferido a V8.5.4: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @, repositorio en Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario.   // V8.5.2: correcciones a Pagos Pendientes y Notificaciones. (1) Prontos Pagos en Finanzas: nuevas columnas Fecha de rodaje (desde Rodajes) y Fecha de pago (editable, por persona+proyecto), con alerta si la fecha de pago es ANTES del rodaje (evita que el CFO pague antes de que la persona trabaje). (2) BUG GRAVE corregido: el Monto de Prontos Pagos ya NO usa el costo cotizado; usa el NETO del COSTO REAL segun el DTE REAL (misma logica tributaria que los contratos: boleta retiene, factura no; via montoNetoDesde). (3) Si una fila PP aun no tiene costo real, el Monto muestra 'Proforma' y esas filas no se exportan. (4) Notificaciones: nueva columna PP en la tabla de destinatarios (a la derecha de Validacion) que marca quien tiene pronto pago (el cuerpo del correo ya adaptaba la condicion de pago via {{CONDICION DE PAGO}}). Diferido a V8.5.3: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @, repositorio en Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario.   // V8.5.1: cierra el hilo de Pronto Pago. (1) Plantilla unica de Produccion en Notificaciones: detecta automaticamente el pronto pago por destinatario via la variable {{CONDICION DE PAGO}} (se llena distinto si la persona tiene filas PP confirmadas en el Presupuesto); se elimino la plantilla separada 'Produccion Pronto Pago'. (2) Seccion Pagos Pendientes en Finanzas/CFO: nueva sub-pestana 'Prontos Pagos' junto a 'Reembolsos', derivada de las filas confirmadas marcadas con PP en el Presupuesto (agregadas por persona y proyecto), con su KPI. (3) Exportacion Office Banking de Santander para prontos pagos (solo) y consolidada (reembolsos + prontos pagos), mismo formato de 13 columnas que ya usaban los reembolsos. Cumpleanos automatico: nota de horizonte (no implementado). Diferido a V8.5.2: sistema de Tareas (boton Tareas por seccion, crear/asignar/adjuntar/comentar, etiquetado @ tambien en notas de Presupuesto, repositorio de tareas en el Control Room, autoasignacion) y 'Requieren Atencion' ligado al usuario, incluyendo atencion mas alla de tareas (p.ej. cambios de guion tecnico que afectan al AD).   // V8.5.0: (1) Responsable por seccion: combobox de BD en el header de cada modulo, un unico responsable por seccion, con defaults por rol (Info Proyecto/Presupuesto/Cotizacion->PE; Crew/Rodajes/Locaciones/Legal/Notificaciones/Gastos->JP; Hoja de Llamado/Plan de Rodaje->AD; BD/Documentos->ninguno). PE y JP se resuelven desde Info Proyecto; muestra nombre/cargo/correo/telefono con click a la ficha. Sin responsables por tarea (queda para futuro). (2) Pronto Pago por fila en Presupuesto (pildora PP en cada fila); se guarda el dato, listo para Finanzas y Notificaciones. (3) Tipo de cuenta como desplegable (Cuenta Corriente/Vista/Ahorro/RUT/Chequera Electronica; preserva texto libre antiguo). (4) Cumpleanos solo DD/MM (sin ano), listo para saludo automatico futuro. (5) Hora extra ahora es monto en pesos (formato $X.XXX CLP, igual que Monto Neto). Formato Office Banking de Santander (13 columnas) registrado como insumo para la futura exportacion de Pagos Pendientes. Difiere (segun el propio documento): responsables por tarea, plantilla de Notificaciones que detecta Pronto Pago, seccion Pagos Pendientes (Reembolsos+Prontos Pagos) con export Office Banking, saludo de cumpleanos automatico.   // V8.4.8: feedback Legal + cambio de variable. (A) en el generador la X se movio a la esquina superior derecha y se agrego un boton 'Cerrar' abajo (junto a Exportar PDF y Generar). (B) los campos de monto autoformatean a '$100.000 CLP' y bloquean letras (solo numeros). (C) todas las variables _texto (monto_texto, hora_extra_texto, etc.) son automaticas: ya no aparecen como campos a tipear, se derivan de su variable base (cifra->palabras o %->'por ciento') y el monto dice 'pesos chilenos'. (D) el PDF se nombra: <documento> - <contraparte> - S-F - v<N>. (E) se eliminaron TODAS las plantillas preset; solo existen las personalizadas (los documentos ya generados con preset se conservan y se pueden ver). (F) la variable jornadas_trabajo se renombro a cantidad_jornadas (jornadas_trabajo queda como alias para compatibilidad). Nota de horizonte: documentos legales para productoras fuera de Chile (por eso el CLP explicito). Pendiente V8.5: carga de logos PNG.   // V8.4.7: feedback del editor de plantillas legales. (1) variables nuevas en grupo Productora: rut_representante_productora y domicilio_productora (ya existian en el motor, ahora son insertables). (2) monto_texto se genera AUTOMATICAMENTE desde monto_neto (cifra->palabras, ej. 'un millon quinientos mil pesos', con 'de pesos' cuando corresponde); deja de ser un campo editable. (3) fechas consolidadas: se elimina fecha_rodaje (singular); queda solo fechas_rodaje (admite una o varias fechas, autollenado desde Rodajes). (4) el titulo del documento en el preview ahora se actualiza en vivo al escribir el Nombre. (5) el generador 'Ver/Usar documento' ya no se cierra al hacer click fuera (anti-cierre, se cierra con la X). (6) se quito el triangulo del encabezado del documento (queda solo el nombre de la productora). Carga de logos PNG: anotada para V8.5 (requiere compresion en cliente para no inflar Firestore).   // V8.4.6: 'Legal editor v2'. (12) el editor de plantillas legales pasa a texto enriquecido: la negrita es real con el boton B o Command/Ctrl+B (ya no se ve **texto**); internamente se sigue guardando como **negrita** para no tocar el renderizador, el PDF ni el generador (se serializa al guardar). (10) vista previa en vivo del documento dentro del editor, al lado del cuerpo, que se actualiza mientras escribes (variables mostradas como placeholders resaltados). (13) variables de fecha (fecha_firma, fecha_rodaje, fecha_vigencia, fecha_termino) con selector de calendario al generar el documento; se guardan en ISO y se imprimen como fecha larga en espanol ('15 de marzo de 2026'). Cluster Legal completo. Proximo foco sugerido: V8.5 (Pronto Pago + Pagos Pendientes + Office Banking).   // V8.4.5: ficha de personas en la BD. (1) 'Empresa asociada' usa el combobox estandar (busca empresas de la BD). (2) Cumpleanos pasa a selector de calendario (type=date). (3) nuevo campo Region con desplegable (16 regiones). (4) Banco es desplegable con los bancos de Chile y el codigo SBIF se completa solo (read-only, no editable). (5) boton 'Cuenta extranjera / otro medio' que abre un campo de texto libre (Global66, IBAN/SWIFT, efectivo, etc.). (6) Rol habitual y DTE habitual ahora se muestran solo si el rol Crew esta marcado (igual que Talento). (7) en perfil de talento, Edad se reemplaza por Fecha de nacimiento (la edad se calcula sola en la tarjeta). (8) 'Areas de interes' pasa a 'Areas de interes / habilidad'. Pendiente 'Legal editor v2' (V8.4.6): preview en vivo (10), negritas reales Command+B (12), selectores de calendario en Legal (13).   // V8.4.4: correcciones sobre V8.4.3. (1) ARREGLADO el bug de los comboboxes de nombre en Empresas: el transform del modal rompia position:fixed; ahora usan anclaje CSS (cbx-anchored) como el de Legal y funcionan dentro de modales. (3) el desplegable ya NO se cierra al scrolear (ni al scrollear su propia lista ni al scrollear el modal). (4) el mensaje 'No esta en la BD' del combobox se reduce a solo el boton '+ Agregar a la BD' (casilla compacta, sin scroll). (2) el tooltip de comentarios del Presupuesto muestra autor + fecha al pasar el cursor (no solo al hacer clic). (5) la pelota ambar 'no esta en BD' muestra solo '+ Agregar a la BD' al hover y es clickeable: lleva a crear el contacto. (6) version visible bajo el logo TakeOS (lee TAKEOS_VERSION). Pendiente 'Legal editor v2': preview en vivo (10), negritas reales Command+B (12), selectores de calendario (13).   // V8.4.3: (5) PRIORIDAD: los modales (editor de plantillas legales, fichas, formularios) ya NO se cierran al hacer click fuera; se cierran solo con sus botones (evita perder trabajo). (1) Empresas con multiples duenos/socios (lista con agregar/quitar). (2) los campos de nombre de Empresas usan el combobox estandar (duenos, representante, contactos). (3) eliminado el mensaje redundante de 'registro minimo'. (4) la advertencia 'No esta en la BD' del combobox ahora es clickeable y abre el alta de persona (igual que Crew). (6) 'Llamado general' en Plan de Rodaje es clickeable y lleva a Hoja de Llamado (fuente unica). (7) los comentarios del Presupuesto muestran el texto al pasar el cursor (tooltip inmediato) y siguen abriendose con clic para el detalle. (8) modelo de comentario preparado para autor+fecha (registra fecha; autor al activar cuentas). (9) Datos de Cotizacion ahora muestra tiempo de derechos, plataformas y paises (solo lectura, desde Info Proyecto). (11) nueva variable legal {{fechas_rodaje}} que toma las fechas activas de Rodajes y es editable. Pendiente 'Legal editor v2': preview en vivo (10), negritas reales Command+B (12), selectores de calendario (13).   // V8.4.2: (1) Costeo Interno desglosado (Subtotal, Gastos administrativos, Contingencias, Costo de produccion, Comisiones, Valor cliente, Ganancia). (2) drag&drop para reordenar Entregables/Incluye/No incluye/Videos. (3) adjuntar PDFs reales (base64, tope ~600KB) en Documentos, sin quitar el link. (7) edicion completa de Empresas (razon social, RUT, tipo, giros, dueno, representante, observaciones) con contactos desde la BD (combobox 'No esta en BD' que crea registro minimo). (8) ficha Control Room por empresa (total pagado y margen SOLO de cerrados via finanzas reales; activos como proforma; dias de pago aun no registrado) + vinculo proyecto<->empresa por ID (clienteEmpresaId con selector en Info Proyecto y auto-sugerencia).   // V8.4.1: correcciones al cluster Legal (cursor al insertar variables, variables con nombres descriptivos, título del PDF = nombre de la plantilla, Nombre vs Descripción, 'Oficial'→'Predeterminada/Preset' con advertencia, negrita en plantillas, bloqueo de export vacío verificado) + fix del bug Ver/Editar en la BD de Locaciones.   // V8.4: (11) editor de plantillas legales en Modo Administrador — crear/editar/eliminar plantillas personalizadas con cuerpo de texto y variables {{insertables}}; las 4 oficiales se conservan literalmente (solo lectura). (12) Locaciones como categoria visible de la Base de Datos (cuarta pestana), con su propio alta a nivel BD. (13) la Base de Datos pasa a llamarse 'Base de Datos' con descripcion que refleja personas, empresas, talentos, locaciones y futuras entidades.   // V8.3.4: (corrección 1) la validación legal ahora bloquea TANTO exportar como GUARDAR/Generar, y exige todos los campos relevantes del documento (no solo 3) en modo "desde el sistema". (corrección 2) el inicio del Plan de Rodaje es una celda roja tipeable en la columna "Inicio", solo en la primera fila, sin tooltip (igual que las celdas de duración). (punto 2 pendiente) las versiones históricas de cotización ahora muestran SU presupuesto real, bloqueado (solo lectura): se guarda un snapshot completo del presupuesto al crear cada versión; las versiones creadas antes de esto muestran solo su resumen con una nota.   // V8.3.3: correcciones sobre V8.3.2. Ícono de nota → globo de comentario; comparador de versiones también en Presupuesto; combobox legal anclado al input; export legal bloqueado si faltan datos obligatorios (con modo "se completa desde el sistema / posteriormente"); campo Relación de contactos ampliado a fila propia; Región como desplegable (16 regiones de Chile); anti-duplicados de locaciones por proyecto (por locId y por nombre); Plan de Rodaje: "Inicio del 1.er plano" renombrado a "Inicio del plan" y reubicado al cronograma; blindaje de fotos (no viajan en el documento de Firestore para no romper el sync; viven en localStorage). Punto 2 (versiones históricas con su presupuesto real bloqueado) queda para V8.3.4.   // V8.3.2: núcleo de cotización (puntos 1-3). Presupuesto muestra la versión de cotización activa y permite navegar entre versiones (con aviso si es histórica; el presupuesto en vivo alimenta la última). Comparador rehecho: compara POR OFERTA emparejada por nombre (no solo la primera), con selector de oferta, etiqueta "Comparando: …", "no comparable" cuando una versión no tiene esa oferta, y deltas estilo KPI (Valor/Costo/Ganancia/Margen vs la primera versión con esa oferta). Sin cambios al cotizado (regla madre intacta).   // V8.3.1: correcciones (puntos 4-11). Legal: combobox con filtrado que incluye talentos; "Monto Neto" desde Costo Real + DTE Real con lógica tributaria CENTRAL (boleta 15,25% / factura sin retención); advertencia global de no-producción; eliminar documentos (directo si no exportado, con confirmación si exportado). Locaciones: 2ª línea de dirección + Región, orientación movida a Avanzado, y "Dueño" reemplazado por "Contactos" (varios, con relación libre). Cotización: bloque Derechos en la portada del PDF (omite campos vacíos). Aditivo, sin breaking changes.   // V8.3.0: nuevo módulo Legal (tab de proyecto, sub-pestañas Documentos y Plantillas) + nueva categoría transversal BD de Legal (BD_LEGAL) + nuevo bloque Derechos en Info Proyecto. Generador de documentos desde 4 plantillas fijas (Cesión validada; Servicios/NDA/Arriendo en borrador) autollenando desde BD Personas, Presupuesto, Info Proyecto y Derechos; vista previa en vivo, ciclo Borrador→Generado→Enviado→Firmado, versionado y export PDF con marca. Aditivo, sin breaking changes.
 
 let _cloudDb = null;
 let _cloudReady = false;
@@ -17830,7 +18434,7 @@ function cloudCommitRemote(obj) {
     PROJECTS.length = 0; obj.projects.forEach(p => PROJECTS.push(p));
     if (PROJECTS_SOURCE === 'supabase') { try { dalBootProyectos(); } catch (e) {} }   // V9.2.0: re-fusiona partes migradas tras un cambio remoto de Firebase
     if (Array.isArray(obj.trash)) { TRASH.length = 0; obj.trash.forEach(p => TRASH.push(p)); }
-    if (obj.empresaPerfil && typeof obj.empresaPerfil === 'object') Object.assign(EMPRESA_PERFIL, obj.empresaPerfil);
+    if (obj.empresaPerfil && typeof obj.empresaPerfil === 'object') { if (PERFIL_SOURCE !== 'supabase') Object.assign(EMPRESA_PERFIL, obj.empresaPerfil); else { try { dalBootPerfil({ silent: true }); } catch (e) {} } }   // V9.4.8: Supabase manda
     // V9.1.0: si la BD ya se sirve desde Supabase, NO dejamos que un cambio
     // remoto de Firebase (p.ej. alguien editando un proyecto) pise los
     // contactos/empresas servidos por Supabase. El resto del estado (proyectos,
@@ -17851,10 +18455,14 @@ function cloudCommitRemote(obj) {
       }
       hydrateContactStore(obj);   // V7.3: reconstruir el modelo unificado desde el remoto
     }
-    if (Array.isArray(obj.bdLoc)) { BD_LOC.length = 0; obj.bdLoc.forEach(l => BD_LOC.push(l)); }   // V8.2
+    if (LOCATIONS_SOURCE !== 'supabase') {                                                  // V9.4.4: no dejar que Firebase pise locaciones servidas por Supabase
+      if (Array.isArray(obj.bdLoc)) { BD_LOC.length = 0; obj.bdLoc.forEach(l => BD_LOC.push(l)); }   // V8.2
+    } else { try { dalBootLocaciones({ silent: true }); } catch (e) {} }                     // re-leer de Supabase tras cambio remoto
     restoreLocalLocPhotos();   // V8.3.3: las fotos no viajan por la nube; se reinyectan desde localStorage
-    if (Array.isArray(obj.bdLegal)) { BD_LEGAL.length = 0; obj.bdLegal.forEach(d => BD_LEGAL.push(d)); }
-  if (Array.isArray(obj.bdLegalTpl)) { BD_LEGAL_TPL.length = 0; obj.bdLegalTpl.forEach(t => BD_LEGAL_TPL.push(t)); }   // V8.3
+    if (LEGAL_SOURCE !== 'supabase') {                                                       // V9.4.7: no dejar que Firebase pise legal servido por Supabase
+      if (Array.isArray(obj.bdLegal)) { BD_LEGAL.length = 0; obj.bdLegal.forEach(d => BD_LEGAL.push(d)); }
+      if (Array.isArray(obj.bdLegalTpl)) { BD_LEGAL_TPL.length = 0; obj.bdLegalTpl.forEach(t => BD_LEGAL_TPL.push(t)); }   // V8.3
+    } else { try { dalBootLegal({ silent: true }); } catch (e) {} }
     if (STATE.currentView !== 'project') { renderKanban(); renderMetrics(); }
   } catch (e) { console.error('[nube] commit remoto', e); }
   _cloudApplying = false;
@@ -18005,7 +18613,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!cloudOn) offerAutosaveRestore();
       // V9.1.0: tras cargar Firebase, intentamos reemplazar la BD por Supabase.
       // Si falla (sin sesion, sin red, error), la app sigue con Firebase (fail-safe).
-      dalBootContactos().then(function(){ return dalResolveIdentidad(); }).then(function(){ dalBootProyectos(); });
+      dalBootContactos().then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
     });
   });
 });
@@ -18581,7 +19189,7 @@ function goExportSantander() {
     const v = window.prompt('N° de cuenta de ORIGEN (cuenta Santander de la empresa desde donde se transfiere):', '');
     if (v === null) return;
     cuentaOrigen = String(v).replace(/\s/g, '').trim();
-    if (cuentaOrigen && typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.bancoNumero = cuentaOrigen; markDirty(); }
+    if (cuentaOrigen && typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.bancoNumero = cuentaOrigen; markDirty(); _dalPerfilSaveSoon(); }
   }
   if (!cuentaOrigen) { showToast({ kind: 'error', title: 'Falta cuenta de origen', body: 'Sin la cuenta de origen no se puede generar la nómina. Configúrala en el Perfil de empresa.' }); return; }
 
@@ -18674,7 +19282,7 @@ function _santanderOrigin() {
     const v = window.prompt('N° de cuenta de ORIGEN (cuenta Santander de la empresa desde donde se transfiere):', '');
     if (v === null) return null;
     cuentaOrigen = String(v).replace(/\s/g, '').trim();
-    if (cuentaOrigen && typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.bancoNumero = cuentaOrigen; markDirty(); }
+    if (cuentaOrigen && typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.bancoNumero = cuentaOrigen; markDirty(); _dalPerfilSaveSoon(); }
   }
   if (!cuentaOrigen) { showToast({ kind: 'error', title: 'Falta cuenta de origen', body: 'Sin la cuenta de origen no se puede generar la nómina. Configúrala en el Perfil de empresa.' }); return null; }
   return cuentaOrigen;
@@ -18786,7 +19394,7 @@ function goOpenMapeo() {
 function goSaveMapeo() {
   document.querySelectorAll('#modalRoot [data-linea]').forEach(inp => { const l = inp.getAttribute('data-linea'); if (l) CHIPAX_CUENTA[l] = inp.value.trim() || CHIPAX_CUENTA[l]; });
   try { if (typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.chipaxCuentas = Object.assign({}, CHIPAX_CUENTA); } } catch (e) {}
-  markDirty(); closeModal(); showToast({ kind: 'success', title: 'Mapeo guardado', body: 'Las próximas exportaciones lo usan.' });
+  markDirty(); _dalPerfilSaveSoon(); closeModal(); showToast({ kind: 'success', title: 'Mapeo guardado', body: 'Las próximas exportaciones lo usan.' });
 }
 
 /* ════════════════════════════════════════════════════════════════════
