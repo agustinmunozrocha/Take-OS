@@ -1957,6 +1957,8 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
 }
 .sidebar-item.active .sidebar-icon { color: var(--accent); }
+/* V9.6.16 · contador de MIS tareas abiertas por sección, en la barra lateral */
+.sidebar-task-badge { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; font-size: 10.5px; font-weight: 700; color: var(--bg-page); background: var(--warning); border-radius: 9px; flex-shrink: 0; }
 
 .sidebar-soon {
   font-size: 9px;
@@ -2243,6 +2245,13 @@ a { color: inherit; text-decoration: none; }
 }
 .cell-name-wrap .combobox-wrap { flex: 1; }
 .cell-name-meta { display: flex; align-items: center; gap: 4px; }
+/* V9.6.18 · grip de arrastre de filas del presupuesto */
+.cell-name-row { display: flex; align-items: flex-start; gap: 4px; }
+.row-drag-handle { cursor: grab; color: var(--ink-faint); font-size: 11px; line-height: 1.2; letter-spacing: -3px; padding: 4px 1px 0 0; user-select: none; flex-shrink: 0; }
+.row-drag-handle:hover { color: var(--accent); }
+.row-drag-handle:active { cursor: grabbing; }
+tr.row-dragging { opacity: .45; }
+tr.row-dragging td { background: var(--accent-bg); }
 /* V5.6 (Nota 6): el badge EXTRA ya no va inline robando ancho al nombre.
    Va debajo, y la fila lleva un acento lateral para identificarse. */
 .data-table tr.is-extra td:first-child { box-shadow: inset 3px 0 0 var(--accent, #c2410c); }
@@ -2340,7 +2349,9 @@ a { color: inherit; text-decoration: none; }
 .crt-item-meta { font-size: 11px; color: var(--ink-faint); margin-top: 3px; }
 .crt-item-actions { display: flex; gap: 6px; }
 .crt-senal { border-left: 3px solid var(--info); background: var(--info-bg); }
-.crt-empty { font-size: 13px; color: var(--ink-faint); text-align: center; padding: 8px; }
+.crt-subgroup { margin-bottom: 10px; }
+.crt-subgroup-h { font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+.crt-mencion { border-left: 3px solid var(--accent); background: var(--accent-bg); }.crt-empty { font-size: 13px; color: var(--ink-faint); text-align: center; padding: 8px; }
 .project-mine { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; font-size: 12px; font-weight: 700; color: var(--bg-page); background: var(--warning); border-radius: 11px; margin-left: 6px; }
 .lgl-rte { min-height: 300px; max-height: 420px; overflow-y: auto; line-height: 1.55; white-space: pre-wrap; }
 .lgl-rte:empty:before { content: attr(data-placeholder); color: var(--ink-faint); }
@@ -4340,9 +4351,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
 
 </head>
 <body>
-<!-- Firebase SDK (compat) — capa de nube V6.10. Carga desde el CDN de Google en el navegador del usuario. -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- V10.0.0 · Firebase RETIRADO (Gate A cerrado): el SDK ya no se carga. Supabase es la única fuente. -->
 <!-- V7.1: SheetJS para import/export .xlsx bidireccional de la BD -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- V8.6: Supabase JS — cliente para la nueva base de datos PostgreSQL. Expone la variable global "supabase". -->
@@ -5666,9 +5675,17 @@ const STATE = {
    - Facturas (afectas o exentas) no tienen retención; el costo
      empresa es el valor neto. El IVA se carga al cliente, no al costo.
    ════════════════════════════════════════════════════════════════════ */
-const IMPUESTO_HONORARIOS = 0.1525;
-const FACTOR_BOLETA = 1 - IMPUESTO_HONORARIOS;
-const IVA = 0.19;
+/* V9.6.18 · FUENTE ÚNICA DE VERDAD TRIBUTARIA: estas tasas son SOLO valores
+   por defecto (red de seguridad). Al arrancar, dalBootTaxRates() las
+   sobreescribe con la fila vigente de la tabla tax_rates en Supabase. Si el
+   IVA o una retención cambia, el fix es un dato en la BD, no un deploy. Si
+   Supabase no responde, la app sigue con estos defaults (nunca se rompe). */
+let IMPUESTO_HONORARIOS = 0.1525;          // concepto 'honorarios' (BHE)
+let IMPUESTO_BTE = 0.1525;                 // concepto 'retencion_bte' (BTE); default = BHE hasta tener dato
+let IVA = 0.19;                            // concepto 'iva'
+let FACTOR_BOLETA = 1 - IMPUESTO_HONORARIOS;
+let FACTOR_BTE = 1 - IMPUESTO_BTE;
+let TAX_RATES_SOURCE = 'default';          // pasa a 'supabase' si se cargaron las tasas
 
 const DTE_OPTIONS = [
   { value: 'boleta',           label: 'Boleta de honorarios' },
@@ -5688,8 +5705,16 @@ const DTE_CON_RETENCION = ['boleta', 'boleta_terceros'];
    monto neto coincide con el costo. Todos los módulos (Presupuesto, Gastos,
    Legal, calculadora) deben usar estas funciones — no recalcular aparte. */
 function dteTieneRetencion(dte) { return DTE_CON_RETENCION.indexOf(dte) !== -1; }
-function montoNetoDesde(costoReal, dte) { const c = Number(costoReal) || 0; if (!c) return 0; return dteTieneRetencion(dte) ? Math.round(c * FACTOR_BOLETA) : Math.round(c); }
-function montoBrutoDesde(liquido, dte) { const l = Number(liquido) || 0; if (!l) return 0; return dteTieneRetencion(dte) ? Math.round(l / FACTOR_BOLETA) : Math.round(l); }
+/* V9.6.18 · factor de retención según DTE (boleta=BHE, boleta_terceros=BTE).
+   Antes ambos usaban FACTOR_BOLETA; ahora cada uno toma su propia tasa de
+   tax_rates (BTE = BHE por defecto, así no cambia el cálculo si no hay dato). */
+function factorRetencionDte(dte) {
+  if (dte === 'boleta_terceros') return FACTOR_BTE;
+  if (dteTieneRetencion(dte)) return FACTOR_BOLETA;
+  return 1;
+}
+function montoNetoDesde(costoReal, dte) { const c = Number(costoReal) || 0; if (!c) return 0; return dteTieneRetencion(dte) ? Math.round(c * factorRetencionDte(dte)) : Math.round(c); }
+function montoBrutoDesde(liquido, dte) { const l = Number(liquido) || 0; if (!l) return 0; return dteTieneRetencion(dte) ? Math.round(l / factorRetencionDte(dte)) : Math.round(l); }
 const UNIDAD_OPTIONS = ['Tarifa Plana', 'Jornadas', 'Horas', 'Personas', 'Locaciones', 'Fotografías'];
 
 /* ════════════════════════════════════════════════════════════════════
@@ -5722,7 +5747,7 @@ function calcCostoEmpresa(valor, cantidad, dte, sectionKey) {
     return { value: null, error: 'FALTA DTE' };
   }
   if (DTE_CON_RETENCION.includes(dte)) {
-    return { value: Math.round((valor / FACTOR_BOLETA) * cantidad), error: null };
+    return { value: Math.round((valor / factorRetencionDte(dte)) * cantidad), error: null };
   }
   return { value: Math.round(valor * cantidad), error: null };
 }
@@ -5996,6 +6021,50 @@ function userOpenTasks(user) {
 }
 function sectionTaskCount(project, seccion) { return (ensureTareas(project)).filter(t => t.seccion === seccion && t.estado !== 'completada').length; }
 
+/* ── V9.6.16 · Sistema de COMUNICACIÓN (Mis tareas / Menciones / Requieren atención) ── */
+// Mis tareas ABIERTAS asignadas a mí en una sección (para el contador de la barra lateral).
+function userSectionTaskCount(project, seccion, user) {
+  const u = user || currentUser();
+  return (ensureTareas(project)).filter(t => t.seccion === seccion && t.estado !== 'completada' && t.asignadoA === u).length;
+}
+// Menciones: comentarios (y textos de tarea) donde me etiquetaron con @, en todos los proyectos.
+function userMentions(user) {
+  const u = user || currentUser();
+  if (!u) return [];
+  const tag = '@' + u;
+  const out = [];
+  PROJECTS.forEach(p => {
+    (ensureTareas(p)).forEach(t => {
+      (t.comentarios || []).forEach(c => {
+        if (c.texto && c.texto.indexOf(tag) !== -1 && c.autor !== u) {
+          out.push({ project: p, tarea: t, tipo: 'comentario', texto: c.texto, autor: c.autor || '\u2014', ts: Number(c.ts) || 0 });
+        }
+      });
+      // Mención en el texto de la tarea, solo si NO está asignada a mí (si lo está, ya sale en Mis tareas).
+      if (t.texto && t.texto.indexOf(tag) !== -1 && t.asignadoA !== u && t.creadoPor !== u) {
+        out.push({ project: p, tarea: t, tipo: 'tarea', texto: t.texto, autor: t.creadoPor || '\u2014', ts: Number(t.creadaTs) || 0 });
+      }
+    });
+  });
+  out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return out;
+}
+// Inyecta/actualiza el badge de mis tareas abiertas junto a cada pestaña de la barra lateral.
+function refreshSidebarTaskCounters() {
+  const p = STATE.currentProject; if (!p) return;
+  const u = currentUser();
+  document.querySelectorAll('.sidebar-item[data-module]').forEach(el => {
+    const mod = el.getAttribute('data-module');
+    const n = userSectionTaskCount(p, mod, u);
+    let badge = el.querySelector('.sidebar-task-badge');
+    if (n > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'sidebar-task-badge'; el.appendChild(badge); }
+      badge.textContent = n;
+      badge.title = n + (n === 1 ? ' tarea tuya' : ' tareas tuyas') + ' abierta(s) en esta sección';
+    } else if (badge) { badge.remove(); }
+  });
+}
+
 function marcarSenal(project, sig) {
   const arr = ensureSenales(project); const visto = [currentUser()];
   const ex = arr.find(x => x.tipo === sig.tipo && x.seccion === sig.seccion);
@@ -6166,32 +6235,55 @@ function tmSelfAssign() {
 function tmToggle(id) { const t = _tmFind(id); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); renderTareasModal(); refreshSectionTareasBadge(); } }
 function tmToggleExpand(id) { const st = _tm(); st.expanded = st.expanded === id ? null : id; renderTareasModal(); }
 function tmAddComentario(id) { const t = _tmFind(id); if (!t) return; const el = document.getElementById('tmCom_' + id); const v = el ? el.value.trim() : ''; if (!v) return; if (!t.comentarios) t.comentarios = []; t.comentarios.push({ id: _taskId(), autor: currentUser(), texto: v, ts: new Date().toLocaleString('es-CL') }); markDirty(); renderTareasModal(); }
-function refreshSectionTareasBadge() { if (STATE.currentView === 'project' && STATE.currentModule) { try { renderModule(STATE.currentModule); } catch (e) {} } }
+function refreshSectionTareasBadge() { if (STATE.currentView === 'project' && STATE.currentModule) { try { renderModule(STATE.currentModule); } catch (e) {} try { refreshSidebarTaskCounters(); } catch (e) {} } }
 function renderMisTareas() {
   const el = document.getElementById('crTareasPanel'); if (!el) return;
   const u = currentUser();
-  const people = (function(){ const set = new Set(); PROJECTS.forEach(p => projectPeople(p).forEach(n => set.add(n))); const ep = (typeof EMPRESA_PERFIL !== 'undefined') ? EMPRESA_PERFIL : {}; if (ep.remitenteNombre) set.add(ep.remitenteNombre); if (u) set.add(u); return [...set].sort((a, b) => a.localeCompare(b, 'es')); })();
-  const selOpts = (people.length ? people : [u]).map(n => '<option value="' + escapeHtml(n) + '"' + (n === u ? ' selected' : '') + '>' + escapeHtml(n) + '</option>').join('');
+  const e = escapeHtml;
+  const modTitle = (sec) => e((MODULES[sec] && MODULES[sec].title) || sec);
+
+  // 1) MIS TAREAS — todo lo asignado a mí, agrupado por proyecto
   const tasks = userOpenTasks(u);
   const byProj = {}; tasks.forEach(o => { (byProj[o.project.id] = byProj[o.project.id] || { project: o.project, items: [] }).items.push(o.tarea); });
-  const senalesRows = []; PROJECTS.forEach(p => userSenales(p, u).forEach(sg => senalesRows.push({ project: p, sg: sg })));
-  let body = '';
-  if (!tasks.length && !senalesRows.length) {
-    body = '<div class="crt-empty">No tienes tareas ni señales pendientes.</div>';
+  let misTareas = '';
+  if (!tasks.length) {
+    misTareas = '<div class="crt-empty">No tienes tareas asignadas.</div>';
   } else {
-    if (senalesRows.length) {
-      body += '<div class="crt-group"><div class="crt-group-h">Requieren tu atención <span class="crt-count">' + senalesRows.length + '</span></div>' +
-        senalesRows.map(o => '<div class="crt-item crt-senal"><div class="crt-item-main"><div class="crt-item-text">' + escapeHtml(o.sg.descripcion) + '</div><div class="crt-item-meta">' + escapeHtml(o.project.name) + ' \u00b7 ' + escapeHtml((MODULES[o.sg.seccion] && MODULES[o.sg.seccion].title) || o.sg.seccion) + '</div></div><div class="crt-item-actions"><button class="btn btn-ghost btn-sm" onclick="crtGoSenal(\'' + o.project.id + '\',\'' + o.sg.seccion + '\')">Ir</button><button class="btn btn-secondary btn-sm" onclick="marcarSenalVista(\'' + o.project.id + '\',\'' + o.sg.id + '\')">Visto</button></div></div>').join('') + '</div>';
-    }
     Object.keys(byProj).forEach(pid => {
       const g = byProj[pid];
-      body += '<div class="crt-group"><div class="crt-group-h">' + escapeHtml(g.project.name) + ' <span class="crt-count">' + g.items.length + '</span></div>' +
-        g.items.map(t => '<div class="crt-item"><label class="tm-check"><input type="checkbox" onchange="crtToggle(\'' + g.project.id + '\',\'' + t.id + '\')"></label><div class="crt-item-main"><div class="crt-item-text">' + highlightMentions(escapeHtml(t.texto), projectPeople(g.project)) + '</div><div class="crt-item-meta">' + escapeHtml((MODULES[t.seccion] && MODULES[t.seccion].title) || t.seccion) + ' \u00b7 de ' + escapeHtml(t.creadoPor || '\u2014') + '</div></div><button class="btn btn-ghost btn-sm" onclick="crtGoTask(\'' + g.project.id + '\',\'' + t.seccion + '\')">Abrir</button></div>').join('') + '</div>';
+      misTareas += '<div class="crt-subgroup"><div class="crt-subgroup-h">' + e(g.project.name) + ' <span class="crt-count">' + g.items.length + '</span></div>' +
+        g.items.map(t => '<div class="crt-item"><label class="tm-check"><input type="checkbox" onchange="crtToggle(\'' + g.project.id + '\',\'' + t.id + '\')"></label><div class="crt-item-main"><div class="crt-item-text">' + highlightMentions(e(t.texto), projectPeople(g.project)) + '</div><div class="crt-item-meta">' + modTitle(t.seccion) + ' \u00b7 de ' + e(t.creadoPor || '\u2014') + '</div></div><button class="btn btn-ghost btn-sm" onclick="crtGoTask(\'' + g.project.id + '\',\'' + t.seccion + '\')">Abrir</button></div>').join('') + '</div>';
     });
   }
-  el.innerHTML = '<div class="crt-card"><div class="crt-head"><div class="crt-title">Mis tareas <span class="crt-faint">\u00b7 todo lo asignado a ti, en todos los proyectos y secciones</span></div>' +
-    '</div>' +
-    '<div class="crt-body">' + body + '</div></div>';
+
+  // 2) MENCIONES — comentarios/tareas donde me etiquetaron (aunque no sean mías)
+  const menciones = userMentions(u);
+  let mencionesHtml = '';
+  if (!menciones.length) {
+    mencionesHtml = '<div class="crt-empty">Nadie te ha mencionado todavía.</div>';
+  } else {
+    mencionesHtml = menciones.map(m => '<div class="crt-item crt-mencion"><div class="crt-item-main"><div class="crt-item-text">' + highlightMentions(e(m.texto), projectPeople(m.project)) + '</div><div class="crt-item-meta">' + e(m.project.name) + ' \u00b7 ' + modTitle(m.tarea.seccion) + ' \u00b7 ' + (m.tipo === 'comentario' ? 'comentario de ' : 'tarea de ') + e(m.autor) + '</div></div><button class="btn btn-ghost btn-sm" onclick="crtGoTask(\'' + m.project.id + '\',\'' + m.tarea.seccion + '\')">Ver</button></div>').join('');
+  }
+
+  // 3) REQUIEREN ATENCIÓN — señales del sistema dirigidas a mí
+  const senalesRows = []; PROJECTS.forEach(p => userSenales(p, u).forEach(sg => senalesRows.push({ project: p, sg: sg })));
+  let atencionHtml = '';
+  if (!senalesRows.length) {
+    atencionHtml = '<div class="crt-empty">Nada requiere tu atención.</div>';
+  } else {
+    atencionHtml = senalesRows.map(o => '<div class="crt-item crt-senal"><div class="crt-item-main"><div class="crt-item-text">' + e(o.sg.descripcion) + '</div><div class="crt-item-meta">' + e(o.project.name) + ' \u00b7 ' + modTitle(o.sg.seccion) + '</div></div><div class="crt-item-actions"><button class="btn btn-ghost btn-sm" onclick="crtGoSenal(\'' + o.project.id + '\',\'' + o.sg.seccion + '\')">Ir</button><button class="btn btn-secondary btn-sm" onclick="marcarSenalVista(\'' + o.project.id + '\',\'' + o.sg.id + '\')">Visto</button></div></div>').join('');
+  }
+
+  const group = (titulo, count, contenido) =>
+    '<div class="crt-group"><div class="crt-group-h">' + titulo + ' <span class="crt-count">' + count + '</span></div>' + contenido + '</div>';
+
+  el.innerHTML = '<div class="crt-card">' +
+    '<div class="crt-head"><div class="crt-title">Comunicación <span class="crt-faint">\u00b7 lo que necesita tu atención: tareas, menciones y señales</span></div></div>' +
+    '<div class="crt-body">' +
+      group('Mis tareas', tasks.length, misTareas) +
+      group('Menciones', menciones.length, mencionesHtml) +
+      group('Requieren atención', senalesRows.length, atencionHtml) +
+    '</div></div>';
 }
 function crtToggle(projId, taskId) { const p = PROJECTS.find(x => x.id === projId); if (!p) return; const t = ensureTareas(p).find(x => x.id === taskId); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); try { renderMetrics(); renderKanban(); } catch (e) {} } }
 function crtGoTask(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) return; navigateToProject(projId); setTimeout(() => { try { navigateToModule(seccion); } catch (e) {} setTimeout(() => { try { openTareasModal(seccion); } catch (e) {} }, 140); }, 70); }
@@ -6357,6 +6449,7 @@ function navigateToModule(moduleKey) {
 
   // Render module
   renderModule(moduleKey);
+  try { refreshSidebarTaskCounters(); } catch (e) {}   // V9.6.16
   document.querySelector('.module-main').scrollTop = 0;
 }
 
@@ -9844,9 +9937,11 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   const dteRealVal = (item.dteReal !== undefined && item.dteReal !== null) ? item.dteReal : (item.dte || '');
 
   return `
-    <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}">
+    <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}" data-sec="${sectionKey}" data-dept="${sectionKey === 'servicios' ? escapeHtml(dept) : ''}" ondragstart="rowDragStart(event)" ondragover="rowDragOver(event)" ondrop="rowDrop(event)" ondragend="rowDragEnd(event)">
       <td>
-        <div class="cell-name-wrap">
+        <div class="cell-name-row">
+          <span class="row-drag-handle" title="Arrastra para reordenar (dentro del mismo departamento)" onmousedown="rowHandleDown(this)">⋮⋮</span>
+          <div class="cell-name-wrap" style="flex:1;min-width:0;">
           <div class="combobox-wrap">
             <input class="cell-input combobox-input ${item.nombre ? '' : 'is-empty'}"
                    value="${escapeHtml(item.nombre || '')}"
@@ -9863,6 +9958,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
             ${isExtra ? '<span class="extra-badge" data-tip="Ítem agregado después de la aprobación del proyecto. Editable libremente. No afecta la cotización original.">EXTRA</span>' : ''}
             <button type="button" class="row-note-btn ${item.nota ? 'has-note' : ''}" data-tip="${item.nota ? escapeHtml(_noteTip(item.nota, item.notaFecha, item.notaAutor)) : 'Agregar nota a esta fila (contexto interno, no aparece en cotización)'}" onclick="openRowNote(${ref})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/></svg></button>
             <label class="row-pp" data-tip="Pronto pago negociado para esta fila"><input type="checkbox" ${item.prontoPago ? 'checked' : ''} onchange="updateRowField(${ref}, 'prontoPago', this.checked); afterRowChange(${ref});">PP</label>
+          </div>
           </div>
         </div>
       </td>
@@ -9906,7 +10002,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
         </span>
       </td>
       ${showReal ? `
-        <td class="num">
+        <td class="num" ondblclick="openCostoRealCalc(${ref})" title="Doble clic para calcular el costo real con el DTE de la fila">
           <input type="text" inputmode="numeric" class="cell-input num"
                  value="${displayMoneyInputValue(item.costoReal)}"
                  placeholder="—"
@@ -9944,6 +10040,60 @@ function updateRowField(sectionKey, dept, idx, field, value) {
   } else {
     project.data[sectionKey][idx][field] = value;
   }
+}
+
+/* ─── V9.6.18 · DRAG & DROP DE FILAS DEL PRESUPUESTO ──────────────────────
+   Reordena filas DENTRO de su mismo departamento (servicios) o sección
+   (gastos/equipos/talentos). NO permite mover entre departamentos (decisión
+   de diseño: para eso se elimina y recrea). HTML5 nativo, sin librería, igual
+   que Plan de Rodaje / Entregables. El orden vive en el array -> markDirty lo
+   guarda. El agarre (⋮⋮) activa draggable solo al tomarlo, para no interferir
+   con la selección de texto en los inputs. */
+let _budgetDrag = null;
+function rowHandleDown(el) { const tr = el.closest('tr'); if (tr) tr.setAttribute('draggable', 'true'); }
+function rowDragStart(ev) {
+  const tr = ev.currentTarget;
+  _budgetDrag = { sec: tr.dataset.sec, dept: tr.dataset.dept || '', idx: Number(tr.dataset.rowIdx) };
+  ev.dataTransfer.effectAllowed = 'move';
+  try { ev.dataTransfer.setData('text/plain', tr.dataset.rowIdx); } catch (e) {}
+  tr.classList.add('row-dragging');
+}
+function _budgetDragMismatch(tr) {
+  return !_budgetDrag || tr.dataset.sec !== _budgetDrag.sec || (tr.dataset.dept || '') !== _budgetDrag.dept;
+}
+function rowDragOver(ev) {
+  const tr = ev.currentTarget;
+  if (_budgetDragMismatch(tr)) return;   // sin cruce de departamento/sección
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+}
+function rowDrop(ev) {
+  const tr = ev.currentTarget;
+  if (_budgetDragMismatch(tr)) { rowDragEnd(ev); return; }
+  ev.preventDefault();
+  const sec = _budgetDrag.sec;
+  const dept = _budgetDrag.dept === '' ? null : _budgetDrag.dept;
+  const from = _budgetDrag.idx;
+  const overIdx = Number(tr.dataset.rowIdx);
+  const rect = tr.getBoundingClientRect();
+  const after = (ev.clientY - rect.top) > rect.height / 2;   // mitad inferior -> soltar después
+  let to = overIdx + (after ? 1 : 0);
+  const arr = (sec === 'servicios') ? (STATE.currentProject.data.servicios[dept] || []) : (STATE.currentProject.data[sec] || []);
+  if (!arr.length) { rowDragEnd(ev); return; }
+  if (from < to) to--;                 // ajuste por el elemento removido
+  if (to < 0) to = 0; if (to > arr.length - 1) to = arr.length - 1;
+  if (from !== to) {
+    const moved = arr.splice(from, 1)[0];
+    arr.splice(to, 0, moved);
+    markDirty();
+  }
+  _budgetDrag = null;
+  if (sec === 'servicios') renderServiciosBody(); else renderSimpleSection(sec);
+}
+function rowDragEnd(ev) {
+  _budgetDrag = null;
+  document.querySelectorAll('tr.row-dragging').forEach(x => x.classList.remove('row-dragging'));
+  document.querySelectorAll('tr[draggable]').forEach(x => x.removeAttribute('draggable'));
 }
 
 /* ─── V8.1 (#2): NOTAS CONTEXTUALES POR FILA DEL PRESUPUESTO ──────────
@@ -10351,11 +10501,21 @@ function calcSummaryFin(project) {
    extras, comisiones y ganancia) y DETALLE abajo (todas las filas con valor;
    se omiten las filas en cero — puro ruido). Si el proyecto tiene costos
    reales (estados de Preproducción en adelante), suma columnas Real. */
-function _presupRowHasValue(r, sectionKey) {
+/* V9.6.15 (#6) · ¿esta fila merece exportarse? Antes bastaba con que tuviera
+   valor unitario != 0, lo que dejaba pasar filas NO cotizadas (ej. valor
+   $120.000 con cantidad 0 -> costo 0, pero valor!=0 -> aparecía como ruido).
+   Nuevo criterio (único, para todas las secciones): exporta la fila solo si
+   tiene costo cotizado, o costo real, o nombre, o comentario, o pronto pago.
+   Así una fila en $0 con una nota importante (ej. "lo provee el cliente") SÍ
+   aparece, pero una fila vacía/no cotizada no. */
+function debeExportarseFilaPresupuesto(r, sectionKey) {
   const cot = (calcCostoEmpresa(r.valor, r.cantidad, r.dte, sectionKey).value) || 0;
   const real = (r.costoReal != null) ? (r.costoReal || 0) : 0;
-  return (Number(r.valor) || 0) !== 0 || cot !== 0 || real !== 0;
+  const nombre = (r.nombre || '').trim();
+  const nota = (r.nota || '').trim();
+  return cot !== 0 || real !== 0 || !!nombre || !!nota || !!r.prontoPago;
 }
+function _presupRowHasValue(r, sectionKey) { return debeExportarseFilaPresupuesto(r, sectionKey); }   // V9.6.15: alias por compatibilidad
 /* ═══════════════════════════════════════════════════════════════════════
    V9.6.13 · EXPORT DEL PRESUPUESTO A EXCEL (ExcelJS, con estilo)
    - Una pestaña por VERSIÓN de presupuesto (todas, automáticamente).
@@ -10372,7 +10532,9 @@ const _XL = {
   ganBg:    'FFFDF6E3',   // ámbar muy claro para Ganancia Final
   rule:     'FFD1D5DB',
   faint:    'FF6B7280',
-  neg:      'FFB91C1C'
+  neg:      'FFB91C1C',
+  colCot:   'FFF0F4F8',   // V9.6.15 (#5): tinte sutil columna Costo Cotizado (azul muy claro)
+  colReal:  'FFF0F6F0'    // V9.6.15 (#5): tinte sutil columna Costo Real (verde muy claro)
 };
 const _XL_MONEY = '"$"#,##0;[Red]-"$"#,##0';   // moneda chilena, negativos en rojo
 
@@ -10489,6 +10651,8 @@ function _presupFillSheetExcelJS(ws, pseudoProject, meta) {
     c.alignment = { horizontal: 'left', wrapText: true };
   });
   r++;
+  const colCot = 9;                  // índice de la columna "Costo cotizado"
+  const colReal = anyReal ? 10 : -1; // índice de "Costo real" (si aplica)
   const pushDetail = (sectionLabel, sectionKey, row, dept) => {
     const cot = (calcCostoEmpresa(row.valor, row.cantidad, row.dte, sectionKey).value) || 0;
     let col = 1;
@@ -10504,16 +10668,18 @@ function _presupFillSheetExcelJS(ws, pseudoProject, meta) {
     if (anyReal) _xlMoneyCell(ws.getCell(r, col++), row.costoReal != null ? row.costoReal : '');
     ws.getCell(r, col++).value = row.prontoPago ? 'Sí' : '';   // #6: Sí / vacío
     ws.getCell(r, col++).value = row.nota || '';                // #5: comentario interno
-    // borde inferior sutil en toda la fila
+    // borde inferior sutil en toda la fila + tinte sutil de las columnas de costo (#5)
     for (let k = 1; k <= nCols; k++) ws.getCell(r, k).border = _xlBorder();
+    ws.getCell(r, colCot).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: _XL.colCot } };
+    if (colReal > 0) ws.getCell(r, colReal).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: _XL.colReal } };
     r++;
   };
   let hubo = false;
   for (const dept in (d.servicios || {})) {
-    (d.servicios[dept] || []).forEach(row => { if (_presupRowHasValue(row, 'servicios')) { pushDetail('Servicios', 'servicios', row, dept); hubo = true; } });
+    (d.servicios[dept] || []).forEach(row => { if (debeExportarseFilaPresupuesto(row, 'servicios')) { pushDetail('Servicios', 'servicios', row, dept); hubo = true; } });
   }
   [['Gastos de producción', 'gastos', d.gastos], ['Técnica', 'equipos', d.equipos], ['Talentos', 'talentos', d.talentos]].forEach(([label, key, arr]) => {
-    (arr || []).forEach(row => { if (_presupRowHasValue(row, key)) { pushDetail(label, key, row, ''); hubo = true; } });
+    (arr || []).forEach(row => { if (debeExportarseFilaPresupuesto(row, key)) { pushDetail(label, key, row, ''); hubo = true; } });
   });
   if (!hubo) mergeRow('(sin filas con valor)', { font: { italic: true, color: { argb: _XL.faint } } });
 
@@ -10735,9 +10901,9 @@ function renderSummaryFin() {
             ${showReal ? fmtPctRowGasto(r.cot, r.real) : ''}
             ${showReal ? fmtDeltaInRowGasto(r.cot, r.real) : ''}
           </tr>`;
-            const subs = open ? deptos.map(dp => `
-          <tr class="summary-subrow" style="background:var(--surface-2,rgba(0,0,0,.02));">
-            <td style="padding-left:30px;color:var(--ink-secondary);font-size:13px;">${escapeHtml(dp.label)}</td>
+            const subs = open ? deptos.map((dp, di) => `
+          <tr class="summary-subrow" style="background:var(--accent-bg);">
+            <td style="padding-left:30px;color:var(--ink-secondary);font-size:13px;border-left:3px solid var(--accent-soft);">${escapeHtml(dp.label)}</td>
             <td class="pct">${pctOfClient(dp.cot)}</td>
             <td class="num" style="color:var(--ink-secondary);">${fmtMoney(dp.cot)}</td>
             ${showReal ? `<td class="num" style="color:var(--ink-secondary);">${s.anyReal ? fmtMoney(dp.real) : '—'}</td>` : ''}
@@ -12469,7 +12635,7 @@ function notifVarsFor(project, rec) {
      El BRUTO del documento se obtiene engrosando según el DTE: */
   const neto = rec.monto || 0;
   let bruto;
-  if (DTE_CON_RETENCION.includes(rec.dte))      bruto = Math.round(neto / FACTOR_BOLETA); // 360.000 → 424.779
+  if (DTE_CON_RETENCION.includes(rec.dte))      bruto = Math.round(neto / factorRetencionDte(rec.dte)); // BHE 15,25% / BTE su propia tasa
   else if (rec.dte === 'factura')               bruto = Math.round(neto * (1 + IVA));     // 900.000 → 1.071.000
   else                                          bruto = neto;                              // factura_exenta / s/d
   const _dteW = _dteWord(rec.dte);
@@ -15603,22 +15769,14 @@ function openConfigPanel() {
           </div>
           ${(STATE && STATE.adminMode) ? `
           <div class="config-section">
-            <p class="config-section-title">Diagnóstico (Gate A)</p>
+            <p class="config-section-title">Diagnóstico</p>
             <div class="config-grid">
-              <button class="topbar-save-btn" onclick="closeConfigPanel(); reconcileFirebaseSupabase();" title="Compara, solo lectura, lo que hay en Firebase contra lo que hay en Supabase (por entidad). Ayuda a decidir cuándo cortar la doble escritura y apagar Firebase. No modifica nada.">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.36-2.64L21 16"/><path d="M21 21v-5h-5"/></svg>
-                Reconciliar Firebase ↔ Supabase
-              </button>
-              <button class="topbar-save-btn ${_supaSole() ? 'is-on' : ''}" onclick="toggleSupabaseSoleSource();" title="Corta (reversible) la doble escritura: con esto activo, la app deja de escribir a Firebase y Supabase queda como única fuente. Se puede revertir con un click. No borra nada de Firebase.">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
-                ${_supaSole() ? 'Única fuente: Supabase · ON' : 'Cortar doble escritura (Firebase)'}
-              </button>
               <button class="topbar-save-btn" onclick="exportSupabaseBackup();" title="Descarga un respaldo manual de Supabase en un solo archivo .json (todas las tablas conocidas). Solo lectura. El respaldo autoritativo es el backup automático de Supabase Pro.">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
                 Respaldar Supabase (.json)
               </button>
             </div>
-            <p class="config-hint" style="margin-top:6px;">Solo lectura: cuenta y compara ids por entidad. No escribe ni borra nada en ninguno de los dos backends.${_supaSole() ? ' <strong style="color:var(--warning);">Doble escritura CORTADA: Supabase es la única fuente. Firebase no se está actualizando (reversible).</strong>' : ''}</p>
+            <p class="config-hint" style="margin-top:6px;">Gate A cerrado: Firebase está retirado y Supabase es la única fuente. El respaldo autoritativo es el backup automático diario de Supabase Pro; este botón descarga una copia manual en <code>.json</code>.</p>
           </div>` : ''}
           <div class="config-section">
             <p class="config-section-title">Perfil de la empresa</p>
@@ -15990,17 +16148,10 @@ async function exportSupabaseBackup() {
    escritura a Firebase perdería sus cambios). Desactivar es inmediato: cloudPush
    se reanuda y Firebase se pone al día en el próximo guardado. */
 function _applySupaSoleIndicator() {
-  let el = document.getElementById('supaSoleIndicator');
-  if (_supaSole()) {
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'supaSoleIndicator';
-      el.style.cssText = 'position:fixed;bottom:10px;left:10px;z-index:9000;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.02em;';
-      el.title = 'La app no está escribiendo a Firebase. Supabase es la única fuente (reversible desde Configuración › Diagnóstico).';
-      el.textContent = '● Supabase única fuente';
-      document.body.appendChild(el);
-    }
-  } else if (el) { el.remove(); }
+  // V10.0.0: Firebase retirado. "Supabase única fuente" dejó de ser un modo
+  // togglable (ahora es el estado permanente), así que no se muestra el badge.
+  const el = document.getElementById('supaSoleIndicator');
+  if (el) el.remove();
 }
 function toggleSupabaseSoleSource() {
   if (_supaSole()) {
@@ -16281,10 +16432,10 @@ function openCalculadoraTributaria() {
     } else { // IVA
       if (_calcModo === 'liquido') {
         liquido = _calcMonto;  // neto
-        bruto = _calcMonto * 1.19;
+        bruto = _calcMonto * (1 + IVA);
       } else {
         bruto = _calcMonto;
-        liquido = _calcMonto / 1.19;
+        liquido = _calcMonto / (1 + IVA);
       }
       impuesto = bruto - liquido;
     }
@@ -16373,6 +16524,136 @@ function calcUpdate(raw) {
   const impuesto = bruto - liquido;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmtMoney(v); };
   set('calcOutLiquido', liquido); set('calcOutImpuesto', impuesto); set('calcOutBruto', bruto);
+}
+
+/* ─── V9.6.17 · CALCULADORA DE COSTO REAL (por fila, DTE real fijo) ────────
+   Doble clic en la celda de Costo Real abre esta calculadora, ya cargada con
+   el DTE real de la fila y SIN poder cambiarlo, para que nadie ingrese el
+   costo empresa mal. El usuario ingresa el monto que conoce (lo líquido que
+   acordó pagar, o el neto de la factura) y el sistema calcula el COSTO EMPRESA
+   (lo que se guarda en costoReal):
+     · boleta (con retención): costo real = bruto = líquido / 0.8475
+     · factura con IVA marcado: costo real = neto = monto / 1.19
+     · factura/exenta/sin retención: costo real = monto (el IVA no es costo)
+   Así el costo real queda alineado con la lógica tributaria central. */
+function openCostoRealCalc(sectionKey, dept, idx) {
+  const item = _rowNoteItem(sectionKey, dept, idx);
+  if (!item) return;
+  const dte = item.dteReal || null;
+  window._crc = { sectionKey: sectionKey, dept: dept, idx: idx, dte: dte, monto: 0, incluyeIVA: false };
+  // semilla: si ya hay un costoReal, lo mostramos como punto de partida (en su forma de entrada)
+  if (item.costoReal != null && item.costoReal !== '') {
+    const cr = Number(item.costoReal) || 0;
+    if (dteTieneRetencion(dte)) window._crc.monto = Math.round(cr * factorRetencionDte(dte));   // bruto guardado -> líquido de partida
+    else window._crc.monto = cr;
+  }
+  renderCostoRealCalc();
+}
+function _crcDteLabel(dte) {
+  if (!dte) return 'Sin DTE real';
+  const o = (typeof DTE_OPTIONS !== 'undefined') ? DTE_OPTIONS.find(x => x.value === dte) : null;
+  return o ? o.label : dte;
+}
+function _crcCostoReal() {
+  const st = window._crc || {}; const m = Number(st.monto) || 0;
+  if (!m) return 0;
+  if (dteTieneRetencion(st.dte)) return Math.round(m / factorRetencionDte(st.dte));             // líquido -> bruto (costo empresa)
+  if (st.dte === 'factura' && st.incluyeIVA) return Math.round(m / (1 + IVA));     // con IVA -> neto (costo empresa)
+  return Math.round(m);                                                            // neto/exenta/sin dte
+}
+function renderCostoRealCalc() {
+  const st = window._crc; if (!st) return;
+  const item = _rowNoteItem(st.sectionKey, st.dept, st.idx) || {};
+  const quien = item.nombre || item.rol || item.item || 'esta fila';
+  const conReten = dteTieneRetencion(st.dte);
+  const esFacturaIVA = (st.dte === 'factura');
+  const costoReal = _crcCostoReal();
+  const m = Number(st.monto) || 0;
+
+  // etiqueta del input según DTE
+  const inputLabel = conReten
+    ? 'Monto líquido (lo que recibe el proveedor)'
+    : (esFacturaIVA ? 'Monto de la factura' : 'Monto');
+
+  // desglose de salida
+  let breakdown = '';
+  if (conReten) {
+    breakdown = `
+      <div class="calc-output-row"><span class="calc-output-label">Líquido (proveedor recibe)</span><strong>${fmtMoney(m)}</strong></div>
+      <div class="calc-output-row"><span class="calc-output-label">Retención (15.25%)</span><strong>${fmtMoney(costoReal - m)}</strong></div>
+      <div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  } else if (esFacturaIVA && st.incluyeIVA) {
+    breakdown = `
+      <div class="calc-output-row"><span class="calc-output-label">Neto (sin IVA)</span><strong>${fmtMoney(costoReal)}</strong></div>
+      <div class="calc-output-row"><span class="calc-output-label">IVA (19%)</span><strong>${fmtMoney(m - costoReal)}</strong></div>
+      <div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  } else {
+    breakdown = `
+      <div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  }
+
+  const ivaToggle = esFacturaIVA ? `
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-secondary);margin-top:8px;cursor:pointer;">
+      <input type="checkbox" ${st.incluyeIVA ? 'checked' : ''} onchange="window._crc.incluyeIVA=this.checked; renderCostoRealCalc();">
+      El monto que ingresé incluye IVA (se descuenta para el costo real)
+    </label>` : '';
+
+  const sinDte = !st.dte ? `<div class="calc-note" style="color:var(--warning);">Esta fila no tiene DTE real. El monto se usa tal cual. Para el cálculo automático con retención o IVA, selecciona primero el DTE real de la fila.</div>` : '';
+
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header">
+          <div class="modal-title">Costo real · ${escapeHtml(quien)}</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top:4px;">DTE real: <strong>${escapeHtml(_crcDteLabel(st.dte))}</strong> <span style="opacity:.7;">(fijo — se toma de la fila)</span></div>
+        </div>
+        <div class="calc-body">
+          <div class="field">
+            <label class="field-label">${inputLabel}</label>
+            <input type="text" inputmode="numeric" class="input num" id="crcMontoInput"
+                   value="${m ? displayMoneyInputValue(m) : ''}" placeholder="0"
+                   oninput="window._crc.monto = parseMoneyCLP(this.value) || 0; _crcUpdateOut();">
+            ${ivaToggle}
+          </div>
+          <div class="calc-output" id="crcOutput">${breakdown}</div>
+          ${sinDte}
+          <div class="calc-note">Se guardará el <strong>costo empresa</strong> (lo que efectivamente cuesta a la productora), no el líquido que recibe el proveedor.</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="_crcConfirm()">Usar como costo real</button>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(() => { const i = document.getElementById('crcMontoInput'); if (i) i.focus(); }, 50);
+}
+function _crcUpdateOut() {
+  // recálculo granular del bloque de salida sin re-render del modal (no pierde foco/cursor)
+  const out = document.getElementById('crcOutput'); if (!out) return;
+  const st = window._crc; const m = Number(st.monto) || 0; const costoReal = _crcCostoReal();
+  const conReten = dteTieneRetencion(st.dte); const esFacturaIVA = (st.dte === 'factura');
+  let html;
+  if (conReten) {
+    html = `<div class="calc-output-row"><span class="calc-output-label">Líquido (proveedor recibe)</span><strong>${fmtMoney(m)}</strong></div>
+      <div class="calc-output-row"><span class="calc-output-label">Retención (15.25%)</span><strong>${fmtMoney(costoReal - m)}</strong></div>
+      <div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  } else if (esFacturaIVA && st.incluyeIVA) {
+    html = `<div class="calc-output-row"><span class="calc-output-label">Neto (sin IVA)</span><strong>${fmtMoney(costoReal)}</strong></div>
+      <div class="calc-output-row"><span class="calc-output-label">IVA (19%)</span><strong>${fmtMoney(m - costoReal)}</strong></div>
+      <div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  } else {
+    html = `<div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (costo real)</span><strong style="color:var(--accent);">${fmtMoney(costoReal)}</strong></div>`;
+  }
+  out.innerHTML = html;
+}
+function _crcConfirm() {
+  const st = window._crc; if (!st) { closeModal(); return; }
+  const costoReal = _crcCostoReal();
+  updateRowField(st.sectionKey, st.dept, st.idx, 'costoReal', costoReal || null);
+  markDirty();
+  closeModal();
+  afterRowChange(st.sectionKey, st.dept, st.idx);
 }
 
 /* ─── BD PERSONAS GLOBAL (acceso desde topbar) ─────────────────────── */
@@ -18227,6 +18508,43 @@ function dalApplyTanda1(data) {
   CONTACTS_SOURCE = 'supabase';
 }
 
+/* V9.6.18 · Carga las tasas tributarias vigentes desde tax_rates (catálogo
+   GLOBAL, sin organization_id) y sobreescribe los defaults del cliente. Es
+   fuente única de verdad: IVA y retenciones viven en la BD, no en el HTML.
+   FAIL-SAFE: ante cualquier error o ausencia de datos, conserva los defaults
+   (la app nunca se rompe por esto). Normaliza la tasa: si viene > 1 se asume
+   porcentaje (19) y se divide por 100. */
+async function dalBootTaxRates() {
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb.from('tax_rates').select('concepto,tasa,vigente_desde,vigente_hasta');
+    if (error || !data || !data.length) return false;
+    const hoy = new Date().toISOString().slice(0, 10);
+    const vigente = {};
+    data.forEach(r => {
+      const desde = r.vigente_desde || '0000-01-01';
+      const hasta = r.vigente_hasta || null;
+      if (desde <= hoy && (!hasta || hasta > hoy)) {
+        const key = String(r.concepto || '').toLowerCase().trim();   // V10: case-insensitive (el concepto del IVA viene 'IVA')
+        const prev = vigente[key];
+        if (!prev || desde > prev._desde) vigente[key] = { tasa: r.tasa, _desde: desde };
+      }
+    });
+    const norm = (v) => { let n = Number(v); if (!isFinite(n)) return null; if (n > 1) n = n / 100; return n; };
+    const iva = vigente['iva'] ? norm(vigente['iva'].tasa) : null;
+    const hon = vigente['honorarios'] ? norm(vigente['honorarios'].tasa) : null;
+    const bte = vigente['retencion_bte'] ? norm(vigente['retencion_bte'].tasa) : null;
+    if (iva != null) IVA = iva;
+    if (hon != null) { IMPUESTO_HONORARIOS = hon; FACTOR_BOLETA = 1 - hon; }
+    if (bte != null) { IMPUESTO_BTE = bte; FACTOR_BTE = 1 - bte; }
+    TAX_RATES_SOURCE = 'supabase';
+    return true;
+  } catch (e) {
+    console.warn('[dal] tax_rates no disponible; se usan tasas por defecto', e);
+    return false;
+  }
+}
+
 /* Orquestador de arranque: intenta leer de Supabase; si lo logra, reemplaza
    los contactos/empresas que Firebase haya cargado y refresca la pantalla.
    Si falla, NO toca nada: la app sigue con los datos de Firebase. */
@@ -19404,7 +19722,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V9.6.14';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.0.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 let _cloudDb = null;
 let _cloudReady = false;
@@ -19412,131 +19730,20 @@ let _cloudApplying = false;          // evita re-push mientras aplicamos datos r
 let _cloudRemotePending = null;      // cambios remotos en espera (cuando el usuario está editando)
 const _cloudWriter = 'w-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
 
-function cloudAvailable() {
-  return CLOUD_ENABLED && typeof firebase !== 'undefined' && CLOUD_CONFIG && !!CLOUD_CONFIG.apiKey;
-}
-function cloudInit() {
-  if (!cloudAvailable()) return false;
-  try {
-    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(CLOUD_CONFIG);
-    _cloudDb = firebase.firestore();
-    _cloudReady = true;
-    return true;
-  } catch (e) { console.error('[nube] init falló', e); _cloudReady = false; return false; }
-}
-function cloudDocRef() { return _cloudDb.collection(CLOUD_DOC.col).doc(CLOUD_DOC.id); }
+function cloudAvailable() { return false; }   // V10.0.0: Firebase retirado
+function cloudInit() { return false; }
+function cloudDocRef() { return null; }
 
-/* Sube el estado completo a la nube (debounced vía autosaveNow).
-   Guardamos como STRING JSON para esquivar las restricciones de Firestore
-   con arrays anidados; un puñado de proyectos está muy por debajo del 1 MiB. */
-function cloudPush() {
-  if (!_cloudReady || _cloudApplying) return;
-  if (_supaSole()) return;   // V9.6.7: doble escritura cortada — Supabase es la única fuente (reversible)
-  try {
-    const payload = { json: JSON.stringify(buildCloudSaveObject()), _writer: _cloudWriter, _ts: Date.now() };
-    cloudDocRef().set(payload).catch(e => console.error('[nube] push falló', e));
-  } catch (e) { console.error('[nube] push excepción', e); }
-}
-function cloudParse(data) {
-  try { return data && data.json ? JSON.parse(data.json) : null; } catch (e) { return null; }
-}
-
-/* Escucha cambios remotos en tiempo real. */
-function cloudStartListener() {
-  if (!_cloudReady) return;
-  cloudDocRef().onSnapshot(
-    snap => {
-      if (!snap.exists) return;
-      if (_supaSole()) return;   // V9.6.7: en modo única fuente, un blob viejo de Firebase NO debe pisar Supabase
-      const data = snap.data();
-      if (!data || data._writer === _cloudWriter) return;   // ignorar mis propios cambios
-      const obj = cloudParse(data);
-      if (obj) cloudApplyRemote(obj);
-    },
-    err => console.error('[nube] listener', err)
-  );
-}
-
-/* Decide cómo aplicar un cambio remoto sin romperle la edición al usuario. */
-function cloudApplyRemote(obj) {
-  if (validateSaveObject(obj) !== null) return;            // estructura inválida → ignorar
-  if (STATE.currentProject) {
-    // El usuario está dentro de un proyecto: no le pisamos lo que está editando.
-    _cloudRemotePending = obj;
-    showToast({
-      kind: 'info', title: 'Cambios del equipo',
-      body: 'Alguien actualizó datos en la nube. Vuelve al Panel para verlos reflejados.',
-      duration: 8000
-    });
-    return;
-  }
-  cloudCommitRemote(obj);
-}
-
-/* Aplica el estado remoto en memoria y refresca el Panel (sin navegar bruscamente). */
-function cloudCommitRemote(obj) {
-  _cloudApplying = true;
-  try {
-    PROJECTS.length = 0; obj.projects.forEach(p => PROJECTS.push(p));
-    if (PROJECTS_SOURCE === 'supabase') { try { dalBootProyectos(); } catch (e) {} }   // V9.2.0: re-fusiona partes migradas tras un cambio remoto de Firebase
-    if (Array.isArray(obj.trash)) { TRASH.length = 0; obj.trash.forEach(p => TRASH.push(p)); }
-    if (obj.empresaPerfil && typeof obj.empresaPerfil === 'object') { if (PERFIL_SOURCE !== 'supabase') Object.assign(EMPRESA_PERFIL, obj.empresaPerfil); else { try { dalBootPerfil({ silent: true }); } catch (e) {} } }   // V9.4.8: Supabase manda
-    // V9.1.0: si la BD ya se sirve desde Supabase, NO dejamos que un cambio
-    // remoto de Firebase (p.ej. alguien editando un proyecto) pise los
-    // contactos/empresas servidos por Supabase. El resto del estado (proyectos,
-    // locaciones, legal) si se aplica normalmente.
-    if (CONTACTS_SOURCE !== 'supabase') {
-      if (obj.bdPersonas && typeof obj.bdPersonas === 'object') {
-        Object.keys(BD_PERSONAS).forEach(k => delete BD_PERSONAS[k]);
-        Object.keys(obj.bdPersonas).forEach(k => { BD_PERSONAS[k] = obj.bdPersonas[k]; });
-      }
-      // V7.2.1: faltaba copiar Empresas y Talentos al recibir cambios remotos.
-      if (obj.bdEmpresas && typeof obj.bdEmpresas === 'object') {
-        Object.keys(BD_EMPRESAS).forEach(k => delete BD_EMPRESAS[k]);
-        Object.keys(obj.bdEmpresas).forEach(k => { BD_EMPRESAS[k] = obj.bdEmpresas[k]; });
-      }
-      if (obj.bdTalentos && typeof obj.bdTalentos === 'object') {
-        Object.keys(BD_TALENTOS).forEach(k => delete BD_TALENTOS[k]);
-        Object.keys(obj.bdTalentos).forEach(k => { BD_TALENTOS[k] = obj.bdTalentos[k]; });
-      }
-      hydrateContactStore(obj);   // V7.3: reconstruir el modelo unificado desde el remoto
-    }
-    if (LOCATIONS_SOURCE !== 'supabase') {                                                  // V9.4.4: no dejar que Firebase pise locaciones servidas por Supabase
-      if (Array.isArray(obj.bdLoc)) { BD_LOC.length = 0; obj.bdLoc.forEach(l => BD_LOC.push(l)); }   // V8.2
-    } else { try { dalBootLocaciones({ silent: true }); } catch (e) {} }                     // re-leer de Supabase tras cambio remoto
-    restoreLocalLocPhotos();   // V8.3.3: las fotos no viajan por la nube; se reinyectan desde localStorage
-    if (LEGAL_SOURCE !== 'supabase') {                                                       // V9.4.7: no dejar que Firebase pise legal servido por Supabase
-      if (Array.isArray(obj.bdLegal)) { BD_LEGAL.length = 0; obj.bdLegal.forEach(d => BD_LEGAL.push(d)); }
-      if (Array.isArray(obj.bdLegalTpl)) { BD_LEGAL_TPL.length = 0; obj.bdLegalTpl.forEach(t => BD_LEGAL_TPL.push(t)); }   // V8.3
-    } else { try { dalBootLegal({ silent: true }); } catch (e) {} }
-    if (STATE.currentView !== 'project') { renderKanban(); renderMetrics(); }
-  } catch (e) { console.error('[nube] commit remoto', e); }
-  _cloudApplying = false;
-}
-
-/* Arranque de la nube: conecta, carga el estado (o siembra si está vacía),
-   y enciende el listener. done(true) si la nube quedó activa, done(false) si
-   hay que caer a modo local. */
-function cloudBoot(done) {
-  if (!cloudInit()) { done(false); return; }
-  cloudDocRef().get().then(snap => {
-    const obj = snap.exists ? cloudParse(snap.data()) : null;
-    if (obj && validateSaveObject(obj) === null) {
-      _cloudApplying = true;
-      applyLoadedState(obj);                // carga inicial desde la nube
-      restoreLocalLocPhotos();              // V8.3.3: fotos viven solo en localStorage
-      _cloudApplying = false;
-    } else {
-      cloudPush();                          // nube vacía → sembrar con el estado actual
-    }
-    cloudStartListener();
-    done(true);
-  }).catch(e => {
-    console.error('[nube] boot load', e);
-    cloudStartListener();
-    done(true);
-  });
-}
+/* V10.0.0 · Firebase retirado (Gate A cerrado). Estas funciones quedan como
+   no-ops permanentes para no romper sus puntos de llamada; la persistencia es
+   100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag
+   en localStorage. No se carga el SDK ni se abre ningún listener. */
+function cloudPush() { /* no-op: Supabase es la única fuente */ }
+function cloudParse(data) { return null; }
+function cloudStartListener() { /* no-op */ }
+function cloudApplyRemote(obj) { /* no-op */ }
+function cloudCommitRemote(obj) { /* no-op */ }
+function cloudBoot(done) { try { done(true); } catch (e) {} }   // entra directo a la carga desde Supabase, sin Firebase
 
 /* Pantalla de LOGIN real (V9.3.0 · Supabase Auth con Google OAuth).
    - Si ya hay sesión iniciada (visita anterior O regreso desde Google), entra directo:
@@ -19653,15 +19860,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Airbag adicional: autoguardar al cerrar/recargar.
   window.addEventListener('beforeunload', () => { if (STATE.dirty) autosaveNow(); });
 
-  // V6.10: gate de contraseña → arranque de nube. Si la nube no está activa,
-  // cae al comportamiento local original (ofrecer restaurar autoguardado).
+  // V10.0.0 · Gate A cerrado: Firebase retirado. El login es Supabase Auth
+  // (cloudGate) y la carga de datos es 100% Supabase (cadena dal*).
   cloudGate(() => {
-    cloudBoot(cloudOn => {
-      if (!cloudOn) offerAutosaveRestore();
-      // V9.1.0: tras cargar Firebase, intentamos reemplazar la BD por Supabase.
-      // Si falla (sin sesion, sin red, error), la app sigue con Firebase (fail-safe).
-      dalBootContactos().then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
-    });
+    dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
   });
 });
 
