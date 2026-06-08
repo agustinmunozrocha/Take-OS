@@ -2247,11 +2247,18 @@ a { color: inherit; text-decoration: none; }
 .cell-name-meta { display: flex; align-items: center; gap: 4px; }
 /* V9.6.18 · grip de arrastre de filas del presupuesto */
 .cell-name-row { display: flex; align-items: flex-start; gap: 4px; }
-.row-drag-handle { cursor: grab; color: var(--ink-faint); font-size: 11px; line-height: 1.2; letter-spacing: -3px; padding: 4px 1px 0 0; user-select: none; flex-shrink: 0; }
+.row-drag-handle { cursor: grab; color: var(--ink-faint); font-size: 13px; line-height: 1.2; letter-spacing: 0; padding: 3px 7px 0 3px; user-select: none; flex-shrink: 0; }
 .row-drag-handle:hover { color: var(--accent); }
 .row-drag-handle:active { cursor: grabbing; }
 tr.row-dragging { opacity: .45; }
 tr.row-dragging td { background: var(--accent-bg); }
+/* V10.3.1 (#6) · línea roja de destino del drop (como en Plan de Rodaje) */
+tr.row-drop-before > td { box-shadow: inset 0 2px 0 var(--accent, #B03A2F); }
+tr.row-drop-after > td { box-shadow: inset 0 -2px 0 var(--accent, #B03A2F); }
+/* V10.3.1 (#2) · signo $ en la celda de costo real */
+.cr-money-wrap { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 1px; width: 100%; }
+.cr-money-sign { color: var(--ink-faint); flex-shrink: 0; }
+.cr-money-input { width: auto; min-width: 52px; }
 /* V5.6 (Nota 6): el badge EXTRA ya no va inline robando ancho al nombre.
    Va debajo, y la fila lleva un acento lateral para identificarse. */
 .data-table tr.is-extra td:first-child { box-shadow: inset 3px 0 0 var(--accent, #c2410c); }
@@ -2536,6 +2543,10 @@ tr.row-dragging td { background: var(--accent-bg); }
 .he-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
 .he-tab { flex: 1; padding: 7px 10px; border: 1px solid var(--rule); background: var(--bg-surface-soft); color: var(--ink-secondary); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .he-tab.is-on { border-color: var(--accent); color: var(--accent); background: var(--bg-surface); }
+/* V10.4.0 (Gate B) · modo solo-lectura por módulo */
+.mod-readonly input, .mod-readonly textarea, .mod-readonly select { pointer-events: none; opacity: 0.9; }
+.mod-readonly .row-add, .mod-readonly .row-delete, .mod-readonly .btn-primary, .mod-readonly .calc-trigger, .mod-readonly .row-note-btn, .mod-readonly .subdept-ctl { pointer-events: none; opacity: 0.45; }
+.mod-readonly-banner { display: flex; align-items: center; gap: 8px; background: var(--bg-surface-soft); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 8px; padding: 9px 13px; font-size: 12px; color: var(--ink-muted); margin-bottom: 14px; }
 .data-table tbody td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--rule-soft);
@@ -3508,7 +3519,7 @@ input.time24 { text-align: center; font-variant-numeric: tabular-nums; letter-sp
 .budget-table.collapse-cot { min-width: 900px; }
 .budget-table.cot-expanded { min-width: 1380px; }
 .budget-table th, .budget-table td { white-space: nowrap; }
-.budget-table .combobox-input { min-width: 190px; }  /* V5.9 (Nota 8): cabe "Javiera de la Maza" */
+.budget-table .combobox-input { min-width: 260px; }  /* V10.3.1 (#5): nombres no se cortan (antes 190px) */
 .budget-table .cell-input { min-width: 60px; }
 .budget-table .cell-select { min-width: 110px; }
 #saveBtn.is-dirty {
@@ -6465,6 +6476,13 @@ function navigateToProject(projectId) {
 }
 
 function navigateToModule(moduleKey) {
+  // V10.4.0 (Gate B): no navegar a módulos sin acceso; caer al primero visible
+  if (!authPuedeVer(moduleKey)) {
+    const first = _firstVisibleModule();
+    showToast({ kind: 'warning', title: 'Sin acceso', body: 'Tu perfil no tiene acceso a este módulo.' });
+    if (first && first !== moduleKey) return navigateToModule(first);
+    return;
+  }
   STATE.currentModule = moduleKey;
 
   // Update sidebar active state
@@ -7297,6 +7315,7 @@ function renderModule(key) {
         <span class="stub-tag">${m.layer}</span>
       </div>`;
   }
+  try { applyModuleReadonly(key); } catch (e) {}   // V10.4.0 (Gate B): solo-lectura si nivel 'L'
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -8937,7 +8956,7 @@ function renderInfoProyecto() {
       </div>
     </div>
 
-    ${STATE.adminMode ? `
+    ${(STATE.adminMode && authNivel('eliminar_proyecto') === 'E') ? `
     <div class="form-section" style="border: 1px solid var(--negative); background: var(--negative-bg);">
       <div class="form-section-title" style="color: var(--negative);">⚠ Zona peligrosa</div>
       <div class="form-section-subtitle">Acción irreversible, solo administrador. Antes de eliminar, exporta un guardado con “Guardar” si quieres conservar el proyecto.</div>
@@ -9041,6 +9060,7 @@ function collectApprovalBlockers(project) {
    irreversible: exige escribir el nombre EXACTO del proyecto para habilitar
    el botón de borrado. No hay "deshacer" (salvo restaurar un guardado previo). */
 function deleteProjectFlow(id) {
+  if (authNivel('eliminar_proyecto') !== 'E') { _authBlockWriteToast(); return; }   // V10.4.0 (Gate B)
   const proj = PROJECTS.find(p => p.id === id);
   if (!proj) return;
   if (!STATE.adminMode) {
@@ -9995,7 +10015,7 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
     <table class="data-table budget-table ${budgetStateClass}" id="${tableId}">
       <thead>
         <tr>
-          ${_budgetSortTh(nameColLabel, sectionKey, dept, 'nombre', '', ' style="width: 14%;"', '')}
+          ${_budgetSortTh(nameColLabel, sectionKey, dept, 'nombre', '', ' style="width: 20%;"', '')}
           ${_budgetSortTh(firstCol, sectionKey, dept, 'rolItem', '', ' style="width: 18%;"', '')}
           <th class="col-cot-detail" style="width: 13%;">DTE${dteOptional ? ' <span style="color: var(--ink-faint); font-weight: 400;">(opc.)</span> <span class="tt" data-tip="En Gastos y Equipos el DTE es opcional porque muchos ítems son contingencias, cajas de producción, estimaciones abiertas o gastos aún sin proveedor confirmado.\n\nSi no seleccionas DTE, el costo se calcula como valor × cantidad sin retención (asumiendo factura).\n\nLlénalo cuando sepas el documento — eso permite que la conversión a costo empresa sea exacta.">?</span>' : ''}</th>
           ${_budgetSortTh('Valor', sectionKey, dept, 'valor', 'num col-cot-detail', ' style="width: 11%;"', '')}
@@ -10125,11 +10145,11 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
         </span>
       </td>
       ${showReal ? `
-        <td class="num" ondblclick="openCostoRealCalc(${ref})" title="Doble clic para calcular el costo real con el DTE de la fila">
-          <input type="text" inputmode="numeric" class="cell-input num"
+        <td class="num" ondblclick="openCostoRealCalc(${ref})" title="Doble clic para calcular el costo real (costo empresa) con el DTE de la fila">
+          <span class="cr-money-wrap"><span class="cr-money-sign">$</span><input type="text" inputmode="numeric" class="cell-input num cr-money-input" data-costo-real
                  value="${displayMoneyInputValue(item.costoReal)}"
                  placeholder="—"
-                 onchange="onMoneyInput(this, ${ref}, 'costoReal'); afterRowChange(${ref});">
+                 onchange="onMoneyInput(this, ${ref}, 'costoReal'); afterRowChange(${ref});"></span>
           <span class="delta-inline ${deltaInitClass}" data-delta-inline>${deltaInitText}</span>
         </td>
         <td>
@@ -10193,6 +10213,12 @@ function rowDragOver(ev) {
   if (_budgetDragMismatch(tr)) return;   // sin cruce de departamento/sección
   ev.preventDefault();
   ev.dataTransfer.dropEffect = 'move';
+  // V10.3.1 (#6): línea roja de destino (antes/después según la mitad del cursor)
+  const tbody = tr.parentNode;
+  if (tbody) tbody.querySelectorAll('.row-drop-before,.row-drop-after').forEach(x => x.classList.remove('row-drop-before', 'row-drop-after'));
+  const rect = tr.getBoundingClientRect();
+  const after = (ev.clientY - rect.top) > rect.height / 2;
+  tr.classList.add(after ? 'row-drop-after' : 'row-drop-before');
 }
 function rowDrop(ev) {
   const tr = ev.currentTarget;
@@ -10219,7 +10245,7 @@ function rowDrop(ev) {
 }
 function rowDragEnd(ev) {
   _budgetDrag = null;
-  document.querySelectorAll('tr.row-dragging').forEach(x => x.classList.remove('row-dragging'));
+  document.querySelectorAll('tr.row-dragging,tr.row-drop-before,tr.row-drop-after').forEach(x => x.classList.remove('row-dragging', 'row-drop-before', 'row-drop-after'));
   document.querySelectorAll('tr[draggable]').forEach(x => x.removeAttribute('draggable'));
 }
 
@@ -10404,6 +10430,15 @@ function afterRowChange(sectionKey, dept, idx) {
     const val = el.value;
     el.classList.toggle('is-empty', !val);
   });
+
+  // V10.3.1 (#1): la celda de costo real SIEMPRE muestra el costo empresa
+  // (bruto) guardado. La calculadora guarda el bruto y llega por aquí; sin
+  // este refresco el input quedaba mostrando el líquido tipeado al abrirla.
+  const crInput = rowEl.querySelector('[data-costo-real]');
+  if (crInput && document.activeElement !== crInput) {
+    crInput.value = (item.costoReal != null) ? displayMoneyInputValue(item.costoReal) : '';
+    crInput.classList.toggle('is-empty', item.costoReal == null);
+  }
 
   // V5.2.1: actualizar indicador "● no en BD" en vivo (antes solo aparecía
   // al re-renderizar toda la tabla, ej al agregar/eliminar fila)
@@ -17375,6 +17410,7 @@ document.getElementById('globalSearch').addEventListener('input', (e) => {
    (cliente, nombre, PE). Usa un draft en memoria porque showModal cierra
    el modal antes de ejecutar onConfirm (los inputs del DOM ya no existen). */
 function newProject() {
+  if (authNivel('crear_proyecto') !== 'E') { _authBlockWriteToast(); return; }   // V10.4.0 (Gate B)
   window._npDraft = { nombre: '', cliente: '', pe: '' };
   showModal({
     title: 'Nuevo proyecto',
@@ -19090,9 +19126,178 @@ async function dalResolveIdentidad() {
     if (DAL_SESSION_EMAIL) {
       let match = null;
       Object.keys(BD_CONTACTOS).forEach(id => { const c = BD_CONTACTOS[id]; if (c && (c.email || '').toLowerCase() === DAL_SESSION_EMAIL) match = c; });
-      if (match && match.nombre) { setCurrentUser(match.nombre); window.__TAKEOS_USER = match.nombre; }
+      if (match && match.nombre) { setCurrentUser(match.nombre); window.__TAKEOS_USER = match.nombre; try { renderTopbarUser(); } catch (e) {} }
     }
   } catch (e) { console.error('[dal] identidad', e); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   V10.4.0 · GATE B — PERMISOS POR PERFIL (capa de cliente)
+   ════════════════════════════════════════════════════════════════════
+   El RLS de Supabase protege los datos en lectura; los RPCs SECURITY
+   DEFINER (escritura) bypasean RLS, así que el cliente agrega una guarda
+   de UX: identidad real, ocultar módulos sin acceso, modo solo-lectura, y
+   bloquear los RPCs de escritura para perfiles sin nivel 'E'. La seguridad
+   REAL de escritura la cerrará el BD Expert dentro de los RPCs (Gate C).
+
+   FAIL-OPEN: si la membresía/matriz no carga (sin sesión, sin membresía,
+   error de red/RLS), TAKEOS_ACCESO queda null y todo se trata como 'E'
+   (comportamiento previo). Así un fallo de carga NUNCA deja a nadie afuera;
+   el RLS sigue protegiendo los datos. El acceso solo se restringe cuando la
+   matriz dice explícitamente 'L' o 'none'. */
+let TAKEOS_PERFIL = null;      // { codigo, nombre, tipo, profileId, contactId }
+let TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (fail-open)
+
+/* Mapa: clave de módulo en la app -> código de módulo en profile_permissions */
+const MODULE_PERM_CODE = {
+  'info-proyecto': 'info_proyecto',
+  'bd-personas': 'bd',
+  'presupuesto': 'presupuesto',
+  'cotizacion': 'cotizacion',
+  'crew': 'operacion_creatividad',
+  'documentos': 'operacion_creatividad',
+  'rodajes': 'operacion_creatividad',
+  'locaciones': 'operacion_creatividad',
+  'hoja-llamado': 'operacion_creatividad',
+  'plan-rodaje': 'operacion_creatividad',
+  'legal': 'gastos_legal_notificaciones',
+  'correos': 'gastos_legal_notificaciones',
+  'gastos': 'gastos_legal_notificaciones',
+  'entregables': 'operacion_creatividad',
+  'reporte-cierre': 'reporte_cierre'
+};
+/* Nivel para un código de módulo de BD. Fail-open: null (no cargado) => 'E';
+   código ausente en la matriz cargada => 'E' (solo restringe el deny explícito). */
+function authNivel(modCode) {
+  if (!TAKEOS_ACCESO) return 'E';
+  const n = TAKEOS_ACCESO[modCode];
+  return n || 'E';
+}
+function authNivelModulo(appKey) {
+  const code = MODULE_PERM_CODE[appKey];
+  if (!code) return 'E';
+  return authNivel(code);
+}
+function authPuedeVer(appKey) { return authNivelModulo(appKey) !== 'none'; }
+function authPuedeEditar(appKey) { return authNivelModulo(appKey) === 'E'; }
+function authEsAdmin() { return TAKEOS_PERFIL && (TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.nombre === 'Administrador'); }
+/* Guardas de los RPCs de escritura: el proyecto-core (guardar_proyecto) toca
+   varios módulos, así que se permite si hay 'E' en alguno de ellos; las
+   operaciones usan 'operacion_creatividad'. */
+function authPuedeGuardarProyecto() {
+  if (!TAKEOS_ACCESO) return true;
+  return ['presupuesto', 'cotizacion', 'info_proyecto', 'reporte_cierre'].some(function (m) { return authNivel(m) === 'E'; });
+}
+function authPuedeGuardarOperaciones() {
+  if (!TAKEOS_ACCESO) return true;
+  return authNivel('operacion_creatividad') === 'E';
+}
+let _authBlockToastAt = 0;
+function _authBlockWriteToast() {
+  const now = Date.now();
+  if (now - _authBlockToastAt < 4000) return;   // un solo aviso, no spam
+  _authBlockToastAt = now;
+  showToast({ kind: 'error', title: 'Sin permiso para editar', body: 'Tu perfil' + (TAKEOS_PERFIL ? ' (' + TAKEOS_PERFIL.nombre + ')' : '') + ' puede ver esto pero no guardar cambios. Los cambios no se enviaron.' });
+}
+
+/* Carga la membresía (por user_id, más confiable que el email) y la matriz
+   de permisos. Corre tras dalBootContactos -> dalResolveIdentidad. */
+async function dalLoadPermisos() {
+  if (!sb || !DAL_SESSION_UID) return;
+  try {
+    const { data: mem, error: e1 } = await sb
+      .from('memberships')
+      .select('tipo, profile_id, contact_id, permission_profiles(codigo, nombre)')
+      .eq('user_id', DAL_SESSION_UID)
+      .eq('organization_id', ORG_ID)
+      .maybeSingle();
+    if (e1) throw e1;
+    if (!mem) { console.warn('[auth] sin membresía para el usuario (fail-open)'); return; }
+    const pp = mem.permission_profiles || {};
+    TAKEOS_PERFIL = { codigo: pp.codigo || null, nombre: pp.nombre || '', tipo: mem.tipo || '', profileId: mem.profile_id || null, contactId: mem.contact_id || null };
+    // Nombre real desde el contacto vinculado (más confiable que el email)
+    if (mem.contact_id && BD_CONTACTOS[mem.contact_id] && BD_CONTACTOS[mem.contact_id].nombre) {
+      setCurrentUser(BD_CONTACTOS[mem.contact_id].nombre);
+      window.__TAKEOS_USER = BD_CONTACTOS[mem.contact_id].nombre;
+    }
+    // Matriz de permisos del perfil
+    const { data: perms, error: e2 } = await sb
+      .from('profile_permissions')
+      .select('modulo, nivel')
+      .eq('profile_id', mem.profile_id);
+    if (e2) throw e2;
+    const acc = {};
+    (perms || []).forEach(function (p) { acc[p.modulo] = p.nivel; });
+    TAKEOS_ACCESO = Object.keys(acc).length ? acc : null;
+    renderTopbarUser();
+    applyPermisosUI();
+  } catch (e) {
+    console.warn('[auth] permisos no cargados (fail-open):', e);
+    // fail-open: no se restringe nada
+  }
+}
+
+/* Refleja la identidad real en el topbar y el saludo del Control Room. */
+function _iniciales(nombre) {
+  const parts = String(nombre || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '··';
+  return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+function renderTopbarUser() {
+  const nombre = (typeof USUARIO_ACTUAL !== 'undefined' && USUARIO_ACTUAL) ? USUARIO_ACTUAL : (window.__TAKEOS_USER || '');
+  if (!nombre) return;
+  const av = document.querySelector('.topbar-user .user-avatar');
+  if (av) av.textContent = _iniciales(nombre);
+  const nm = document.querySelector('.topbar-user .user-name');
+  if (nm) {
+    const parts = nombre.split(/\s+/);
+    nm.textContent = parts[0] + (parts.length > 1 ? ' ' + parts[1][0] + '.' : '');
+    if (TAKEOS_PERFIL && TAKEOS_PERFIL.nombre) nm.title = 'Perfil: ' + TAKEOS_PERFIL.nombre;
+  }
+  const greet = document.querySelector('.cr-title');
+  if (greet && /Buen/i.test(greet.textContent)) {
+    const h = new Date().getHours();
+    const saludo = h < 12 ? 'Buenos días' : (h < 20 ? 'Buenas tardes' : 'Buenas noches');
+    greet.textContent = saludo + ', ' + (nombre.split(/\s+/)[0]) + '.';
+  }
+}
+
+/* Aplica los permisos a la UI global: oculta módulos del sidebar sin acceso y
+   esconde botones de acción que el perfil no puede ejecutar. */
+function applyPermisosUI() {
+  try {
+    document.querySelectorAll('.sidebar-item[data-module]').forEach(function (el) {
+      el.style.display = authPuedeVer(el.dataset.module) ? '' : 'none';
+    });
+    const btnNuevo = document.querySelector('.cr-actions .btn-primary[onclick*="newProject"]');
+    if (btnNuevo) btnNuevo.style.display = (authNivel('crear_proyecto') === 'E') ? '' : 'none';
+    const btnCFO = document.querySelector('.cr-actions [onclick*="openGlobalCFO"]');
+    if (btnCFO) btnCFO.style.display = (authNivel('finanzas_consolidada') !== 'none') ? '' : 'none';
+  } catch (e) { console.warn('[auth] applyPermisosUI', e); }
+}
+
+/* Primer módulo visible del sidebar (para no dejar el área vacía si el módulo
+   por defecto está oculto para el perfil). */
+function _firstVisibleModule() {
+  const items = document.querySelectorAll('.sidebar-item[data-module]');
+  for (let i = 0; i < items.length; i++) { if (authPuedeVer(items[i].dataset.module)) return items[i].dataset.module; }
+  return null;
+}
+
+/* Marca el contenido de un módulo como solo-lectura cuando el nivel es 'L'. */
+function applyModuleReadonly(appKey) {
+  const content = document.getElementById('moduleContent');
+  if (!content) return;
+  const ro = authNivelModulo(appKey) === 'L';
+  content.classList.toggle('mod-readonly', ro);
+  const prev = content.querySelector('.mod-readonly-banner');
+  if (prev) prev.remove();
+  if (ro) {
+    const b = document.createElement('div');
+    b.className = 'mod-readonly-banner';
+    b.textContent = 'Solo lectura · tu perfil' + (TAKEOS_PERFIL ? ' (' + TAKEOS_PERFIL.nombre + ')' : '') + ' puede ver este módulo pero no editarlo.';
+    content.insertBefore(b, content.firstChild);
+  }
 }
 
 /* --- IDs ya conocidos en Supabase (para distinguir insert de update) --- */
@@ -19904,6 +20109,7 @@ function _dalProyectoPayload(project) {
 
 async function dalGuardarProyecto(project) {
   if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  if (!authPuedeGuardarProyecto()) { _authBlockWriteToast(); return false; }   // V10.4.0 (Gate B)
   try {
     const payload = _dalProyectoPayload(project);
     const { error } = await sb.rpc('guardar_proyecto', { p: payload });
@@ -19930,6 +20136,7 @@ function _dalOperaciones4aPayload(project) {
 
 async function dalGuardarOperaciones4a(project) {
   if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  if (!authPuedeGuardarOperaciones()) { _authBlockWriteToast(); return false; }   // V10.4.0 (Gate B)
   try {
     const { error } = await sb.rpc('guardar_operaciones_4a', { p: _dalOperaciones4aPayload(project) });
     if (error) throw error;
@@ -19978,6 +20185,7 @@ function _dalOperaciones4bPayload(project) {
 
 async function dalGuardarOperaciones4b(project) {
   if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  if (!authPuedeGuardarOperaciones()) { _authBlockWriteToast(); return false; }   // V10.4.0 (Gate B)
   try {
     const { error } = await sb.rpc('guardar_operaciones_4b', { p: _dalOperaciones4bPayload(project) });
     if (error) throw error;
@@ -20016,6 +20224,7 @@ function _dalOperaciones4cPayload(project) {
 
 async function dalGuardarOperaciones4c(project) {
   if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  if (!authPuedeGuardarOperaciones()) { _authBlockWriteToast(); return false; }   // V10.4.0 (Gate B)
   try {
     const { error } = await sb.rpc('guardar_operaciones_4c', { p: _dalOperaciones4cPayload(project) });
     if (error) throw error;
@@ -20045,6 +20254,7 @@ function _dalOperaciones4ePayload(project) {
 }
 async function dalGuardarOperaciones4e(project) {
   if (!sb || !project || PROJECTS_SOURCE !== 'supabase') return true;
+  if (!authPuedeGuardarOperaciones()) { _authBlockWriteToast(); return false; }   // V10.4.0 (Gate B)
   try {
     const { error } = await sb.rpc('guardar_operaciones_4e', { p: _dalOperaciones4ePayload(project) });
     if (error) throw error;
@@ -20088,7 +20298,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.3.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.4.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 let _cloudDb = null;
 let _cloudReady = false;
@@ -20229,7 +20439,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // V10.0.0 · Gate A cerrado: Firebase retirado. El login es Supabase Auth
   // (cloudGate) y la carga de datos es 100% Supabase (cadena dal*).
   cloudGate(() => {
-    dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
+    dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
   });
 });
 
