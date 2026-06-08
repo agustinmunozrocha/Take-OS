@@ -2516,6 +2516,26 @@ tr.row-dragging td { background: var(--accent-bg); }
 }
 .data-table thead th.num { text-align: right; }
 .data-table thead th.ctr { text-align: center; }
+/* V10.1.0 (#1) · Orden por columnas (solo presentación) */
+.data-table thead th.sortable { cursor: pointer; user-select: none; }
+.data-table thead th.sortable:hover { color: var(--ink-secondary); background: var(--bg-surface); }
+.data-table thead th .sort-ind { display: inline-block; width: 0.9em; margin-left: 3px; font-size: 9px; color: var(--ink-faint); }
+.data-table thead th .sort-ind.on { color: var(--accent); }
+.row-drag-handle.is-disabled { cursor: not-allowed; opacity: 0.32; }
+.budget-sort-bar { display: flex; align-items: center; gap: 8px; padding: 5px 12px 7px; font-size: 11px; color: var(--ink-muted); }
+.budget-sort-restore { cursor: pointer; border: 1px solid var(--rule); background: var(--bg-surface-soft); color: var(--ink-secondary); border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 600; }
+.budget-sort-restore:hover { border-color: var(--accent); color: var(--accent); }
+/* V10.2.0 (#2) · Panel Visualización (sub-secciones de Servicios) */
+.viz-dept-list { display: flex; flex-direction: column; gap: 6px; }
+.viz-dept-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--rule-soft); border-radius: 8px; background: var(--bg-surface-soft); }
+.viz-dept-ord { display: flex; flex-direction: column; gap: 1px; }
+.viz-dept-name { flex: 1; min-width: 0; }
+.viz-dept-count { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+/* V10.3.0 (#4) · Horas extra */
+.cost-cell.he-on { color: var(--accent); font-weight: 600; }
+.he-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.he-tab { flex: 1; padding: 7px 10px; border: 1px solid var(--rule); background: var(--bg-surface-soft); color: var(--ink-secondary); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.he-tab.is-on { border-color: var(--accent); color: var(--accent); background: var(--bg-surface); }
 .data-table tbody td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--rule-soft);
@@ -5651,6 +5671,7 @@ const STATE = {
      Sin esto, el bug del Presupuesto reaparece al re-renderizar. */
   ui: {
     collapsed: {},          // ej: { 'P001:Dirección': false, 'P001:gastos': true }
+    budgetSort: {},         // V10.1.0 (#1): orden por columna por tabla, solo presentación; NO persiste
     bdSearch: '',           // texto de búsqueda en BD Personas
     bdExpanded: null,       // nombre de persona expandida en BD
     hojaDiaSel: null,       // V5.3: diaId seleccionado en Hoja de Llamado
@@ -5787,6 +5808,8 @@ function calcProjectTotals(project) {
         totalReal += real.value || 0;
         hasReal = true;
       }
+      const he = Number(r.horaExtra) || 0;   // V10.3.0 (#4): HE es costo real adicional
+      if (he) { totalReal += he; hasReal = true; }
       if (c.error) alerts++;
     });
   }
@@ -5800,6 +5823,8 @@ function calcProjectTotals(project) {
         totalReal += real.value || 0;
         hasReal = true;
       }
+      const he = Number(r.horaExtra) || 0;   // V10.3.0 (#4): HE es costo real adicional
+      if (he) { totalReal += he; hasReal = true; }
       if (c.error) alerts++;
     });
   });
@@ -9622,6 +9647,10 @@ function renderPresupuesto() {
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar Presupuesto
       </button>
+      <button class="calc-trigger" onclick="openVisualizacionPanel()" title="Reordenar y renombrar las sub-secciones de Servicios. El renombrar es estructural (migra las filas a la nueva sub-sección); reordenar es solo el orden en que se muestran.">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Visualización
+      </button>
       <div style="font-size: 11px; color: var(--ink-muted);">
         Modo: <strong style="color: var(--ink-secondary);">${showReal ? 'Cotizado + Real' : 'Solo cotización'}</strong>
         ${!showReal ? '<span style="color: var(--ink-faint);"> · se activa en Preproducción</span>' : ''}
@@ -9774,27 +9803,35 @@ function addServiceDept() {
   recalcAllDeptSummaries();
   showToast({ kind: 'success', title: 'Sub-sección creada', body: `«${name}» agregada a Servicios. Usa "+ Agregar rol" para sumarle filas.` });
 }
-function renameServiceDept(idx) {
+function _renameServiceDeptCore(idx, rawNew) {
   const project = STATE.currentProject;
   const d = project.data.servicios;
   const names = Object.keys(d);
   const oldName = names[idx];
-  if (!oldName) return;
-  const raw = window.prompt('Nuevo nombre de la sub-sección:', oldName);
-  if (raw === null) return;
-  const newName = _sanitizeDeptName(raw);
-  if (!newName) { showToast({ kind: 'warning', title: 'Nombre inválido', body: 'El nombre no puede quedar vacío.' }); return; }
-  if (newName === oldName) return;
-  if (d[newName]) { showToast({ kind: 'warning', title: 'Ya existe', body: `Ya hay una sub-sección llamada «${newName}».` }); return; }
+  if (!oldName) return false;
+  const newName = _sanitizeDeptName(rawNew);
+  if (!newName) { showToast({ kind: 'warning', title: 'Nombre inválido', body: 'El nombre no puede quedar vacío.' }); return false; }
+  if (newName === oldName) return false;
+  if (d[newName]) { showToast({ kind: 'warning', title: 'Ya existe', body: `Ya hay una sub-sección llamada «${newName}».` }); return false; }
   // Reconstruir preservando el orden (renombrar solo cambia la etiqueta;
   // los montos cotizados de las filas no se tocan → respeta la regla madre).
   const rebuilt = {};
   names.forEach(n => { rebuilt[n === oldName ? newName : n] = d[n]; });
   project.data.servicios = rebuilt;
   markDirty();
+  return { oldName, newName };
+}
+function renameServiceDept(idx) {
+  const names = Object.keys(STATE.currentProject.data.servicios);
+  const oldName = names[idx];
+  if (!oldName) return;
+  const raw = window.prompt('Nuevo nombre de la sub-sección:', oldName);
+  if (raw === null) return;
+  const r = _renameServiceDeptCore(idx, raw);
+  if (!r) return;
   renderServiciosBody();
   recalcAllDeptSummaries();
-  showToast({ kind: 'success', title: 'Sub-sección renombrada', body: `«${oldName}» → «${newName}».` });
+  showToast({ kind: 'success', title: 'Sub-sección renombrada', body: `«${r.oldName}» → «${r.newName}».` });
 }
 function deleteServiceDept(idx) {
   const project = STATE.currentProject;
@@ -9825,6 +9862,75 @@ function deleteServiceDept(idx) {
     danger: true,
     onConfirm: doDelete
   });
+}
+
+/* ─── V10.2.0 (#2) · PANEL "VISUALIZACIÓN" ───────────────────────────────
+   Reordena y renombra las sub-secciones de Servicios desde un panel dedicado.
+   Reordenar es solo el orden de pintado (reconstruye el objeto con las llaves
+   en otro orden; los montos cotizados no se tocan → seguro incluso tras
+   aprobar). Renombrar reusa _renameServiceDeptCore (migración estructural de
+   la llave vieja a la nueva). Este botón es además el punto de entrada
+   forward-compatible para el selector de vista (SMB / pestañas por
+   departamento) de la nota de horizonte H2 — que NO se implementa aquí. Las 4
+   secciones de nivel superior (Servicios/Gastos/Técnica/Talentos) tienen llave
+   fija y quedan fuera de este panel a propósito. */
+function moveServiceDept(idx, dir) {
+  const project = STATE.currentProject;
+  const d = project.data.servicios;
+  const names = Object.keys(d);
+  const j = idx + dir;
+  if (j < 0 || j >= names.length) return;
+  const order = names.slice();
+  const t = order[idx]; order[idx] = order[j]; order[j] = t;
+  const rebuilt = {};
+  order.forEach(n => { rebuilt[n] = d[n]; });   // solo cambia el orden de las llaves, no los datos
+  project.data.servicios = rebuilt;
+  markDirty();
+  renderServiciosBody();
+  recalcAllDeptSummaries();
+  openVisualizacionPanel();   // re-pintar el panel con el nuevo orden
+}
+function vizRenameInput(idx, value) {
+  const r = _renameServiceDeptCore(idx, value);
+  if (!r) { openVisualizacionPanel(); return; }   // inválido/duplicado/igual: restaurar el panel
+  renderServiciosBody();
+  recalcAllDeptSummaries();
+  openVisualizacionPanel();
+  showToast({ kind: 'success', title: 'Sub-sección renombrada', body: `«${r.oldName}» → «${r.newName}».` });
+}
+function openVisualizacionPanel() {
+  const project = STATE.currentProject;
+  if (!project) return;
+  const d = project.data.servicios || {};
+  const names = Object.keys(d);
+  const list = names.length
+    ? names.map((n, i) => {
+        const count = (d[n] || []).length;
+        return `<div class="viz-dept-row">
+          <div class="viz-dept-ord">
+            <button type="button" class="pr-tool" title="Subir" onclick="moveServiceDept(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⌃</button>
+            <button type="button" class="pr-tool" title="Bajar" onclick="moveServiceDept(${i}, 1)" ${i === names.length - 1 ? 'disabled' : ''}>⌄</button>
+          </div>
+          <input class="input viz-dept-name" value="${escapeHtml(n)}" onchange="vizRenameInput(${i}, this.value)" title="Renombrar: migra las filas a la nueva sub-sección. Los montos cotizados no cambian.">
+          <span class="viz-dept-count">${count} fila${count === 1 ? '' : 's'}</span>
+        </div>`;
+      }).join('')
+    : '<p class="config-hint" style="margin:4px 0;">Servicios aún no tiene sub-secciones. Créalas con «+ Agregar sub-sección» en la tabla de Servicios.</p>';
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 560px;">
+        <div class="modal-header">
+          <div class="modal-title">Visualización · Sub-secciones de Servicios</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Reordena con ⌃⌄ y renombra editando el nombre. Renombrar migra las filas a la nueva sub-sección; reordenar solo cambia el orden en pantalla. Los montos cotizados no se tocan.</div>
+        </div>
+        <div class="modal-body">
+          <div class="viz-dept-list">${list}</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeModal()">Listo</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ─── GASTOS / EQUIPOS / TALENTOS (sin sub-departamentos) ──────────── */
@@ -9875,25 +9981,36 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
     ? `<th class="ctr" style="width: 5%;">Conf. <span class="tt" data-tip="Marcar como confirmado significa que esta persona/ítem está cerrado en su negociación. Al marcar:\n\n• Aparece en el módulo Crew.\n• Entra en los correos automáticos de producción.\n• Cuenta en el KPI de personas confirmadas.">?</span></th>`
     : '';
 
+  // V10.1.0 (#1): orden por columnas (solo presentación). data-row-idx sigue
+  // siendo el índice REAL del array; aquí solo cambia el orden de pintado.
+  const _sortActive = _budgetSortState(sectionKey, dept);
+  const _order = _budgetDisplayOrder(items, sectionKey, dept);
+  const _deptArg = sectionKey === 'servicios' ? ("'" + escapeHtml(dept) + "'") : 'null';
+  const _sortBar = _sortActive
+    ? `<div class="budget-sort-bar">Orden por columna activo (solo en pantalla; no altera el orden guardado) <button type="button" class="budget-sort-restore" onclick="budgetSortClear('${sectionKey}', ${_deptArg})">↺ Restaurar orden</button></div>`
+    : '';
+  const _costoRealTip = '<span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para Primate.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span>';
   return `
+    ${_sortBar}
     <table class="data-table budget-table ${budgetStateClass}" id="${tableId}">
       <thead>
         <tr>
-          <th style="width: 14%;">${nameColLabel}</th>
-          <th style="width: 18%;">${firstCol}</th>
+          ${_budgetSortTh(nameColLabel, sectionKey, dept, 'nombre', '', ' style="width: 14%;"', '')}
+          ${_budgetSortTh(firstCol, sectionKey, dept, 'rolItem', '', ' style="width: 18%;"', '')}
           <th class="col-cot-detail" style="width: 13%;">DTE${dteOptional ? ' <span style="color: var(--ink-faint); font-weight: 400;">(opc.)</span> <span class="tt" data-tip="En Gastos y Equipos el DTE es opcional porque muchos ítems son contingencias, cajas de producción, estimaciones abiertas o gastos aún sin proveedor confirmado.\n\nSi no seleccionas DTE, el costo se calcula como valor × cantidad sin retención (asumiendo factura).\n\nLlénalo cuando sepas el documento — eso permite que la conversión a costo empresa sea exacta.">?</span>' : ''}</th>
-          <th class="num col-cot-detail" style="width: 11%;">Valor</th>
-          <th class="num col-cot-detail" style="width: 6%;">Cant.</th>
+          ${_budgetSortTh('Valor', sectionKey, dept, 'valor', 'num col-cot-detail', ' style="width: 11%;"', '')}
+          ${_budgetSortTh('Cant.', sectionKey, dept, 'cantidad', 'num col-cot-detail', ' style="width: 6%;"', '')}
           <th style="width: 9%;">Unidad</th>
-          <th class="num">Costo cotizado</th>
-          ${showReal ? '<th class="num">Costo real <span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para Primate.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span></th>' : ''}
+          ${_budgetSortTh('Costo cotizado', sectionKey, dept, 'costoCotizado', 'num', '', '')}
+          ${showReal ? _budgetSortTh('Costo real ', sectionKey, dept, 'costoReal', 'num', '', _costoRealTip) : ''}
           ${showReal ? '<th style="width: 11%;">DTE real <span class="tt" data-tip="Documento tributario realmente emitido por el proveedor. Por defecto coincide con el DTE cotizado. Cambiarlo NO altera el cotizado (congelado al aprobar); es declarativo, para pagos y trazabilidad.">?</span></th>' : ''}
+          ${showReal ? _budgetSortTh('Horas extra ', sectionKey, dept, 'horaExtra', 'num', '', '<span class="tt" data-tip="Horas extra de la fila como costo empresa (ya con la conversión por DTE real). Doble clic para calcularlas: modo Tarifa plana (monto fijo) o Fórmula (150% del valor hora × N° horas). Se suma al Costo de Producción real, aparte del costo base.">?</span>') : ''}
           ${confHeaderHTML}
           <th style="width: 32px;"></th>
         </tr>
       </thead>
       <tbody>
-        ${items.map((item, idx) => renderRoleRow(sectionKey, dept, item, idx, showReal)).join('')}
+        ${_order.map(idx => renderRoleRow(sectionKey, dept, items[idx], idx, showReal)).join('')}
       </tbody>
     </table>
   `;
@@ -9901,6 +10018,12 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
 
 function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   const ref = sectionKey === 'servicios' ? `'servicios','${escapeHtml(dept)}',${idx}` : `'${sectionKey}',null,${idx}`;
+  // V10.1.0 (#1): con un orden por columna activo, el arrastre manual se desactiva
+  // en esta tabla (la vista ordenada no mapea a posiciones del array sin corromper
+  // el orden curado). "Restaurar orden" vuelve a habilitarlo.
+  const _dragHandle = _budgetSortState(sectionKey, dept)
+    ? '<span class="row-drag-handle is-disabled" title="Reordenar a mano está desactivado mientras haya un orden por columna activo. Usa «Restaurar orden» para volver a arrastrar.">⋮⋮</span>'
+    : '<span class="row-drag-handle" title="Arrastra para reordenar (dentro del mismo departamento)" onmousedown="rowHandleDown(this)">⋮⋮</span>';
   const calc = calcCostoEmpresa(item.valor, item.cantidad, item.dte, sectionKey);
   const isConfirmed = item.confirmado;
   const roleOrItemField = sectionKey === 'servicios' ? 'rol' : 'item';
@@ -9940,7 +10063,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
     <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}" data-sec="${sectionKey}" data-dept="${sectionKey === 'servicios' ? escapeHtml(dept) : ''}" ondragstart="rowDragStart(event)" ondragover="rowDragOver(event)" ondrop="rowDrop(event)" ondragend="rowDragEnd(event)">
       <td>
         <div class="cell-name-row">
-          <span class="row-drag-handle" title="Arrastra para reordenar (dentro del mismo departamento)" onmousedown="rowHandleDown(this)">⋮⋮</span>
+          ${_dragHandle}
           <div class="cell-name-wrap" style="flex:1;min-width:0;">
           <div class="combobox-wrap">
             <input class="cell-input combobox-input ${item.nombre ? '' : 'is-empty'}"
@@ -10018,6 +10141,9 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
             ).join('')}
           </select>
         </td>
+        <td class="num" ondblclick="openHorasExtraCalc(${ref})" title="Doble clic para calcular o ingresar las horas extra (costo empresa, con el DTE real de la fila)">
+          <span class="cost-cell ${item.horaExtra ? 'he-on' : 'zero'}" data-he-cell>${item.horaExtra ? fmtMoney(item.horaExtra) : '—'}</span>
+        </td>
       ` : ''}
       ${showConfirmado ? `<td class="ctr">
         <input type="checkbox" ${isConfirmed ? 'checked' : ''}
@@ -10053,6 +10179,7 @@ let _budgetDrag = null;
 function rowHandleDown(el) { const tr = el.closest('tr'); if (tr) tr.setAttribute('draggable', 'true'); }
 function rowDragStart(ev) {
   const tr = ev.currentTarget;
+  if (_budgetSortState(tr.dataset.sec, tr.dataset.dept || '')) { ev.preventDefault(); return; }  // V10.1.0: sin drag con sort activo
   _budgetDrag = { sec: tr.dataset.sec, dept: tr.dataset.dept || '', idx: Number(tr.dataset.rowIdx) };
   ev.dataTransfer.effectAllowed = 'move';
   try { ev.dataTransfer.setData('text/plain', tr.dataset.rowIdx); } catch (e) {}
@@ -10094,6 +10221,79 @@ function rowDragEnd(ev) {
   _budgetDrag = null;
   document.querySelectorAll('tr.row-dragging').forEach(x => x.classList.remove('row-dragging'));
   document.querySelectorAll('tr[draggable]').forEach(x => x.removeAttribute('draggable'));
+}
+
+/* ─── V10.1.0 (#1) · ORDEN POR COLUMNAS DEL PRESUPUESTO ───────────────────
+   Ordenamiento SOLO de presentación y TRANSITORIO. NO toca el array
+   (project.data...[]) ni el orden manual del drag, y NO persiste (vive en
+   STATE.ui.budgetSort, jamás en project.data, nunca llama markDirty). En
+   render se calcula un orden de visualización (índices reales reordenados);
+   las filas se pintan en ese orden pero data-row-idx sigue siendo el índice
+   REAL del array, así updateRowField / afterRowChange / etc. escriben a la
+   fila correcta. Mientras hay sort activo el arrastre manual se desactiva en
+   esa tabla (arrastrar en vista ordenada no puede mapear a posiciones del
+   array sin corromper el orden curado); "Restaurar orden" limpia el sort y
+   reactiva el drag. Por tabla: clave = sectionKey + '|' + (dept||''). */
+function _budgetSortKey(sectionKey, dept) { return sectionKey + '|' + (dept || ''); }
+function _budgetSortState(sectionKey, dept) { return (STATE.ui.budgetSort || {})[_budgetSortKey(sectionKey, dept)] || null; }
+function _budgetSortValue(item, sectionKey, colKey) {
+  switch (colKey) {
+    case 'nombre':        return { t: 'text', v: item.nombre || '' };
+    case 'rolItem':       return { t: 'text', v: (sectionKey === 'servicios' ? (item.rol || '') : (item.item || '')) };
+    case 'valor':         return { t: 'num',  v: item.valor };
+    case 'cantidad':      return { t: 'num',  v: item.cantidad };
+    case 'costoCotizado': return { t: 'num',  v: (calcCostoEmpresa(item.valor, item.cantidad, item.dte, sectionKey) || {}).value };
+    case 'costoReal':     return { t: 'num',  v: (getCostoReal(item, sectionKey) || {}).value };
+    case 'horaExtra':    return { t: 'num',  v: item.horaExtra };
+    default:              return { t: 'text', v: '' };
+  }
+}
+function _budgetSortEmpty(sv) {
+  if (sv.v === null || sv.v === undefined) return true;
+  if (sv.t === 'text') return String(sv.v).trim() === '';
+  return isNaN(Number(sv.v));
+}
+function _budgetDisplayOrder(items, sectionKey, dept) {
+  // Índices REALES del array, en el orden visual a renderizar.
+  const order = items.map((_, i) => i);
+  const s = _budgetSortState(sectionKey, dept);
+  if (!s) return order;                                  // sin sort: orden del array (manual / drag)
+  const dir = s.dir === 'asc' ? 1 : -1;
+  order.sort((a, b) => {
+    const sa = _budgetSortValue(items[a], sectionKey, s.col);
+    const sb = _budgetSortValue(items[b], sectionKey, s.col);
+    const ea = _budgetSortEmpty(sa), eb = _budgetSortEmpty(sb);
+    if (ea && eb) return a - b;                           // ambos vacíos: estable por índice real
+    if (ea) return 1;                                     // vacíos siempre al final (en ambas direcciones)
+    if (eb) return -1;
+    let cmp;
+    if (sa.t === 'num') cmp = Number(sa.v) - Number(sb.v);
+    else cmp = String(sa.v).localeCompare(String(sb.v), 'es', { sensitivity: 'base', numeric: true });
+    if (cmp === 0) return a - b;                          // empate: estable por índice real
+    return cmp * dir;
+  });
+  return order;
+}
+function budgetSortBy(sectionKey, dept, colKey) {
+  if (!STATE.ui.budgetSort) STATE.ui.budgetSort = {};
+  const k = _budgetSortKey(sectionKey, dept);
+  const cur = STATE.ui.budgetSort[k];
+  // toggle desc <-> asc; para volver al orden manual se usa "Restaurar orden".
+  if (!cur || cur.col !== colKey) STATE.ui.budgetSort[k] = { col: colKey, dir: 'desc' };
+  else STATE.ui.budgetSort[k] = { col: colKey, dir: cur.dir === 'desc' ? 'asc' : 'desc' };
+  if (sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(sectionKey);
+}
+function budgetSortClear(sectionKey, dept) {
+  if (STATE.ui.budgetSort) delete STATE.ui.budgetSort[_budgetSortKey(sectionKey, dept)];
+  if (sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(sectionKey);
+}
+function _budgetSortTh(label, sectionKey, dept, colKey, extraClass, styleAttr, tipHTML) {
+  const deptArg = sectionKey === 'servicios' ? ("'" + escapeHtml(dept) + "'") : 'null';
+  const s = _budgetSortState(sectionKey, dept);
+  const on = s && s.col === colKey;
+  const ind = on ? ('<span class="sort-ind on">' + (s.dir === 'asc' ? '▲' : '▼') + '</span>') : '<span class="sort-ind"></span>';
+  const cls = 'sortable' + (extraClass ? ' ' + extraClass : '');
+  return '<th class="' + cls + '"' + (styleAttr || '') + ' onclick="budgetSortBy(\'' + sectionKey + '\', ' + deptArg + ', \'' + colKey + '\')">' + label + (tipHTML || '') + ind + '</th>';
 }
 
 /* ─── V8.1 (#2): NOTAS CONTEXTUALES POR FILA DEL PRESUPUESTO ──────────
@@ -10410,6 +10610,14 @@ function calcSummaryFin(project) {
   const t = sumSection(d.talentos, 'talentos');
   anyReal = anyReal || g.hasReal || e.hasReal || t.hasReal;
 
+  // V10.3.0 (#4): horas extra. Costo real adicional, sin equivalente cotizado.
+  // Se suma al Costo de Producción real DESPUÉS de admin y contingencias (no
+  // infla esas bases → no se aplica overhead ni contingencia sobre la HE).
+  let totalHE = 0;
+  for (const dept in d.servicios) d.servicios[dept].forEach(r => { totalHE += Number(r.horaExtra) || 0; });
+  ['gastos', 'equipos', 'talentos'].forEach(sk => d[sk].forEach(r => { totalHE += Number(r.horaExtra) || 0; }));
+  if (totalHE > 0) anyReal = true;
+
   const subtotalCot = servCot + g.cot + e.cot + t.cot;
   const subtotalReal = servReal + g.real + e.real + t.real;
 
@@ -10436,7 +10644,7 @@ function calcSummaryFin(project) {
   const totalRiesgosReal = riesgosCalc.reduce((s, r) => s + r.real, 0);
 
   const costoProdCot = subtotalCot + adminCot + totalRiesgosCot;
-  const costoProdReal = subtotalReal + adminReal + totalRiesgosReal;
+  const costoProdReal = subtotalReal + adminReal + totalRiesgosReal + totalHE;   // V10.3.0 (#4): + horas extra
 
   const presupCliente = fin.presupuestoCliente || 0;
 
@@ -10482,6 +10690,7 @@ function calcSummaryFin(project) {
     admin:    { cot: adminCot,    real: adminReal, pct: fin.gastosAdminPct },
     riesgos:  riesgosCalc,
     totalRiesgos: { cot: totalRiesgosCot, real: totalRiesgosReal },
+    horasExtra: { cot: 0, real: totalHE },
     costoProd:{ cot: costoProdCot, real: costoProdReal },
     presupCliente,
     extras,
@@ -10618,6 +10827,7 @@ function _presupFillSheetExcelJS(ws, pseudoProject, meta) {
   sumRow('Subtotal de producción', s.subtotal.cot, s.subtotal.real, { bold: true, fill: _XL.totBg });
   sumRow('Gastos administrativos (' + Math.round((s.admin.pct || 0) * 100) + '%)', s.admin.cot, s.admin.real);
   (s.riesgos || []).forEach(x => sumRow('Contingencia · ' + (x.label || ''), x.cot, x.real));
+  if (s.horasExtra && s.horasExtra.real) sumRow('Horas extra', null, s.horasExtra.real);   // V10.3.0 (#4)
   sumRow('Costo de producción', s.costoProd.cot, s.costoProd.real, { bold: true, fill: _XL.totBg });
   sumRow('Presupuesto cliente', s.presupCliente, anyReal ? s.presupCliente : null);
   if (anyReal && s.totalExtras) {
@@ -10989,6 +11199,16 @@ function renderSummaryFin() {
           </td>
         </tr>
         `}
+
+        ${showReal && s.horasExtra && s.horasExtra.real > 0 ? `
+        <tr>
+          <td>Horas extra <span class="tt" data-tip="Horas extra reales (costo empresa, ya con la conversión por DTE real). Es un costo del lado real: no tiene equivalente cotizado y se suma al Costo de Producción real, después de Gastos administrativos y Contingencias. Cárgalas por fila con doble clic en la columna «Horas extra».">?</span></td>
+          <td class="pct">—</td>
+          <td class="num">—</td>
+          <td class="num">${fmtMoney(s.horasExtra.real)}</td>
+          ${fmtPctRowGasto(0, s.horasExtra.real)}
+          ${fmtDeltaInRowGasto(0, s.horasExtra.real)}
+        </tr>` : ''}
 
         <tr class="summary-row">
           <td>Costo de Producción</td>
@@ -16656,6 +16876,152 @@ function _crcConfirm() {
   afterRowChange(st.sectionKey, st.dept, st.idx);
 }
 
+/* ─── V10.3.0 (#4) · CALCULADORA DE HORAS EXTRA ──────────────────────────
+   Dos modos:
+   · Tarifa plana: monto fijo de HE (lo que el productor decide pagar; la
+     Biblia dice que la HE es flexible y a criterio del productor).
+   · Fórmula (Biblia 3.4.2): hora extra = recargo% × valor hora × N° horas.
+     valor hora sugerido = valor jornada / 10 (jornada = 10 h de trabajo);
+     para roles de preproducción se usa un "valor jornal" designado en vez de
+     la tarifa plana. El recargo es editable (default 150%).
+   El resultado (líquido al proveedor) se convierte a COSTO EMPRESA con el DTE
+   real de la fila, con el MISMO primitivo que Costo Real (boleta: líquido /
+   factor de retención; factura+IVA: monto / (1+IVA); resto: tal cual). Se
+   guarda en item.horaExtra y se suma al total real, aparte del costo base. */
+function _heCostoEmpresa(liquido, dte, incluyeIVA) {
+  const m = Number(liquido) || 0;
+  if (!m) return 0;
+  if (dteTieneRetencion(dte)) return Math.round(m / factorRetencionDte(dte));   // líquido -> bruto
+  if (dte === 'factura' && incluyeIVA) return Math.round(m / (1 + IVA));          // con IVA -> neto
+  return Math.round(m);                                                          // neto/exenta/sin dte
+}
+function _heLiquido() {
+  const st = window._hec || {};
+  if (st.modo === 'plana') return Number(st.montoPlano) || 0;
+  const base = Number(st.baseHora) || 0;
+  const rec = Number(st.recargo);
+  const recF = (isNaN(rec) ? 150 : rec) / 100;
+  const horas = Number(st.nHoras) || 0;
+  return Math.round(base * recF * horas);
+}
+function openHorasExtraCalc(sectionKey, dept, idx) {
+  const item = _rowNoteItem(sectionKey, dept, idx);
+  if (!item) return;
+  const dte = item.dteReal || null;
+  const esJornadas = (item.unidad === 'Jornadas');
+  const baseSugerida = (esJornadas && item.valor) ? Math.round(Number(item.valor) / 10) : '';   // Biblia: valor/10
+  window._hec = { sectionKey: sectionKey, dept: dept, idx: idx, dte: dte, modo: 'formula', baseHora: baseSugerida, recargo: 150, nHoras: '', montoPlano: '', incluyeIVA: false };
+  renderHorasExtraCalc();
+}
+function _hecSetModo(modo) { if (window._hec) { window._hec.modo = modo; renderHorasExtraCalc(); } }
+function _hecOutHTML() {
+  const st = window._hec; if (!st) return '';
+  const liquido = _heLiquido();
+  const costo = _heCostoEmpresa(liquido, st.dte, st.incluyeIVA);
+  const conReten = dteTieneRetencion(st.dte);
+  const esFacturaIVA = (st.dte === 'factura');
+  let extra = '';
+  if (conReten && liquido) extra = `<div class="calc-output-row"><span class="calc-output-label">Líquido (proveedor)</span><strong>${fmtMoney(liquido)}</strong></div><div class="calc-output-row"><span class="calc-output-label">Retención</span><strong>${fmtMoney(costo - liquido)}</strong></div>`;
+  else if (esFacturaIVA && st.incluyeIVA && liquido) extra = `<div class="calc-output-row"><span class="calc-output-label">Neto (sin IVA)</span><strong>${fmtMoney(costo)}</strong></div><div class="calc-output-row"><span class="calc-output-label">IVA</span><strong>${fmtMoney(liquido - costo)}</strong></div>`;
+  return `${extra}<div class="calc-output-row" style="border-top:1px solid var(--rule);padding-top:6px;margin-top:2px;"><span class="calc-output-label" style="font-weight:700;">Costo empresa (horas extra)</span><strong style="color:var(--accent);">${fmtMoney(costo)}</strong></div>`;
+}
+function _hecUpdateOut() { const out = document.getElementById('hecOutput'); if (out) out.innerHTML = _hecOutHTML(); }
+function renderHorasExtraCalc() {
+  const st = window._hec; if (!st) return;
+  const item = _rowNoteItem(st.sectionKey, st.dept, st.idx) || {};
+  const quien = item.nombre || item.rol || item.item || 'esta fila';
+  const esFacturaIVA = (st.dte === 'factura');
+  const esJornadas = (item.unidad === 'Jornadas');
+  const actual = (item.horaExtra != null && item.horaExtra !== '') ? item.horaExtra : null;
+
+  const tabs = `
+    <div class="he-tabs">
+      <button type="button" class="he-tab ${st.modo === 'formula' ? 'is-on' : ''}" onclick="_hecSetModo('formula')">Fórmula</button>
+      <button type="button" class="he-tab ${st.modo === 'plana' ? 'is-on' : ''}" onclick="_hecSetModo('plana')">Tarifa plana</button>
+    </div>`;
+
+  let inputs;
+  if (st.modo === 'formula') {
+    inputs = `
+      <div class="field">
+        <label class="field-label">Valor de la hora ${esJornadas ? '<span style="color:var(--ink-faint);font-weight:400;">(sugerido: valor jornada ÷ 10)</span>' : '<span style="color:var(--ink-faint);font-weight:400;">(valor jornal designado)</span>'}</label>
+        <input type="text" inputmode="numeric" class="input num" value="${st.baseHora !== '' ? displayMoneyInputValue(st.baseHora) : ''}" placeholder="0"
+               oninput="window._hec.baseHora = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="field" style="flex:1;">
+          <label class="field-label">Recargo %</label>
+          <input type="number" step="1" min="0" class="input num" value="${st.recargo}" placeholder="150"
+                 oninput="window._hec.recargo = (this.value === '' ? 150 : parseFloat(this.value)); _hecUpdateOut();">
+        </div>
+        <div class="field" style="flex:1;">
+          <label class="field-label">N° de horas extra</label>
+          <input type="number" step="0.5" min="0" class="input num" value="${st.nHoras}" placeholder="0"
+                 oninput="window._hec.nHoras = parseFloat(this.value) || 0; _hecUpdateOut();">
+        </div>
+      </div>`;
+  } else {
+    inputs = `
+      <div class="field">
+        <label class="field-label">Monto de horas extra ${dteTieneRetencion(st.dte) ? '(líquido que recibe el proveedor)' : (esFacturaIVA ? '(monto de la factura)' : '')}</label>
+        <input type="text" inputmode="numeric" class="input num" value="${st.montoPlano !== '' ? displayMoneyInputValue(st.montoPlano) : ''}" placeholder="0"
+               oninput="window._hec.montoPlano = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+      </div>`;
+  }
+
+  const ivaToggle = esFacturaIVA ? `
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-secondary);margin-top:8px;cursor:pointer;">
+      <input type="checkbox" ${st.incluyeIVA ? 'checked' : ''} onchange="window._hec.incluyeIVA=this.checked; _hecUpdateOut();">
+      El monto incluye IVA (se descuenta para el costo empresa)
+    </label>` : '';
+
+  const sinDte = !st.dte ? `<div class="calc-note" style="color:var(--warning);">Esta fila no tiene DTE real. El monto se usa tal cual. Para la conversión con retención o IVA, selecciona primero el DTE real de la fila.</div>` : '';
+
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal-header">
+          <div class="modal-title">Horas extra · ${escapeHtml(quien)}</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top:4px;">DTE real: <strong>${escapeHtml(_crcDteLabel(st.dte))}</strong> <span style="opacity:.7;">(fijo — se toma de la fila)</span>${actual != null ? ` · HE actual: <strong>${fmtMoney(actual)}</strong>` : ''}</div>
+        </div>
+        <div class="calc-body">
+          ${tabs}
+          ${inputs}
+          ${ivaToggle}
+          <div class="calc-output" id="hecOutput">${_hecOutHTML()}</div>
+          ${sinDte}
+          <div class="calc-note">Se guardará el <strong>costo empresa</strong> de las horas extra. Se suma al Costo de Producción real, aparte del costo base.</div>
+        </div>
+        <div class="modal-footer">
+          ${actual != null ? `<button class="btn" style="margin-right:auto;color:var(--negative);" onclick="_hecClear()">Quitar horas extra</button>` : ''}
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="_hecConfirm()">Usar como horas extra</button>
+        </div>
+      </div>
+    </div>`;
+}
+function _hecRefresh(st) {
+  if (st.sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(st.sectionKey);
+  recalcAllDeptSummaries();
+  renderSummaryFin();
+  recalcKPIs();
+}
+function _hecConfirm() {
+  const st = window._hec; if (!st) { closeModal(); return; }
+  const costo = _heCostoEmpresa(_heLiquido(), st.dte, st.incluyeIVA);
+  updateRowField(st.sectionKey, st.dept, st.idx, 'horaExtra', costo || null);
+  markDirty();
+  closeModal();
+  _hecRefresh(st);
+}
+function _hecClear() {
+  const st = window._hec; if (!st) { closeModal(); return; }
+  updateRowField(st.sectionKey, st.dept, st.idx, 'horaExtra', null);
+  markDirty();
+  closeModal();
+  _hecRefresh(st);
+}
+
 /* ─── BD PERSONAS GLOBAL (acceso desde topbar) ─────────────────────── */
 /* V5.1.1: rediseñado. Antes movíamos #moduleMain entre vistas creando
    dos elementos con el mismo ID. Ahora #bdGlobalMain es un container
@@ -19722,7 +20088,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.0.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.3.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 let _cloudDb = null;
 let _cloudReady = false;
