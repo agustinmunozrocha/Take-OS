@@ -76,7 +76,7 @@
   - Autenticación real: hasta entonces, el usuario actual se simula y los avisos
     no se envían (las @menciones y las tareas no notifican todavía).
   - Adjuntos: por ahora se guarda el NOMBRE del archivo (no el binario); el archivo
-    real viaja cuando exista backend/almacenamiento (Firebase Storage o Supabase).
+    real viaja cuando exista almacenamiento dedicado (Supabase Storage).
   - Señales: extensibles a más secciones/roles (hoy: guion técnico → AD).
   - Formulario de intake nativo (independizarse de Google Forms).
   ESTADO DE APROBACIÓN: Pendiente de aprobación.
@@ -302,7 +302,7 @@
   BREAKING: las plantillas que usaran jornadas_trabajo deben pasar a
   cantidad_jornadas (hay alias temporal). Las presets dejan de poder generarse.
   PENDIENTE V8.5: carga de logos PNG (Perfil de Empresa + INFO PROYECTO), con
-  compresión en cliente para no inflar Firestore.
+  compresión en cliente para no inflar el almacén en la nube.
 
   ════════════════════════════════════════════════════════════════════
   CAMBIOS V8.4.6 → V8.4.7 (feedback del editor de plantillas legales)
@@ -343,7 +343,7 @@
   - Desde Ajustes › Perfil de Empresa: subir el logo de la productora.
   - Desde INFO PROYECTO: subir los logos de agencia y de cliente.
   - Se usarán luego en la generación de documentos. Requiere compresión/redimensión
-    en el cliente (a un thumbnail pequeño) para no inflar el documento de Firestore
+    en el cliente (a un thumbnail pequeño) para no inflar el documento en la nube
     (límite de 1 MiB/doc; las fotos ya tuvieron que moverse a localStorage por esto).
 
   ════════════════════════════════════════════════════════════════════
@@ -541,8 +541,8 @@
     arrastrando (mismo patrón del Plan de Rodaje: tomar del ⠿, soltar donde va).
   DOCUMENTOS — ADJUNTAR PDFs REALES (punto 3)
   - Además del link, ahora se puede adjuntar un PDF (≤ ~600 KB) al documento,
-    abrirlo y quitarlo. El tope protege el sync de Firestore (1 MiB/doc); para
-    archivos grandes o repositorio entre dispositivos: link o Firebase Storage.
+    abrirlo y quitarlo. El tope protege el sync en la nube (1 MiB/doc); para
+    archivos grandes o repositorio entre dispositivos: link o Supabase Storage.
   BD EMPRESAS — EDICIÓN COMPLETA (punto 7)
   - Nuevo botón "Editar": nombre de fantasía, razón social, RUT, tipo
     (Cliente/Proveedor/Ambos), giro informal, giro SII, dueño (nombre/teléfono/
@@ -574,7 +574,7 @@
    · V8.5: indicador "Pronto Pago" por fila en Presupuesto + arquitectura de
      "Pagos Pendientes" (Reembolsos/Prontos Pagos) + exportación Office Banking.
    · Registrar la fecha de pago del cliente para activar "días de pago" en la ficha.
-   · Repositorio de archivos entre dispositivos (Firebase Storage / plan Blaze).
+   · Repositorio de archivos entre dispositivos (Supabase Storage).
    · Validación legal de borradores por un abogado.
 
   ════════════════════════════════════════════════════════════════════
@@ -665,7 +665,7 @@
     locaciones y futuras entidades (antes solo personas).
   DECISIONES ESTRUCTURALES
   - Plantillas personalizadas en un store propio (BD_LEGAL_TPL), persistido en
-    Firestore y localStorage (bdLegalTpl). Las oficiales siguen en código
+    la nube y localStorage (bdLegalTpl). Las oficiales siguen en código
     (LEGAL_TPL) y nunca se tocan.
   - Un getter unificado (legalTplGet) y un listador (legalAllTplEntries) hacen que
     todo el módulo Legal trate oficiales y personalizadas por igual.
@@ -676,7 +676,7 @@
   BREAKING: ninguno. Las plantillas oficiales y los documentos existentes no
   cambian; lo nuevo es aditivo (store de plantillas + pestaña + textos).
   PENDIENTES: validación legal de borradores por abogado; fotos cross-device
-  (Firebase Storage / Blaze); Fase 2 backend (Supabase) tras correr un proyecto
+  (Supabase Storage); Fase 2 backend tras correr un proyecto
   real end-to-end.
 
   ════════════════════════════════════════════════════════════════════
@@ -751,15 +751,15 @@
     un plano). El control se movió de la información general superior al propio
     bloque del cronograma.
   PERSISTENCIA / NUBE
-  - Blindaje de fotos: el documento que se sube a Firestore ya NO incluye las
-    fotos base64. Firestore guarda todo el estado como un único documento con
+  - Blindaje de fotos: el documento que se subía a la nube ya NO incluía las
+    fotos base64. La nube guardaba todo el estado como un único documento con
     tope de 1 MiB; las fotos lo superaban y hacían fallar el push EN SILENCIO,
     deteniendo además la sincronización de TODO lo demás. Ahora las fotos viven
     en localStorage (este navegador) y se reinyectan al cargar; el resto sí
     sincroniza con fiabilidad.
   DECISIONES ESTRUCTURALES
-  - Fotos cross-device quedan pendientes de almacenamiento dedicado (Firebase
-    Storage, plan Blaze). localStorage también tiene tope (~5-10 MB), así que
+  - Fotos cross-device quedan pendientes de almacenamiento dedicado (Supabase
+    Storage). localStorage también tiene tope (~5-10 MB), así que
     con muchas fotos puede saturarse: es una solución puente.
   BREAKING: ninguno.
   PENDIENTES: punto 2 (versiones históricas muestran su presupuesto real,
@@ -852,7 +852,7 @@
     Firmado, versionado y export a PDF con marca.
   - NUEVA CATEGORÍA "BD DE LEGAL" (BD_LEGAL), transversal y consultable,
     junto a Personas/Empresas/Locaciones. Los documentos no mueren con el
-    proyecto: viven en el archivo global (Firestore + localStorage). El
+    proyecto: viven en el archivo global (nube + localStorage). El
     tab del proyecto es una vista filtrada de BD_LEGAL.
   - NUEVO BLOQUE "DERECHOS" en Info Proyecto (Tiempo · Plataformas ·
     Países/territorio). Fuente única para cesiones, contratos, cotización
@@ -881,7 +881,7 @@
   BREAKING: ninguno (módulo nuevo). Info Proyecto suma el objeto
   "derechos"; el render tolera su ausencia en proyectos viejos.
   PENDIENTES: validación legal de los 3 borradores; firma electrónica;
-  almacenamiento de PDFs (base64 vs Firebase Storage/Blaze); editor de
+  almacenamiento de PDFs (base64 vs Supabase Storage); editor de
   plantillas (futuro, solo Admin).
 
   ════════════════════════════════════════════════════════════════════
@@ -894,7 +894,7 @@
     ruta de visitas con el mismo motor de tiempos del Plan de Rodaje).
   - NUEVA ENTIDAD "BD DE LOCACIONES" (BD_LOC), transversal y canónica,
     al mismo nivel que Personas/Empresas: sobrevive al cierre del
-    proyecto y se persiste en el store global (Firestore + localStorage).
+    proyecto y se persiste en el store global (nube + localStorage).
     El proyecto guarda solo su USO (project.data.locaciones / PROJ_LOC):
     estado, costo, contratación, notas del proyecto.
   MENORES
@@ -918,8 +918,7 @@
     de tener lista propia y consumen las locaciones CONFIRMADAS del módulo.
     La asignación locación↔citación/día sigue ocurriendo en esos tabs.
   PENDIENTES
-  - Almacenamiento de fotos: base64/Spark (acotado) vs Firebase Storage
-    (Blaze). Decisión a tomar con Agustín antes de uso intensivo.
+  - Almacenamiento de fotos: base64 (acotado) vs Supabase Storage. Decisión a tomar con Agustín antes de uso intensivo.
 
   ════════════════════════════════════════════════════════════════════
   CAMBIOS V8.1.0 → V8.1.1 (ajustes operacionales)
@@ -4416,7 +4415,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
 
 </head>
 <body>
-<!-- V10.0.0 · Firebase RETIRADO (Gate A cerrado): el SDK ya no se carga. Supabase es la única fuente. -->
+<!-- V10.0.0 · Capa de nube anterior retirada: el SDK ya no se carga. Supabase es la única fuente. -->
 <!-- V7.1: SheetJS para import/export .xlsx bidireccional de la BD -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- V8.6: Supabase JS — cliente para la nueva base de datos PostgreSQL. Expone la variable global "supabase". -->
@@ -13331,16 +13330,16 @@ function docDelete(id) {
 }
 function docFmtSize(bytes) { const b = Number(bytes) || 0; if (b < 1024) return b + ' B'; if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB'; return (b / 1024 / 1024).toFixed(1) + ' MB'; }
 /* ── V9.6.1 · PDFs de Documentos en Supabase Storage (bucket privado) ─────────
-   Antes el PDF se guardaba como base64 dentro del blob de Firebase (tope ~600 KB
-   por el límite de 1 MiB/doc de Firestore). Ahora el binario sube al bucket
+   Antes el PDF se guardaba como base64 en el estado local (tope ~600 KB
+   por el límite de tamaño de documento). Ahora el binario sube al bucket
    privado 'documentos-proyecto' y la BD guarda solo la RUTA (project_documents
    .archivo_path), sincronizada vía la RPC guardar_operaciones_4e. El nombre abre
-   el archivo con URL firmada (1 h). Sin el límite de Firestore, el tope sube a
+   el archivo con URL firmada (1 h). Sin ese límite de documento, el tope sube a
    15 MB (cubre briefs/tratamientos/decks reales). FAIL-SAFE: si Storage no está
    disponible, cae a base64 local (comportamiento previo). Soporta documentos
    mixtos {dataUrl} (legado) y {path} (Storage). */
 const STORAGE_BUCKET_DOCS = 'documentos-proyecto';
-const DOC_PDF_MAX = 15 * 1024 * 1024;   // 15 MB (en Storage ya no aplica el 1 MiB de Firestore)
+const DOC_PDF_MAX = 15 * 1024 * 1024;   // 15 MB (en Storage no hay límite de documento)
 function _docStoragePath(projId, name) {
   const safe = String(name || 'documento.pdf').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
   return ORG_ID + '/' + (projId || 'proyecto') + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + safe;
@@ -13371,7 +13370,7 @@ function docAttachPDF(id, input) {
       showToast({ kind: 'success', title: 'PDF subido', body: (file.name || 'PDF') + ' quedó en la nube.' });
       return;
     }
-    // Fallback: base64 local (como antes). Acá sí aplica el tope chico de Firestore.
+    // Fallback: base64 local (como antes). Acá sí aplica el tope chico del modo local.
     if (file.size > 600 * 1024) { showToast({ kind: 'warning', title: 'Sin nube disponible', body: 'Storage no está disponible y el PDF supera ~600 KB para guardarlo local. Usa el link, o reintenta cuando el bucket exista.' }); input.value = ''; return; }
     const reader = new FileReader();
     reader.onload = function () {
@@ -14196,7 +14195,7 @@ function openLocDetail(locId) {
             <div class="loc-block-h">Galería de scouting <span class="loc-block-tag bd">BD · reutilizable</span></div>
             <div class="loc-gallery">${galeria}<label class="loc-foto-add" title="Agregar fotos (se comprimen solas)">+<input type="file" accept="image/*" multiple style="display:none" onchange="locAddFotos('${locId}',this)"></label></div>
             <div style="font-size:11px;color:var(--ink-faint);margin-top:7px;">Las fotos se comprimen a máx. 1280 px. Click para ampliar.</div>
-            <div style="font-size:11px;color:var(--accent,#c2410c);margin-top:6px;line-height:1.45;">⚠ Por ahora las fotos se guardan <b>solo en este navegador</b>; no se sincronizan en la nube (límite de Firestore). Para fotos compartidas entre dispositivos hace falta almacenamiento dedicado (Firebase Storage / plan Blaze).</div>
+            <div style="font-size:11px;color:var(--accent,#c2410c);margin-top:6px;line-height:1.45;">⚠ Por ahora las fotos se guardan <b>solo en este navegador</b>; aún no se sincronizan en la nube. Para fotos compartidas entre dispositivos falta integrarlas a Supabase Storage.</div>
           </div>
           ${uso ? `<div class="loc-block">
             <div class="loc-block-h">Uso en este proyecto <span class="loc-block-tag proj">solo de este proyecto</span></div>
@@ -16151,7 +16150,7 @@ function openConfigPanel() {
                 Respaldar Supabase (.json)
               </button>
             </div>
-            <p class="config-hint" style="margin-top:6px;">Gate A cerrado: Firebase está retirado y Supabase es la única fuente. El respaldo autoritativo es el backup automático diario de Supabase Pro; este botón descarga una copia manual en <code>.json</code>.</p>
+            <p class="config-hint" style="margin-top:6px;">Supabase es la única fuente de datos. El respaldo autoritativo es el backup automático diario de Supabase Pro; este botón descarga una copia manual en <code>.json</code>.</p>
           </div>` : ''}
           <div class="config-section">
             <p class="config-section-title">Perfil de la empresa</p>
@@ -16186,214 +16185,13 @@ function openConfigPanel() {
 function closeConfigPanel() { closeModal(); }
 function _configPanelOpen() { return !!document.querySelector('.config-panel'); }
 
-/* ════════════════════════════════════════════════════════════════════
-   V9.6.6 · RECONCILIACIÓN Firebase ↔ Supabase (solo lectura, Gate A)
-   Compara, por entidad, los ids presentes en el blob de Firebase contra
-   los de Supabase. NO escribe ni borra nada. Da la foto necesaria para
-   decidir cuándo cortar la doble escritura y apagar Firebase.
-   ════════════════════════════════════════════════════════════════════ */
-async function _reconFetchSupabaseIds(tabla, col) {
-  // Trae solo la columna de id; pagina por si hay muchos.
-  const ids = [];
-  let from = 0; const PAGE = 1000;
-  for (let i = 0; i < 50; i++) {   // tope duro 50k filas
-    const { data, error } = await sb.from(tabla).select(col).range(from, from + PAGE - 1);
-    if (error) throw error;
-    (data || []).forEach(r => { const v = r[col]; if (v != null && v !== '') ids.push(String(v)); });
-    if (!data || data.length < PAGE) break;
-    from += PAGE;
-  }
-  return ids;
-}
-function _reconDiff(fbIds, sbIds) {
-  const fb = new Set(fbIds), sb = new Set(sbIds);
-  const soloFb = [...fb].filter(x => !sb.has(x));
-  const soloSb = [...sb].filter(x => !fb.has(x));
-  const ambos = [...fb].filter(x => sb.has(x));
-  return { fbCount: fb.size, sbCount: sb.size, soloFb, soloSb, ambosCount: ambos.length };
-}
-
-/* ── V9.6.9 · Comparación de CONTENIDO (no solo presencia) en datos sensibles ──
-   Complementa el diff de ids con un cruce de valores Firebase↔Supabase, que un
-   SQL no puede hacer (no ve Firebase). Se enfoca en lo crítico:
-   (1) número de cuenta bancaria principal por contacto, (2) agregados de
-   presupuesto por proyecto (nº de líneas con valor y suma de 'valor'). */
-function _reconNormNum(v) { return String(v == null ? '' : v).replace(/[\s.\-]/g, '').trim(); }
-function _reconCuentaBlob(c) {   // número (o datos extranjeros) de la cuenta principal en el blob
-  const pago = (c && c.pago) || {};
-  if (pago.cuentaExtranjera) return _reconNormNum(pago.datosExtranjeros || '');
-  return _reconNormNum(pago.nCuenta || pago.numeroCuenta || '');
-}
-async function _reconCuentasContenido(bdContactos) {
-  // Supabase: cuenta principal por contacto
-  const sbByContact = {};
-  let from = 0; const PAGE = 1000;
-  for (let i = 0; i < 50; i++) {
-    const { data, error } = await sb.from('contact_bank_accounts').select('contact_id,numero_cuenta,datos_extra,es_extranjera,es_principal').range(from, from + PAGE - 1);
-    if (error) throw error;
-    (data || []).forEach(r => {
-      const cur = sbByContact[r.contact_id];
-      if (!cur || (r.es_principal && !cur.es_principal)) sbByContact[r.contact_id] = r;
-    });
-    if (!data || data.length < PAGE) break;
-    from += PAGE;
-  }
-  const mismatches = [];
-  let comparados = 0;
-  Object.keys(bdContactos || {}).forEach(id => {
-    const c = bdContactos[id];
-    const fbNum = _reconCuentaBlob(c);
-    const r = sbByContact[id];
-    const sbNum = r ? _reconNormNum(r.es_extranjera ? (r.datos_extra || '') : (r.numero_cuenta || '')) : '';
-    if (!fbNum && !sbNum) return;            // ninguno tiene cuenta → nada que comparar
-    comparados++;
-    if (fbNum !== sbNum) mismatches.push({ id, nombre: (c && c.nombre) || id, fb: fbNum || '(vacío)', sb: sbNum || '(vacío)' });
-  });
-  return { comparados, mismatches };
-}
-function _reconPresupBlob(p) {   // agregados del presupuesto desde el blob (project.data)
-  const d = (p && p.data) || {};
-  let n = 0, suma = 0;
-  const acc = (r) => { const v = Number(r && r.valor) || 0; if (v !== 0) { n++; suma += v; } };
-  for (const dep in (d.servicios || {})) (d.servicios[dep] || []).forEach(acc);
-  (d.gastos || []).forEach(acc); (d.equipos || []).forEach(acc); (d.talentos || []).forEach(acc);
-  return { n, suma: Math.round(suma) };
-}
-async function _reconPresupContenido(projects) {
-  // Supabase: agregados de budget_line_items por proyecto
-  const sbAgg = {};
-  let from = 0; const PAGE = 1000;
-  for (let i = 0; i < 100; i++) {
-    const { data, error } = await sb.from('budget_line_items').select('project_id,valor').range(from, from + PAGE - 1);
-    if (error) throw error;
-    (data || []).forEach(r => {
-      const v = Number(r.valor) || 0; if (v === 0) return;
-      const a = sbAgg[r.project_id] || (sbAgg[r.project_id] = { n: 0, suma: 0 });
-      a.n++; a.suma += v;
-    });
-    if (!data || data.length < PAGE) break;
-    from += PAGE;
-  }
-  const mismatches = []; let comparados = 0;
-  (projects || []).forEach(p => {
-    const fb = _reconPresupBlob(p);
-    const sb2 = sbAgg[p.id] || { n: 0, suma: 0 }; sb2.suma = Math.round(sb2.suma);
-    if (!fb.n && !sb2.n) return;
-    comparados++;
-    if (fb.n !== sb2.n || fb.suma !== sb2.suma) {
-      mismatches.push({ id: p.id, nombre: (p.data && p.data.infoProyecto && p.data.infoProyecto.nombreProyecto) || p.name || p.id,
-        fb: `${fb.n} líneas · $${fb.suma.toLocaleString('es-CL')}`, sb: `${sb2.n} líneas · $${sb2.suma.toLocaleString('es-CL')}` });
-    }
-  });
-  return { comparados, mismatches };
-}
-async function reconcileFirebaseSupabase() {
-  // V10.5.3: Firebase desconectado del cliente. La reconciliación Firebase↔Supabase
-  // ya no aplica (Supabase es la única fuente). Se conserva el punto de entrada como
-  // aviso para no romper su botón en Diagnóstico.
-  showToast({ kind: 'info', title: 'Reconciliación no disponible', body: 'Firebase está desconectado del cliente; Supabase es la única fuente. La reconciliación Firebase↔Supabase ya no aplica.' });
-}
-function _reconIdList(ids) {
-  if (!ids || !ids.length) return '';
-  const shown = ids.slice(0, 25).map(escapeHtml).join(', ');
-  const extra = ids.length > 25 ? ` … (+${ids.length - 25} más)` : '';
-  return `<div style="font-size:11px;color:var(--ink-faint);margin-top:2px;word-break:break-all;">${shown}${extra}</div>`;
-}
-function _renderReconReport(filas, perfilFb, perfilSb, contenido) {
-  const e = escapeHtml;
-  contenido = contenido || {};
-  const rowHTML = (f) => {
-    if (f.error) return `<tr><td>${e(f.label)}</td><td colspan="4" style="color:var(--warning);">No se pudo leer en Supabase (¿tabla o permisos?)</td></tr>`;
-    const ok = f.soloFb.length === 0 && f.soloSb.length === 0;
-    const estado = ok
-      ? '<span style="color:var(--positive);font-weight:700;">✓ en paridad</span>'
-      : '<span style="color:var(--warning);font-weight:700;">⚠ difieren</span>';
-    const detalle = ok ? '' :
-      `${f.soloFb.length ? `<div style="margin-top:4px;"><strong>Solo en Firebase (${f.soloFb.length}):</strong>${_reconIdList(f.soloFb)}</div>` : ''}
-       ${f.soloSb.length ? `<div style="margin-top:4px;"><strong>Solo en Supabase (${f.soloSb.length}):</strong>${_reconIdList(f.soloSb)}</div>` : ''}`;
-    return `<tr>
-      <td style="font-weight:600;">${e(f.label)}</td>
-      <td style="text-align:center;">${f.fbCount}</td>
-      <td style="text-align:center;">${f.sbCount}</td>
-      <td style="text-align:center;">${f.ambosCount}</td>
-      <td>${estado}${detalle}</td>
-    </tr>`;
-  };
-  const perfilOk = perfilFb === perfilSb;
-  const perfilRow = `<tr>
-      <td style="font-weight:600;">Perfil de empresa</td>
-      <td style="text-align:center;">${perfilFb ? '1' : '0'}</td>
-      <td style="text-align:center;">${perfilSb ? '1' : '0'}</td>
-      <td style="text-align:center;">${perfilFb && perfilSb ? '1' : '0'}</td>
-      <td>${perfilOk ? '<span style="color:var(--positive);font-weight:700;">✓ en paridad</span>' : '<span style="color:var(--warning);font-weight:700;">⚠ difieren</span>'}</td>
-    </tr>`;
-
-  const totalDifieren = filas.filter(f => !f.error && (f.soloFb.length || f.soloSb.length)).length + (perfilOk ? 0 : 1);
-  const conError = filas.filter(f => f.error).length;
-
-  // V9.6.9 — bloque de comparación de CONTENIDO
-  const cu = contenido.cuentas, pr = contenido.presupuesto;
-  const contMismatch = ((cu && !cu.error && cu.mismatches) ? cu.mismatches.length : 0) + ((pr && !pr.error && pr.mismatches) ? pr.mismatches.length : 0);
-  const _mmList = (arr, unidad) => arr.slice(0, 15).map(m => `<div style="font-size:11px;color:var(--ink-faint);margin-top:3px;"><strong>${e(m.nombre)}</strong> — Firebase: ${e(String(m.fb))} · Supabase: ${e(String(m.sb))}</div>`).join('') + (arr.length > 15 ? `<div style="font-size:11px;color:var(--ink-faint);">… (+${arr.length - 15} más)</div>` : '');
-  const contBloque = (() => {
-    const partes = [];
-    if (cu) {
-      if (cu.error) partes.push('<tr><td style="font-weight:600;">Cuentas bancarias</td><td colspan="2" style="color:var(--warning);">No se pudo leer en Supabase.</td></tr>');
-      else {
-        const ok = cu.mismatches.length === 0;
-        partes.push(`<tr><td style="font-weight:600;">Cuentas bancarias</td><td style="text-align:center;">${cu.comparados}</td>
-          <td>${ok ? '<span style="color:var(--positive);font-weight:700;">✓ coinciden</span>' : `<span style="color:var(--warning);font-weight:700;">⚠ ${cu.mismatches.length} difieren</span>${_mmList(cu.mismatches)}`}</td></tr>`);
-      }
-    }
-    if (pr) {
-      if (pr.error) partes.push('<tr><td style="font-weight:600;">Presupuestos</td><td colspan="2" style="color:var(--warning);">No se pudo leer en Supabase.</td></tr>');
-      else {
-        const ok = pr.mismatches.length === 0;
-        partes.push(`<tr><td style="font-weight:600;">Presupuestos (nº líneas + suma)</td><td style="text-align:center;">${pr.comparados}</td>
-          <td>${ok ? '<span style="color:var(--positive);font-weight:700;">✓ coinciden</span>' : `<span style="color:var(--warning);font-weight:700;">⚠ ${pr.mismatches.length} difieren</span>${_mmList(pr.mismatches)}`}</td></tr>`);
-      }
-    }
-    if (!partes.length) return '';
-    return `<p class="config-section-title" style="margin-top:16px;">Contenido de datos sensibles (valor, no solo presencia)</p>
-      <table class="lgl-tbl" style="width:100%;">
-        <thead><tr><th>Dato</th><th>Comparados</th><th>Resultado</th></tr></thead>
-        <tbody>${partes.join('')}</tbody>
-      </table>
-      <p class="config-hint" style="margin-top:8px;">Cruza el valor real Firebase↔Supabase (cuenta bancaria principal por persona; nº de líneas con valor y suma de presupuesto por proyecto). Un SQL no puede hacer este cruce porque no ve Firebase.</p>`;
-  })();
-
-  const hayProblema = (totalDifieren > 0) || (conError > 0) || (contMismatch > 0);
-  const veredicto = (!hayProblema)
-    ? '<div style="padding:10px 12px;border-radius:8px;background:var(--positive-bg);color:var(--positive);font-weight:600;">Todo en paridad: misma presencia de registros y mismo contenido en los datos sensibles comparados. Buena señal para avanzar hacia cortar la doble escritura.</div>'
-    : `<div style="padding:10px 12px;border-radius:8px;background:var(--warning-bg);color:var(--warning);font-weight:600;">${totalDifieren} entidad(es) con diferencias de presencia${contMismatch ? `, ${contMismatch} con diferencias de contenido` : ''}${conError ? `, ${conError} no legible(s)` : ''}. Revisa el detalle antes de cortar la doble escritura.</div>`;
-
-  const root = document.getElementById('modalRoot');
-  root.innerHTML = `
-    <div class="modal-backdrop" onclick="closeModal()">
-      <div class="modal" onclick="event.stopPropagation()" style="max-width:760px;">
-        <div class="modal-header"><div class="modal-title">Reconciliación Firebase ↔ Supabase</div></div>
-        <div class="modal-body">
-          <p style="margin:0 0 10px;color:var(--ink-secondary);font-size:13px;">Comparación <strong>solo lectura</strong>. No modifica ningún backend. Revisa <em>presencia</em> de registros y, en datos sensibles, también el <em>contenido</em>.</p>
-          ${veredicto}
-          <p class="config-section-title" style="margin-top:14px;">Presencia de registros (por entidad)</p>
-          <table class="lgl-tbl" style="width:100%;">
-            <thead><tr><th>Entidad</th><th>Firebase</th><th>Supabase</th><th>En ambos</th><th>Estado</th></tr></thead>
-            <tbody>${filas.map(rowHTML).join('')}${perfilRow}</tbody>
-          </table>
-          <p class="config-hint" style="margin-top:10px;">"Solo en Firebase" = aún no migrado / no escrito a Supabase. "Solo en Supabase" = creado directo en Supabase o ya borrado en Firebase. Las operaciones por-proyecto (rodajes, tareas, etc.) viven dentro de cada proyecto y no se cuentan por separado aquí.</p>
-          ${contBloque}
-        </div>
-        <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Cerrar</button></div>
-      </div>
-    </div>`;
-  showToast({ kind: 'success', title: 'Reconciliación lista', body: !hayProblema ? 'Todo en paridad (presencia y contenido).' : 'Hay diferencias — revisa el reporte.' });
-}
+/* V10.6.0 · Reconciliación con la nube anterior eliminada (obsoleta; Supabase es la única fuente). */
 
 /* ── V9.6.8 · Respaldo de Supabase a un solo JSON (Gate A, paso 3) ─────────
    Lee las tablas conocidas de Supabase (best-effort, paginado) y descarga UN
    archivo .json portable. Si una tabla no existe o no es accesible, se registra
    en _meta.omitidas y el respaldo sigue (no se rompe). Es un respaldo manual,
-   independiente del blob de Firebase; el respaldo AUTORITATIVO (captura todo el
+   independiente; el respaldo AUTORITATIVO (captura todo el
    esquema, incluso lo que el cliente no conoce) es el backup automático de
    Supabase Pro — ver handoff al BD Expert. Solo lectura. */
 const SUPA_BACKUP_TABLES = [
@@ -16470,60 +16268,7 @@ async function exportSupabaseBackup() {
   }
 }
 
-/* V9.6.7 · Corte reversible de la doble escritura. Activar exige que TODAS las
-   fuentes ya estén en Supabase (si alguna sigue leyendo de Firebase, cortar la
-   escritura a Firebase perdería sus cambios). Desactivar es inmediato: cloudPush
-   se reanuda y Firebase se pone al día en el próximo guardado. */
-function _applySupaSoleIndicator() {
-  // V10.0.0: Firebase retirado. "Supabase única fuente" dejó de ser un modo
-  // togglable (ahora es el estado permanente), así que no se muestra el badge.
-  const el = document.getElementById('supaSoleIndicator');
-  if (el) el.remove();
-}
-function toggleSupabaseSoleSource() {
-  if (_supaSole()) {
-    // DESACTIVAR — reanuda la doble escritura (Firebase se pone al día solo)
-    showModal({
-      title: 'Reanudar la doble escritura',
-      body: 'Vas a volver a escribir también en Firebase (doble escritura). Supabase sigue siendo la fuente de lectura. Firebase se pondrá al día en el próximo guardado.<br><br>¿Reanudar?',
-      confirmLabel: 'Reanudar doble escritura', cancelLabel: 'Cancelar',
-      onConfirm: () => {
-        SUPA_SOLE_SOURCE = false;
-        try { window.localStorage.setItem(SUPA_SOLE_KEY, '0'); } catch (e) {}
-        _applySupaSoleIndicator();
-        try { markDirty(); autosaveNow(); } catch (e) {}   // dispara un push que repuebla Firebase
-        showToast({ kind: 'success', title: 'Doble escritura reanudada', body: 'La app vuelve a escribir en Firebase y Supabase.' });
-        if (_configPanelOpen()) openConfigPanel();
-      }
-    });
-    return;
-  }
-  // ACTIVAR — guarda dura: todas las fuentes deben estar en Supabase
-  if (!_allSourcesSupabase()) {
-    const pend = _sourcesPendientes();
-    showModal({
-      title: 'Aún no se puede cortar', danger: true,
-      body: 'No se puede cortar la doble escritura porque estas entidades todavía se están leyendo desde Firebase (no desde Supabase):<br><br><strong>' + pend.map(escapeHtml).join(', ') + '</strong><br><br>Si cortáramos ahora, los cambios a esas entidades se perderían. Recarga con sesión de Supabase activa para que todas las fuentes pasen a Supabase, verifica con la Reconciliación, y vuelve a intentarlo.',
-      confirmLabel: 'Entendido', cancelLabel: ''
-    });
-    return;
-  }
-  showModal({
-    title: 'Cortar la doble escritura', danger: true,
-    body: 'Con esto, la app <strong>dejará de escribir en Firebase</strong>: Supabase queda como única fuente. ' +
-          'Es <strong>reversible</strong> con un click (no se borra nada de Firebase) y el respaldo local de este navegador sigue funcionando. ' +
-          'Mientras esté activo, Firebase quedará desactualizado a propósito.<br><br>' +
-          'Recomendación: ten una reconciliación reciente "en paridad" antes de activar.<br><br>¿Cortar la doble escritura ahora?',
-    confirmLabel: 'Sí, Supabase única fuente', cancelLabel: 'Cancelar',
-    onConfirm: () => {
-      SUPA_SOLE_SOURCE = true;
-      try { window.localStorage.setItem(SUPA_SOLE_KEY, '1'); } catch (e) {}
-      _applySupaSoleIndicator();
-      showToast({ kind: 'success', title: 'Doble escritura cortada', body: 'Supabase es ahora la única fuente. Reversible desde Configuración › Diagnóstico.' });
-      if (_configPanelOpen()) openConfigPanel();
-    }
-  });
-}
+/* V10.6.0 · Toggle de corte de doble escritura eliminado (ya no hay doble escritura). */
 
 /* ════════════════════════════════════════════════════════════════════
    V7.11 · BUSCADOR GLOBAL (barra superior)
@@ -18448,12 +18193,12 @@ function buildSaveObject() {
 }
 
 /* V8.3.3 — BLINDAJE DE FOTOS PARA LA NUBE.
-   Firestore guarda TODO el estado como un único documento JSON con tope de
+   El modo local guarda TODO el estado como un único JSON con tope de
    1 MiB. Las fotos base64 (aunque comprimidas) lo superan rápido y hacen que
    el push falle EN SILENCIO; peor aún, una vez sobre el límite deja de
    sincronizarse TODO. Por eso el payload de nube va SIN fotos: las fotos viven
    en localStorage (este navegador) y se reinyectan al cargar. Cross-device
-   real requiere Firebase Storage (plan Blaze), pendiente. */
+   real requiere Supabase Storage, pendiente. */
 function stripLocPhotosForCloud(bdLocArr) {
   return (bdLocArr || []).map(l => {
     const n = (l && l.fotos ? l.fotos.length : 0);
@@ -18526,7 +18271,6 @@ function applyLoadedState(obj) {
   renderMetrics();
   renderKanban();
   clearDirty();
-  cloudPush();   // V6.10: si cargas un respaldo, también se propaga al equipo (no hace eco durante el arranque por el guard _cloudApplying)
 }
 
 /* ─── EXPORTAR (.json) ─────────────────────────────────────────────── */
@@ -18614,7 +18358,6 @@ function importSaveFromInput(input) {
         renderMetrics();
         renderKanban();
         markDirty();
-        try { if (typeof cloudPush === 'function') cloudPush(); } catch (e) {}
         showToast({ kind: 'success', title: 'Proyectos agregados', body: `${r.agregados} proyecto(s) nuevo(s) agregado(s). ${r.omitidos} ya existían y se mantuvieron sin cambios.` });
       },
       onCancel: () => {}
@@ -18866,7 +18609,6 @@ function autosaveNow() {
   if (hasLS()) {
     try { window.localStorage.setItem(LS_KEY, JSON.stringify(buildSaveObject())); ok = true; } catch (e) {}
   }
-  cloudPush();   // V6.10: además del airbag local, sincroniza a la nube si está activa
   return ok;
 }
 function scheduleAutosave() {
@@ -18990,9 +18732,9 @@ function offerAutosaveRestore() {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   V6.10 — CAPA DE NUBE (Firebase Firestore)
-   Los proyectos viven en un documento central en Firestore y se sincronizan
-   en tiempo real entre todos los que tienen TakeOS abierto. Si Firebase no
+   V6.10 — CAPA DE NUBE (histórica)
+   Esta capa fue la sincronización en la nube original. Quedó retirada: la
+   persistencia es 100% Supabase. Se conserva el contexto para referencia. Si la nube no
    carga o no está configurado, TakeOS sigue funcionando en modo local
    (localStorage) — FAIL-SAFE, nunca se rompe.
 
@@ -19002,12 +18744,12 @@ function offerAutosaveRestore() {
    proyecto es la siguiente iteración, una vez validada la sincronización.
    ════════════════════════════════════════════════════════════════════ */
 
-/* ── V10.5.3 · Firebase desconectado del cliente ─────────────────────────
-   El SDK de Firebase se retiró en V10.0.0 (las funciones cloud* son no-op) y
-   en V10.5.3 se eliminó la configuración con credenciales (apiKey, projectId,
-   etc.), que ya era código muerto. El cliente no carga, no lee ni escribe en
-   Firebase: Supabase es la única fuente. Los datos en Firebase quedan intactos
-   como respaldo externo hasta que se decida borrarlos por separado. */
+/* ── V10.6.0 · Capa de nube anterior retirada del cliente ────────────────
+   La sincronización en la nube original quedó retirada por completo: no se
+   carga ningún SDK, no hay credenciales en el código y no se lee ni escribe en
+   esa nube. Supabase es la única fuente de datos. Los datos en el servicio
+   anterior quedan intactos como respaldo externo hasta que se decida borrarlos
+   por separado, fuera de esta app. */
 
 /* ── Supabase (V8.6: login real + base de datos PostgreSQL) ───────────
    La publishable key es SEGURA de exponer aquí porque el RLS protege los
@@ -19049,20 +18791,20 @@ window.confirmLogout = function () {
    V9.1.0 — CAPA DE ACCESO A DATOS (DAL) · lectura de Contactos y Empresas
    desde Supabase / PostgreSQL.
    Es "el Productor" del software: el resto de la app le pide los datos sin
-   saber si vienen de Firebase o de Supabase. Hoy esta capa lee la Tanda 1
+   saber de qué tabla vienen. Hoy esta capa lee la Tanda 1
    (personas + empresas, con sus tablas satelite) y re-arma EXACTAMENTE el
    mismo modelo en memoria (BD_CONTACTOS / BD_EMPRESAS_BYID) que el resto del
    sistema ya consume, de modo que ninguna otra parte de la UI cambia.
-   Desde la V9.1.1 la ESCRITURA por ficha tambien va a Supabase (ver dalGuardarContacto / dalGuardarEmpresa); Firebase recibe copia como red de seguridad.
+   La ESCRITURA por ficha va a Supabase (ver dalGuardarContacto / dalGuardarEmpresa); el respaldo es el airbag en localStorage.
    ════════════════════════════════════════════════════════════════════ */
 const ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // Primate Films (tenant)
-let CONTACTS_SOURCE = 'firebase';   // pasa a 'supabase' SOLO tras una lectura exitosa (fail-safe)
-let LOCATIONS_SOURCE = 'firebase';  // V9.4.4: idem para la BD de locaciones (BD_LOC)
+let CONTACTS_SOURCE = 'pending';    // pasa a 'supabase' SOLO tras una lectura exitosa (fail-safe). 'pending' = aún sin confirmar.
+let LOCATIONS_SOURCE = 'pending';   // idem para la BD de locaciones (BD_LOC)
 const DAL_KNOWN_LOC_IDS = new Set();
-let LEGAL_SOURCE = 'firebase';      // V9.4.7: idem para la BD de Legal (documentos + plantillas)
+let LEGAL_SOURCE = 'pending';       // idem para la BD de Legal (documentos + plantillas)
 const DAL_KNOWN_LEGAL_DOC_IDS = new Set();
 const DAL_KNOWN_LEGAL_TPL_IDS = new Set();
-let PERFIL_SOURCE = 'firebase';     // V9.4.8: idem para el perfil de empresa (EMPRESA_PERFIL, singleton)
+let PERFIL_SOURCE = 'pending';      // idem para el perfil de empresa (EMPRESA_PERFIL, singleton)
 
 /* Mapeos codigo (Postgres) -> etiqueta de la app (lo que la UI ya espera). */
 const _DAL_ROLE_LABEL = { crew: 'Crew', interno: 'Interno', talento: 'Talento', contacto_cliente: 'Contacto cliente', proveedor_individual: 'Proveedor individual' };
@@ -19145,7 +18887,7 @@ function _dalEmpresaDesdeRow(e) {
 }
 
 /* Lee Contactos + Empresas (Tanda 1) desde Supabase. Devuelve {contactos, empresas}
-   o null si no hay cliente/sesion o si algo falla (el caller cae a Firebase). */
+   o null si no hay cliente/sesion o si algo falla (el caller mantiene el estado actual). */
 async function dalLoadTanda1() {
   if (!sb) return null;
   try {
@@ -19216,11 +18958,11 @@ async function dalBootTaxRates() {
 }
 
 /* Orquestador de arranque: intenta leer de Supabase; si lo logra, reemplaza
-   los contactos/empresas que Firebase haya cargado y refresca la pantalla.
-   Si falla, NO toca nada: la app sigue con los datos de Firebase. */
+   los contactos/empresas ya cargados y refresca la pantalla.
+   Si falla, NO toca nada: la app sigue con el estado actual. */
 async function dalBootContactos() {
   const data = await dalLoadTanda1();
-  if (!data) { console.warn('[dal] sin datos de Supabase; la BD sigue desde Firebase'); return false; }
+  if (!data) { console.warn('[dal] sin datos de Supabase; la BD mantiene su estado actual'); return false; }
   dalApplyTanda1(data);
   const nC = Object.keys(data.contactos).length, nE = Object.keys(data.empresas).length;
   try { if (STATE.currentModule === 'bd-personas') renderBDPersonas(); } catch (e) {}
@@ -19231,7 +18973,7 @@ async function dalBootContactos() {
 }
 
 /* \u00bfLa escritura de la BD esta congelada? (porque ya leemos de Supabase pero
-   la escritura todavia va a Firebase, y se perderia al recargar). La usan los
+   la escritura no llegó a Supabase, y se perderia al recargar). La usan los
    editores de la Base de Datos para avisar y no guardar. */
 function dalBulkFrozen() {
   if (CONTACTS_SOURCE !== 'supabase') return false;
@@ -19244,8 +18986,8 @@ function dalBulkFrozen() {
 
 /* ── V9.4.4 · BD de Locaciones (BD_LOC), transversal ──────────────────────
    Lectura desde la tabla `locations`. Las FOTOS no viven en Supabase todavía
-   (siguen en localStorage por el blindaje de Firestore); por eso tras reemplazar
-   BD_LOC se llama restoreLocalLocPhotos(), igual que en el camino de Firebase. */
+   (siguen en localStorage por el blindaje de tamaño); por eso tras reemplazar
+   BD_LOC se llama restoreLocalLocPhotos(). */
 function _dalLocacionMap(row) {
   return {
     locId: row.loc_id,
@@ -19278,7 +19020,7 @@ function dalApplyLocaciones(locs) {
 async function dalBootLocaciones(opts) {
   const silent = opts && opts.silent;
   const locs = await dalLoadLocaciones();
-  if (!locs) { if (!silent) console.warn('[dal] sin locaciones de Supabase; BD_LOC sigue desde Firebase'); return false; }
+  if (!locs) { if (!silent) console.warn('[dal] sin locaciones de Supabase; BD_LOC mantiene su estado actual'); return false; }
   dalApplyLocaciones(locs);
   try { restoreLocalLocPhotos(); } catch (e) {}   // reinyecta fotos de localStorage
   if (!silent) {
@@ -19336,7 +19078,7 @@ function dalApplyLegal(data) {
 async function dalBootLegal(opts) {
   const silent = opts && opts.silent;
   const data = await dalLoadLegal();
-  if (!data) { if (!silent) console.warn('[dal] sin legal de Supabase; sigue desde Firebase'); return false; }
+  if (!data) { if (!silent) console.warn('[dal] sin legal de Supabase; mantiene su estado actual'); return false; }
   dalApplyLegal(data);
   if (!silent) {
     try { if (typeof renderLegal === 'function' && STATE.currentModule === 'legal') renderLegal(); } catch (e) {}
@@ -19358,13 +19100,13 @@ async function dalLoadPerfil() {
   } catch (e) { console.error('[dal] excepcion al leer perfil', e); return null; }
 }
 function dalApplyPerfil(profile) {
-  Object.assign(EMPRESA_PERFIL, profile);   // bloque sobre los valores actuales (igual que el camino de Firebase)
+  Object.assign(EMPRESA_PERFIL, profile);   // bloque sobre los valores actuales
   PERFIL_SOURCE = 'supabase';
 }
 async function dalBootPerfil(opts) {
   const silent = opts && opts.silent;
   const profile = await dalLoadPerfil();
-  if (!profile) { if (!silent) console.warn('[dal] sin perfil de Supabase; sigue desde Firebase'); return false; }
+  if (!profile) { if (!silent) console.warn('[dal] sin perfil de Supabase; mantiene su estado actual'); return false; }
   dalApplyPerfil(profile);
   if (!silent) {
     /* V10.5.1: notificación de boot de migración removida (obsoleta). */
@@ -19377,7 +19119,7 @@ async function dalBootPerfil(opts) {
    La identidad deja de simularse: currentUser() pasa a ser la persona cuyo
    correo coincide con el de la sesión de Supabase. La escritura descompone el
    modelo canónico en sus tablas relacionales y lo sincroniza a Supabase
-   (fuente de verdad); Firebase sigue recibiendo copia como red de seguridad.
+   (fuente de verdad); el respaldo es el airbag en localStorage.
    ════════════════════════════════════════════════════════════════════ */
 
 /* --- Identidad de la sesión --- */
@@ -19712,7 +19454,7 @@ async function dalGuardarContacto(c) {
     return { ok: true };
   } catch (e) {
     console.error('[dal] guardar contacto', c.id, e);
-    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: '«' + (c.nombre || c.id) + '» se guardó localmente (Firebase) pero no se pudo sincronizar todo con Supabase. Reintenta al editar.', duration: 7000 }); } catch (x) {}
+    try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: '«' + (c.nombre || c.id) + '» quedó en el respaldo local pero no se pudo sincronizar con Supabase. Reintenta al editar.', duration: 7000 }); } catch (x) {}
     return { ok: false, error: e };
   }
 }
@@ -19765,14 +19507,14 @@ async function dalBulkSyncBD(contactIds, companyIds) {
 /* Cierra una importación .xlsx en modo fusión sincronizando lo tocado a Supabase
    (si la fuente es Supabase). Avisa progreso y resultado. */
 async function dalFinishBulkImport(contactIds, companyIds) {
-  if (CONTACTS_SOURCE !== 'supabase') return;   // en Firebase, el autosave del blob basta
+  if (CONTACTS_SOURCE !== 'supabase') return;   // sin Supabase confirmado, basta el autosave local
   const nC = (contactIds || []).length, nE = (companyIds || []).length;
   if (!nC && !nE) return;
   try { showToast({ kind: 'info', title: 'Sincronizando con Supabase…', body: `Subiendo ${nC} contacto(s) y ${nE} empresa(s).`, duration: 4000 }); } catch (e) {}
   const res = await dalBulkSyncBD(contactIds, companyIds);
   if (res && !res.skipped) {
     if (res.fail > 0) {
-      try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: `${res.okC} contacto(s) y ${res.okE} empresa(s) en Supabase; ${res.fail} con problemas (quedaron en Firebase). Reintenta importando de nuevo o editando por ficha.`, duration: 8000 }); } catch (e) {}
+      try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: `${res.okC} contacto(s) y ${res.okE} empresa(s) en Supabase; ${res.fail} con problemas (quedaron solo en el respaldo local). Reintenta importando de nuevo o editando por ficha.`, duration: 8000 }); } catch (e) {}
     } else {
       try { showToast({ kind: 'success', title: 'BD sincronizada', body: `${res.okC} contacto(s) y ${res.okE} empresa(s) guardados en Supabase.` }); } catch (e) {}
     }
@@ -19942,38 +19684,15 @@ function _dalPerfilSaveSoon() {
    V9.2.0 — LECTURA Y FUSIÓN DE PROYECTOS (Tanda 3): Proyecto + Presupuesto
    Un proyecto vive a medias entre los dos backends: cabecera, finanzas y
    presupuesto vienen de Supabase; rodajes, locaciones, hoja de llamado,
-   cotización, tareas y señales siguen en Firebase (tandas futuras). Por eso
-   FUSIONAMOS las partes migradas sobre el proyecto de Firebase (emparejando
+   cotización, tareas y señales aún no se migran a sus tablas. Por eso
+   FUSIONAMOS las partes migradas sobre el proyecto en memoria (emparejando
    por id), sin tocar lo operativo. No destructivo: si un proyecto no está en
-   Supabase, queda 100% como en Firebase.
+   Supabase, queda 100% como estaba.
    ════════════════════════════════════════════════════════════════════ */
-let PROJECTS_SOURCE = 'firebase';
+let PROJECTS_SOURCE = 'pending';
 const DAL_KNOWN_PROJECT_IDS = new Set();
 
-/* ── V9.6.7 · Corte REVERSIBLE de la doble escritura (Gate A) ──────────────
-   Cuando el "modo Supabase única fuente" está activo, la app DEJA de escribir
-   el blob a Firebase (cloudPush se vuelve no-op) y deja de aplicar snapshots
-   remotos de Firebase (para que un blob viejo no pise datos buenos). Supabase
-   queda como única fuente. Es 100% reversible (un flag en localStorage; no se
-   borra NADA de Firebase). El autosave local (localStorage / airbag) sigue
-   funcionando como red de seguridad, independiente de Firebase.
-   Solo se puede ACTIVAR si todas las fuentes ya están en Supabase. */
-const SUPA_SOLE_KEY = 'takeos_supabase_sole_source';
-let SUPA_SOLE_SOURCE = (function(){ try { return window.localStorage.getItem(SUPA_SOLE_KEY) === '1'; } catch (e) { return false; } })();
-function _supaSole() { return SUPA_SOLE_SOURCE === true; }
-function _allSourcesSupabase() {
-  return CONTACTS_SOURCE === 'supabase' && LOCATIONS_SOURCE === 'supabase' &&
-         LEGAL_SOURCE === 'supabase' && PERFIL_SOURCE === 'supabase' && PROJECTS_SOURCE === 'supabase';
-}
-function _sourcesPendientes() {
-  const m = [];
-  if (CONTACTS_SOURCE !== 'supabase') m.push('Contactos/Empresas');
-  if (PROJECTS_SOURCE !== 'supabase') m.push('Proyectos');
-  if (LOCATIONS_SOURCE !== 'supabase') m.push('Locaciones');
-  if (LEGAL_SOURCE !== 'supabase') m.push('Legal');
-  if (PERFIL_SOURCE !== 'supabase') m.push('Perfil');
-  return m;
-}
+/* V10.6.0 · Flags SUPA_SOLE eliminados (Supabase es la única fuente, sin doble escritura). */
 
 function _dalNum(v) { return (v == null || v === '') ? null : Number(v); }
 
@@ -20004,7 +19723,7 @@ function _dalCotizacionPartes(p) {
   const pq = p.project_quotation || null;
   const offers = p.quotation_offers || [];
   const versions = p.quotation_versions || [];
-  if (!pq && !offers.length && !versions.length) return null;   // sin cotización en Supabase -> Firebase intacto
+  if (!pq && !offers.length && !versions.length) return null;   // sin cotización en Supabase -> estado actual intacto
   const meta = (pq && pq.meta) ? pq.meta : {};
   const ofertas = offers.slice().sort(function(a,b){ return (a.posicion||0)-(b.posicion||0); }).map(function(o){
     return {
@@ -20040,7 +19759,7 @@ function _dal1to1(v) { return Array.isArray(v) ? (v[0] || null) : (v || null); }
 
 /* Operaciones 4a (rodajes + plan de rodaje + hoja de llamado) desde Supabase.
    rodajes es relacional; plan de rodaje y hoja de llamado son documentos JSONB
-   que se devuelven completos. null si no hay nada -> Firebase queda intacto. */
+   que se devuelven completos. null si no hay nada -> estado actual intacto. */
 function _dalOperaciones4aPartes(p) {
   const dias = p.project_shoot_days || [];
   const plan = _dal1to1(p.project_shooting_plan);
@@ -20060,7 +19779,7 @@ function _dalOperaciones4aPartes(p) {
 }
 
 /* Operaciones 4b (locaciones del proyecto + crew + responsables + asistentes +
-   gastos operativos) desde Supabase. null si no hay nada -> Firebase intacto. */
+   gastos operativos) desde Supabase. null si no hay nada -> estado actual intacto. */
 function _dalOperaciones4bPartes(p) {
   const byPos = function(a,b){ return (a.posicion||0)-(b.posicion||0); };
   const locs   = p.project_locations || [];
@@ -20114,7 +19833,7 @@ function _dalOperaciones4bPartes(p) {
 
 /* Operaciones 4c (tareas + señales) desde Supabase. Las tareas traen sus
    comentarios y adjuntos anidados. Las señales guardan rolObjetivo en meta jsonb
-   (la columna no existe). null si no hay nada -> Firebase intacto. */
+   (la columna no existe). null si no hay nada -> estado actual intacto. */
 function _dalOperaciones4cPartes(p) {
   const byPos = function(a,b){ return (a.posicion||0)-(b.posicion||0); };
   const tasks = p.project_tasks || [];
@@ -20151,7 +19870,7 @@ function _dalOperaciones4cPartes(p) {
 /* V9.6.0 — Documentos (Tanda 4e). project_documents -> data.documentos.items[].
    El binario vive en Storage (archivo_path -> bucket documentos-proyecto); acá
    se reconstruye archivo:{nombre,path,size}. Documentos legados con base64 (que
-   nunca se migraron) siguen viniendo del blob de Firebase vía la fusión. */
+   nunca se migraron) se mantienen del estado actual vía la fusión. */
 function _dalDocumentosPartes(p) {
   const rows = p.project_documents || [];
   if (!rows.length) return null;
@@ -20223,7 +19942,7 @@ function _dalProyectoPartes(p) {
   };
 }
 
-/* Fusiona partes migradas (Supabase) sobre un proyecto, sin tocar lo operativo (Firebase). */
+/* Fusiona partes migradas (Supabase) sobre un proyecto, sin tocar lo operativo. */
 function _dalFusionarProyecto(target, partes) {
   if (!target.data) target.data = buildDefaultProjectData();
   target.state = partes.estado;
@@ -20262,7 +19981,7 @@ function _dalFusionarProyecto(target, partes) {
   if (partes.documentos && partes.documentos.items) {               // V9.6.0: Documentos (4e) desde Supabase
     d.documentos = { items: partes.documentos.items };
   }
-  // locaciones/tareas/senales/crewExtra/responsables/asistentes/crewExternos/gastosOp: intactos (Firebase). rodajes/planRodaje/hojaLlamado: desde Supabase (4a).
+  // locaciones/tareas/senales/crewExtra/responsables/asistentes/crewExternos/gastosOp: intactos (estado actual). rodajes/planRodaje/hojaLlamado: desde Supabase (4a).
 }
 
 async function dalLoadProyectos() {
@@ -20298,8 +20017,8 @@ async function dalLoadProyectos() {
 
 async function dalBootProyectos() {
   const rows = await dalLoadProyectos();
-  if (!rows) return;            // error o sin red -> Firebase intacto
-  if (!rows.length) return;     // sin proyectos migrados -> Firebase intacto (NO destructivo)
+  if (!rows) return;            // error o sin red -> estado actual intacto
+  if (!rows.length) return;     // sin proyectos migrados -> estado actual intacto (NO destructivo)
   let aplicados = 0;
   rows.forEach(function(p){
     const partes = _dalProyectoPartes(p);
@@ -20320,7 +20039,7 @@ async function dalBootProyectos() {
 /* ════════════════════════════════════════════════════════════════════
    V9.2.2 — ESCRITURA DE PROYECTOS (Tanda 3) vía RPC guardar_proyecto.
    Doble escritura durante la transición: el blob completo sigue yendo a
-   Firebase (red de seguridad) y, además, las partes migradas (cabecera +
+   el estado local y, además, las partes migradas (cabecera +
    asignaciones + finanzas + presupuesto + cotización) se mandan a Supabase
    en un payload que la RPC descompone en sus tablas (reemplazo total de
    filas hijas, atómico). El id del cliente se preserva como projects.id.
@@ -20537,7 +20256,7 @@ async function dalGuardarOperaciones4c(project) {
 /* V9.6.1 — Documentos (4e). Inverso exacto de _dalDocumentosPartes. Manda el
    ESTADO COMPLETO (la RPC borra+reinserta). Solo persiste la RUTA del archivo
    (archivo_path); un documento legado con base64 (sin path) viaja con path null
-   y conserva su binario en el blob de Firebase. */
+   y conserva su binario en el estado local. */
 function _dalOperaciones4ePayload(project) {
   const d = project.data || {};
   const items = ((d.documentos && d.documentos.items) || []).map(function(it){
@@ -20584,7 +20303,7 @@ async function dalFlushProyectos() {
     const okOps3 = await dalGuardarOperaciones4c(p);     // operaciones 4c: tareas+señales
     const okOps4 = await dalGuardarOperaciones4e(p);     // operaciones 4e: documentos (rutas; binario en Storage)
     if (okCore === false || okOps === false || okOps2 === false || okOps3 === false || okOps4 === false) {
-      try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: 'Se guardó local y en Firebase, pero falló la sincronización con la base relacional. Vuelve a guardar para reintentar.', duration: 6000 }); } catch (x) {}
+      try { showToast({ kind: 'warning', title: 'Sincronización parcial', body: 'Se guardó en el respaldo local, pero falló la sincronización con Supabase. Vuelve a guardar para reintentar.', duration: 6000 }); } catch (x) {}
     }
   }
 }
@@ -20597,28 +20316,13 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.5.3';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.7.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
-let _cloudDb = null;
-let _cloudReady = false;
-let _cloudApplying = false;          // evita re-push mientras aplicamos datos remotos
-let _cloudRemotePending = null;      // cambios remotos en espera (cuando el usuario está editando)
-const _cloudWriter = 'w-' + Math.random().toString(36).slice(2) + '-' + Date.now().toString(36);
-
-function cloudAvailable() { return false; }   // V10.0.0: Firebase retirado
-function cloudInit() { return false; }
-function cloudDocRef() { return null; }
-
-/* V10.0.0 · Firebase retirado (Gate A cerrado). Estas funciones quedan como
-   no-ops permanentes para no romper sus puntos de llamada; la persistencia es
-   100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag
-   en localStorage. No se carga el SDK ni se abre ningún listener. */
-function cloudPush() { /* no-op: Supabase es la única fuente */ }
-function cloudParse(data) { return null; }
-function cloudStartListener() { /* no-op */ }
-function cloudApplyRemote(obj) { /* no-op */ }
-function cloudCommitRemote(obj) { /* no-op */ }
-function cloudBoot(done) { try { done(true); } catch (e) {} }   // entra directo a la carga desde Supabase, sin Firebase
+/* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
+   100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
+   localStorage. No se carga ningún SDK ni se abre ningún listener. Solo se
+   conserva cloudGate (abajo), que es el LOGIN real con Supabase Auth: el nombre
+   es heredado y no implica ninguna otra dependencia externa. */
 
 /* Pantalla de LOGIN real (V9.3.0 · Supabase Auth con Google OAuth).
    - Si ya hay sesión iniciada (visita anterior O regreso desde Google), entra directo:
@@ -20720,10 +20424,208 @@ function updateThemeButton(theme) {
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   V10.7.0 · ESPACIO DE USUARIO (multi-organización) — primera integración
+   ─────────────────────────────────────────────────────────────────────
+   Tras el login, si la persona pertenece a MÁS DE UNA organización (o se
+   fuerza con ?espacio=1), se muestra su espacio personal para elegir a dónde
+   entrar. Si pertenece a una sola, entra directo (sin cambio para el equipo
+   actual de Primate). DEFENSIVO: ante cualquier error, arranca TakeOS normal.
+   Modo demostración: ?espacio=demo pinta la pantalla con datos ficticios
+   (Game of Thrones) para evaluar la estética integrada sin depender de datos.
+
+   PENDIENTE (ver handoff al BD Expert):
+   · Motor de organización activa (hoy ORG_ID está fijo en Primate Films).
+   · Modo externo: cargar SOLO el/los proyecto(s) invitados, no la org completa.
+   · Perfil personal del usuario (datos personales editables).
+   ════════════════════════════════════════════════════════════════════ */
+const PERFIL_NOMBRES = {1:'Administrador',2:'Ejecutivo',3:'Producción',4:'Asistencia de Producción',5:'Coordinación',6:'Creativo',7:'Invitado',8:'Finanzas'};
+
+function arrancarTakeOS() {
+  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
+}
+
+function _espIniciales(txt){
+  txt = String(txt||'').trim();
+  if (!txt) return 'U';
+  const base = txt.indexOf('@')>=0 ? txt.split('@')[0].replace(/[._-]+/g,' ') : txt;
+  const parts = base.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]||'')[0]||'' + (parts[1]?parts[1][0]:'')).toUpperCase().slice(0,2) || base.slice(0,2).toUpperCase();
+}
+function _espSello(nombre){
+  const parts = String(nombre||'').trim().split(/\s+/).filter(Boolean);
+  if (parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
+  return String(nombre||'··').slice(0,2).toUpperCase();
+}
+
+const ESPACIO_DEMO = {
+  _demo: true,
+  usuario: { nombre:'Tyrion Lannister', email:'tyrion@casterlyrock.cl', iniciales:'TL' },
+  internas: [
+    { nombre:'Casterly Rock Films', perfil:'Ejecutivo', sello:'CR', total:4, proyectos:['Spot Oro de Lannister','Doc · Las Lluvias de Castamere'] }
+  ],
+  externas: [
+    { nombre:'Winterfell Studios', sello:'WS', proyectos:[
+      { nombre:'The Long Night', tipo:'Largometraje', rol:'Coordinación', estado:'En rodaje', clase:'prod' } ] },
+    { nombre:'Dragonstone Pictures', sello:'DP', proyectos:[
+      { nombre:'Dracarys — Campaña Targaryen', tipo:'Comercial', rol:'Productor de Campo', estado:'Preproducción', clase:'prep' },
+      { nombre:'Fuego y Sangre', tipo:'Documental', rol:'Jefe de Producción', estado:'Postproducción', clase:'post' } ] },
+    { nombre:"King's Landing Media", sello:'KL', proyectos:[
+      { nombre:'Spot Trono de Hierro', tipo:'Comercial', rol:'Asistencia de Producción', estado:'Cotización', clase:'sale' } ] }
+  ]
+};
+
+function _espConstruir(rows, email){
+  const internas=[], externas=[];
+  (rows||[]).forEach(function(r){
+    const nombre = (r.organizations && r.organizations.nombre) || 'Organización';
+    if (r.tipo === 'externo') externas.push({ nombre:nombre, sello:_espSello(nombre), proyectos:[] });
+    else internas.push({ nombre:nombre, perfil:(PERFIL_NOMBRES[r.profile_id]||'—'), sello:_espSello(nombre), total:null, proyectos:[] });
+  });
+  return { _demo:false, usuario:{ nombre:(email? email.split('@')[0].replace(/[._-]+/g,' ') : 'tu cuenta'), email:(email||''), iniciales:_espIniciales(email||'U') }, internas:internas, externas:externas };
+}
+
+async function resolverEspacioYArrancar(){
+  const forzar = /[?&]espacio=1\b/.test(window.location.search);
+  const demo   = /[?&]espacio=demo\b/.test(window.location.search);
+  if (demo) { try { renderEspacioUsuario(ESPACIO_DEMO); return; } catch(e){ arrancarTakeOS(); return; } }
+  try {
+    const client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
+    if (!client) { arrancarTakeOS(); return; }
+    const ures = await client.auth.getUser();
+    const uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
+    const email = (ures && ures.data && ures.data.user) ? (ures.data.user.email||'') : '';
+    if (!uid) { arrancarTakeOS(); return; }
+    const res = await client.from('memberships')
+      .select('organization_id, tipo, profile_id, estado, organizations(nombre)')
+      .eq('user_id', uid).eq('estado','activo');
+    const rows = res && res.data ? res.data : null;
+    if (res.error || !rows || !rows.length) { arrancarTakeOS(); return; }
+    if (rows.length === 1 && !forzar) { arrancarTakeOS(); return; }   // una sola pertenencia: entra directo
+    renderEspacioUsuario(_espConstruir(rows, email));
+  } catch (e) {
+    arrancarTakeOS();   // ante cualquier problema, no bloqueamos el acceso
+  }
+}
+
+function _espEntrarInterna(demo){
+  if (demo){ try{ showToast({kind:'info',title:'Vista de demostración',body:'Aquí entrarías a la productora con tu rol. El motor multi-organización se conecta en la próxima versión.'}); }catch(e){} return; }
+  const ov=document.getElementById('espacioUsuario'); if(ov) ov.remove();
+  arrancarTakeOS();
+}
+function _espAbrirProyecto(){ try{ showToast({kind:'info',title:'En construcción',body:'El acceso directo a un proyecto como colaborador externo se habilita en una próxima versión.'}); }catch(e){} }
+function _espPerfil(){ try{ showToast({kind:'info',title:'Tu perfil',body:'La edición de tus datos personales (nombre, correo, celular, cuenta bancaria) llega en una próxima versión.'}); }catch(e){} }
+
+function renderEspacioUsuario(data){
+  try{
+    const demo = !!data._demo, u = data.usuario||{};
+    const internas = data.internas||[], externas = data.externas||[];
+    const intHTML = internas.map(function(o){ return `
+      <div class="esp-org">
+        <div class="esp-seal i">${o.sello||'··'}</div>
+        <div class="esp-f1">
+          <div class="nm">${o.nombre}</div>
+          <div class="esp-meta"><span class="esp-badge i">Interno</span><span class="esp-role">${o.perfil||'—'} · acceso completo</span></div>
+          ${(o.proyectos&&o.proyectos.length)?`<div class="esp-prev">${o.total?`<span class="esp-pill faint">${o.total} proyectos activos</span>`:''}${o.proyectos.map(function(p){return `<span class="esp-pill">${p}</span>`;}).join('')}</div>`:''}
+        </div>
+        <button class="esp-enter" onclick="_espEntrarInterna(${demo})">Entrar <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+      </div>`; }).join('');
+    const extHTML = externas.map(function(o){ return `
+      <div class="esp-grp">
+        <div class="esp-grp-h"><div class="esp-seal e sm">${o.sello||'··'}</div><div class="nm">${o.nombre}</div><span class="esp-badge e">Externo</span></div>
+        ${(o.proyectos&&o.proyectos.length)? o.proyectos.map(function(p){ return `
+          <div class="esp-proj" onclick="_espAbrirProyecto()">
+            <div class="esp-f1"><div class="pnm">${p.nombre}</div><div class="psub">${p.tipo||''}${p.tipo?' · ':''}invitado por ${o.nombre}</div></div>
+            <div class="prole"><span class="l">Tu rol</span>${p.rol||'—'}</div>
+            <span class="esp-chip ${p.clase||'sale'}">${p.estado||''}</span>
+            <span class="esp-go"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+          </div>`; }).join('') : `<div class="esp-empty">Verás aquí los proyectos a los que te inviten.</div>`}
+      </div>`; }).join('');
+    const ov = document.createElement('div'); ov.id='espacioUsuario';
+    ov.innerHTML = `<style>
+      #espacioUsuario{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
+      #espacioUsuario *{box-sizing:border-box;}
+      #espacioUsuario .esp-top{position:sticky;top:0;background:var(--bg-surface);border-bottom:1px solid var(--rule);}
+      #espacioUsuario .esp-top-in{max-width:920px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+      #espacioUsuario .esp-brand{display:flex;align-items:center;gap:10px;}
+      #espacioUsuario .esp-mark{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--ink-onAccent);display:grid;place-items:center;font-weight:700;font-size:16px;}
+      #espacioUsuario .esp-bname{font-weight:700;font-size:18px;letter-spacing:.01em;}
+      #espacioUsuario .esp-ver{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint);border:1px solid var(--rule);border-radius:5px;padding:2px 7px;}
+      #espacioUsuario .esp-acct{display:flex;align-items:center;gap:10px;cursor:pointer;}
+      #espacioUsuario .esp-acct .who{text-align:right;line-height:1.25;}
+      #espacioUsuario .esp-acct .who b{font-weight:600;font-size:14px;}
+      #espacioUsuario .esp-acct .who span{display:block;font-size:12px;color:var(--ink-faint);}
+      #espacioUsuario .esp-av{width:36px;height:36px;border-radius:50%;background:var(--bg-elevated);color:var(--ink-primary);display:grid;place-items:center;font-weight:600;font-size:14px;border:1px solid var(--rule-strong);text-transform:uppercase;}
+      #espacioUsuario .esp-wrap{max-width:920px;margin:0 auto;padding:34px 28px 70px;}
+      #espacioUsuario .esp-eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:8px;}
+      #espacioUsuario .esp-dot{width:7px;height:7px;border-radius:50%;}
+      #espacioUsuario .esp-dot.i{background:var(--accent);} #espacioUsuario .esp-dot.e{background:var(--info);}
+      #espacioUsuario .esp-h1{font-size:34px;font-weight:700;letter-spacing:.005em;margin:8px 0 6px;}
+      #espacioUsuario .esp-lede{color:var(--ink-secondary);margin:0 0 32px;max-width:60ch;}
+      #espacioUsuario .esp-sec{margin-bottom:30px;}
+      #espacioUsuario .esp-sec-h{margin-bottom:14px;}
+      #espacioUsuario .esp-hint{margin:5px 0 0;font-size:13px;color:var(--ink-faint);}
+      #espacioUsuario .esp-f1{flex:1;min-width:0;}
+      #espacioUsuario .esp-seal{flex:none;width:46px;height:46px;border-radius:11px;font-weight:700;font-size:18px;display:grid;place-items:center;}
+      #espacioUsuario .esp-seal.sm{width:34px;height:34px;border-radius:9px;font-size:14px;}
+      #espacioUsuario .esp-seal.i{background:var(--accent);color:var(--ink-onAccent);}
+      #espacioUsuario .esp-seal.e{background:transparent;color:var(--info);border:1.5px solid var(--info);}
+      #espacioUsuario .esp-org{display:flex;align-items:center;gap:18px;padding:18px 20px;background:var(--bg-card);border:1px solid var(--rule);border-top:3px solid var(--accent);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s;}
+      #espacioUsuario .esp-org:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+      #espacioUsuario .esp-org .nm{font-weight:700;font-size:20px;}
+      #espacioUsuario .esp-meta{display:flex;align-items:center;gap:10px;margin-top:3px;flex-wrap:wrap;}
+      #espacioUsuario .esp-badge{text-transform:uppercase;letter-spacing:.1em;font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:5px;}
+      #espacioUsuario .esp-badge.i{background:var(--accent-bg);color:var(--accent-deep);}
+      #espacioUsuario .esp-badge.e{background:var(--info-bg);color:var(--info);}
+      #espacioUsuario .esp-role{font-size:13px;color:var(--ink-secondary);}
+      #espacioUsuario .esp-prev{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap;}
+      #espacioUsuario .esp-pill{font-size:12px;color:var(--ink-secondary);background:var(--bg-elevated);border:1px solid var(--rule);border-radius:999px;padding:4px 11px;}
+      #espacioUsuario .esp-pill.faint{color:var(--ink-faint);}
+      #espacioUsuario .esp-enter{flex:none;display:flex;align-items:center;gap:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:13px;color:var(--accent-deep);border:none;background:transparent;cursor:pointer;padding-left:16px;border-left:1px solid var(--rule);align-self:stretch;}
+      #espacioUsuario .esp-enter svg{transition:transform .15s;} #espacioUsuario .esp-org:hover .esp-enter svg{transform:translateX(3px);}
+      #espacioUsuario .esp-grp{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:13px;}
+      #espacioUsuario .esp-grp-h{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--rule-soft);}
+      #espacioUsuario .esp-grp-h .nm{font-weight:700;font-size:16px;}
+      #espacioUsuario .esp-proj{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--rule-soft);cursor:pointer;transition:background .12s;}
+      #espacioUsuario .esp-proj:last-child{border-bottom:none;}
+      #espacioUsuario .esp-proj:hover{background:var(--bg-elevated);}
+      #espacioUsuario .esp-proj .pnm{font-weight:600;font-size:15px;}
+      #espacioUsuario .esp-proj .psub{font-size:12.5px;color:var(--ink-faint);margin-top:1px;}
+      #espacioUsuario .esp-proj .prole{flex:none;font-size:12.5px;color:var(--ink-secondary);text-align:right;min-width:140px;}
+      #espacioUsuario .esp-proj .prole .l{display:block;text-transform:uppercase;letter-spacing:.12em;font-size:9.5px;color:var(--ink-faint);}
+      #espacioUsuario .esp-chip{flex:none;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:4px 10px;border-radius:6px;color:#1a1a19;min-width:104px;text-align:center;}
+      #espacioUsuario .esp-chip.sale{background:var(--state-sale);} #espacioUsuario .esp-chip.prep{background:var(--state-prep);}
+      #espacioUsuario .esp-chip.prod{background:var(--state-prod);} #espacioUsuario .esp-chip.post{background:var(--state-post);}
+      #espacioUsuario .esp-go{flex:none;color:var(--ink-faint);} #espacioUsuario .esp-proj:hover .esp-go{color:var(--info);}
+      #espacioUsuario .esp-empty{padding:16px 18px;font-size:13px;color:var(--ink-faint);}
+      #espacioUsuario .esp-foot{margin-top:26px;font-size:12.5px;color:var(--ink-faint);border-top:1px dashed var(--rule);padding-top:15px;line-height:1.6;}
+      @media (max-width:680px){
+        #espacioUsuario .esp-top-in,#espacioUsuario .esp-wrap{padding-left:16px;padding-right:16px;}
+        #espacioUsuario .esp-h1{font-size:27px;}
+        #espacioUsuario .esp-org{flex-wrap:wrap;} #espacioUsuario .esp-enter{border-left:none;padding-left:0;margin-top:6px;}
+        #espacioUsuario .esp-proj{flex-wrap:wrap;} #espacioUsuario .esp-proj .prole{min-width:0;text-align:left;width:100%;} #espacioUsuario .esp-chip{min-width:0;}
+        #espacioUsuario .esp-acct .who{display:none;}
+      }
+    </style>
+      <div class="esp-top"><div class="esp-top-in">
+        <div class="esp-brand"><div class="esp-mark">T</div><span class="esp-bname">TakeOS</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
+        <div class="esp-acct" onclick="_espPerfil()"><div class="who"><b>${u.nombre||'tu cuenta'}</b><span>${u.email||''}</span></div><div class="esp-av">${u.iniciales||'U'}</div></div>
+      </div></div>
+      <div class="esp-wrap">
+        <div class="esp-eyebrow">Tu espacio</div>
+        <h1 class="esp-h1">Hola, ${String(u.nombre||'').split(' ')[0]||'de nuevo'}</h1>
+        <p class="esp-lede">Tus productoras y los proyectos donde colaboras, reunidos en un solo lugar. Entra a una productora para verla completa, o salta directo a un proyecto.</p>
+        ${internas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot i"></span>Tus productoras</div><p class="esp-hint">Eres parte del equipo. Entras con tu rol y ves todo lo de la productora.</p></div>${intHTML}</div>`:''}
+        ${externas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot e"></span>Proyectos donde colaboras</div><p class="esp-hint">Te invitaron a proyectos puntuales. Ves solo esos proyectos, no el resto de la productora.</p></div>${extHTML}</div>`:''}
+        <p class="esp-foot">El color cuenta la relación: <b style="color:var(--accent-deep)">terracota = interno</b> · <b style="color:var(--info)">azul = externo</b>.${demo?' Vista de demostración con datos ficticios.':''}</p>
+      </div>`;
+    document.body.appendChild(ov);
+  }catch(e){ try{ const o=document.getElementById('espacioUsuario'); if(o)o.remove(); }catch(_){ } arrancarTakeOS(); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   try { const _bv = document.getElementById('brandVer'); if (_bv) _bv.textContent = 'v' + String(TAKEOS_VERSION || '').replace(/^[vV]\.?/, ''); } catch (e) {}
   applyStoredTheme();   // V7.2: aplicar tema guardado antes de renderizar
-  try { _applySupaSoleIndicator(); } catch (e) {}   // V9.6.7: mostrar indicador si la doble escritura quedó cortada
   renderMetrics();
   renderKanban();
   setupTooltipListeners();
@@ -20735,11 +20637,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Airbag adicional: autoguardar al cerrar/recargar.
   window.addEventListener('beforeunload', () => { if (STATE.dirty) autosaveNow(); });
 
-  // V10.0.0 · Gate A cerrado: Firebase retirado. El login es Supabase Auth
-  // (cloudGate) y la carga de datos es 100% Supabase (cadena dal*).
-  cloudGate(() => {
-    dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
-  });
+  // Gate A cerrado: el login es Supabase Auth (cloudGate) y la carga es 100% Supabase.
+  // V10.7.0: tras el login pasamos por el espacio de usuario (multi-organización),
+  // que decide si mostrar la pantalla de elección o entrar directo (equipo actual).
+  cloudGate(() => { resolverEspacioYArrancar(); });
 });
 
 </script>
