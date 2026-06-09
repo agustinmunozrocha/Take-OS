@@ -2543,6 +2543,20 @@ tr.row-drop-after > td { box-shadow: inset 0 -2px 0 var(--accent, #B03A2F); }
 .he-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
 .he-tab { flex: 1; padding: 7px 10px; border: 1px solid var(--rule); background: var(--bg-surface-soft); color: var(--ink-secondary); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .he-tab.is-on { border-color: var(--accent); color: var(--accent); background: var(--bg-surface); }
+/* V10.5.0 · Horas Extra: celda con spinner + costo + ⚙, y toggle del modal */
+.he-cell-wrap { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; width: 100%; }
+.he-horas-input { width: 46px; min-width: 38px; padding: 3px 4px; border: 1px solid var(--rule); border-radius: 6px; background: var(--bg-surface); color: var(--ink-primary); font-size: 12px; text-align: right; font-family: inherit; }
+.he-horas-input:disabled, .he-horas-input.is-disabled { opacity: .45; cursor: not-allowed; }
+.he-cost { font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.he-cost.he-on { color: var(--accent); font-weight: 600; }
+.he-cost.zero { color: var(--ink-faint); font-weight: 400; }
+.he-cog { border: none; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 13px; line-height: 1; padding: 2px; border-radius: 5px; flex-shrink: 0; }
+.he-cog:hover { color: var(--accent); background: var(--bg-surface-soft); }
+.he-cog.is-override { color: var(--accent); }
+.he-head-cog { border: none; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 12px; line-height: 1; padding: 0 2px; margin-left: 3px; border-radius: 4px; }
+.he-head-cog:hover { color: var(--accent); }
+.he-usa-proyecto { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink-secondary); margin-bottom: 12px; cursor: pointer; line-height: 1.4; }
+.he-usa-proyecto input { margin-top: 2px; flex-shrink: 0; }
 /* V10.4.0 (Gate B) · modo solo-lectura por módulo */
 .mod-readonly input, .mod-readonly textarea, .mod-readonly select { pointer-events: none; opacity: 0.9; }
 .mod-readonly .row-add, .mod-readonly .row-delete, .mod-readonly .btn-primary, .mod-readonly .calc-trigger, .mod-readonly .row-note-btn, .mod-readonly .subdept-ctl { pointer-events: none; opacity: 0.45; }
@@ -5317,6 +5331,7 @@ function buildDefaultProjectData() {
     finanzas: {
       presupuestoCliente: 0,
       gastosAdminPct: 0.05,
+      heRecargoPct: 150,   // V10.5.0: recargo HE por defecto del proyecto (Biblia §3.4.2)
       frozen: null,  // V5.11 (Nota 3): {admin, riesgos[]} congelados al aprobar
       comisiones: [
         { label: 'Comisión',   mode: 'pct', value: 0 },
@@ -9089,11 +9104,31 @@ function deleteProjectFlow(id) {
       </div>
     </div>`;
 }
-function confirmDeleteProject(id) {
+async function confirmDeleteProject(id) {
   const i = PROJECTS.findIndex(p => p.id === id);
   if (i === -1) { closeModal(); return; }
   const proj = PROJECTS[i];
   const name = proj.name;
+  // V10.5.0 (fix BD Expert): persistir el borrado en Supabase ANTES de sacarlo
+  // de memoria. Sin esto el proyecto seguía con deleted_at = NULL y reaparecía
+  // al recargar. Es un UPDATE puntual (no RPC, no reemplazo de estado completo).
+  // Si el UPDATE falla, NO se saca de memoria.
+  if (sb && PROJECTS_SOURCE === 'supabase' && DAL_KNOWN_PROJECT_IDS.has(id)) {
+    const btn = document.getElementById('delConfirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Eliminando…'; }
+    try {
+      const now = new Date().toISOString();
+      const { error } = await sb.from('projects')
+        .update({ deleted_at: now, updated_at: now })
+        .eq('id', id).eq('organization_id', ORG_ID);
+      if (error) throw error;
+    } catch (e) {
+      console.error('[delete] no se pudo marcar deleted_at en Supabase:', e);
+      if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+      showToast({ kind: 'warning', title: 'No se pudo eliminar', body: 'No se pudo escribir el borrado en Supabase. El proyecto NO se eliminó. Revisa la conexión e inténtalo de nuevo.' });
+      return;   // no sacar de memoria
+    }
+  }
   proj._deletedAt = new Date().toISOString();
   proj._deletedState = proj.state;  // recordamos el estado para restaurar
   TRASH.unshift(proj);              // V5.10 (Respuesta 1): a la papelera, no se destruye
@@ -9136,10 +9171,26 @@ function openTrash() {
       </div>
     </div>`;
 }
-function restoreFromTrash(id) {
+async function restoreFromTrash(id) {
   const i = TRASH.findIndex(p => p.id === id);
   if (i === -1) return;
   const proj = TRASH[i];
+  // V10.5.0: contraparte del fix de borrado. El load filtra deleted_at IS NULL,
+  // así que restaurar debe LIMPIAR deleted_at en Supabase ANTES de devolver el
+  // proyecto a memoria; si no, la restauración no sobrevive a una recarga.
+  // Si el UPDATE falla, el proyecto se queda en la papelera.
+  if (sb && PROJECTS_SOURCE === 'supabase' && DAL_KNOWN_PROJECT_IDS.has(id)) {
+    try {
+      const { error } = await sb.from('projects')
+        .update({ deleted_at: null, updated_at: new Date().toISOString() })
+        .eq('id', id).eq('organization_id', ORG_ID);
+      if (error) throw error;
+    } catch (e) {
+      console.error('[restore] no se pudo limpiar deleted_at en Supabase:', e);
+      showToast({ kind: 'warning', title: 'No se pudo restaurar', body: 'No se pudo limpiar el borrado en Supabase. El proyecto sigue en la papelera. Revisa la conexión e inténtalo de nuevo.' });
+      return;   // no devolver a memoria
+    }
+  }
   if (proj._deletedState) proj.state = proj._deletedState;
   delete proj._deletedAt; delete proj._deletedState;
   TRASH.splice(i, 1);
@@ -10024,7 +10075,7 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
           ${_budgetSortTh('Costo cotizado', sectionKey, dept, 'costoCotizado', 'num', '', '')}
           ${showReal ? _budgetSortTh('Costo real ', sectionKey, dept, 'costoReal', 'num', '', _costoRealTip) : ''}
           ${showReal ? '<th style="width: 11%;">DTE real <span class="tt" data-tip="Documento tributario realmente emitido por el proveedor. Por defecto coincide con el DTE cotizado. Cambiarlo NO altera el cotizado (congelado al aprobar); es declarativo, para pagos y trazabilidad.">?</span></th>' : ''}
-          ${showReal ? _budgetSortTh('Horas extra ', sectionKey, dept, 'horaExtra', 'num', '', '<span class="tt" data-tip="Horas extra de la fila como costo empresa (ya con la conversión por DTE real). Doble clic para calcularlas: modo Tarifa plana (monto fijo) o Fórmula (150% del valor hora × N° horas). Se suma al Costo de Producción real, aparte del costo base.">?</span>') : ''}
+          ${showReal ? _budgetSortTh('Horas extra ', sectionKey, dept, 'horaExtra', 'num', '', '<span class="tt" data-tip="Horas extra de la fila como costo empresa (ya con la conversión por DTE). Ingresa el N° de horas en la celda; la HE usa el valor hora (valor de la fila ÷ 10) y el recargo del proyecto. El ⚙ de la fila permite tarifa plana o fórmula propia; este ⚙ fija el recargo por defecto del proyecto. Se suma al Costo de Producción real, aparte del costo base.">?</span><button type="button" class="he-head-cog" title="Fijar el recargo por defecto de las horas extra del proyecto" onclick="event.stopPropagation(); openHeProyectoDefault();">⚙</button>') : ''}
           ${confHeaderHTML}
           <th style="width: 32px;"></th>
         </tr>
@@ -10077,6 +10128,11 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   }
   const disabledAttr = locked ? 'disabled' : '';
   const readonlyAttr = locked ? 'readonly' : '';
+  // V10.5.0: estado de Horas Extra de la fila (heConfig persistido).
+  const heCfg = item.heConfig || null;
+  const hePlana = !!(heCfg && heCfg.usaProyecto === false && heCfg.modo === 'plana');
+  const heOverride = !!(heCfg && heCfg.usaProyecto === false);
+  const heHoras = (heCfg && Number(heCfg.horas) > 0) ? heCfg.horas : '';
   const dteRealVal = (item.dteReal !== undefined && item.dteReal !== null) ? item.dteReal : (item.dte || '');
 
   return `
@@ -10161,8 +10217,15 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
             ).join('')}
           </select>
         </td>
-        <td class="num" ondblclick="openHorasExtraCalc(${ref})" title="Doble clic para calcular o ingresar las horas extra (costo empresa, con el DTE real de la fila)">
-          <span class="cost-cell ${item.horaExtra ? 'he-on' : 'zero'}" data-he-cell>${item.horaExtra ? fmtMoney(item.horaExtra) : '—'}</span>
+        <td class="num">
+          <div class="he-cell-wrap">
+            <input type="number" step="0.5" min="0" class="he-horas-input ${hePlana ? 'is-disabled' : ''}"
+                   value="${heHoras}" placeholder="0" ${hePlana ? 'disabled' : ''}
+                   title="N° de horas extra. La HE se calcula con el valor hora (valor de la fila ÷ 10) y el recargo del proyecto. Usa el ⚙ para una tarifa plana o una fórmula propia."
+                   onchange="setHeHoras(${ref}, this.value)">
+            <span class="he-cost ${item.horaExtra ? 'he-on' : 'zero'}" data-he-cell>${item.horaExtra ? fmtMoney(item.horaExtra) : '—'}</span>
+            <button type="button" class="he-cog ${heOverride ? 'is-override' : ''}" title="Ajustar las horas extra de esta fila (tarifa plana, fórmula propia, IVA)" onclick="openHorasExtraCalc(${ref})">⚙</button>
+          </div>
         </td>
       ` : ''}
       ${showConfirmado ? `<td class="ctr">
@@ -10459,6 +10522,19 @@ function afterRowChange(sectionKey, dept, idx) {
     }
   }
 
+  // V10.5.0: la HE de las filas que usan el cálculo del proyecto depende del
+  // valor (valor ÷ 10) y del DTE efectivo de la fila. Al editar valor/DTE,
+  // recomputar el cache (item.horaExtra) y refrescar la celda. Las filas con
+  // override propio (tarifa plana / fórmula con valor hora fijo) no se tocan.
+  if (item.heConfig && item.heConfig.usaProyecto !== false) {
+    item.horaExtra = _heComputeCosto(item.heConfig, item) || null;
+  }
+  const heCostEl = rowEl.querySelector('[data-he-cell]');
+  if (heCostEl) {
+    heCostEl.className = 'he-cost ' + (item.horaExtra ? 'he-on' : 'zero');
+    heCostEl.textContent = item.horaExtra ? fmtMoney(item.horaExtra) : '—';
+  }
+
   // Recalcular totales del subdepto / depto
   if (sectionKey === 'servicios') {
     recalcSubdeptTotals(dept);
@@ -10467,6 +10543,9 @@ function afterRowChange(sectionKey, dept, idx) {
   recalcKPIs();
   recalcAlerts();
   renderHeadcountPanel();  // V5.9 (Nota 4)
+  // V10.5.0: si la fila tiene HE, el Resumen financiero incluye su línea de
+  // horas extra (nivel proyecto); refrescarlo para que no quede desfasado.
+  if (item.heConfig) renderSummaryFin();
 }
 
 function afterRowConfirmToggle(sectionKey, dept, idx) {
@@ -16911,18 +16990,30 @@ function _crcConfirm() {
   afterRowChange(st.sectionKey, st.dept, st.idx);
 }
 
-/* ─── V10.3.0 (#4) · CALCULADORA DE HORAS EXTRA ──────────────────────────
-   Dos modos:
-   · Tarifa plana: monto fijo de HE (lo que el productor decide pagar; la
-     Biblia dice que la HE es flexible y a criterio del productor).
-   · Fórmula (Biblia 3.4.2): hora extra = recargo% × valor hora × N° horas.
-     valor hora sugerido = valor jornada / 10 (jornada = 10 h de trabajo);
-     para roles de preproducción se usa un "valor jornal" designado en vez de
-     la tarifa plana. El recargo es editable (default 150%).
-   El resultado (líquido al proveedor) se convierte a COSTO EMPRESA con el DTE
-   real de la fila, con el MISMO primitivo que Costo Real (boleta: líquido /
-   factor de retención; factura+IVA: monto / (1+IVA); resto: tal cual). Se
-   guarda en item.horaExtra y se suma al total real, aparte del costo base. */
+/* ─── V10.5.0 (#3/#4) · HORAS EXTRA PERSISTENTES ─────────────────────────
+   Rediseño de Horas Extra con persistencia real (BD Expert: columna jsonb
+   budget_line_items.he_config + project_financials.he_recargo_default).
+
+   Modelo por fila (item.heConfig, jsonb; null = sin HE):
+     { horas, usaProyecto, modo('formula'|'plana'), montoPlano, recargo,
+       valorHora, incluyeIVA }
+   · usaProyecto=true  -> la fila usa el cálculo por defecto del proyecto:
+       valor hora = valor de la fila / 10 (jornada = 10 h, Biblia §3.4.2),
+       recargo = finanzas.heRecargoPct (default 150%), DTE efectivo de la fila.
+   · usaProyecto=false -> override por fila:
+       modo 'formula' -> recargo y/o valor hora propios × N° horas;
+       modo 'plana'   -> monto fijo (a criterio del productor; ignora horas).
+   El líquido resultante se convierte a COSTO EMPRESA con el MISMO primitivo
+   tributario que Costo Real (boleta: líquido / factor; factura+IVA: monto /
+   (1+IVA); resto: tal cual). El costo empresa se cachea en item.horaExtra
+   (columna hora_extra) para totales y export. La celda tiene un spinner de
+   horas (0,5) + costo + ⚙ (override); el encabezado tiene un ⚙ que fija el
+   recargo por defecto del proyecto. La HE se suma al Costo de Producción real
+   aparte del costo base. Solo lado real; el cotizado no la incluye.
+
+   DTE EFECTIVO: se usa item.dteReal || item.dte (no solo dteReal). Como dteReal
+   no persiste (gap conocido Tanda 3), caer al DTE cotizado —que SÍ persiste—
+   hace que el cache de HE sobreviva correctamente a una recarga. */
 function _heCostoEmpresa(liquido, dte, incluyeIVA) {
   const m = Number(liquido) || 0;
   if (!m) return 0;
@@ -16930,29 +17021,122 @@ function _heCostoEmpresa(liquido, dte, incluyeIVA) {
   if (dte === 'factura' && incluyeIVA) return Math.round(m / (1 + IVA));          // con IVA -> neto
   return Math.round(m);                                                          // neto/exenta/sin dte
 }
-function _heLiquido() {
-  const st = window._hec || {};
-  if (st.modo === 'plana') return Number(st.montoPlano) || 0;
-  const base = Number(st.baseHora) || 0;
-  const rec = Number(st.recargo);
-  const recF = (isNaN(rec) ? 150 : rec) / 100;
-  const horas = Number(st.nHoras) || 0;
-  return Math.round(base * recF * horas);
+/* ─── Primitivos puros de HE ──────────────────────────────────────────── */
+function _heDefaultConfig() {
+  return { horas: 0, usaProyecto: true, modo: 'formula', montoPlano: 0, recargo: null, valorHora: null, incluyeIVA: false };
 }
+function _heProjRecargo() {
+  const f = (STATE.currentProject && STATE.currentProject.data && STATE.currentProject.data.finanzas) || {};
+  const v = Number(f.heRecargoPct);
+  return (isNaN(v) || v < 0) ? 150 : v;
+}
+function _heEffDte(item) {
+  // DTE efectivo: DTE real si está, si no el cotizado (que sí persiste).
+  return (item && (item.dteReal || item.dte)) || null;
+}
+function _heValorHoraDefault(item) {
+  // Biblia §3.4.2: jornada = 10 h -> valor hora = valor jornada / 10.
+  if (item && item.unidad === 'Jornadas' && item.valor) return Math.round(Number(item.valor) / 10);
+  return 0;
+}
+function _heResolveLiquido(cfg, item) {
+  if (!cfg) return 0;
+  const override = (cfg.usaProyecto === false);
+  if (override && cfg.modo === 'plana') return Number(cfg.montoPlano) || 0;
+  const horas = Number(cfg.horas) || 0;
+  if (horas <= 0) return 0;
+  const vh = override
+    ? ((cfg.valorHora != null && Number(cfg.valorHora) > 0) ? Number(cfg.valorHora) : _heValorHoraDefault(item))
+    : _heValorHoraDefault(item);
+  const rec = override
+    ? ((cfg.recargo != null && !isNaN(Number(cfg.recargo))) ? Number(cfg.recargo) : _heProjRecargo())
+    : _heProjRecargo();
+  return Math.round((Number(vh) || 0) * (rec / 100) * horas);
+}
+function _heComputeCosto(cfg, item) {
+  if (!cfg) return 0;
+  const liquido = _heResolveLiquido(cfg, item);
+  if (!liquido) return 0;
+  return _heCostoEmpresa(liquido, _heEffDte(item), !!cfg.incluyeIVA);
+}
+function _heRecalcProjectRows() {
+  // Tras cambiar el recargo por defecto: recalcula solo las filas que usan
+  // el cálculo del proyecto (las override mantienen su valor).
+  const d = STATE.currentProject && STATE.currentProject.data;
+  if (!d) return;
+  const recalc = (item) => { const c = item.heConfig; if (c && c.usaProyecto !== false) item.horaExtra = _heComputeCosto(c, item) || null; };
+  for (const dept in d.servicios) (d.servicios[dept] || []).forEach(recalc);
+  ['gastos', 'equipos', 'talentos'].forEach(sk => (d[sk] || []).forEach(recalc));
+}
+function _heRefreshAll(sectionKey) {
+  if (sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(sectionKey);
+  recalcAllDeptSummaries();
+  renderSummaryFin();
+  recalcKPIs();
+}
+
+/* ─── Celda: spinner de horas ─────────────────────────────────────────── */
+function setHeHoras(sectionKey, dept, idx, raw) {
+  const item = _rowNoteItem(sectionKey, dept, idx);
+  if (!item) return;
+  let horas = parseFloat(raw);
+  if (isNaN(horas) || horas < 0) horas = 0;
+  let cfg = item.heConfig;
+  if (!cfg) {
+    if (horas <= 0) { _heRefreshAll(sectionKey); return; }   // nada que configurar
+    cfg = _heDefaultConfig();                                 // arranca con el cálculo del proyecto
+  }
+  cfg.horas = horas;
+  const esPlana = (cfg.usaProyecto === false && cfg.modo === 'plana');
+  if (!esPlana && horas <= 0) {
+    item.heConfig = null;          // sin horas y por fórmula -> sin HE
+    item.horaExtra = null;
+  } else {
+    item.heConfig = cfg;
+    item.horaExtra = _heComputeCosto(cfg, item) || null;
+  }
+  markDirty();
+  _heRefreshAll(sectionKey);
+}
+
+/* ─── Modal de override por fila ──────────────────────────────────────── */
 function openHorasExtraCalc(sectionKey, dept, idx) {
   const item = _rowNoteItem(sectionKey, dept, idx);
   if (!item) return;
-  const dte = item.dteReal || null;
-  const esJornadas = (item.unidad === 'Jornadas');
-  const baseSugerida = (esJornadas && item.valor) ? Math.round(Number(item.valor) / 10) : '';   // Biblia: valor/10
-  window._hec = { sectionKey: sectionKey, dept: dept, idx: idx, dte: dte, modo: 'formula', baseHora: baseSugerida, recargo: 150, nHoras: '', montoPlano: '', incluyeIVA: false };
+  const cfg = item.heConfig || _heDefaultConfig();
+  const vhDef = _heValorHoraDefault(item);
+  window._hec = {
+    sectionKey: sectionKey, dept: dept, idx: idx,
+    dte: _heEffDte(item),
+    usaProyecto: (cfg.usaProyecto !== false),
+    modo: (cfg.modo === 'plana' ? 'plana' : 'formula'),
+    horas: (Number(cfg.horas) || 0),
+    valorHora: (cfg.valorHora != null && cfg.valorHora !== '' ? cfg.valorHora : vhDef),
+    recargo: (cfg.recargo != null && cfg.recargo !== '' ? cfg.recargo : _heProjRecargo()),
+    montoPlano: (cfg.montoPlano != null && cfg.montoPlano !== '' ? cfg.montoPlano : ''),
+    incluyeIVA: !!cfg.incluyeIVA,
+    valorHoraDefault: vhDef,
+    projRecargo: _heProjRecargo(),
+    esJornadas: (item.unidad === 'Jornadas')
+  };
   renderHorasExtraCalc();
 }
+function _hecSetUsaProyecto(v) { if (window._hec) { window._hec.usaProyecto = !!v; renderHorasExtraCalc(); } }
 function _hecSetModo(modo) { if (window._hec) { window._hec.modo = modo; renderHorasExtraCalc(); } }
+function _hecLiquido() {
+  const st = window._hec; if (!st) return 0;
+  if (!st.usaProyecto && st.modo === 'plana') return Number(st.montoPlano) || 0;
+  const horas = Number(st.horas) || 0;
+  if (horas <= 0) return 0;
+  const vh = st.usaProyecto ? st.valorHoraDefault : ((Number(st.valorHora) > 0) ? Number(st.valorHora) : st.valorHoraDefault);
+  const rec = st.usaProyecto ? st.projRecargo : ((st.recargo != null && st.recargo !== '' && !isNaN(Number(st.recargo))) ? Number(st.recargo) : st.projRecargo);
+  return Math.round((Number(vh) || 0) * (rec / 100) * horas);
+}
+function _hecCosto() { const st = window._hec; if (!st) return 0; return _heCostoEmpresa(_hecLiquido(), st.dte, st.incluyeIVA); }
 function _hecOutHTML() {
   const st = window._hec; if (!st) return '';
-  const liquido = _heLiquido();
-  const costo = _heCostoEmpresa(liquido, st.dte, st.incluyeIVA);
+  const liquido = _hecLiquido();
+  const costo = _hecCosto();
   const conReten = dteTieneRetencion(st.dte);
   const esFacturaIVA = (st.dte === 'factura');
   let extra = '';
@@ -16966,42 +17150,59 @@ function renderHorasExtraCalc() {
   const item = _rowNoteItem(st.sectionKey, st.dept, st.idx) || {};
   const quien = item.nombre || item.rol || item.item || 'esta fila';
   const esFacturaIVA = (st.dte === 'factura');
-  const esJornadas = (item.unidad === 'Jornadas');
   const actual = (item.horaExtra != null && item.horaExtra !== '') ? item.horaExtra : null;
 
-  const tabs = `
-    <div class="he-tabs">
-      <button type="button" class="he-tab ${st.modo === 'formula' ? 'is-on' : ''}" onclick="_hecSetModo('formula')">Fórmula</button>
-      <button type="button" class="he-tab ${st.modo === 'plana' ? 'is-on' : ''}" onclick="_hecSetModo('plana')">Tarifa plana</button>
-    </div>`;
+  // Toggle: usar el cálculo del proyecto
+  const usaToggle = `
+    <label class="he-usa-proyecto">
+      <input type="checkbox" ${st.usaProyecto ? 'checked' : ''} onchange="_hecSetUsaProyecto(this.checked)">
+      <span>Usar el cálculo por defecto del proyecto <span style="color:var(--ink-faint);font-weight:400;">(recargo ${st.projRecargo}% · valor hora = valor de la fila ÷ 10)</span></span>
+    </label>`;
 
-  let inputs;
-  if (st.modo === 'formula') {
-    inputs = `
+  let cuerpo;
+  if (st.usaProyecto) {
+    cuerpo = `
       <div class="field">
-        <label class="field-label">Valor de la hora ${esJornadas ? '<span style="color:var(--ink-faint);font-weight:400;">(sugerido: valor jornada ÷ 10)</span>' : '<span style="color:var(--ink-faint);font-weight:400;">(valor jornal designado)</span>'}</label>
-        <input type="text" inputmode="numeric" class="input num" value="${st.baseHora !== '' ? displayMoneyInputValue(st.baseHora) : ''}" placeholder="0"
-               oninput="window._hec.baseHora = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+        <label class="field-label">N° de horas extra</label>
+        <input type="number" step="0.5" min="0" class="input num" value="${st.horas || ''}" placeholder="0"
+               oninput="window._hec.horas = parseFloat(this.value) || 0; _hecUpdateOut();">
       </div>
-      <div style="display:flex;gap:10px;">
-        <div class="field" style="flex:1;">
-          <label class="field-label">Recargo %</label>
-          <input type="number" step="1" min="0" class="input num" value="${st.recargo}" placeholder="150"
-                 oninput="window._hec.recargo = (this.value === '' ? 150 : parseFloat(this.value)); _hecUpdateOut();">
-        </div>
-        <div class="field" style="flex:1;">
-          <label class="field-label">N° de horas extra</label>
-          <input type="number" step="0.5" min="0" class="input num" value="${st.nHoras}" placeholder="0"
-                 oninput="window._hec.nHoras = parseFloat(this.value) || 0; _hecUpdateOut();">
-        </div>
-      </div>`;
+      <div class="calc-note">Valor de la hora sugerido: <strong>${st.valorHoraDefault ? fmtMoney(st.valorHoraDefault) : '—'}</strong>${st.esJornadas ? '' : ' <span style="color:var(--warning);">(la unidad de la fila no es «Jornadas»; ingresa un valor hora propio desacoplando del proyecto)</span>'} · Recargo del proyecto: <strong>${st.projRecargo}%</strong>. Para fijar el recargo por defecto usa el ⚙ del encabezado «Horas extra».</div>`;
   } else {
-    inputs = `
-      <div class="field">
-        <label class="field-label">Monto de horas extra ${dteTieneRetencion(st.dte) ? '(líquido que recibe el proveedor)' : (esFacturaIVA ? '(monto de la factura)' : '')}</label>
-        <input type="text" inputmode="numeric" class="input num" value="${st.montoPlano !== '' ? displayMoneyInputValue(st.montoPlano) : ''}" placeholder="0"
-               oninput="window._hec.montoPlano = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+    const tabs = `
+      <div class="he-tabs">
+        <button type="button" class="he-tab ${st.modo === 'formula' ? 'is-on' : ''}" onclick="_hecSetModo('formula')">Fórmula propia</button>
+        <button type="button" class="he-tab ${st.modo === 'plana' ? 'is-on' : ''}" onclick="_hecSetModo('plana')">Tarifa plana</button>
       </div>`;
+    let inputs;
+    if (st.modo === 'formula') {
+      inputs = `
+        <div class="field">
+          <label class="field-label">Valor de la hora <span style="color:var(--ink-faint);font-weight:400;">${st.esJornadas ? '(sugerido: valor de la fila ÷ 10)' : '(valor jornal designado)'}</span></label>
+          <input type="text" inputmode="numeric" class="input num" value="${(st.valorHora !== '' && st.valorHora != null) ? displayMoneyInputValue(st.valorHora) : ''}" placeholder="${st.valorHoraDefault || 0}"
+                 oninput="window._hec.valorHora = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;">
+            <label class="field-label">Recargo %</label>
+            <input type="number" step="1" min="0" class="input num" value="${st.recargo}" placeholder="${st.projRecargo}"
+                   oninput="window._hec.recargo = (this.value === '' ? '' : parseFloat(this.value)); _hecUpdateOut();">
+          </div>
+          <div class="field" style="flex:1;">
+            <label class="field-label">N° de horas extra</label>
+            <input type="number" step="0.5" min="0" class="input num" value="${st.horas || ''}" placeholder="0"
+                   oninput="window._hec.horas = parseFloat(this.value) || 0; _hecUpdateOut();">
+          </div>
+        </div>`;
+    } else {
+      inputs = `
+        <div class="field">
+          <label class="field-label">Monto de horas extra ${dteTieneRetencion(st.dte) ? '(líquido que recibe el proveedor)' : (esFacturaIVA ? '(monto de la factura)' : '')}</label>
+          <input type="text" inputmode="numeric" class="input num" value="${(st.montoPlano !== '' && st.montoPlano != null) ? displayMoneyInputValue(st.montoPlano) : ''}" placeholder="0"
+                 oninput="window._hec.montoPlano = parseMoneyCLP(this.value) || 0; _hecUpdateOut();">
+        </div>`;
+    }
+    cuerpo = tabs + inputs;
   }
 
   const ivaToggle = esFacturaIVA ? `
@@ -17010,51 +17211,116 @@ function renderHorasExtraCalc() {
       El monto incluye IVA (se descuenta para el costo empresa)
     </label>` : '';
 
-  const sinDte = !st.dte ? `<div class="calc-note" style="color:var(--warning);">Esta fila no tiene DTE real. El monto se usa tal cual. Para la conversión con retención o IVA, selecciona primero el DTE real de la fila.</div>` : '';
+  const sinDte = !st.dte ? `<div class="calc-note" style="color:var(--warning);">Esta fila no tiene DTE (ni real ni cotizado). El monto se usa tal cual. Para la conversión con retención o IVA, selecciona primero el DTE de la fila.</div>` : '';
 
   document.getElementById('modalRoot').innerHTML = `
     <div class="modal-backdrop" onclick="closeModal()">
       <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
         <div class="modal-header">
           <div class="modal-title">Horas extra · ${escapeHtml(quien)}</div>
-          <div style="font-size: 12px; color: var(--ink-muted); margin-top:4px;">DTE real: <strong>${escapeHtml(_crcDteLabel(st.dte))}</strong> <span style="opacity:.7;">(fijo — se toma de la fila)</span>${actual != null ? ` · HE actual: <strong>${fmtMoney(actual)}</strong>` : ''}</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top:4px;">DTE: <strong>${escapeHtml(_crcDteLabel(st.dte))}</strong> <span style="opacity:.7;">(se toma de la fila)</span>${actual != null ? ` · HE actual: <strong>${fmtMoney(actual)}</strong>` : ''}</div>
         </div>
         <div class="calc-body">
-          ${tabs}
-          ${inputs}
+          ${usaToggle}
+          ${cuerpo}
           ${ivaToggle}
           <div class="calc-output" id="hecOutput">${_hecOutHTML()}</div>
           ${sinDte}
-          <div class="calc-note">Se guardará el <strong>costo empresa</strong> de las horas extra. Se suma al Costo de Producción real, aparte del costo base.</div>
+          <div class="calc-note">Se guarda el <strong>costo empresa</strong> de las horas extra (cache) más la configuración. Se suma al Costo de Producción real, aparte del costo base.</div>
         </div>
         <div class="modal-footer">
           ${actual != null ? `<button class="btn" style="margin-right:auto;color:var(--negative);" onclick="_hecClear()">Quitar horas extra</button>` : ''}
           <button class="btn" onclick="closeModal()">Cancelar</button>
-          <button class="btn btn-primary" onclick="_hecConfirm()">Usar como horas extra</button>
+          <button class="btn btn-primary" onclick="_hecConfirm()">Guardar horas extra</button>
         </div>
       </div>
     </div>`;
 }
-function _hecRefresh(st) {
-  if (st.sectionKey === 'servicios') renderServiciosBody(); else renderSimpleSection(st.sectionKey);
-  recalcAllDeptSummaries();
-  renderSummaryFin();
-  recalcKPIs();
-}
 function _hecConfirm() {
   const st = window._hec; if (!st) { closeModal(); return; }
-  const costo = _heCostoEmpresa(_heLiquido(), st.dte, st.incluyeIVA);
-  updateRowField(st.sectionKey, st.dept, st.idx, 'horaExtra', costo || null);
+  const item = _rowNoteItem(st.sectionKey, st.dept, st.idx);
+  if (!item) { closeModal(); return; }
+  const override = !st.usaProyecto;
+  const cfg = {
+    horas: Number(st.horas) || 0,
+    usaProyecto: !override,
+    modo: (override && st.modo === 'plana') ? 'plana' : 'formula',
+    montoPlano: (override && st.modo === 'plana') ? (Number(st.montoPlano) || 0) : null,
+    recargo: (override && st.modo === 'formula' && st.recargo !== '' && st.recargo != null && !isNaN(Number(st.recargo))) ? Number(st.recargo) : null,
+    valorHora: (override && st.modo === 'formula' && Number(st.valorHora) > 0) ? Number(st.valorHora) : null,
+    incluyeIVA: !!st.incluyeIVA
+  };
+  const costo = _heComputeCosto(cfg, item) || null;
+  const esPlana = (override && cfg.modo === 'plana');
+  if (!costo && !(esPlana && cfg.montoPlano)) {
+    item.heConfig = null; item.horaExtra = null;   // nada efectivo -> sin HE
+  } else {
+    item.heConfig = cfg; item.horaExtra = costo;
+  }
   markDirty();
   closeModal();
-  _hecRefresh(st);
+  _heRefreshAll(st.sectionKey);
 }
 function _hecClear() {
   const st = window._hec; if (!st) { closeModal(); return; }
-  updateRowField(st.sectionKey, st.dept, st.idx, 'horaExtra', null);
+  const item = _rowNoteItem(st.sectionKey, st.dept, st.idx);
+  if (item) { item.heConfig = null; item.horaExtra = null; }
   markDirty();
   closeModal();
-  _hecRefresh(st);
+  _heRefreshAll(st.sectionKey);
+}
+
+/* ─── Modal del recargo por defecto del proyecto (⚙ del encabezado) ────── */
+function openHeProyectoDefault() {
+  if (!STATE.currentProject) return;
+  window._hep = { recargo: _heProjRecargo() };
+  renderHeProyectoDefault();
+}
+function _hepContarFilas() {
+  const d = STATE.currentProject && STATE.currentProject.data;
+  if (!d) return 0;
+  let n = 0;
+  const cuenta = (item) => { const c = item.heConfig; if (c && c.usaProyecto !== false && (Number(c.horas) || 0) > 0) n++; };
+  for (const dept in d.servicios) (d.servicios[dept] || []).forEach(cuenta);
+  ['gastos', 'equipos', 'talentos'].forEach(sk => (d[sk] || []).forEach(cuenta));
+  return n;
+}
+function renderHeProyectoDefault() {
+  const st = window._hep; if (!st) return;
+  const afectadas = _hepContarFilas();
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width: 440px;">
+        <div class="modal-header">
+          <div class="modal-title">Horas extra · cálculo del proyecto</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top:4px;">Recargo por defecto para las filas que usan el cálculo del proyecto. El valor de la hora se toma de cada fila (valor ÷ 10) y la conversión usa el DTE de la fila.</div>
+        </div>
+        <div class="calc-body">
+          <div class="field">
+            <label class="field-label">Recargo por defecto %</label>
+            <input type="number" step="1" min="0" class="input num" value="${st.recargo}" placeholder="150"
+                   oninput="window._hep.recargo = (this.value === '' ? 150 : parseFloat(this.value));">
+          </div>
+          <div class="calc-note">Biblia §3.4.2: la hora extra es el 150% del valor de la hora por defecto. Al guardar se recalcula la HE de <strong>${afectadas}</strong> fila(s) que usan el cálculo del proyecto. Las filas con override propio no se tocan.</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="_hepConfirm()">Guardar recargo</button>
+        </div>
+      </div>
+    </div>`;
+}
+function _hepConfirm() {
+  const st = window._hep; if (!st) { closeModal(); return; }
+  const d = STATE.currentProject && STATE.currentProject.data;
+  if (!d) { closeModal(); return; }
+  if (!d.finanzas) d.finanzas = {};
+  const rec = (st.recargo != null && st.recargo !== '' && !isNaN(Number(st.recargo)) && Number(st.recargo) >= 0) ? Number(st.recargo) : 150;
+  d.finanzas.heRecargoPct = rec;
+  _heRecalcProjectRows();
+  markDirty();
+  closeModal();
+  renderPresupuesto();
 }
 
 /* ─── BD PERSONAS GLOBAL (acceso desde topbar) ─────────────────────── */
@@ -19697,6 +19963,7 @@ function _dalBudgetRow(r, esServicio) {
     extra: !!r.es_extra,
     prontoPago: !!r.es_pp,   // V9.2.0: el campo real del cliente es 'prontoPago' (no 'pp')
     horaExtra: (r.hora_extra != null ? Number(r.hora_extra) : 0),
+    heConfig: (r.he_config != null ? r.he_config : null),   // V10.5.0: inputs HE persistidos (jsonb); hora_extra es el cache del costo empresa
     _contactId: r.contact_id || ''
   };
   if (esServicio) row.rol = r.concepto || ''; else row.item = r.concepto || '';
@@ -19897,6 +20164,7 @@ function _dalProyectoPartes(p) {
   const finanzas = {
     presupuestoCliente: (fin.presupuesto_cliente != null ? Number(fin.presupuesto_cliente) : 0),
     gastosAdminPct: (fin.gastos_admin_pct != null ? Number(fin.gastos_admin_pct) : 0.05),
+    heRecargoPct: (fin.he_recargo_default != null ? Number(fin.he_recargo_default) : 150),   // V10.5.0: recargo HE por defecto del proyecto
     frozen: (fin.frozen != null ? fin.frozen : null),
     comisiones: sortPos(p.project_commissions).map(function(x){ return { label: x.label || 'Comisión', mode: x.mode || 'pct', value: Number(x.value) || 0 }; }),
     riesgos: sortPos(p.project_risks).map(function(x){ return { label: x.label || '', mode: x.mode || 'pct', value: Number(x.value) || 0 }; }),
@@ -19972,11 +20240,11 @@ async function dalLoadProyectos() {
   if (!sb) return null;
   const sel = 'id,nombre_proyecto,categoria,es_remunerado,cliente_empresa_id,cliente_contacto_id,agencia_empresa_id,cliente_texto,agencia_texto,servicio,productora,derechos_tiempo,derechos_plataformas,derechos_territorio,contacto_cliente,mail_contacto_cliente,telefono_contacto_cliente,contacto_agencia,mail_contacto_agencia,telefono_contacto_agencia,condicion_pago,fecha_cotizacion,fecha_aprobacion,fecha_entrega_final,fecha_pago,estado,aprobado_at,cerrado_at,'
     + 'project_assignments(contact_id,function_id,project_functions(nombre)),'
-    + 'project_financials(presupuesto_cliente,gastos_admin_pct,frozen),'
+    + 'project_financials(presupuesto_cliente,gastos_admin_pct,he_recargo_default,frozen),'
     + 'project_commissions(label,mode,value,posicion),'
     + 'project_risks(label,mode,value,posicion),'
     + 'project_income_extras(label,monto,posicion),'
-    + 'budget_line_items(section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,confirmado,costo_real,es_extra,es_pp,hora_extra,posicion,departments(nombre)),'
+    + 'budget_line_items(section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,confirmado,costo_real,es_extra,es_pp,hora_extra,he_config,posicion,departments(nombre)),'
     + 'project_quotation(fecha_emision,representante_cliente,condiciones,descripcion_proyecto,jornadas_rodaje,meta),'
     + 'quotation_offers(id_externo,es_base,nombre,valor_cliente,descripcion,incluye,no_incluye,entregables,presupuesto_alt,posicion),'
     + 'quotation_versions(numero,es_activa,snapshot,nota),'
@@ -20057,6 +20325,7 @@ function _dalProyectoPayload(project) {
       concepto: concepto, valor: (r.valor != null ? r.valor : null), cantidad: (r.cantidad != null ? r.cantidad : 0),
       unidad: r.unidad || '', dte: r.dte || null, confirmado: !!r.confirmado, costoReal: (r.costoReal != null ? r.costoReal : null),
       esExtra: !!r.extra, esPp: !!r.prontoPago, horaExtra: (r.horaExtra != null ? r.horaExtra : 0),
+      heConfig: (r.heConfig != null ? r.heConfig : null),   // V10.5.0: inputs HE -> he_config (jsonb); hora_extra sigue como cache del costo empresa
       dteReal: r.dteReal || null, nota: r.nota || null, notaFecha: r.notaFecha || null, notaAutor: r.notaAutor || null, posicion: pos
     });
   }
@@ -20100,6 +20369,7 @@ function _dalProyectoPayload(project) {
     finanzas: {
       presupuestoCliente: (fin.presupuestoCliente != null ? fin.presupuestoCliente : 0),
       gastosAdminPct: (fin.gastosAdminPct != null ? fin.gastosAdminPct : 0.05),
+      heRecargoPct: (fin.heRecargoPct != null ? fin.heRecargoPct : 150),
       frozen: (fin.frozen != null ? fin.frozen : null),
       comisiones: fin.comisiones || [], riesgos: fin.riesgos || [], extras: fin.extras || []
     },
@@ -20298,7 +20568,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.4.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.5.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 let _cloudDb = null;
 let _cloudReady = false;
