@@ -5953,6 +5953,27 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* V10.7.1 · Seguridad (pen-test MEDIA #6): saneo de URLs en atributos src/href.
+   Valida el esquema (permite http/https, blob: y data:image/; rechaza
+   javascript:, data:text/html y similares, incluso ofuscados con caracteres
+   de control) y luego escapa el resultado para cerrar el break-out del
+   atributo. Un valor inseguro devuelve cadena vacía: el enlace/imagen no carga
+   en lugar de ejecutar script. */
+function safeUrl(u) {
+  try {
+    var s = String(u === null || u === undefined ? '' : u).replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+    if (!s) return '';
+    var m = s.match(/^([a-z][a-z0-9+.\-]*):/i);
+    if (m) {
+      var sch = m[1].toLowerCase();
+      var ok = (sch === 'http' || sch === 'https' || sch === 'blob');
+      var okImg = (sch === 'data' && /^data:image\//i.test(s));
+      if (!ok && !okImg) return '';
+    }
+    return escapeHtml(s);
+  } catch (e) { return ''; }
+}
+
 /* V5.2: renderUnidadCell ahora es solo dispatcher entre las dos
    versiones (select vs input custom). Las funciones detalladas viven
    al final del JS junto a sus handlers. */
@@ -6973,7 +6994,7 @@ function prRowToolsHTML(f, i, n) {
 }
 function prImgAttachHTML(id, imgKey, arr) {
   arr = arr || [];
-  const thumbs = arr.map((src, k) => `<span class="pr-thumb"><img src="${src}" alt=""><button class="pr-thumb-x" onclick="prDelImagen('${id}','${imgKey}',${k})" title="Quitar">✕</button></span>`).join('');
+  const thumbs = arr.map((src, k) => `<span class="pr-thumb"><img src="${safeUrl(src)}" alt=""><button class="pr-thumb-x" onclick="prDelImagen('${id}','${imgKey}',${k})" title="Quitar">✕</button></span>`).join('');
   return `<div class="pr-imgrow" ondragover="prImgDragOver(event)" ondragleave="prImgDragLeave(event)" ondrop="prDropImagen(event,'${id}','${imgKey}')">${thumbs}${arr.length < 6 ? `<label class="pr-img-add" title="Agregar o arrastrar imagen aquí (se comprime sola)">+<input type="file" accept="image/*" multiple style="display:none" onchange="prAddImagen('${id}','${imgKey}',this)"></label>` : ''}</div>`;
 }
 function prTextareaHTML(id, key, value, ph) { return `<textarea class="pr-ta" rows="2" placeholder="${ph || ''}" onchange="prSetFilaField('${id}','${key}',this.value)">${escapeHtml(value || '')}</textarea>`; }
@@ -7638,8 +7659,8 @@ function renderBDTalentosList() {
           ${(t.email || t.telefono) ? `<div style="color:var(--ink-faint);font-size:11px;margin-top:4px;">${escapeHtml(t.email || '')}${t.email && t.telefono ? ' · ' : ''}${escapeHtml(t.telefono || '')}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
-          ${t.fotosLink ? `<a href="${escapeHtml(t.fotosLink.split(',')[0].trim())}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid var(--border-soft);border-radius:4px;">Fotos</a>` : ''}
-          ${t.reelLink ? `<a href="${escapeHtml(t.reelLink)}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid var(--border-soft);border-radius:4px;">Reel</a>` : ''}
+          ${t.fotosLink ? `<a href="${safeUrl(t.fotosLink.split(',')[0].trim())}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid var(--border-soft);border-radius:4px;">Fotos</a>` : ''}
+          ${t.reelLink ? `<a href="${safeUrl(t.reelLink)}" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid var(--border-soft);border-radius:4px;">Reel</a>` : ''}
         </div>
       </div>
     </div>`;
@@ -12766,7 +12787,7 @@ function cotBuildCartaHTML(project) {
         <h1>Cotización<span class="a">Audiovisual</span></h1>
       </div>
       <div class="org">
-        <img class="logo" src="${COT_LOGO}" alt="">
+        <img class="logo" src="${safeUrl(COT_LOGO)}" alt="">
         <div class="name">Primate Films</div>
         <div class="role">Productora Audiovisual</div>
         <div class="date">${escapeHtml(fecha)}</div>
@@ -13300,7 +13321,7 @@ function docRowHTML(d) {
     </div>
     <div style="display:flex;gap:8px;margin-top:8px;">
       <input class="input" style="flex:1;" value="${escapeHtml(d.url || '')}" placeholder="Link (Drive, Dropbox, URL…)" onchange="docSet('${d.id}','url',this.value)">
-      ${d.url ? `<a class="btn btn-secondary btn-sm" href="${escapeHtml(d.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}
+      ${d.url ? `<a class="btn btn-secondary btn-sm" href="${safeUrl(d.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}
     </div>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
       ${d.archivo ? `<span style="font-size:12.5px;color:var(--ink-secondary);">📎 ${escapeHtml(d.archivo.nombre || 'documento.pdf')} <span style="color:var(--ink-faint);">(${docFmtSize(d.archivo.size)})</span></span>
@@ -14127,7 +14148,7 @@ function locRepoHTML(project) {
 
 function locCardHTML(uso) {
   const l = bdLocFind(uso.locId); if (!l) return '';
-  const portada = (l.fotos && l.fotos[0] && l.fotos[0].url) ? `<img src="${l.fotos[0].url}" alt="">` : 'Sin fotos';
+  const portada = (l.fotos && l.fotos[0] && l.fotos[0].url) ? `<img src="${safeUrl(l.fotos[0].url)}" alt="">` : 'Sin fotos';
   const nFotos = (l.fotos || []).length;
   const orient = (l.orientacion && l.orientacion !== '—') ? `<span class="loc-tag">☉ ${escapeHtml(l.orientacion)}</span>` : '';
   return `<div class="loc-card" onclick="openLocDetail('${l.locId}')">
@@ -14157,7 +14178,7 @@ function openLocDetail(locId) {
               <div style="display:flex;gap:8px;margin-top:7px;"><span style="flex:1;"><label style="font-size:11px;color:var(--ink-mut);">Mail</label><input class="input" value="${e(c.mail || '')}" onchange="locSetContacto('${locId}',${i},'mail',this.value)"></span><span style="flex:1;"><label style="font-size:11px;color:var(--ink-mut);">Teléfono</label><input class="input" value="${e(c.tel || '')}" onchange="locSetContacto('${locId}',${i},'tel',this.value)"></span></div>
               <div style="margin-top:7px;"><label style="font-size:11px;color:var(--ink-mut);">Observaciones</label><input class="input" value="${e(c.obs || '')}" onchange="locSetContacto('${locId}',${i},'obs',this.value)"></div>
             </div>`).join('') || '<div style="font-size:12px;color:var(--ink-faint);margin-bottom:8px;">Sin contactos aún. Agrega a quien coordinas la locación.</div>';
-  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb"><img id="lf_${locId}_${i}" src="${f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER}" onclick="locLightbox('${locId}',${i})"><button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button></div>`).join('');
+  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb"><img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" onclick="locLightbox('${locId}',${i})"><button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button></div>`).join('');
   try { setTimeout(function(){ _resolveLocFotoUrls(locId); }, 0); } catch (e) {}
   const estadoChips = uso ? Object.keys(LOC_ESTADOS).map(s => `<button class="loc-chip ${uso.estado === s ? 'on' : ''}" onclick="locSetEstado('${locId}','${s}')">${LOC_ESTADOS[s]}</button>`).join('') : '';
   document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:760px;width:94vw;max-height:88vh;overflow:auto;">
@@ -14309,7 +14330,7 @@ function locLightbox(locId, i) {
   const old = document.getElementById('locLb'); if (old) old.remove();
   const div = document.createElement('div'); div.id = 'locLb'; div.className = 'loc-lightbox';
   div.onclick = () => div.remove();
-  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${l.fotos[i].url || l.fotos[i]._signedUrl || _LOC_FOTO_PLACEHOLDER}" alt="">`;
+  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${safeUrl(l.fotos[i].url || l.fotos[i]._signedUrl || _LOC_FOTO_PLACEHOLDER)}" alt="">`;
   document.body.appendChild(div);
 }
 
@@ -14402,7 +14423,7 @@ function locScoutingHTML(project) {
       return `<tr class="traslado"><td class="loc-time">${clock}</td><td><input class="input" style="width:64px;" value="${e(f.dur || '')}" title="HHMM: 100 = 1 hora" onchange="locScoutSetFila(${i},'dur',this.value,true)"></td><td colspan="4">⤷ Traslado <input class="input" style="display:inline-block;width:auto;min-width:200px;" value="${e(f.nota || '')}" placeholder="de … a …" onchange="locScoutSetFila(${i},'nota',this.value)"></td><td><button class="btn btn-secondary btn-sm" onclick="locScoutDelFila(${i})">×</button></td></tr>`;
     }
     const l = bdLocFind(f.locId) || {};
-    const dir = l.maps ? `<a href="${e(l.maps)}" target="_blank" rel="noopener">${e(l.direccion || 'Maps')}</a>` : e(l.direccion || '—');
+    const dir = l.maps ? `<a href="${safeUrl(l.maps)}" target="_blank" rel="noopener">${e(l.direccion || 'Maps')}</a>` : e(l.direccion || '—');
     const _c0 = locPrimaryContact(l) || {}; const cont = [_c0.nombre, _c0.tel].filter(Boolean).join(' · ') || '—';
     return `<tr><td class="loc-time">${clock}</td>
       <td><input class="input" style="width:64px;" value="${e(f.dur || '')}" title="HHMM: 100 = 1 hora" onchange="locScoutSetFila(${i},'dur',this.value,true)"></td>
@@ -15670,7 +15691,7 @@ function buildHojaLlamadoPrintHTML(project, sel) {
   const locRows = _printLocs.map(l => `<tr>
       <td><strong>${e(l.locId)}</strong></td>
       <td>${e(l.nombre || '—')}</td>
-      <td>${l.direccion ? `<a href="${e(mapsHref(l))}" class="maplink">${e([l.direccion, l.comuna].filter(Boolean).join(', '))}</a>` : '—'}</td>
+      <td>${l.direccion ? `<a href="${safeUrl(mapsHref(l))}" class="maplink">${e([l.direccion, l.comuna].filter(Boolean).join(', '))}</a>` : '—'}</td>
       <td>${e(((l._proy && l._proy.notasProy) || l.notas || ''))}</td>
     </tr>`).join('');
 
@@ -15878,7 +15899,7 @@ function _prPdfTimeCell(f, c, t) {
 }
 function _prPdfContentCell(f, c) {
   const imgKey = 'img_' + c.key;
-  const imgs = (Array.isArray(f[imgKey]) ? f[imgKey] : []).map(s => `<img src="${s}">`).join('');
+  const imgs = (Array.isArray(f[imgKey]) ? f[imgKey] : []).map(s => `<img src="${safeUrl(s)}">`).join('');
   const txt = escapeHtml(f[c.key] || '');
   return `<td class="cc-${c.key}">${txt ? ('<div>' + txt.replace(/\n/g, '<br>') + '</div>') : ''}${imgs ? ('<div class="c-imgs">' + imgs + '</div>') : ''}</td>`;
 }
@@ -15911,7 +15932,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
   const span = prSpanDia(plan.filas, times);
   const head = `<tr>${cols.map(c => `<th>${c.key === 'dur' ? 'Dur.' : e(c.label)}</th>`).join('')}</tr>`;
   const body = plan.filas.map((f, i) => _prPdfRow(f, cols, times[i])).join('');
-  const bancoRows = plan.banco.map(f => `<tr><td class="c-time">${e(f.escPlano || '')}</td><td>${e(f.accion || '').replace(/\n/g, '<br>')}</td><td>${e(f.ref || '').replace(/\n/g, '<br>')}${(Array.isArray(f.img_ref) ? f.img_ref : []).map(s => `<img src="${s}" style="max-height:66px;max-width:108px;margin-left:3px;border:1px solid #ccc;border-radius:2px;">`).join('')}</td><td>${e(f.prod || '').replace(/\n/g, '<br>')}</td></tr>`).join('');
+  const bancoRows = plan.banco.map(f => `<tr><td class="c-time">${e(f.escPlano || '')}</td><td>${e(f.accion || '').replace(/\n/g, '<br>')}</td><td>${e(f.ref || '').replace(/\n/g, '<br>')}${(Array.isArray(f.img_ref) ? f.img_ref : []).map(s => `<img src="${safeUrl(s)}" style="max-height:66px;max-width:108px;margin-left:3px;border:1px solid #ccc;border-radius:2px;">`).join('')}</td><td>${e(f.prod || '').replace(/\n/g, '<br>')}</td></tr>`).join('');
   const bancoTable = plan.banco.length ? `<h2>Banco de planos (si queda tiempo · fuera del horario)</h2><table class="banco"><thead><tr><th style="width:8%;">Cód.</th><th style="width:40%;">Acción</th><th style="width:36%;">Ref</th><th style="width:16%;">Nota</th></tr></thead><tbody>${bancoRows}</tbody></table>` : '';
   // Cabecera: solo campos con valor (los vacíos no se muestran). La FECHA va en "Día".
   const solStr = (real, util) => { const a = []; if (real && String(real).trim()) a.push(String(real).trim()); if (util && String(util).trim()) a.push('útil ' + String(util).trim()); return a.join(' · '); };
@@ -20316,7 +20337,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.7.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.7.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -20880,11 +20901,11 @@ function goVerComprobante(id) {
   const x = goMovs(project).find(g => g.id === id) || (goFindMov(id) || {}).m;
   if (!x) return;
   const body = x.fileUrl
-    ? `<img src="${x.fileUrl}" style="max-width:100%;border-radius:8px;">`
+    ? `<img src="${safeUrl(x.fileUrl)}" style="max-width:100%;border-radius:8px;">`
     : `<div class="go-receipt"><div class="rc-h">COMPROBANTE</div><div class="rc-row"><span>${escapeHtml(x.prov)}</span></div><div class="rc-row"><span>${escapeHtml(x.concepto)}</span></div><div class="rc-row"><span>${escapeHtml(x.fecha)}</span><span>${escapeHtml(x.tipo)}</span></div><div class="rc-row" style="font-weight:700;border-top:1px dashed #b9b2a3;margin-top:6px;padding-top:6px;"><span>TOTAL</span><span>${fmtMoney(x.monto)}</span></div></div><div class="go-help" style="text-align:center;margin-top:10px;">El archivo adjunto se ve mientras dura la sesión; el guardado real del archivo llega con object storage (backend).</div>`;
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(x.concepto)}</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb">${body}</div>
-    <div class="go-mf">${x.fileUrl ? `<a class="btn btn-secondary btn-sm" href="${x.fileUrl}" download="${escapeHtml(x.fileName || 'comprobante')}">⬇ Descargar</a>` : ''}<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
+    <div class="go-mf">${x.fileUrl ? `<a class="btn btn-secondary btn-sm" href="${safeUrl(x.fileUrl)}" download="${escapeHtml(x.fileName || 'comprobante')}">⬇ Descargar</a>` : ''}<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
 }
 
 /* ---------- modal: crear presupuesto (sobre) ---------- */
@@ -21022,7 +21043,7 @@ function goOnFile(inp) {
   const f = inp.files[0]; if (!f) return;
   GO_DRAFT.fileName = f.name; GO_DRAFT.fileUrl = URL.createObjectURL(f);
   const isImg = (f.type || '').indexOf('image/') === 0;
-  document.getElementById('f_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb">${isImg ? '<img src="' + GO_DRAFT.fileUrl + '">' : '📄'}</div><div style="flex:1;">${escapeHtml(f.name)}<div class="go-sub">${(f.size / 1024).toFixed(0)} KB</div></div><a href="${GO_DRAFT.fileUrl}" download="${escapeHtml(f.name)}" class="go-mini">descargar</a></div>`;
+  document.getElementById('f_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb">${isImg ? '<img src="' + safeUrl(GO_DRAFT.fileUrl) + '">' : '📄'}</div><div style="flex:1;">${escapeHtml(f.name)}<div class="go-sub">${(f.size / 1024).toFixed(0)} KB</div></div><a href="${safeUrl(GO_DRAFT.fileUrl)}" download="${escapeHtml(f.name)}" class="go-mini">descargar</a></div>`;
 }
 function goSaveGasto() {
   const project = STATE.currentProject; const d = goData(project);
@@ -21067,7 +21088,7 @@ function goOpenQuick() {
 function goOnFileQ(inp) {
   const f = inp.files[0]; if (!f) return;
   GO_DRAFT.fileName = f.name; GO_DRAFT.fileUrl = URL.createObjectURL(f);
-  document.getElementById('q_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb"><img src="${GO_DRAFT.fileUrl}"></div><div style="flex:1;">${escapeHtml(f.name)}</div></div>`;
+  document.getElementById('q_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb"><img src="${safeUrl(GO_DRAFT.fileUrl)}"></div><div style="flex:1;">${escapeHtml(f.name)}</div></div>`;
 }
 function goSaveQuick() {
   const project = STATE.currentProject; const d = goData(project);
