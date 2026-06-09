@@ -18827,7 +18827,26 @@ window.confirmLogout = function () {
    sistema ya consume, de modo que ninguna otra parte de la UI cambia.
    La ESCRITURA por ficha va a Supabase (ver dalGuardarContacto / dalGuardarEmpresa); el respaldo es el airbag en localStorage.
    ════════════════════════════════════════════════════════════════════ */
-const ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // Primate Films (tenant)
+/* V10.9.0 · Motor de organización activa.
+   ORG_ID deja de ser una constante fija: ahora es la organización ACTIVA del
+   usuario en sesión, resuelta desde sus membresías al arrancar (o elegida en el
+   espacio de usuario). El valor por defecto (Primate) queda como respaldo para
+   no dejar sin contexto a la sesión si la resolución fallara; el equipo actual
+   (todos internos de Primate, una sola membresía) resuelve siempre a Primate,
+   de modo que su comportamiento no cambia. Toda la app sigue consumiendo ORG_ID
+   igual que antes: lo único que cambió es de dónde sale su valor. */
+let ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // organización activa (default: Primate Films)
+const _ORG_LS_KEY = 'takeos_org_activa';
+const _ORG_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function _setOrgActiva(orgId){
+  try{
+    var s = String(orgId == null ? '' : orgId).trim();
+    if (!_ORG_UUID_RE.test(s)) return false;     // valor inválido: no tocamos la org actual
+    ORG_ID = s;
+    try { localStorage.setItem(_ORG_LS_KEY, s); } catch(e){}   // recordamos la última (para futura entrada directa)
+    return true;
+  }catch(e){ return false; }
+}
 let CONTACTS_SOURCE = 'pending';    // pasa a 'supabase' SOLO tras una lectura exitosa (fail-safe). 'pending' = aún sin confirmar.
 let LOCATIONS_SOURCE = 'pending';   // idem para la BD de locaciones (BD_LOC)
 const DAL_KNOWN_LOC_IDS = new Set();
@@ -20346,7 +20365,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.8.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.9.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -20553,15 +20572,16 @@ async function resolverEspacioYArrancar(){
     const rows = res && res.data ? res.data : null;
     if (res.error || !rows) { arrancarTakeOS(); return; }            // error de consulta: no bloqueamos
     if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); return; }  // cuenta sin productora aún
-    if (rows.length === 1 && !forzar) { arrancarTakeOS(); return; }   // una sola pertenencia: entra directo
+    if (rows.length === 1 && !forzar) { _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // una sola pertenencia: esa es la org activa
     renderEspacioUsuario(_espConstruir(rows, email));
   } catch (e) {
     arrancarTakeOS();   // ante cualquier problema, no bloqueamos el acceso
   }
 }
 
-function _espEntrarInterna(demo){
-  if (demo){ try{ showToast({kind:'info',title:'Vista de demostración',body:'Aquí entrarías a la productora con tu rol. El motor multi-organización se conecta en la próxima versión.'}); }catch(e){} return; }
+function _espEntrarInterna(demo, orgId){
+  if (demo){ try{ showToast({kind:'info',title:'Vista de demostración',body:'En la app real entrarías a esta productora con tu rol. Esta es una vista de ejemplo.'}); }catch(e){} return; }
+  if (orgId) _setOrgActiva(orgId);
   const ov=document.getElementById('espacioUsuario'); if(ov) ov.remove();
   arrancarTakeOS();
 }
@@ -20580,7 +20600,7 @@ function renderEspacioUsuario(data){
           <div class="esp-meta"><span class="esp-badge i">Interno</span><span class="esp-role">${o.perfil||'—'} · acceso completo</span></div>
           ${(o.orgId||(o.proyectos&&o.proyectos.length))?`<div class="esp-prev">${o.orgId?`<span class="esp-pill faint" id="espc_${o.orgId}">Cargando proyectos…</span>`:(o.total?`<span class="esp-pill faint">${o.total} proyectos activos</span>`:'')}${(o.proyectos||[]).map(function(p){return `<span class="esp-pill">${p}</span>`;}).join('')}</div>`:''}
         </div>
-        <button class="esp-enter" onclick="_espEntrarInterna(${demo})">Entrar <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+        <button class="esp-enter" onclick="_espEntrarInterna(${demo}, '${o.orgId||''}')">Entrar <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
       </div>`; }).join('');
     const extHTML = externas.map(function(o){ return `
       <div class="esp-grp">
