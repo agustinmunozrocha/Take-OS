@@ -16174,6 +16174,15 @@ function openConfigPanel() {
             <p class="config-hint" style="margin-top:6px;">Supabase es la única fuente de datos. El respaldo autoritativo es el backup automático diario de Supabase Pro; este botón descarga una copia manual en <code>.json</code>.</p>
           </div>` : ''}
           <div class="config-section">
+            <p class="config-section-title">Mi perfil</p>
+            <div class="config-grid">
+              <button class="topbar-save-btn" onclick="closeConfigPanel(); abrirPerfilUsuario(false);" title="Tus datos personales (nombre, correo, celular, dirección, cuenta bancaria). Son tuyos y te acompañan en cada productora donde colabores.">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+                Mis datos personales
+              </button>
+            </div>
+          </div>
+          <div class="config-section">
             <p class="config-section-title">Perfil de la empresa</p>
             <div class="config-grid">
               <button class="topbar-save-btn" onclick="openEmpresaPerfil()" title="Datos de tu empresa/productora (razón social, RUT, giro, representante). Se usan en documentos: hojas de llamado, plan de rodaje, cotizaciones y contratos.">
@@ -20337,7 +20346,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.7.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.8.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -20501,9 +20510,30 @@ function _espConstruir(rows, email){
   (rows||[]).forEach(function(r){
     const nombre = (r.organizations && r.organizations.nombre) || 'Organización';
     if (r.tipo === 'externo') externas.push({ nombre:nombre, sello:_espSello(nombre), proyectos:[] });
-    else internas.push({ nombre:nombre, perfil:(PERFIL_NOMBRES[r.profile_id]||'—'), sello:_espSello(nombre), total:null, proyectos:[] });
+    else internas.push({ nombre:nombre, orgId:r.organization_id, perfil:(PERFIL_NOMBRES[r.profile_id]||'—'), sello:_espSello(nombre), total:null, proyectos:[] });
   });
   return { _demo:false, usuario:{ nombre:(email? email.split('@')[0].replace(/[._-]+/g,' ') : 'tu cuenta'), email:(email||''), iniciales:_espIniciales(email||'U') }, internas:internas, externas:externas };
+}
+
+/* Conteo de proyectos por productora interna (Punto 2 BD: b_projects_sel deja
+   al interno listar los proyectos de su organización). Async y defensivo:
+   actualiza el pill cuando llega; si falla, lo oculta sin romper nada. */
+async function _espCargarConteos(internas){
+  try{
+    var client = (typeof sb !== 'undefined' && sb) ? sb : null;
+    if (!client) return;
+    (internas||[]).forEach(function(o){
+      if (!o || !o.orgId) return;
+      client.from('projects').select('id', { count:'exact', head:true }).eq('organization_id', o.orgId)
+        .then(function(r){
+          var el = document.getElementById('espc_' + o.orgId); if (!el) return;
+          if (r && r.error) { el.style.display = 'none'; return; }
+          var n = (r && typeof r.count === 'number') ? r.count : 0;
+          el.textContent = (n === 0) ? 'Sin proyectos aún' : (n + ' ' + (n === 1 ? 'proyecto' : 'proyectos'));
+        })
+        .catch(function(){ var el = document.getElementById('espc_' + o.orgId); if (el) el.style.display = 'none'; });
+    });
+  }catch(e){}
 }
 
 async function resolverEspacioYArrancar(){
@@ -20521,7 +20551,8 @@ async function resolverEspacioYArrancar(){
       .select('organization_id, tipo, profile_id, estado, organizations(nombre)')
       .eq('user_id', uid).eq('estado','activo');
     const rows = res && res.data ? res.data : null;
-    if (res.error || !rows || !rows.length) { arrancarTakeOS(); return; }
+    if (res.error || !rows) { arrancarTakeOS(); return; }            // error de consulta: no bloqueamos
+    if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); return; }  // cuenta sin productora aún
     if (rows.length === 1 && !forzar) { arrancarTakeOS(); return; }   // una sola pertenencia: entra directo
     renderEspacioUsuario(_espConstruir(rows, email));
   } catch (e) {
@@ -20535,7 +20566,7 @@ function _espEntrarInterna(demo){
   arrancarTakeOS();
 }
 function _espAbrirProyecto(){ try{ showToast({kind:'info',title:'En construcción',body:'El acceso directo a un proyecto como colaborador externo se habilita en una próxima versión.'}); }catch(e){} }
-function _espPerfil(){ try{ showToast({kind:'info',title:'Tu perfil',body:'La edición de tus datos personales (nombre, correo, celular, cuenta bancaria) llega en una próxima versión.'}); }catch(e){} }
+function _espPerfil(){ try{ abrirPerfilUsuario(false); }catch(e){} }
 
 function renderEspacioUsuario(data){
   try{
@@ -20547,7 +20578,7 @@ function renderEspacioUsuario(data){
         <div class="esp-f1">
           <div class="nm">${o.nombre}</div>
           <div class="esp-meta"><span class="esp-badge i">Interno</span><span class="esp-role">${o.perfil||'—'} · acceso completo</span></div>
-          ${(o.proyectos&&o.proyectos.length)?`<div class="esp-prev">${o.total?`<span class="esp-pill faint">${o.total} proyectos activos</span>`:''}${o.proyectos.map(function(p){return `<span class="esp-pill">${p}</span>`;}).join('')}</div>`:''}
+          ${(o.orgId||(o.proyectos&&o.proyectos.length))?`<div class="esp-prev">${o.orgId?`<span class="esp-pill faint" id="espc_${o.orgId}">Cargando proyectos…</span>`:(o.total?`<span class="esp-pill faint">${o.total} proyectos activos</span>`:'')}${(o.proyectos||[]).map(function(p){return `<span class="esp-pill">${p}</span>`;}).join('')}</div>`:''}
         </div>
         <button class="esp-enter" onclick="_espEntrarInterna(${demo})">Entrar <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
       </div>`; }).join('');
@@ -20638,10 +20669,224 @@ function renderEspacioUsuario(data){
         <p class="esp-lede">Tus productoras y los proyectos donde colaboras, reunidos en un solo lugar. Entra a una productora para verla completa, o salta directo a un proyecto.</p>
         ${internas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot i"></span>Tus productoras</div><p class="esp-hint">Eres parte del equipo. Entras con tu rol y ves todo lo de la productora.</p></div>${intHTML}</div>`:''}
         ${externas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot e"></span>Proyectos donde colaboras</div><p class="esp-hint">Te invitaron a proyectos puntuales. Ves solo esos proyectos, no el resto de la productora.</p></div>${extHTML}</div>`:''}
-        <p class="esp-foot">El color cuenta la relación: <b style="color:var(--accent-deep)">terracota = interno</b> · <b style="color:var(--info)">azul = externo</b>.${demo?' Vista de demostración con datos ficticios.':''}</p>
+        ${(!internas.length && !externas.length)?`<div class="esp-grp"><div class="esp-empty" style="padding:30px 20px;text-align:center;line-height:1.7;">Aún no perteneces a ninguna productora.<br><span style="color:var(--ink-faint);font-size:12.5px;">Cuando una productora te invite a colaborar, sus proyectos van a aparecer aquí.</span></div></div>`:''}
+        ${(internas.length||externas.length)?`<p class="esp-foot">El color cuenta la relación: <b style="color:var(--accent-deep)">terracota = interno</b> · <b style="color:var(--info)">azul = externo</b>.${demo?' Vista de demostración con datos ficticios.':''}</p>`:''}
       </div>`;
     document.body.appendChild(ov);
+    try{ if(!demo) _espCargarConteos(internas); }catch(e){}
   }catch(e){ try{ const o=document.getElementById('espacioUsuario'); if(o)o.remove(); }catch(_){ } arrancarTakeOS(); }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   V10.8.0 · PERFIL PERSONAL DEL USUARIO + ONBOARDING
+   ─────────────────────────────────────────────────────────────────────
+   Datos personales de la PERSONA (no de la productora), ligados a auth.uid()
+   en user_profiles + user_bank_accounts (RLS fila-propia). Son tuyos y viajan
+   contigo entre productoras. Acceso: clic en tu nombre (espacio) y desde el
+   panel de Configuración (app). Onboarding: tras el login, si aún no tienes
+   perfil, se ofrece completarlo (posponible). Todo defensivo: si algo falla,
+   no se bloquea el acceso. ════════════════════════════════════════════════ */
+var _PERFIL_CTX = { email: '', cuentaId: null, onDone: null, onboarding: false };
+
+function _perfilCerrar() { var o = document.getElementById('perfilUsuario'); if (o) o.remove(); }
+
+function _perfilTipoCuentaOptions(cur) {
+  var opts = '<option value="">\u2014 Sin especificar</option>';
+  try { Object.keys(_DAL_TIPOCUENTA_LABEL).forEach(function (code) {
+    opts += '<option value="' + code + '"' + (cur === code ? ' selected' : '') + '>' + escapeHtml(_DAL_TIPOCUENTA_LABEL[code]) + '</option>';
+  }); } catch (e) {}
+  return opts;
+}
+
+async function abrirPerfilUsuario(modoOnboarding, onDone) {
+  modoOnboarding = !!modoOnboarding;
+  try {
+    var client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
+    var prof = {}, cuenta = {}, email = '';
+    if (client) {
+      try {
+        var ures = await client.auth.getUser();
+        var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
+        email = (ures && ures.data && ures.data.user) ? (ures.data.user.email || '') : '';
+        if (uid) {
+          var pr = await client.from('user_profiles').select('*').eq('user_id', uid).maybeSingle();
+          if (pr && pr.data) prof = pr.data;
+          var br = await client.from('user_bank_accounts').select('*').eq('user_id', uid).order('es_principal', { ascending: false }).limit(1);
+          if (br && br.data && br.data.length) cuenta = br.data[0];
+        }
+      } catch (e) { /* sin datos: form vacío */ }
+    }
+    _PERFIL_CTX = { email: email, cuentaId: (cuenta && cuenta.id) || null, onDone: onDone || null, onboarding: modoOnboarding };
+    _perfilRender(prof, cuenta, email, modoOnboarding);
+  } catch (e) {
+    if (modoOnboarding && typeof onDone === 'function') onDone();
+  }
+}
+
+function _perfilRender(prof, cuenta, email, modoOnboarding) {
+  try {
+    prof = prof || {}; cuenta = cuenta || {};
+    var v = function (x) { return escapeHtml(x == null ? '' : String(x)); };
+    var ext = !!cuenta.es_extranjera;
+    var bancoNombre = ext ? '' : (typeof _dalBancoNombre === 'function' ? _dalBancoNombre(cuenta.bank_codigo_sbif) : '');
+    var bancoSel = (typeof bancoSelectHTML === 'function')
+      ? bancoSelectHTML(bancoNombre, { id: 'perfilBanco' })
+      : '<input class="input" id="perfilBanco" value="' + v(bancoNombre) + '">';
+    var ov = document.createElement('div'); ov.id = 'perfilUsuario';
+    ov.innerHTML = `<style>
+      #perfilUsuario{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
+      #perfilUsuario *{box-sizing:border-box;}
+      #perfilUsuario .pf-top{position:sticky;top:0;background:var(--bg-surface);border-bottom:1px solid var(--rule);}
+      #perfilUsuario .pf-top-in{max-width:760px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+      #perfilUsuario .pf-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;}
+      #perfilUsuario .pf-mark{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--ink-onAccent);display:grid;place-items:center;font-weight:700;}
+      #perfilUsuario .pf-wrap{max-width:760px;margin:0 auto;padding:30px 28px 90px;}
+      #perfilUsuario .pf-eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--ink-faint);font-weight:600;}
+      #perfilUsuario .pf-h1{font-size:30px;font-weight:700;margin:8px 0 6px;}
+      #perfilUsuario .pf-lede{color:var(--ink-secondary);margin:0 0 26px;max-width:62ch;}
+      #perfilUsuario .pf-sec{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-md);padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+      #perfilUsuario .pf-sec-t{font-weight:700;font-size:15px;margin:0 0 14px;display:flex;align-items:center;gap:8px;}
+      #perfilUsuario .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;}
+      #perfilUsuario .pf-f{display:flex;flex-direction:column;gap:5px;}
+      #perfilUsuario .pf-f.full{grid-column:1 / -1;}
+      #perfilUsuario .pf-f label{font-size:11.5px;color:var(--ink-faint);font-weight:600;letter-spacing:.02em;}
+      #perfilUsuario .pf-f .input,#perfilUsuario .pf-f .select{width:100%;}
+      #perfilUsuario .pf-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-secondary);margin-bottom:12px;cursor:pointer;}
+      #perfilUsuario .pf-bar{position:fixed;left:0;right:0;bottom:0;background:var(--bg-surface);border-top:1px solid var(--rule);}
+      #perfilUsuario .pf-bar-in{max-width:760px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+      #perfilUsuario .pf-bar .spacer{flex:1;font-size:12px;color:var(--ink-faint);}
+      @media (max-width:640px){ #perfilUsuario .pf-grid{grid-template-columns:1fr;} #perfilUsuario .pf-top-in,#perfilUsuario .pf-wrap,#perfilUsuario .pf-bar-in{padding-left:16px;padding-right:16px;} }
+    </style>
+      <div class="pf-top"><div class="pf-top-in">
+        <div class="pf-brand"><div class="pf-mark">T</div><span>TakeOS</span></div>
+        <span class="pf-eyebrow">${modoOnboarding ? 'Bienvenida/o' : 'Tu perfil'}</span>
+      </div></div>
+      <div class="pf-wrap">
+        <span class="pf-eyebrow">Tu perfil personal</span>
+        <h1 class="pf-h1">${modoOnboarding ? 'Cuéntanos quién eres' : 'Tus datos personales'}</h1>
+        <p class="pf-lede">Estos son tus datos como persona, no los de una productora. Son tuyos y te acompañan en cada productora donde colabores.${modoOnboarding ? ' Puedes completarlos ahora o más tarde desde tu perfil.' : ''}</p>
+
+        <div class="pf-sec">
+          <p class="pf-sec-t">Identidad</p>
+          <div class="pf-grid">
+            <div class="pf-f"><label>Nombre</label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
+            <div class="pf-f"><label>Apellido</label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
+            <div class="pf-f"><label>RUT</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9"></div>
+            <div class="pf-f"><label>Correo</label><input class="input" id="pf_email" value="${v(prof.email || email)}"></div>
+            <div class="pf-f"><label>Celular</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..."></div>
+          </div>
+        </div>
+
+        <div class="pf-sec">
+          <p class="pf-sec-t">Dirección</p>
+          <div class="pf-grid">
+            <div class="pf-f full"><label>Calle y número</label><input class="input" id="pf_direccion" value="${v(prof.direccion)}"></div>
+            <div class="pf-f full"><label>Departamento, oficina, etc. (opcional)</label><input class="input" id="pf_dir2" value="${v(prof.direccion_linea2)}"></div>
+            <div class="pf-f"><label>Comuna</label><input class="input" id="pf_comuna" value="${v(prof.comuna)}"></div>
+            <div class="pf-f"><label>Ciudad</label><input class="input" id="pf_ciudad" value="${v(prof.ciudad)}"></div>
+            <div class="pf-f full"><label>Región</label><input class="input" id="pf_region" value="${v(prof.region)}"></div>
+          </div>
+        </div>
+
+        <div class="pf-sec">
+          <p class="pf-sec-t">Cuenta bancaria</p>
+          <label class="pf-check"><input type="checkbox" id="pf_ext" ${ext ? 'checked' : ''} onchange="_perfilToggleExt()"> Cuenta en el extranjero</label>
+          <div id="pf_bloqueCL" style="${ext ? 'display:none;' : ''}">
+            <div class="pf-grid">
+              <div class="pf-f"><label>Banco</label>${bancoSel}</div>
+              <div class="pf-f"><label>Tipo de cuenta</label><select class="select" id="pf_tipocuenta">${_perfilTipoCuentaOptions(ext ? '' : cuenta.tipo_cuenta)}</select></div>
+              <div class="pf-f full"><label>Número de cuenta</label><input class="input" id="pf_ncuenta" value="${ext ? '' : v(cuenta.numero_cuenta)}"></div>
+            </div>
+          </div>
+          <div id="pf_bloqueEXT" class="pf-f full" style="${ext ? '' : 'display:none;'}">
+            <label>Datos bancarios (banco, IBAN/SWIFT, titular, país…)</label>
+            <textarea class="input" id="pf_extra" rows="3">${ext ? v(cuenta.datos_extra) : ''}</textarea>
+          </div>
+        </div>
+      </div>
+      <div class="pf-bar"><div class="pf-bar-in">
+        <span class="spacer">Tus datos quedan guardados solo en tu cuenta.</span>
+        <button class="btn btn-secondary" onclick="_perfilOmitir()">${modoOnboarding ? 'Completar después' : 'Cerrar'}</button>
+        <button class="btn btn-primary" onclick="_perfilGuardar()">Guardar</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+  } catch (e) {
+    _perfilCerrar();
+    if (modoOnboarding && _PERFIL_CTX && typeof _PERFIL_CTX.onDone === 'function') _PERFIL_CTX.onDone();
+  }
+}
+
+function _perfilToggleExt() {
+  var ext = document.getElementById('pf_ext'); if (!ext) return;
+  var cl = document.getElementById('pf_bloqueCL'), ex = document.getElementById('pf_bloqueEXT');
+  if (cl) cl.style.display = ext.checked ? 'none' : '';
+  if (ex) ex.style.display = ext.checked ? '' : 'none';
+}
+
+function _perfilOmitir() {
+  var onb = _PERFIL_CTX && _PERFIL_CTX.onboarding;
+  var cb = _PERFIL_CTX && _PERFIL_CTX.onDone;
+  _perfilCerrar();
+  if (onb && typeof cb === 'function') cb();
+}
+
+async function _perfilGuardar() {
+  var g = function (id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  var client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
+  if (!client) { _perfilOmitir(); return; }
+  try {
+    var ures = await client.auth.getUser();
+    var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
+    if (!uid) { _perfilOmitir(); return; }
+    var prof = {
+      user_id: uid, nombre: g('pf_nombre'), apellido: g('pf_apellido'), rut: g('pf_rut'),
+      email: g('pf_email') || (_PERFIL_CTX && _PERFIL_CTX.email) || '', telefono: g('pf_telefono'),
+      direccion: g('pf_direccion'), direccion_linea2: g('pf_dir2'), comuna: g('pf_comuna'),
+      ciudad: g('pf_ciudad'), region: g('pf_region')
+    };
+    var up = await client.from('user_profiles').upsert(prof, { onConflict: 'user_id' });
+    if (up.error) throw up.error;
+
+    var extEl = document.getElementById('pf_ext'); var ext = extEl ? extEl.checked : false;
+    var bancoNombre = g('perfilBanco'), tipo = g('pf_tipocuenta'), num = g('pf_ncuenta'), datosExtra = g('pf_extra');
+    var hayCuenta = ext ? !!datosExtra : (!!bancoNombre || !!num || !!tipo);
+    if (hayCuenta) {
+      var ctaRow = {
+        user_id: uid, es_principal: true, es_extranjera: ext,
+        bank_codigo_sbif: ext ? null : (bancoNombre && typeof bancoCodigo === 'function' ? (bancoCodigo(bancoNombre) || null) : null),
+        tipo_cuenta: ext ? null : (tipo || null),
+        numero_cuenta: ext ? null : (num || null),
+        datos_extra: ext ? (datosExtra || null) : null
+      };
+      if (_PERFIL_CTX && _PERFIL_CTX.cuentaId) ctaRow.id = _PERFIL_CTX.cuentaId;
+      var cu = await client.from('user_bank_accounts').upsert(ctaRow);
+      if (cu.error) throw cu.error;
+    }
+    try { showToast({ kind: 'positive', title: 'Perfil guardado', body: 'Tus datos personales quedaron guardados.' }); } catch (e) {}
+    _perfilOmitir();
+  } catch (e) {
+    try { showToast({ kind: 'negative', title: 'No se pudo guardar', body: 'Revisa los datos e inténtalo de nuevo.' }); } catch (_) {}
+  }
+}
+
+/* Onboarding: si la persona aún no tiene perfil, se lo ofrecemos antes de
+   entrar. Cualquier fallo continúa al arranque normal (no bloquea). */
+async function iniciarSesionTakeOS() {
+  try {
+    var client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
+    if (client) {
+      var ures = await client.auth.getUser();
+      var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
+      if (uid) {
+        var pr = await client.from('user_profiles').select('user_id').eq('user_id', uid).maybeSingle();
+        if (!pr.error && (!pr || !pr.data)) {
+          abrirPerfilUsuario(true, function () { resolverEspacioYArrancar(); });
+          return;
+        }
+      }
+    }
+  } catch (e) { /* seguimos al arranque */ }
+  resolverEspacioYArrancar();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -20659,9 +20904,9 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeunload', () => { if (STATE.dirty) autosaveNow(); });
 
   // Gate A cerrado: el login es Supabase Auth (cloudGate) y la carga es 100% Supabase.
-  // V10.7.0: tras el login pasamos por el espacio de usuario (multi-organización),
-  // que decide si mostrar la pantalla de elección o entrar directo (equipo actual).
-  cloudGate(() => { resolverEspacioYArrancar(); });
+  // V10.7.0: tras el login pasamos por el espacio de usuario (multi-organización).
+  // V10.8.0: y antes, por el onboarding si la persona aún no tiene perfil personal.
+  cloudGate(() => { iniciarSesionTakeOS(); });
 });
 
 </script>
