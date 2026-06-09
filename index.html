@@ -1957,6 +1957,23 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
 }
 .sidebar-item.active .sidebar-icon { color: var(--accent); }
+/* V10.5.1 · indicador de solo-lectura (L en círculo) junto al nombre del módulo */
+.sidebar-item .ro-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink-faint);
+}
+.sidebar-item.active .ro-badge { color: var(--accent); border-color: var(--accent); }
 /* V9.6.16 · contador de MIS tareas abiertas por sección, en la barra lateral */
 .sidebar-task-badge { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; font-size: 10.5px; font-weight: 700; color: var(--bg-page); background: var(--warning); border-radius: 9px; flex-shrink: 0; }
 
@@ -2559,7 +2576,10 @@ tr.row-drop-after > td { box-shadow: inset 0 -2px 0 var(--accent, #B03A2F); }
 .he-usa-proyecto input { margin-top: 2px; flex-shrink: 0; }
 /* V10.4.0 (Gate B) · modo solo-lectura por módulo */
 .mod-readonly input, .mod-readonly textarea, .mod-readonly select { pointer-events: none; opacity: 0.9; }
-.mod-readonly .row-add, .mod-readonly .row-delete, .mod-readonly .btn-primary, .mod-readonly .calc-trigger, .mod-readonly .row-note-btn, .mod-readonly .subdept-ctl { pointer-events: none; opacity: 0.45; }
+/* V10.5.1: cambiar de día en hoja de llamado es navegación, sigue activo en solo-lectura */
+.mod-readonly .hl-day-select select { pointer-events: auto; opacity: 1; }
+.mod-readonly .row-add, .mod-readonly .row-delete, .mod-readonly .btn-primary, .mod-readonly .calc-trigger, .mod-readonly .row-note-btn, .mod-readonly .subdept-ctl,
+.mod-readonly .btn-secondary:not(.ro-allow), .mod-readonly .pr-ab-btn, .mod-readonly .pr-tool { pointer-events: none; opacity: 0.45; }
 .mod-readonly-banner { display: flex; align-items: center; gap: 8px; background: var(--bg-surface-soft); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 8px; padding: 9px 13px; font-size: 12px; color: var(--ink-muted); margin-bottom: 14px; }
 .data-table tbody td {
   padding: 8px 12px;
@@ -4472,7 +4492,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
         <p class="cr-subtitle">Vista global de todos los proyectos de Primate Films.</p>
       </div>
       <div class="cr-actions">
-        <button class="btn btn-secondary" onclick="document.getElementById('importProjectFileInput').click()"
+        <button class="btn btn-secondary" id="importProjectBtn" onclick="document.getElementById('importProjectFileInput').click()"
                 title="Importar UN proyecto desde un archivo .json. NO toca la BD ni los demás proyectos.">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><polyline points="9 15 12 12 15 15"/></svg>
           Importar proyecto
@@ -5665,7 +5685,7 @@ const TRASH = [];
 /* V7.9: perfil de la empresa/productora emisora (datos para documentos). Global, persiste en save y nube. NO vive en Notificaciones. */
 let EMPRESA_PERFIL = {
   nombreFicticio: 'Primate Films', razonSocial: 'La Hectárea SpA', rut: '77.398.011-K', giro: 'Producción audiovisual',
-  direccion: '', comuna: '', telefono: '', email: '', web: '',
+  direccion: '', comuna: '', ciudad: '', telefono: '', email: '', web: '',
   representante: 'Agustín Ignacio Muñoz Rocha', repRut: '20.287.686-2', repTelefono: '', repEmail: 'agustin@amrfilms.com',
   // V7.10: datos bancarios (para futuras transferencias) y enlaces/integraciones (para futuros botones: subir a Drive, abrir Milanote/Chipax, agendar en Calendar)
   bancoNombre: '', bancoTipoCuenta: '', bancoNumero: '', bancoTitular: '', bancoRut: '', bancoEmailPagos: '',
@@ -6218,12 +6238,14 @@ function renderTareasModal() {
   const people = projectPeople(project);
   const tareas = ensureTareas(project).filter(t => t.seccion === seccion)
     .sort((a, b) => (a.estado === b.estado ? 0 : (a.estado === 'completada' ? 1 : -1)) || (b.creadaTs - a.creadaTs));
-  const createForm = '<div class="tm-create"><div class="tm-create-h">Crear tarea</div>' +
+  const createForm = (!_puedeEditarTareas())
+    ? '<div class="tm-create"><div class="tm-create-h">Solo lectura</div><div class="tm-hint" style="margin-top:6px;">Tu perfil puede ver las tareas de esta sección, pero no crearlas ni editarlas.</div></div>'
+    : ('<div class="tm-create"><div class="tm-create-h">Crear tarea</div>' +
     '<div class="tm-field"><label>Asignar a</label>' + _tmAssigneeSelect(people, st.asignado) + '</div>' +
     '<div class="tm-field"><label>Tarea</label><textarea id="tmNuevoTexto" class="input" rows="3" placeholder="Ej: toma todas las personas de esta base de datos y agrégalas como visitas externas. Escribe @ para etiquetar." oninput="mentionInput(this)" onblur="mentionBlur()"></textarea></div>' +
     '<div class="tm-field"><label>Adjuntos</label>' + ((st.adjuntos || []).length ? '<div class="tm-atts">' + st.adjuntos.map((a, i) => '<span class="tm-att">\U0001F4CE ' + escapeHtml(a.name) + ' <button onclick="tmRemoveAtt(' + i + ')">\u2715</button></span>').join('') + '</div>' : '<div class="tm-hint">Sin adjuntos.</div>') +
       '<input type="file" id="tmFile" multiple style="display:none;" onchange="tmAddFiles(this.files)"><button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'tmFile\').click()">+ Adjuntar archivo</button></div>' +
-    '<div class="tm-create-actions"><button class="btn btn-ghost btn-sm" onclick="tmSelfAssign()">Auto-asignármela</button><button class="btn btn-primary btn-sm" onclick="tmCrear()">Crear tarea</button></div></div>';
+    '<div class="tm-create-actions"><button class="btn btn-ghost btn-sm" onclick="tmSelfAssign()">Auto-asignármela</button><button class="btn btn-primary btn-sm" onclick="tmCrear()">Crear tarea</button></div></div>');
   const list = tareas.length ? tareas.map(t => _tmTaskHtml(project, t, people)).join('') : '<div class="tm-empty">Sin tareas en esta sección todavía.</div>';
   const root = document.getElementById('modalRoot');
   root.innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:640px;width:94vw;max-height:88vh;overflow:auto;">' +
@@ -6264,6 +6286,7 @@ async function tmAddFiles(files) {
 }
 function tmRemoveAtt(i) { const st = _tm(); const a = (st.adjuntos || [])[i]; if (a && a.path && sb && sb.storage) { try { sb.storage.from(STORAGE_BUCKET_ADJUNTOS).remove([a.path]); } catch (e) {} } (st.adjuntos || []).splice(i, 1); renderTareasModal(); }
 function _tmPush(project, st, texto, asignado) {
+  if (!_puedeEditarTareas()) { showToast({ kind: 'info', title: 'Solo lectura', body: 'Tu perfil no puede crear tareas en esta sección.' }); return; }   // V10.5.2
   ensureTareas(project).push({ id: _taskId(), seccion: st.seccion, texto: texto, asignadoA: asignado, creadoPor: currentUser(), estado: 'pendiente', adjuntos: (st.adjuntos || []).slice(), comentarios: [], creadaTs: Date.now() });
   st.asignado = ''; st.adjuntos = []; markDirty();
   showToast({ kind: 'success', title: 'Tarea creada', body: 'Asignada a ' + escapeHtml(asignado) + '. El aviso real a la persona llega con el backend.' });
@@ -6283,9 +6306,9 @@ function tmSelfAssign() {
   if (!texto) { showToast({ kind: 'warning', title: 'Falta la tarea', body: 'Escribe en qué consiste la tarea.' }); return; }
   _tmPush(project, st, texto, currentUser());
 }
-function tmToggle(id) { const t = _tmFind(id); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); renderTareasModal(); refreshSectionTareasBadge(); } }
+function tmToggle(id) { if (!_puedeEditarTareas()) return; const t = _tmFind(id); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); renderTareasModal(); refreshSectionTareasBadge(); } }
 function tmToggleExpand(id) { const st = _tm(); st.expanded = st.expanded === id ? null : id; renderTareasModal(); }
-function tmAddComentario(id) { const t = _tmFind(id); if (!t) return; const el = document.getElementById('tmCom_' + id); const v = el ? el.value.trim() : ''; if (!v) return; if (!t.comentarios) t.comentarios = []; t.comentarios.push({ id: _taskId(), autor: currentUser(), texto: v, ts: new Date().toLocaleString('es-CL') }); markDirty(); renderTareasModal(); }
+function tmAddComentario(id) { if (!_puedeEditarTareas()) return; const t = _tmFind(id); if (!t) return; const el = document.getElementById('tmCom_' + id); const v = el ? el.value.trim() : ''; if (!v) return; if (!t.comentarios) t.comentarios = []; t.comentarios.push({ id: _taskId(), autor: currentUser(), texto: v, ts: new Date().toLocaleString('es-CL') }); markDirty(); renderTareasModal(); }
 function refreshSectionTareasBadge() { if (STATE.currentView === 'project' && STATE.currentModule) { try { renderModule(STATE.currentModule); } catch (e) {} try { refreshSidebarTaskCounters(); } catch (e) {} } }
 function renderMisTareas() {
   const el = document.getElementById('crTareasPanel'); if (!el) return;
@@ -6336,7 +6359,7 @@ function renderMisTareas() {
       group('Requieren atención', senalesRows.length, atencionHtml) +
     '</div></div>';
 }
-function crtToggle(projId, taskId) { const p = PROJECTS.find(x => x.id === projId); if (!p) return; const t = ensureTareas(p).find(x => x.id === taskId); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); try { renderMetrics(); renderKanban(); } catch (e) {} } }
+function crtToggle(projId, taskId) { if (!_puedeEditarTareas()) return; const p = PROJECTS.find(x => x.id === projId); if (!p) return; const t = ensureTareas(p).find(x => x.id === taskId); if (t) { t.estado = t.estado === 'completada' ? 'pendiente' : 'completada'; markDirty(); try { renderMetrics(); renderKanban(); } catch (e) {} } }
 function crtGoTask(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) return; navigateToProject(projId); setTimeout(() => { try { navigateToModule(seccion); } catch (e) {} setTimeout(() => { try { openTareasModal(seccion); } catch (e) {} }, 140); }, 70); }
 function crtGoSenal(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) return; navigateToProject(projId); setTimeout(() => { try { navigateToModule(seccion); } catch (e) {} }, 90); }
 function renderMetrics() {
@@ -7197,6 +7220,7 @@ function sectionResponsableName(key) {
   return (fld && ip[fld]) ? String(ip[fld]) : '';
 }
 function setSectionResponsable(key, nombre) {
+  if (!_puedeEditarResponsables()) return;   // V10.5.2: solo Administrador y Ejecutivo
   const r = _projResp(); if (!r) return;
   r[key] = (nombre || '').trim();
   markDirty();
@@ -7221,6 +7245,11 @@ function sectionResponsableInner(key) {
     const tel = p ? (p.telefono || '') : '';
     const meta = [cargo, correo, tel].filter(Boolean).map(e).join(' · ');
     info = '<button type="button" class="resp-card" onclick="openPersonaByName(\'' + e(name) + '\')" data-tip="Ver ficha en la Base de Datos">' + e(name) + (meta ? '<span class="resp-meta">' + meta + '</span>' : '') + '</button>';
+  }
+  // V10.5.2: editar responsables es exclusivo de Administrador y Ejecutivo.
+  // El resto ve quién es el responsable, pero no el combobox para cambiarlo.
+  if (!_puedeEditarResponsables()) {
+    return info || '<span style="font-size:13px;color:var(--ink-faint);">Sin responsable asignado</span>';
   }
   return '<span class="resp-combo combobox-wrap cbx-anchored">' +
     '<input class="input combobox-input" value="' + e(name) + '" placeholder="' + e(roleLabel || 'Buscar en la Base de Datos…') + '" autocomplete="off" onfocus="comboboxOpen(this)" oninput="comboboxFilter(this)" onblur="comboboxCloseDelayed(this)" onchange="setSectionResponsable(\'' + key + '\', this.value)">' +
@@ -9239,7 +9268,17 @@ function requestAdminPassword(onOk) {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') tryIt(); });
   setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
 }
+/* V10.5.1: el modo administrador queda reservado al perfil Administrador (1).
+   Fail-open coherente con authNivel: si no hay perfil cargado, no se restringe. */
+function _puedeModoAdmin() {
+  if (!TAKEOS_PERFIL) return true;
+  return authEsAdmin();
+}
 function toggleAdminMode() {
+  if (!STATE.adminMode && !_puedeModoAdmin()) {
+    showToast({ kind: 'error', title: 'Modo administrador no disponible', body: 'Solo el perfil Administrador puede activar el modo administrador.' });
+    return;
+  }
   if (!STATE.adminMode) {
     requestAdminPassword(() => {
       STATE.adminMode = true; _applyAdminUI();
@@ -12015,6 +12054,8 @@ function renderCotizacion() {
     <div id="cotOfertasWrap">
       ${c.ofertas.map((o, i) => cotOfertaCardHTML(project, o, i)).join('')}
     </div>`;
+  // V10.5.1: el innerHTML de arriba borra el banner de solo-lectura; re-aplicarlo tras cada render.
+  try { applyModuleReadonly('cotizacion'); } catch (e) {}
 }
 
 function cotMetaCardHTML(project, c, ip, fechaVal) {
@@ -14524,7 +14565,7 @@ function legalSetFiltro(k, v) { _legalState()[k] = v; renderLegal(); }
 
 function legalRep() {
   const e = EMPRESA_PERFIL || {};
-  const dom = [e.direccion, e.comuna].filter(Boolean).join(', ');
+  const dom = [e.direccion, e.comuna, e.ciudad].filter(Boolean).join(', ');   // V10.5.1: comuna y ciudad ahora son campos separados
   return {
     razon: e.razonSocial || 'La Hectárea SpA',
     rutEmp: e.rut || '77.398.011-K',
@@ -16140,6 +16181,7 @@ function openConfigPanel() {
   const ab = document.getElementById('adminToggleBtn'), al = document.getElementById('adminToggleLabel');
   if (ab) ab.classList.toggle('is-on', !!(STATE && STATE.adminMode));
   if (al) al.textContent = `Modo admin: ${(STATE && STATE.adminMode) ? 'ON' : 'OFF'}`;
+  if (ab && !_puedeModoAdmin()) ab.style.display = 'none';   // V10.5.1: modo admin solo para perfil Administrador
 }
 function closeConfigPanel() { closeModal(); }
 function _configPanelOpen() { return !!document.querySelector('.config-panel'); }
@@ -16246,59 +16288,10 @@ async function _reconPresupContenido(projects) {
   return { comparados, mismatches };
 }
 async function reconcileFirebaseSupabase() {
-  if (!sb) { showToast({ kind: 'warning', title: 'Sin Supabase', body: 'No hay conexión con Supabase para reconciliar.' }); return; }
-  if (typeof cloudDocRef !== 'function' || !_cloudReady) { showToast({ kind: 'warning', title: 'Sin Firebase', body: 'No hay conexión con Firebase para leer el blob.' }); return; }
-  showToast({ kind: 'info', title: 'Reconciliando…', body: 'Leyendo Firebase y Supabase (solo lectura).', duration: 4000 });
-
-  // 1) Firebase: leer el blob crudo
-  let blob = null;
-  try {
-    const snap = await cloudDocRef().get();
-    blob = cloudParse(snap.data()) || {};
-  } catch (e) {
-    showToast({ kind: 'error', title: 'No se pudo leer Firebase', body: 'Falló la lectura del documento de Firestore.' });
-    return;
-  }
-
-  const fbKeys = (o) => (o && typeof o === 'object') ? Object.keys(o) : [];
-  const fbArrIds = (arr, field) => (Array.isArray(arr) ? arr : []).map(x => x && x[field]).filter(v => v != null && v !== '').map(String);
-
-  // 2) Definición de entidades a comparar
-  const ENT = [
-    { label: 'Contactos',          fb: fbKeys(blob.bdContactos),                 tabla: 'contacts',             col: 'id' },
-    { label: 'Empresas',           fb: fbKeys(blob.bdEmpresasById),              tabla: 'companies',            col: 'id' },
-    { label: 'Proyectos',          fb: fbArrIds(blob.projects, 'id'),            tabla: 'projects',             col: 'id' },
-    { label: 'Locaciones',         fb: fbArrIds(blob.bdLoc, 'locId'),            tabla: 'locations',            col: 'loc_id' },
-    { label: 'Documentos legales', fb: fbArrIds(blob.bdLegal, 'docId'),          tabla: 'legal_documents',      col: 'doc_id' },
-    { label: 'Plantillas legales', fb: fbArrIds(blob.bdLegalTpl, 'id'),          tabla: 'legal_templates',      col: 'id' }
-  ];
-
-  const filas = [];
-  for (const e of ENT) {
-    let sbIds = [];
-    let err = null;
-    try { sbIds = await _reconFetchSupabaseIds(e.tabla, e.col); }
-    catch (ex) { err = ex; }
-    if (err) { filas.push({ label: e.label, error: true }); continue; }
-    filas.push(Object.assign({ label: e.label }, _reconDiff(e.fb, sbIds)));
-  }
-
-  // Perfil (singleton): presencia
-  let perfilFb = !!(blob.empresaPerfil && typeof blob.empresaPerfil === 'object' && Object.keys(blob.empresaPerfil).length);
-  let perfilSb = false;
-  try {
-    const { count } = await sb.from('organization_profile').select('organization_id', { count: 'exact', head: true });
-    perfilSb = (count || 0) > 0;
-  } catch (e) {}
-
-  // V9.6.9 — Comparación de CONTENIDO en datos sensibles (Firebase↔Supabase)
-  const contenido = {};
-  try { contenido.cuentas = await _reconCuentasContenido(blob.bdContactos || {}); }
-  catch (e) { contenido.cuentas = { error: true }; }
-  try { contenido.presupuesto = await _reconPresupContenido(Array.isArray(blob.projects) ? blob.projects : []); }
-  catch (e) { contenido.presupuesto = { error: true }; }
-
-  _renderReconReport(filas, perfilFb, perfilSb, contenido);
+  // V10.5.3: Firebase desconectado del cliente. La reconciliación Firebase↔Supabase
+  // ya no aplica (Supabase es la única fuente). Se conserva el punto de entrada como
+  // aviso para no romper su botón en Diagnóstico.
+  showToast({ kind: 'info', title: 'Reconciliación no disponible', body: 'Firebase está desconectado del cliente; Supabase es la única fuente. La reconciliación Firebase↔Supabase ya no aplica.' });
 }
 function _reconIdList(ids) {
   if (!ids || !ids.length) return '';
@@ -16545,7 +16538,7 @@ var GSEARCH_DESTS = [
   { icon: '🏢', label: 'Empresa / Productora (datos)', kw: 'empresa productora razon social rut giro direccion banco bancarios cuenta titular drive milanote chipax calendar perfil datos remitente representante', sub: 'Configuración', run: () => openEmpresaPerfil() },
   { icon: '👥', label: 'Base de Datos de Contactos', kw: 'base de datos contactos personas talentos proveedores clientes bd', sub: 'Abrir', run: () => openGlobalBDPersonas() },
   { icon: '📊', label: 'Finanzas · CFO', kw: 'cfo finanzas gastos consolidado validacion reembolsos chipax exportar contador caja', sub: 'Abrir', run: () => openGlobalCFO() },
-  { icon: '🛡', label: 'Modo administrador', kw: 'modo administrador admin permisos clave contrasena password revertir', sub: 'Activar permisos', adminRequired: true, run: () => { if (!STATE.adminMode) { STATE.adminMode = true; _applyAdminUI(); showToast({ kind: 'warning', title: 'Modo administrador activado', body: 'Acciones restringidas habilitadas. Úsalo con criterio.' }); } else { openConfigPanel(); } } },
+  { icon: '🛡', label: 'Modo administrador', kw: 'modo administrador admin permisos clave contrasena password revertir', sub: 'Activar permisos', adminRequired: true, run: () => { if (!_puedeModoAdmin()) { showToast({ kind: 'error', title: 'Modo administrador no disponible', body: 'Solo el perfil Administrador puede activarlo.' }); return; } if (!STATE.adminMode) { STATE.adminMode = true; _applyAdminUI(); showToast({ kind: 'warning', title: 'Modo administrador activado', body: 'Acciones restringidas habilitadas. Úsalo con criterio.' }); } else { openConfigPanel(); } } },
   { icon: '🎨', label: 'Cambiar tema (claro / oscuro)', kw: 'tema theme claro oscuro dark light apariencia', sub: 'Preferencias', run: () => toggleTheme() },
   { icon: '💾', label: 'Guardar OS', kw: 'guardar respaldo backup exportar os json', sub: 'Datos del OS', run: () => { closeModal(); exportSave(); } },
   { icon: '📂', label: 'Cargar OS', kw: 'cargar importar abrir os respaldo json', sub: 'Datos del OS', run: () => { closeModal(); const i = document.getElementById('loadFileInput'); if (i) i.click(); } },
@@ -16603,6 +16596,7 @@ function _gsearchGo(i) {
 
 /* V7.9: perfil de la empresa/productora emisora (datos para documentos). */
 function openEmpresaPerfil() {
+  if (!_puedeModoAdmin()) { showToast({ kind: 'error', title: 'Perfil de empresa no disponible', body: 'Solo el perfil Administrador puede editar los datos de la empresa.' }); return; }
   if (!(STATE && STATE.adminMode)) { requestAdminPassword(() => { STATE.adminMode = true; _applyAdminUI(); openEmpresaPerfil(); }); return; }
   const E = EMPRESA_PERFIL;
   const field = (id, label, val, ph) => `<div class="emp-field"><label>${label}</label><input id="emp_${id}" class="cot-input" value="${escapeHtml(val || '')}" placeholder="${ph || ''}"></div>`;
@@ -16619,7 +16613,8 @@ function openEmpresaPerfil() {
             ${field('rut','RUT empresa', E.rut, '77.398.011-K')}
             ${field('giro','Giro', E.giro, 'Producción audiovisual')}
             ${field('direccion','Dirección', E.direccion, 'Calle, número, oficina')}
-            ${field('comuna','Comuna / Ciudad', E.comuna, 'Providencia, Santiago')}
+            ${field('comuna','Comuna', E.comuna, 'Providencia')}
+            ${field('ciudad','Ciudad', E.ciudad, 'Santiago')}
             ${field('telefono','Teléfono empresa', E.telefono, '+56 9 ...')}
             ${field('email','Email empresa', E.email, 'contacto@...')}
             ${field('web','Sitio web', E.web, 'www...')}
@@ -16660,7 +16655,7 @@ function openEmpresaPerfil() {
     </div>`;
 }
 function saveEmpresaPerfil() {
-  const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
+  const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','ciudad','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
   keys.forEach(k => { const el = document.getElementById('emp_' + k); if (el) EMPRESA_PERFIL[k] = el.value.trim(); });
   markDirty(); _dalPerfilSaveSoon();
   showToast({ kind: 'success', title: 'Perfil guardado', body: 'Los datos de la empresa se aplicarán a los documentos. Recuerda Guardar OS para respaldarlo.' });
@@ -16871,6 +16866,7 @@ function calcUpdate(raw) {
      · factura/exenta/sin retención: costo real = monto (el IVA no es costo)
    Así el costo real queda alineado con la lógica tributaria central. */
 function openCostoRealCalc(sectionKey, dept, idx) {
+  if (authNivel('presupuesto') !== 'E') { showToast({ kind: 'info', title: 'Solo lectura', body: 'Tu perfil puede ver el presupuesto, pero no modificar el costo real.' }); return; }   // V10.5.1
   const item = _rowNoteItem(sectionKey, dept, idx);
   if (!item) return;
   const dte = item.dteReal || null;
@@ -17101,6 +17097,7 @@ function setHeHoras(sectionKey, dept, idx, raw) {
 
 /* ─── Modal de override por fila ──────────────────────────────────────── */
 function openHorasExtraCalc(sectionKey, dept, idx) {
+  if (authNivel('presupuesto') !== 'E') { showToast({ kind: 'info', title: 'Solo lectura', body: 'Tu perfil puede ver el presupuesto, pero no modificar las horas extra.' }); return; }   // V10.5.1
   const item = _rowNoteItem(sectionKey, dept, idx);
   if (!item) return;
   const cfg = item.heConfig || _heDefaultConfig();
@@ -17272,6 +17269,7 @@ function _hecClear() {
 
 /* ─── Modal del recargo por defecto del proyecto (⚙ del encabezado) ────── */
 function openHeProyectoDefault() {
+  if (authNivel('presupuesto') !== 'E') { showToast({ kind: 'info', title: 'Solo lectura', body: 'Tu perfil puede ver el presupuesto, pero no configurar las horas extra.' }); return; }   // V10.5.1
   if (!STATE.currentProject) return;
   window._hep = { recargo: _heProjRecargo() };
   renderHeProyectoDefault();
@@ -17367,12 +17365,14 @@ function openAddPersonaQuick() { openPersonaForm('create', null); }
    formulario de Nueva persona con el nombre ya rellenado. */
 function crewAddToBD(nombre) { openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre || ''; el.focus(); } }
 
-/* Apertura de edición con gate de Modo Administrador (#7). */
+/* V10.5.1: editar fichas de BD requiere permiso de módulo BD en nivel E
+   (Administrador, Ejecutivo, Producción, Asistencia, Coordinación). Reemplaza el
+   antiguo gate de Modo Administrador: el sistema de permisos formal ya está activo. */
 function requestEditPersona(contactId) {
-  if (!STATE.adminMode) {
+  if (authNivel('bd') !== 'E') {
     showModal({
-      title: 'Editar persona requiere Modo administrador',
-      body: 'Modificar un registro de la Base de Datos puede afectar a todos los proyectos que lo referencian.<br><br>Activa <strong>Modo administrador</strong> en la barra superior para habilitar la edición. El sistema de permisos formal llega en una versión futura.',
+      title: 'Sin permiso para editar fichas',
+      body: 'Modificar un registro de la Base de Datos requiere permiso de edición en el módulo BD. Tu perfil puede consultarlo, pero no editarlo.',
       confirmLabel: 'Entendido',
       cancelLabel: null
     });
@@ -18552,10 +18552,33 @@ function exportSave() {
 }
 
 /* ─── IMPORTAR (.json) ─────────────────────────────────────────────── */
+/* V10.5.1: Cargar OS es ADITIVO — agrega solo los proyectos cuyo id no exista,
+   sin borrar ni sobreescribir proyectos existentes ni la Base de Datos transversal.
+   (applyLoadedState, que reemplaza todo, queda reservada para revertir Snapshots.) */
+function mergeAddProjectsFromSave(obj) {
+  const res = { agregados: 0, omitidos: 0 };
+  const existentes = new Set(PROJECTS.map(p => p && p.id).filter(Boolean));
+  (obj.projects || []).forEach(p => {
+    if (!p || !p.id) return;
+    if (existentes.has(p.id)) { res.omitidos++; return; }
+    if (p.data && !Array.isArray(p.data.locaciones)) p.data.locaciones = [];
+    PROJECTS.push(p); existentes.add(p.id); res.agregados++;
+  });
+  return res;
+}
 function importSaveFromInput(input) {
   const file = input.files && input.files[0];
   input.value = ''; // permitir recargar el mismo archivo después
   if (!file) return;
+  // V10.5.1: Cargar OS reservado al perfil Administrador, en modo administrador (acción seria).
+  if (!_puedeModoAdmin()) {
+    showToast({ kind: 'error', title: 'Cargar OS no disponible', body: 'Solo el perfil Administrador puede cargar un OS.' });
+    return;
+  }
+  if (!STATE.adminMode) {
+    showToast({ kind: 'warning', title: 'Activa el modo administrador', body: 'Cargar un OS requiere el modo administrador activo. Actívalo en Configuración.' });
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     let obj;
@@ -18570,26 +18593,29 @@ function importSaveFromInput(input) {
       showToast({ kind: 'warning', title: 'Guardado más nuevo', body: 'Este archivo fue creado por una versión más nueva de TakeOS. Se intentará cargar igual.' });
     }
     const savedWhen = obj.savedAt ? new Date(obj.savedAt).toLocaleString('es-CL') : 'fecha desconocida';
-    const numProyectosActuales = PROJECTS.length;
-    const numPersonasActuales = Object.keys(BD_PERSONAS).length;
+    const idsActuales = new Set(PROJECTS.map(p => p && p.id).filter(Boolean));
+    const nuevos = (obj.projects || []).filter(p => p && p.id && !idsActuales.has(p.id)).length;
+    const yaExisten = (obj.projects || []).length - nuevos;
     showModal({
-      danger: true,
-      title: '⚠️ Vas a reemplazar TODO el estado',
-      body: `Esta acción <strong>borra y reemplaza</strong> el estado completo de TakeOS:<br><br>
-        <strong>Lo actual que se va a perder:</strong><br>
-        • ${numProyectosActuales} proyecto(s)<br>
-        • ${numPersonasActuales} persona(s) en la BD<br><br>
-        <strong>Lo que viene en el archivo</strong> <code>${escapeHtml(file.name)}</code> (${escapeHtml(savedWhen)}):<br>
-        • ${obj.projects.length} proyecto(s)<br>
-        • ${obj.bdPersonas ? Object.keys(obj.bdPersonas).length : 0} persona(s) en la BD<br><br>
-        TakeOS va a crear un <strong>snapshot automático</strong> antes de reemplazar, así que puedes revertir desde el menú "Snapshots" si te arrepientes.<br><br>
-        ¿Quieres continuar con el reemplazo?`,
-      confirmLabel: 'Sí, reemplazar todo',
+      title: 'Cargar OS · agregar proyectos',
+      body: `Esta acción <strong>solo agrega</strong> proyectos nuevos. No borra ni modifica los proyectos actuales ni la Base de Datos.<br><br>
+        <strong>Del archivo</strong> <code>${escapeHtml(file.name)}</code> (${escapeHtml(savedWhen)}):<br>
+        • ${nuevos} proyecto(s) nuevo(s) que se agregarán<br>
+        • ${yaExisten} ya existen y se mantienen sin cambios<br><br>
+        Se crea un <strong>snapshot automático</strong> antes, por si necesitas revertir desde el menú "Snapshots".<br><br>
+        ¿Agregar los proyectos nuevos?`,
+      confirmLabel: 'Agregar proyectos',
       cancelLabel: 'Cancelar',
       onConfirm: () => {
-        pushSnapshot('Antes de cargar ' + file.name);
-        applyLoadedState(obj);
-        showToast({ kind: 'success', title: 'Proyecto cargado', body: `${obj.projects.length} proyecto(s) restaurados. Snapshot pre-carga disponible en el menú.` });
+        pushSnapshot('Antes de cargar OS ' + file.name);
+        const r = mergeAddProjectsFromSave(obj);
+        STATE.currentProject = null;
+        navigateToControlRoom();
+        renderMetrics();
+        renderKanban();
+        markDirty();
+        try { if (typeof cloudPush === 'function') cloudPush(); } catch (e) {}
+        showToast({ kind: 'success', title: 'Proyectos agregados', body: `${r.agregados} proyecto(s) nuevo(s) agregado(s). ${r.omitidos} ya existían y se mantuvieron sin cambios.` });
       },
       onCancel: () => {}
     });
@@ -18976,36 +19002,12 @@ function offerAutosaveRestore() {
    proyecto es la siguiente iteración, una vez validada la sincronización.
    ════════════════════════════════════════════════════════════════════ */
 
-/* ── Dos entornos: PRODUCCIÓN (real) y PRUEBAS (sandbox del Tester) ──
-   El sitio de pruebas (tests-takeos.netlify.app) usa su propia base de datos
-   Firestore, totalmente aislada de la real. El switch es por hostname: si la
-   URL contiene "test" o "pruebas" → base de pruebas; si no → base real.
-   Así el Tester nunca toca datos de producción. */
-const CLOUD_CONFIG_PROD = {
-  apiKey: "AIzaSyDDC1YcJo3eboKblpM1NZHSg8U6ye4AjCs",
-  authDomain: "takeos-by-primate-films.firebaseapp.com",
-  projectId: "takeos-by-primate-films",
-  storageBucket: "takeos-by-primate-films.firebasestorage.app",
-  messagingSenderId: "316353926859",
-  appId: "1:316353926859:web:8fe6e2d5dd325ea61f6d4e"
-};
-const CLOUD_CONFIG_TEST = {
-  apiKey: "AIzaSyC1v3yZ-zH792AYqZFztWnRg7IcSgGmoEE",
-  authDomain: "takeos-pruebas.firebaseapp.com",
-  projectId: "takeos-pruebas",
-  storageBucket: "takeos-pruebas.firebasestorage.app",
-  messagingSenderId: "331256168668",
-  appId: "1:331256168668:web:06f62899bc9d14623af419"
-};
-const IS_TEST_ENV = (function(){
-  try { var h = (location.hostname||'').toLowerCase();
-        return h.indexOf('test')>=0 || h.indexOf('pruebas')>=0; }
-  catch(e){ return false; }
-})();
-const CLOUD_CONFIG = IS_TEST_ENV ? CLOUD_CONFIG_TEST : CLOUD_CONFIG_PROD;
-const CLOUD_PASSWORD = "primate";   // V8.6: YA NO SE USA para entrar. El login real es Supabase (ver supabaseInit/cloudGate abajo). Se deja por compatibilidad.
-const CLOUD_ENABLED = true;          // ← pon false para volver a modo 100% local.
-const CLOUD_DOC = { col: 'takeos', id: 'estado' };
+/* ── V10.5.3 · Firebase desconectado del cliente ─────────────────────────
+   El SDK de Firebase se retiró en V10.0.0 (las funciones cloud* son no-op) y
+   en V10.5.3 se eliminó la configuración con credenciales (apiKey, projectId,
+   etc.), que ya era código muerto. El cliente no carga, no lee ni escribe en
+   Firebase: Supabase es la única fuente. Los datos en Firebase quedan intactos
+   como respaldo externo hasta que se decida borrarlos por separado. */
 
 /* ── Supabase (V8.6: login real + base de datos PostgreSQL) ───────────
    La publishable key es SEGURA de exponer aquí porque el RLS protege los
@@ -19223,7 +19225,7 @@ async function dalBootContactos() {
   const nC = Object.keys(data.contactos).length, nE = Object.keys(data.empresas).length;
   try { if (STATE.currentModule === 'bd-personas') renderBDPersonas(); } catch (e) {}
   try { renderMetrics(); renderKanban(); } catch (e) {}
-  try { showToast({ kind: 'success', title: 'Base de Datos desde Supabase', body: nC + ' contactos y ' + nE + ' empresas. Base de Datos en linea (lectura y escritura).', duration: 7000 }); } catch (e) {}
+  /* V10.5.1: notificación de boot de migración removida (obsoleta). */
   window.__TAKEOS_DATA_SOURCE = 'supabase';
   return true;
 }
@@ -19281,7 +19283,7 @@ async function dalBootLocaciones(opts) {
   try { restoreLocalLocPhotos(); } catch (e) {}   // reinyecta fotos de localStorage
   if (!silent) {
     try { if (typeof renderLocaciones === 'function') renderLocaciones(); } catch (e) {}
-    try { showToast({ kind: 'success', title: 'Locaciones desde Supabase', body: locs.length + ' locación(es) en línea (lectura y escritura).', duration: 6000 }); } catch (e) {}
+    /* V10.5.1: notificación de boot de migración removida (obsoleta). */
   }
   return true;
 }
@@ -19338,7 +19340,7 @@ async function dalBootLegal(opts) {
   dalApplyLegal(data);
   if (!silent) {
     try { if (typeof renderLegal === 'function' && STATE.currentModule === 'legal') renderLegal(); } catch (e) {}
-    try { showToast({ kind: 'success', title: 'Legal desde Supabase', body: data.docs.length + ' documento(s) y ' + data.tpls.length + ' plantilla(s) en línea.', duration: 6000 }); } catch (e) {}
+    /* V10.5.1: notificación de boot de migración removida (obsoleta). */
   }
   return true;
 }
@@ -19365,7 +19367,7 @@ async function dalBootPerfil(opts) {
   if (!profile) { if (!silent) console.warn('[dal] sin perfil de Supabase; sigue desde Firebase'); return false; }
   dalApplyPerfil(profile);
   if (!silent) {
-    try { showToast({ kind: 'success', title: 'Perfil de empresa desde Supabase', body: 'Datos de la organización en línea (lectura y escritura).', duration: 5000 }); } catch (e) {}
+    /* V10.5.1: notificación de boot de migración removida (obsoleta). */
   }
   return true;
 }
@@ -19430,6 +19432,7 @@ const MODULE_PERM_CODE = {
   'correos': 'gastos_legal_notificaciones',
   'gastos': 'gastos_legal_notificaciones',
   'entregables': 'operacion_creatividad',
+  'tareas': 'tareas',
   'reporte-cierre': 'reporte_cierre'
 };
 /* Nivel para un código de módulo de BD. Fail-open: null (no cargado) => 'E';
@@ -19447,6 +19450,16 @@ function authNivelModulo(appKey) {
 function authPuedeVer(appKey) { return authNivelModulo(appKey) !== 'none'; }
 function authPuedeEditar(appKey) { return authNivelModulo(appKey) === 'E'; }
 function authEsAdmin() { return TAKEOS_PERFIL && (TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.nombre === 'Administrador'); }
+/* V10.5.2: editar responsables de sección es exclusivo de Administrador (1) y Ejecutivo (2).
+   El servidor (RPC 4b) ya ignora los responsables para el resto; esto alinea la UI.
+   Fail-open coherente: sin perfil cargado, no restringe. */
+function _puedeEditarResponsables() {
+  if (!TAKEOS_PERFIL) return true;
+  return TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.codigo === 2;
+}
+/* V10.5.2: la escritura de tareas se gobierna por el módulo 'tareas' (no por
+   operacion_creatividad), para que Finanzas pueda crear/editar tareas. */
+function _puedeEditarTareas() { return authNivel('tareas') === 'E'; }
 /* Guardas de los RPCs de escritura: el proyecto-core (guardar_proyecto) toca
    varios módulos, así que se permite si hay 'E' en alguno de ellos; las
    operaciones usan 'operacion_creatividad'. */
@@ -19533,10 +19546,26 @@ function renderTopbarUser() {
 function applyPermisosUI() {
   try {
     document.querySelectorAll('.sidebar-item[data-module]').forEach(function (el) {
-      el.style.display = authPuedeVer(el.dataset.module) ? '' : 'none';
+      const vis = authPuedeVer(el.dataset.module);
+      el.style.display = vis ? '' : 'none';
+      // V10.5.1: indicador de solo-lectura (L) cuando el nivel del módulo es 'L'
+      const ro = vis && authNivelModulo(el.dataset.module) === 'L';
+      let badge = el.querySelector('.ro-badge');
+      if (ro && !badge) {
+        badge = document.createElement('span');
+        badge.className = 'ro-badge';
+        badge.textContent = 'L';
+        badge.title = 'Solo lectura';
+        el.appendChild(badge);
+      } else if (!ro && badge) {
+        badge.remove();
+      }
     });
     const btnNuevo = document.querySelector('.cr-actions .btn-primary[onclick*="newProject"]');
     if (btnNuevo) btnNuevo.style.display = (authNivel('crear_proyecto') === 'E') ? '' : 'none';
+    // V10.5.1: importar proyecto reservado a perfiles con crear_proyecto = E (Administrador y Ejecutivo)
+    const btnImport = document.getElementById('importProjectBtn');
+    if (btnImport) btnImport.style.display = (authNivel('crear_proyecto') === 'E') ? '' : 'none';
     const btnCFO = document.querySelector('.cr-actions [onclick*="openGlobalCFO"]');
     if (btnCFO) btnCFO.style.display = (authNivel('finanzas_consolidada') !== 'none') ? '' : 'none';
   } catch (e) { console.warn('[auth] applyPermisosUI', e); }
@@ -20285,7 +20314,7 @@ async function dalBootProyectos() {
   });
   PROJECTS_SOURCE = 'supabase';
   try { renderMetrics(); renderKanban(); } catch (e) {}
-  try { showToast({ kind: 'info', title: 'Proyectos desde Supabase', body: aplicados + ' proyecto(s) con presupuesto sincronizados desde la base relacional.', duration: 5000 }); } catch (e) {}
+  /* V10.5.1: notificación de boot de migración removida (obsoleta). */
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -20568,7 +20597,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.5.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V10.5.3';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 let _cloudDb = null;
 let _cloudReady = false;
