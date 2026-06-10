@@ -4859,6 +4859,15 @@ function comboboxFilterEmpresas(inputEl) {
   else { positionComboboxDropdown(inputEl, dropdown); }
 }
 
+async function _locThumbAsync(locId, path) {
+  try {
+    if (!sb || !sb.storage) return;
+    const { data, error } = await sb.storage.from('fotos-locaciones').createSignedUrl(path, 3600);
+    if (error || !data || !data.signedUrl) return;
+    const el = document.getElementById('locThumb_' + locId); if (!el) return;
+    el.outerHTML = '<img src="' + safeUrl(data.signedUrl) + '" alt="">';
+  } catch (e) {}
+}
 function bdLocFind(locId) { return BD_LOC.find(l => l.locId === locId) || null; }
 function projLocList(project) { const d = project && project.data; if (!d) return []; if (!Array.isArray(d.locaciones)) d.locaciones = []; return d.locaciones; }
 function projLocFind(project, locId) { return projLocList(project).find(u => u.locId === locId) || null; }
@@ -5122,7 +5131,8 @@ function _legacyPersonaView(c) {
     restriccion: c.restriccion, fechaNacimiento: c.fechaNacimiento, notas: c.notas,
     banco: pago.banco || '', codigoBanco: pago.codigoBanco || '',
     tipoCuenta: pago.tipoCuenta || '', nCuenta: pago.nCuenta || '', numeroCuenta: pago.nCuenta || '',
-    tipoDTE: pago.tipoDTE || '', dteHabitual: pago.dteHabitual || null
+    tipoDTE: pago.tipoDTE || '', dteHabitual: pago.dteHabitual || null,
+    cuentaExtranjera: !!pago.cuentaExtranjera, datosExtranjeros: pago.datosExtranjeros || ''
   };
   return v;
 }
@@ -9041,30 +9051,31 @@ function renderInfoProyecto() {
       </div>
     </div>
 
-    <!-- RESPONSABLES PRIMATE (RECI) -->
-    <!-- V5.1 FIX: reemplazado el datalist+input que tenía un bug crítico
-         (no permitía cambiar ni borrar a la persona seleccionada) por un
-         <select> nativo + botón "×" explícito. UX clara y sin bug. -->
+    <!-- RESPONSABLES (RECI) · V11.4.0: fuente única = módulo Cargos.
+         La regla madre: una misma información no vive en dos lugares aislados.
+         Aquí solo se LEE la proyección derivada de Cargos (PE / Director / JP);
+         se gestiona allá y se refleja acá (y en hoja de llamado, plan, gastos). -->
     <div class="form-section">
       <div class="form-section-title">Responsables (RECI) <span class="tt" data-tip="RECI = Responsable, Ejecutor, Consultado, Informado. Adaptación al español del framework RACI internacional.\n\n• R = Responsable final del proyecto. No delegable. Es quien responde por el resultado.\n• E = Ejecutor. Realiza el trabajo. Puede ser delegado por el Responsable.\n• C = Consultado. Aporta input durante la ejecución.\n• I = Informado. Recibe el resultado.">?</span></div>
-      <div class="form-section-subtitle">PE = Responsable final del proyecto (PRD V2 §07). Selecciona desde la BD; los datos de contacto se completan solos. Para cambiar, abre el desplegable. Para borrar, usa el botón ×.</div>
+      <div class="form-section-subtitle">Los responsables se gestionan en el módulo <strong>Cargos</strong> (fuente única) y se reflejan aquí y en todos los documentos. Asigna los cargos «Productor/a Ejecutivo/a», «Director/a» y «Jefe/a de Producción» allá.</div>
       <div class="form-grid cols-3">
         <div class="field">
-          <label class="field-label">Productor Ejecutivo <span class="tt" data-tip="R — Responsable final del proyecto. Único dueño operativo. Decide en escenarios ambiguos. No delega la responsabilidad.">R</span></label>
-          ${renderPersonSelect('productorEjecutivo', ip.productorEjecutivo)}
+          <label class="field-label">Productor Ejecutivo <span class="tt" data-tip="R — Responsable final del proyecto.">R</span></label>
+          <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.productorEjecutivo || '—')}</div>
           ${renderPersonContactSub(peData)}
         </div>
         <div class="field">
-          <label class="field-label">Director <span class="tt" data-tip="E — Ejecutor de la visión creativa. Responsable de devoluciones, tratamientos, plan de rodaje y resultado audiovisual.">E</span></label>
-          ${renderPersonSelect('director', ip.director)}
+          <label class="field-label">Director <span class="tt" data-tip="E — Ejecutor de la visión creativa.">E</span></label>
+          <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.director || '—')}</div>
           ${renderPersonContactSub(dirData)}
         </div>
         <div class="field">
-          <label class="field-label">Jefe de Producción <span class="tt" data-tip="E — Ejecutor operacional. Responsable de que todo lo necesario llegue al rodaje. Trabaja al servicio de cabezas de equipo y del PE.">E</span></label>
-          ${renderPersonSelect('jefeProduccion', ip.jefeProduccion)}
+          <label class="field-label">Jefe de Producción <span class="tt" data-tip="E — Ejecutor operacional.">E</span></label>
+          <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.jefeProduccion || '—')}</div>
           ${renderPersonContactSub(jpData)}
         </div>
       </div>
+      <div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="navigateToModule('cargos')">Gestionar en Cargos →</button></div>
     </div>
 
     <!-- ESTADO -->
@@ -13617,7 +13628,7 @@ function docRemoveArchivo(id) {
    extienda el modelo (handoff enviado). La invitación real a externos
    (correo + consentir_invitacion) está pendiente de Auth y Legal: aquí
    el externo queda registrado como «Invitación pendiente» sin envío. */
-const CARGOS_PRESETS = ['Director', 'Productor', 'Director de Fotografía', 'Asistente de Dirección', 'Asistente de Producción', 'Dirección de Arte', 'Sonido directo', 'Gaffer'];
+const CARGOS_PRESETS = ['Director/a', 'Productor/a Ejecutivo/a', 'Productor/a', 'Jefe/a de Producción', 'Director/a de Fotografía', 'Asistente de Dirección', 'Asistente de Producción', 'Dirección de Arte'];
 const CARGOS_PERFILES_INTERNO = ['Administrador', 'Ejecutivo', 'Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Finanzas / CFO', 'Invitado'];
 const CARGOS_PERFILES_EXTERNO = ['Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Invitado'];   // Administrador y Finanzas no se ofrecen a externos
 let _CARGO_EDIT = null;
@@ -13663,6 +13674,7 @@ async function dalCargarCargos(project) {
       });
     }
     project.data._cargosOK = true;
+    _cargosDerivarRECI(project);
   } catch (e) {
     console.error('[dal] cargar cargos', e);
     project.data._cargosOK = true;   // no bloquea el render; queda vacío en memoria
@@ -13694,8 +13706,28 @@ async function dalGuardarCargos(project) {
     return false;
   }
 }
+/* V11.4.0 · espejo RECI: los cargos PE / Director / JP alimentan los campos
+   históricos de Info Proyecto (de los que se nutren hoja de llamado, plan de
+   rodaje, gastos, exports). Fuente única = Cargos; ip.* es proyección. Si un
+   cargo no está asignado, NO se borra el valor previo (registro anterior). */
+function _cargosDerivarRECI(project) {
+  try {
+    const ip = project && project.data ? project.data.infoProyecto : null; if (!ip) return;
+    const cargos = (project.data.cargos || []).filter(function (c) { return (c.personaNombre || '').trim(); });
+    const buscar = function (rx) { const c = cargos.find(function (c) { return rx.test(c.cargo || ''); }); return c ? c.personaNombre.trim() : null; };
+    const pe = buscar(/productor(\/a)?\s+ejecutiv/i);
+    const dir = buscar(/^\s*director(\/a)?\s*$/i);
+    const jp = buscar(/jefe(\/a)?\s+de\s+producci/i);
+    let cambio = false;
+    if (pe && ip.productorEjecutivo !== pe) { ip.productorEjecutivo = pe; cambio = true; }
+    if (dir && ip.director !== dir) { ip.director = dir; cambio = true; }
+    if (jp && ip.jefeProduccion !== jp) { ip.jefeProduccion = jp; cambio = true; }
+    if (cambio) { markDirty(); try { if (STATE.currentModule === 'info-proyecto') renderInfoProyecto(); } catch (e) {} }
+  } catch (e) {}
+}
 function _cargosSave(project) {
   markDirty();
+  _cargosDerivarRECI(project);
   dalGuardarCargos(project);
 }
 function _cargoPill(txt, tone) {
@@ -13780,6 +13812,8 @@ async function cargoCopiarInvitacion(cargoId) {
 }
 function _cargoTipoChanged(v) {
   const ew = document.getElementById('cg_emailWrap'); if (ew) ew.style.display = v === 'externo' ? 'block' : 'none';
+  const pin = document.getElementById('cg_persona'); if (pin && !pin.matches(':focus')) { /* el filtro se rehace al enfocar */ }
+  const ps = document.getElementById('cg_perfil'); if (ps) _cargoPerfilChecklist(ps.value);
   const sel = document.getElementById('cg_perfil');
   if (sel) sel.innerHTML = _cargoOpcionesPerfil(v, v === 'externo' ? 'Creativo' : 'Producción');
   const hint = document.getElementById('cg_tipoHint');
@@ -13801,26 +13835,104 @@ function cargoAbrirModal(editId) {
   const selCargoVal = edit ? (esPreset ? edit.cargo : '__otro') : '';
   let optsCargo = CARGOS_PRESETS.map(function (p) { return '<option' + (p === selCargoVal ? ' selected' : '') + '>' + escapeHtml(p) + '</option>'; }).join('');
   optsCargo += '<option value="__otro"' + (selCargoVal === '__otro' ? ' selected' : '') + '>Otro (especificar)…</option>';
-  const nombres = (typeof BD_CONTACTOS !== 'undefined') ? Object.keys(BD_CONTACTOS).map(function (id) { return BD_CONTACTOS[id] && BD_CONTACTOS[id].nombre; }).filter(Boolean) : [];
-  const dl = '<datalist id="cg_personas">' + nombres.map(function (n) { return '<option value="' + escapeHtml(n) + '">'; }).join('') + '</datalist>';
   const tipo = edit ? (edit.tipo || 'interno') : 'interno';
-  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:540px;">'
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">'
     + '<div class="modal-header"><div class="modal-title">' + (edit ? 'Editar cargo' : 'Asignar un cargo') + '</div></div>'
     + '<div class="modal-body">'
-    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Cargo</label><select class="select" id="cg_cargo" onchange="_cargoSelChanged(this.value)">' + optsCargo + '</select>'
-    +     '<input class="input" id="cg_otro" placeholder="Escribe el cargo (ej. Entrevistador)" style="display:' + (selCargoVal === '__otro' ? 'block' : 'none') + ';margin-top:8px;" value="' + (edit && !esPreset ? escapeHtml(edit.cargo || '') : '') + '"></div>'
-    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Persona</label><input class="input" id="cg_persona" list="cg_personas" placeholder="Busca en tu base de datos o escribe un nombre" value="' + (edit ? escapeHtml(edit.personaNombre || '') : '') + '">' + dl + '</div>'
+    /* V11.4.0 · Tipo va PRIMERO: determina qué personas se ofrecen abajo. */
     +   '<div class="emp-field" style="margin-bottom:12px;"><label>Tipo</label><select class="select" id="cg_tipo" onchange="_cargoTipoChanged(this.value)">'
     +     '<option value="interno"' + (tipo !== 'externo' ? ' selected' : '') + '>Interno (de mi equipo)</option>'
     +     '<option value="externo"' + (tipo === 'externo' ? ' selected' : '') + '>Externo (freelance / invitado)</option>'
     +   '</select><div id="cg_tipoHint" style="font-size:11.5px;color:var(--ink-faint);margin-top:5px;line-height:1.5;"></div></div>'
-    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Perfil de acceso</label><select class="select" id="cg_perfil">' + _cargoOpcionesPerfil(tipo, edit ? edit.perfil : 'Producción') + '</select></div>'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Cargo</label><select class="select" id="cg_cargo" onchange="_cargoSelChanged(this.value)">' + optsCargo + '</select>'
+    +     '<input class="input" id="cg_otro" placeholder="Escribe el cargo (ej. Gaffer, Sonidista, Entrevistador)" style="display:' + (selCargoVal === '__otro' ? 'block' : 'none') + ';margin-top:8px;" value="' + (edit && !esPreset ? escapeHtml(edit.cargo || '') : '') + '"></div>'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Persona</label>'
+    +     '<span class="combobox-wrap cbx-anchored" style="display:block;">'
+    +       '<input class="input combobox-input" id="cg_persona" placeholder="Escribe para buscar…" autocomplete="off" value="' + (edit ? escapeHtml(edit.personaNombre || '') : '') + '"'
+    +         ' onfocus="cargoComboboxFilter(this)" oninput="cargoComboboxFilter(this)" onblur="comboboxCloseDelayed(this)">'
+    +       '<div class="combobox-dropdown" hidden></div>'
+    +     '</span></div>'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Perfil de acceso</label><select class="select" id="cg_perfil" onchange="_cargoPerfilChecklist(this.value)">' + _cargoOpcionesPerfil(tipo, edit ? edit.perfil : 'Producción') + '</select>'
+    +     '<div id="cg_permGlosario" style="font-size:11px;color:var(--ink-faint);margin-top:8px;line-height:1.5;"><strong>E</strong> = puede editar · <strong>L</strong> = solo lectura · <strong>—</strong> = oculto</div>'
+    +     '<div id="cg_permList" style="margin-top:6px;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--ink-secondary);max-height:170px;overflow-y:auto;">Cargando permisos…</div></div>'
     +   '<div class="emp-field" id="cg_emailWrap" style="display:' + (tipo === 'externo' ? 'block' : 'none') + ';"><label>Correo del externo (para invitarle a colaborar)</label><input class="input" id="cg_email" type="email" placeholder="persona@correo.cl"><span class="hint" style="font-size:11.5px;color:var(--ink-faint);">Opcional. Si lo ingresas, se genera la invitación a este cargo con link copiable.</span></div>'
     + '</div>'
     + '<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cargoGuardarModal()">' + (edit ? 'Guardar cambios' : 'Asignar') + '</button></div>'
     + '</div></div>';
   _cargoTipoChanged(document.getElementById('cg_tipo').value);
   if (edit && edit.perfil) { const s = document.getElementById('cg_perfil'); if (s) s.value = edit.perfil; }
+  _cargoPerfilChecklist((document.getElementById('cg_perfil') || {}).value || '');
+  _cargoCargarInternos();
+}
+/* V11.4.0 · combobox estándar del modal de cargos. Interno: SOLO las personas
+   del equipo interno de la productora (membresías activas), con acceso directo
+   a invitar si falta alguien. Externo: toda la BD de contactos. */
+let _CARGO_INTERNOS = null;
+async function _cargoCargarInternos() {
+  if (_CARGO_INTERNOS) return _CARGO_INTERNOS;
+  try {
+    const r = await sb.from('memberships').select('contact_id, tipo, estado').eq('organization_id', ORG_ID).eq('estado', 'activo').eq('tipo', 'interno');
+    if (!r.error && Array.isArray(r.data)) {
+      _CARGO_INTERNOS = r.data.map(function (m) { return (m.contact_id && typeof BD_CONTACTOS !== 'undefined' && BD_CONTACTOS[m.contact_id]) ? BD_CONTACTOS[m.contact_id].nombre : null; }).filter(Boolean);
+    }
+  } catch (e) {}
+  if (!_CARGO_INTERNOS) _CARGO_INTERNOS = [];
+  return _CARGO_INTERNOS;
+}
+function cargoComboboxFilter(inputEl) {
+  const wrap = inputEl.closest('.combobox-wrap'); if (!wrap) return;
+  const dropdown = wrap.querySelector('.combobox-dropdown'); if (!dropdown) return;
+  const tipo = (document.getElementById('cg_tipo') || {}).value || 'interno';
+  const q = _normKey(inputEl.value || '');
+  let nombres;
+  if (tipo === 'interno') { nombres = (_CARGO_INTERNOS || []).slice().sort(); }
+  else { nombres = Object.keys(BD_PERSONAS).sort(); }
+  const matched = q ? nombres.filter(function (n) { return _normKey(n).includes(q); }) : nombres;
+  let html = matched.slice(0, 20).map(function (n) {
+    const meta = tipo === 'externo' && BD_PERSONAS[n] && BD_PERSONAS[n].rolHabitual ? '<div class="combobox-option-meta">' + escapeHtml(BD_PERSONAS[n].rolHabitual) + '</div>' : '';
+    return '<div class="combobox-option" onmousedown="comboboxSelect(this, \'' + escapeHtml(n) + '\')"><div class="combobox-option-main">' + escapeHtml(n) + '</div>' + meta + '</div>';
+  }).join('');
+  if (!matched.length) html += '<div class="combobox-empty">' + (tipo === 'interno' ? 'Nadie con ese nombre en tu equipo interno.' : 'Sin coincidencias en la Base de Datos.') + '</div>';
+  if (matched.length > 20) html += '<div class="combobox-more">+ ' + (matched.length - 20) + ' más — sigue tipeando</div>';
+  if (tipo === 'interno') html += '<div class="combobox-option" style="border-top:1px solid var(--rule);color:var(--accent);font-weight:600;" onmousedown="event.preventDefault(); cargoIrAInvitar();">+ Invitar a alguien a la productora…</div>';
+  dropdown.innerHTML = html;
+  dropdown.hidden = false;
+  dropdown.onmousedown = function (e) { if (!e.target.closest('.combobox-option')) e.preventDefault(); };
+  if (wrap.classList.contains('cbx-anchored')) { dropdown.style.left = ''; dropdown.style.top = ''; dropdown.style.width = ''; }
+}
+function cargoIrAInvitar() {
+  closeModal();
+  try { openEmpresaPerfil(); setTimeout(function () { try { _empShowSub('equipo'); } catch (e) {} }, 120); }
+  catch (e) { showToast({ kind: 'info', title: 'Equipo', body: 'Abre Configuración → Empresa / Productora → Equipo para invitar.' }); }
+}
+/* Checklist de permisos del perfil elegido (lee profile_permissions, cacheado). */
+const _CARGO_PERM_CACHE = {};
+const _PERM_MOD_LABELS = {
+  info_proyecto: 'Info Proyecto', bd: 'Base de Datos', presupuesto: 'Presupuesto', cotizacion: 'Cotización',
+  operacion_creatividad: 'Operación y creatividad (Crew, Cargos, Documentos, Rodajes, Locaciones, Hoja de Llamado, Plan de Rodaje, Entregables)',
+  gastos_legal_notificaciones: 'Gastos, Legal y Notificaciones', tareas: 'Tareas', reporte_cierre: 'Reporte de cierre',
+  gestion_permisos: 'Gestión de permisos', finanzas: 'Finanzas'
+};
+async function _cargoPerfilChecklist(perfilNombre) {
+  const box = document.getElementById('cg_permList'); if (!box) return;
+  box.textContent = 'Cargando permisos…';
+  try {
+    const codigo = PERFIL_CODIGO_POR_NOMBRE[perfilNombre];
+    const perfiles = await _empPerfilesOrg();
+    const p = perfiles.find(function (x) { return x.codigo === codigo; });
+    if (!p) { box.textContent = 'Permisos no disponibles.'; return; }
+    if (!_CARGO_PERM_CACHE[p.id]) {
+      const r = await sb.from('profile_permissions').select('module_code, nivel').eq('profile_id', p.id);
+      if (r.error) throw r.error;
+      _CARGO_PERM_CACHE[p.id] = r.data || [];
+    }
+    const perms = _CARGO_PERM_CACHE[p.id];
+    if (!perms.length) { box.textContent = 'Permisos no disponibles.'; return; }
+    box.innerHTML = perms.map(function (pr) {
+      const niv = (pr.nivel === 'E') ? '<strong style="color:var(--positive);">E</strong>' : (pr.nivel === 'L' ? '<strong style="color:var(--warning);">L</strong>' : '<span style="color:var(--ink-faint);">—</span>');
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--rule);"><span>' + escapeHtml(_PERM_MOD_LABELS[pr.module_code] || pr.module_code) + '</span><span>' + niv + '</span></div>';
+    }).join('');
+  } catch (e) { box.textContent = 'Permisos no disponibles (lectura restringida).'; }
 }
 function cargoEditar(id) { cargoAbrirModal(id); }
 function cargoGuardarModal() {
@@ -14581,7 +14693,15 @@ function locRepoHTML(project) {
 
 function locCardHTML(uso) {
   const l = bdLocFind(uso.locId); if (!l) return '';
-  const portada = (l.fotos && l.fotos[0] && l.fotos[0].url) ? `<img src="${safeUrl(l.fotos[0].url)}" alt="">` : 'Sin fotos';
+  /* V11.4.0 · la portada soporta fotos con url directa, dataUrl legado y
+     RUTA de Storage (las subidas nuevas viven en el bucket): para path se
+     pinta un placeholder y la URL firmada llega async. */
+  const _f0 = (l.fotos && l.fotos[0]) || null;
+  const _src0 = _f0 ? (_f0.url || _f0.dataUrl || '') : '';
+  let portada;
+  if (_src0) portada = `<img src="${safeUrl(_src0)}" alt="">`;
+  else if (_f0 && _f0.path) { portada = `<span id="locThumb_${l.locId}">…</span>`; _locThumbAsync(l.locId, _f0.path); }
+  else portada = 'Sin fotos';
   const nFotos = (l.fotos || []).length;
   const orient = (l.orientacion && l.orientacion !== '—') ? `<span class="loc-tag">☉ ${escapeHtml(l.orientacion)}</span>` : '';
   return `<div class="loc-card" onclick="openLocDetail('${l.locId}')">
@@ -21121,7 +21241,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.3.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.4.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21260,6 +21380,16 @@ async function invAceptar(token, orgId, perfilCompleto) {
     showToast({ kind: 'warning', title: 'Falta tu perfil', body: 'Completa tu perfil personal antes de aceptar: es lo que autorizas a importar.' });
     return;
   }
+  /* V11.4.0 · al incorporarte a una productora, los datos bancarios pasan a
+     ser obligatorios (al crear la cuenta no lo son, para reducir fricción). */
+  try {
+    const cta = await sb.from('user_bank_accounts').select('id').limit(1);
+    if (!cta.error && (!cta.data || !cta.data.length)) {
+      showToast({ kind: 'warning', title: 'Falta tu cuenta bancaria', body: 'Para incorporarte a una productora necesitas datos bancarios en tu perfil (es como te pagan). Complétalos y vuelve a aceptar.', duration: 9000 });
+      invCompletarPerfil(token);
+      return;
+    }
+  } catch (e) { /* si la verificación falla, no bloquea */ }
   const btn = document.getElementById('invBtnAceptar'); if (btn) { btn.disabled = true; btn.textContent = 'Procesando…'; }
   try {
     const r1 = await sb.rpc('consentir_invitacion', { p_org_id: orgId });
@@ -21286,6 +21416,34 @@ async function invRechazar(token) {
   _invCerrarOverlay();
   resolverEspacioYArrancar();
 }
+/* V11.4.0 · Herramientas personales en Tu espacio (preparación de frontend;
+   el almacenamiento personal de estas herramientas viene en el handoff a BD). */
+function _espInyectarHerramientas() {
+  try {
+    const host = document.getElementById('espacioUsuario'); if (!host) return;
+    if (host.querySelector('#espHerr')) return;
+    const cont = host.querySelector('.esp-wrap') || host.firstElementChild || host;
+    const sec = document.createElement('div');
+    sec.id = 'espHerr';
+    sec.style.cssText = 'max-width:680px;margin:18px auto 30px;';
+    const card = function (nombre, sub) {
+      return '<div style="flex:1;min-width:170px;border:1px solid var(--rule);border-radius:10px;padding:14px;background:var(--bg-card);opacity:.75;" title="Disponible próximamente: tus herramientas se guardarán en tu cuenta personal.">'
+        + '<div style="font-weight:700;font-size:13.5px;margin-bottom:4px;">' + nombre + '</div>'
+        + '<div style="font-size:11.5px;color:var(--ink-faint);">' + sub + '</div></div>';
+    };
+    sec.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<div style="font-weight:700;font-size:14px;">Herramientas</div>'
+      + '<span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--positive,#2e7d32);color:#fff;border-radius:999px;padding:2px 9px;">Gratis en Early Bird</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+      + card('Plan de Rodaje', 'Próximamente en tu cuenta personal')
+      + card('Guion Técnico', 'En construcción')
+      + card('Hoja de Llamado', 'Próximamente en tu cuenta personal')
+      + '</div>'
+      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de TakeOS, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
+    cont.appendChild(sec);
+  } catch (e) {}
+}
 /* Bandeja: inyecta las invitaciones pendientes en la pantalla "Tu espacio". */
 function _espInyectarInvitaciones(invs) {
   if (!Array.isArray(invs) || !invs.length) return;
@@ -21310,6 +21468,26 @@ function _espInyectarInvitaciones(invs) {
   } catch (e) { console.warn('[inv] inyectar bandeja', e); }
 }
 
+/* V11.4.0 · cortina de arranque: tapa el microsegundo de Control Room vacío
+   antes del login y los ~2 s de carga de proyectos después de loguear. */
+function _bootVeil(msg) {
+  let v = document.getElementById('bootVeil');
+  if (!v) {
+    v = document.createElement('div'); v.id = 'bootVeil';
+    v.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--bg-page,#111);display:grid;place-items:center;color:var(--ink-faint,#888);font-family:var(--font-sans),system-ui,sans-serif;transition:opacity .25s;';
+    document.body.appendChild(v);
+  }
+  v.innerHTML = '<div style="text-align:center;"><div style="font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink-primary,#eee);margin-bottom:10px;">TakeOS</div><div style="font-size:13px;">' + (msg || '') + '</div></div>';
+  v.style.opacity = '1'; v.style.pointerEvents = 'auto';
+  clearTimeout(v._t);
+  v._t = setTimeout(_bootVeilOff, 2600);   // se quita sola: cortina, no muro
+}
+function _bootVeilOff() {
+  const v = document.getElementById('bootVeil'); if (!v) return;
+  v.style.opacity = '0'; v.style.pointerEvents = 'none';
+  setTimeout(function () { try { v.remove(); } catch (e) {} }, 300);
+}
+try { _bootVeil(''); } catch (e) {}
 async function cloudGate(onUnlock) {
   const client = supabaseInit();
   if (!client) { onUnlock(); return; }   // fallback: sin Supabase, no bloqueamos
@@ -21344,9 +21522,10 @@ async function cloudGate(onUnlock) {
             .replace(/^&/, '?');
           history.replaceState(null, '', window.location.pathname + (qs === '?' ? '' : qs));
         } catch (e) {}
-        onUnlock(); return;
+        _bootVeil('Cargando tus proyectos…'); onUnlock(); return;
       }
       console.warn('[auth] regreso del OAuth sin sesión utilizable; se muestra el login');
+      _bootVeilOff();
     } else {
       const { data } = await client.auth.getSession();
       if (data && data.session) {
@@ -21363,7 +21542,7 @@ async function cloudGate(onUnlock) {
           const vigente = at > 0 && (Date.now() - at) < AUTH_TTL_HORAS * 3600 * 1000;
           okTTL = !!(mismo && vigente);
         } catch (e) { okTTL = false; }
-        if (okTTL) { onUnlock(); return; }
+        if (okTTL) { _bootVeil('Cargando tus proyectos…'); onUnlock(); return; }
         const quien = (data.session.user && data.session.user.email) ? data.session.user.email : '(desconocido)';
         console.info('[auth] sesión guardada de ' + quien + ' descartada (vencida o de otro usuario): se pide autenticación.');
         try { await client.auth.signOut({ scope: 'local' }); } catch (e) {}
@@ -21371,6 +21550,7 @@ async function cloudGate(onUnlock) {
       }
     }
   } catch (e) { /* si falla, seguimos y mostramos el login */ }
+  _bootVeilOff();
 
   const ov = document.createElement('div');
   ov.id = 'cloudGate';
@@ -21510,6 +21690,9 @@ const ESPACIO_DEMO = {
   ]
 };
 
+function _titleCaseNombre(s) {
+  return String(s || '').trim().split(/\s+/).map(function (w) { return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''; }).join(' ');
+}
 function _espConstruir(rows, email){
   const internas=[], externas=[];
   (rows||[]).forEach(function(r){
@@ -21517,7 +21700,9 @@ function _espConstruir(rows, email){
     if (r.tipo === 'externo') externas.push({ nombre:nombre, sello:_espSello(nombre), proyectos:[] });
     else internas.push({ nombre:nombre, orgId:r.organization_id, perfil:(PERFIL_NOMBRES[r.profile_id]||'—'), sello:_espSello(nombre), total:null, proyectos:[] });
   });
-  return { _demo:false, usuario:{ nombre:(email? email.split('@')[0].replace(/[._-]+/g,' ') : 'tu cuenta'), email:(email||''), iniciales:_espIniciales(email||'U') }, internas:internas, externas:externas };
+  var _nm = ((typeof USER_NOMBRE !== 'undefined' ? USER_NOMBRE : '') + ' ' + (typeof USER_APELLIDO !== 'undefined' ? USER_APELLIDO : '')).trim();
+  if (!_nm) _nm = email ? email.split('@')[0].replace(/[._-]+/g,' ') : 'tu cuenta';
+  return { _demo:false, usuario:{ nombre:_titleCaseNombre(_nm), email:(email||''), iniciales:_espIniciales(_nm||email||'U') }, internas:internas, externas:externas };
 }
 
 /* Conteo de proyectos por productora interna (Punto 2 BD: b_projects_sel deja
@@ -21564,10 +21749,11 @@ async function resolverEspacioYArrancar(){
     // V11.3.0 · bandeja interna: invitaciones pendientes del usuario.
     let _invs = [];
     try { const ir = await client.rpc('mis_invitaciones'); if (!ir.error && Array.isArray(ir.data)) _invs = ir.data; } catch (e) {}
-    if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); return; }  // cuenta sin productora aún
+    if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); _espInyectarHerramientas(); return; }  // cuenta sin productora aún
     if (rows.length === 1 && !forzar && _invs.length === 0) { _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // una sola pertenencia: esa es la org activa
     renderEspacioUsuario(_espConstruir(rows, email));
     _espInyectarInvitaciones(_invs);
+    _espInyectarHerramientas();
   } catch (e) {
     arrancarTakeOS();   // ante cualquier problema, no bloqueamos el acceso
   }
@@ -21712,6 +21898,24 @@ function _perfilTipoCuentaOptions(cur) {
   return opts;
 }
 
+/* V11.4.0 · regiones de Chile (dropdown del perfil) + heurística provisional
+   de extranjería: sin columna es_extranjero en la base (handoff a BD), se
+   infiere de una región guardada que no es chilena. El país del extranjero
+   se guarda en la columna `region` (text) hasta que exista `pais`. */
+function _perfilEsExtranjero(prof) {
+  try { return !!(prof && prof.region && typeof REGIONES_CHILE !== 'undefined' && REGIONES_CHILE.indexOf(prof.region) === -1); } catch (e) { return false; }
+}
+function _rutValido(s) {
+  const x = String(s || '').toUpperCase().replace(/[^0-9K]/g, '');
+  if (x.length < 2) return false;
+  const cuerpo = x.slice(0, -1), dv = x.slice(-1);
+  if (!/^\d+$/.test(cuerpo)) return false;
+  let suma = 0, mul = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) { suma += parseInt(cuerpo[i], 10) * mul; mul = mul === 7 ? 2 : mul + 1; }
+  const res = 11 - (suma % 11);
+  const dvCalc = res === 11 ? '0' : (res === 10 ? 'K' : String(res));
+  return dv === dvCalc;
+}
 async function abrirPerfilUsuario(modoOnboarding, onDone) {
   modoOnboarding = !!modoOnboarding;
   try {
@@ -21745,6 +21949,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
     prof = prof || {}; cuenta = cuenta || {};
     var v = function (x) { return escapeHtml(x == null ? '' : String(x)); };
     var ext = !!cuenta.es_extranjera;
+    var EXTRANJERO = _perfilEsExtranjero(prof);
     var bancoNombre = ext ? '' : (typeof _dalBancoNombre === 'function' ? _dalBancoNombre(cuenta.bank_codigo_sbif) : '');
     var bancoSel = (typeof bancoSelectHTML === 'function')
       ? bancoSelectHTML(bancoNombre, { id: 'perfilBanco' })
@@ -21792,25 +21997,35 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           </details>
         </div>
 
-        <div class="pf-sec">
-          <p class="pf-sec-t">Identidad</p>
+        <div class="pf-sec" style="border-left:3px solid var(--info, #3b82f6);">
+          <p class="pf-sec-t" style="display:flex;align-items:center;gap:8px;">Identidad pública <span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--info,#3b82f6);color:#fff;border-radius:999px;padding:2px 9px;">Público</span></p>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--ink-faint);line-height:1.5;">Solo tu nombre y el rol que desempeñas podrán ser visibles para otras productoras dentro de TakeOS. <strong>Todo lo demás, de aquí hacia abajo, es privado</strong> y solo se comparte con tu consentimiento.</p>
+          <label class="pf-check" style="margin-bottom:10px;"><input type="checkbox" id="pf_noCl" ${EXTRANJERO ? 'checked' : ''}> No soy chileno/a</label>
           <div class="pf-grid">
-            <div class="pf-f"><label>Nombre</label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
-            <div class="pf-f"><label>Apellido</label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
-            <div class="pf-f"><label>RUT</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9"></div>
-            <div class="pf-f"><label>Correo</label><input class="input" id="pf_email" value="${v(prof.email || email)}"></div>
-            <div class="pf-f"><label>Celular</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..."></div>
+            <div class="pf-f"><label>Nombre <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
+            <div class="pf-f"><label>Apellidos <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
+            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="" disabled placeholder="Ej: Director de Fotografía, Productora, Gaffer…" title="Se habilita con la próxima extensión de la base de datos."><span style="font-size:11px;color:var(--ink-faint);">Se habilita pronto: será tu carta de presentación dentro de TakeOS.</span></div>
+          </div>
+        </div>
+
+        <div class="pf-sec">
+          <p class="pf-sec-t">Identidad privada y contacto</p>
+          <div class="pf-grid">
+            <div class="pf-f" id="pf_rutWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>RUT <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9" inputmode="text"><span id="pf_rutErr" style="display:none;font-size:11px;color:var(--negative,#c0392b);">RUT inválido: revisa el dígito verificador.</span></div>
+            <div class="pf-f" id="pf_docWrap" style="${EXTRANJERO ? '' : 'display:none;'}"><label>Documento de identidad / pasaporte</label><input class="input" id="pf_doc" value="" disabled placeholder="Pasaporte u otro documento"><span style="font-size:11px;color:var(--ink-faint);">Se habilita con la próxima extensión de la base.</span></div>
+            <div class="pf-f"><label>Correo <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
+            <div class="pf-f"><label>Celular <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
           </div>
         </div>
 
         <div class="pf-sec">
           <p class="pf-sec-t">Dirección</p>
           <div class="pf-grid">
-            <div class="pf-f full"><label>Calle y número</label><input class="input" id="pf_direccion" value="${v(prof.direccion)}"></div>
+            <div class="pf-f full"><label>Calle y número <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_direccion" value="${v(prof.direccion)}"></div>
             <div class="pf-f full"><label>Departamento, oficina, etc. (opcional)</label><input class="input" id="pf_dir2" value="${v(prof.direccion_linea2)}"></div>
-            <div class="pf-f"><label>Comuna</label><input class="input" id="pf_comuna" value="${v(prof.comuna)}"></div>
-            <div class="pf-f"><label>Ciudad</label><input class="input" id="pf_ciudad" value="${v(prof.ciudad)}"></div>
-            <div class="pf-f full"><label>Región</label><input class="input" id="pf_region" value="${v(prof.region)}"></div>
+            <div class="pf-f" id="pf_comunaWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>Comuna <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_comuna" value="${v(prof.comuna)}"></div>
+            <div class="pf-f"><label>Ciudad <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_ciudad" value="${v(prof.ciudad)}"></div>
+            <div class="pf-f full" id="pf_regionWrap"><label id="pf_regionLabel">${EXTRANJERO ? 'País' : 'Región'} <span style="color:var(--negative,#c0392b);">*</span></label>${EXTRANJERO ? `<input class="input" id="pf_region" value="${v(prof.region)}" placeholder="Ej: Argentina, España…">` : regionSelectHTML(prof.region, { id: 'pf_region' })}</div>
           </div>
         </div>
 
@@ -21870,13 +22085,48 @@ function _perfilBind() {
     var el = document.getElementById(id);
     if (el) el.addEventListener('input', _perfilToggleGuardar);
   });
+  /* V11.4.0 · filtros de tipeo: celular solo dígitos/+/espacios; RUT solo
+     dígitos, K, puntos y guión. */
+  var tel = document.getElementById('pf_telefono');
+  if (tel) tel.addEventListener('input', function () { var v = this.value.replace(/[^0-9+\s]/g, ''); if (v !== this.value) this.value = v; });
+  var rut = document.getElementById('pf_rut');
+  if (rut) rut.addEventListener('input', function () {
+    var v = this.value.toUpperCase().replace(/K/g, 'K').replace(/[^0-9K.\-]/gi, ''); if (v !== this.value) this.value = v;
+    var err = document.getElementById('pf_rutErr');
+    if (err) err.style.display = (this.value.trim() && !_rutValido(this.value)) ? 'block' : 'none';
+  });
+  var em = document.getElementById('pf_email');
+  if (em) em.addEventListener('input', function () {
+    var w = document.getElementById('pf_emailWarn');
+    if (w) w.style.display = (this.value.trim() !== String(this.getAttribute('data-original') || '').trim()) ? 'block' : 'none';
+  });
+  var ncl = document.getElementById('pf_noCl');
+  if (ncl) ncl.addEventListener('change', _perfilToggleNoCl);
+  _perfilToggleGuardar();
+}
+function _perfilToggleNoCl() {
+  var on = !!(document.getElementById('pf_noCl') || {}).checked;
+  var show = function (id, s) { var el = document.getElementById(id); if (el) el.style.display = s ? '' : 'none'; };
+  show('pf_rutWrap', !on); show('pf_docWrap', on); show('pf_comunaWrap', !on);
+  var lbl = document.getElementById('pf_regionLabel');
+  if (lbl) lbl.innerHTML = (on ? 'País' : 'Región') + ' <span style="color:var(--negative,#c0392b);">*</span>';
+  /* Región: dropdown chileno ↔ texto libre (país). Se reemplaza el control. */
+  var wrap = document.getElementById('pf_regionWrap');
+  var cur = (document.getElementById('pf_region') || {}).value || '';
+  if (wrap) {
+    var old = document.getElementById('pf_region'); if (old) old.remove();
+    if (on) { wrap.insertAdjacentHTML('beforeend', '<input class="input" id="pf_region" value="' + String(cur).replace(/"/g, '&quot;') + '" placeholder="Ej: Argentina, España…">'); }
+    else { wrap.insertAdjacentHTML('beforeend', regionSelectHTML(REGIONES_CHILE.indexOf(cur) >= 0 ? cur : '', { id: 'pf_region' })); }
+  }
   _perfilToggleGuardar();
 }
 function _perfilToggleGuardar() {
   var g = function (id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
-  var ok = !!(g('pf_nombre') && g('pf_apellido') && g('pf_rut'));
+  var noCl = !!(document.getElementById('pf_noCl') || {}).checked;
+  var rutOk = noCl ? true : (!!g('pf_rut') && _rutValido(g('pf_rut')));
+  var ok = !!(g('pf_nombre') && g('pf_apellido') && rutOk);
   var bg = document.getElementById('pf_btnGuardar');
-  if (bg) { bg.disabled = !ok; bg.title = ok ? '' : 'Completa nombre, apellido y RUT para guardar.'; }
+  if (bg) { bg.disabled = !ok; bg.title = ok ? '' : (noCl ? 'Completa nombre y apellidos para guardar.' : 'Completa nombre, apellidos y un RUT válido para guardar.'); }
 }
 function _perfilMsg(texto, esError) {
   var el = document.getElementById('pf_msg');
@@ -21925,7 +22175,7 @@ function _perfilRenderFallback(prof, cuenta, email, modoOnboarding) {
   }
 
   campo('pf_nombre', 'Nombre', prof.nombre);
-  campo('pf_apellido', 'Apellido', prof.apellido);
+  campo('pf_apellido', 'Apellidos', prof.apellido);
   campo('pf_rut', 'RUT', prof.rut);
   campo('pf_email', 'Correo', prof.email || email);
   campo('pf_telefono', 'Celular', prof.telefono);
@@ -22012,7 +22262,13 @@ async function _perfilGuardar() {
        solo cuando la identidad mínima está completa (nombre + apellido + RUT).
        Si falta algo, la clave se omite y el valor existente no se pisa:
        NULL = perfil incompleto, que es lo que lee el muro post-pago. */
-    if (prof.nombre && prof.apellido && prof.rut) prof.completado_at = new Date().toISOString();
+    /* V11.4.0 · completado_at = cuestionario completo (handoff BD §A.3):
+       identidad + contacto + dirección. Para no-chilenos no se exige RUT
+       (documento extranjero pendiente de columna en BD) ni comuna. */
+    var noCl = !!(document.getElementById('pf_noCl') || {}).checked;
+    var completo = prof.nombre && prof.apellido && prof.email && prof.telefono && prof.direccion && prof.ciudad && prof.region
+      && (noCl ? true : (prof.rut && _rutValido(prof.rut) && prof.comuna));
+    if (completo) prof.completado_at = new Date().toISOString();
     var up = await client.from('user_profiles').upsert(prof, { onConflict: 'user_id' });
     if (up.error) throw up.error;
     USER_NOMBRE = prof.nombre || ''; USER_APELLIDO = prof.apellido || ''; try { aplicarUsuario(); } catch (e) {}
@@ -22666,6 +22922,10 @@ function goExportSantander() {
   const rows = []; const skipped = [];
   pend.forEach(o => {
     const b = goSantanderBankFor(o.project, o.m);
+    /* V11.4.0 · cuentas extranjeras NO entran a la nómina bancaria (el
+       formato de pagos masivos no las soporta): se omiten con aviso al CFO. */
+    const _pl = (typeof BD_PERSONAS !== 'undefined' && BD_PERSONAS[b.nombre]) || {};
+    if (_pl.cuentaExtranjera || b.cuentaExtranjera) { skipped.push((b.nombre || '(sin nombre)') + ' (CUENTA EXTRANJERA: transferir por banca internacional)'); return; }
     const cuentaDestino = String(b.nCuenta || '').replace(/\s/g, '').trim();
     if (!cuentaDestino) { skipped.push(b.nombre || '(sin nombre)'); return; }
     const rut = String(b.rut || '').replace(/\./g, '').trim();   // sin puntos, conserva el dígito verificador
