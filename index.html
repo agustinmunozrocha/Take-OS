@@ -5683,9 +5683,13 @@ const PROJECTS = [];
 const TRASH = [];
 /* V7.9: perfil de la empresa/productora emisora (datos para documentos). Global, persiste en save y nube. NO vive en Notificaciones. */
 let EMPRESA_PERFIL = {
-  nombreFicticio: 'Primate Films', razonSocial: 'La Hectárea SpA', rut: '77.398.011-K', giro: 'Producción audiovisual',
+  /* V11.0.0 · multi-tenant: el perfil nace VACÍO. Los datos de la organización
+     activa se cargan desde Supabase (organization_profile.profile) y el nombre
+     de fantasía cae al nombre canónico de organizations.nombre si falta.
+     Nunca volver a cablear aquí datos de una organización concreta. */
+  nombreFicticio: '', razonSocial: '', rut: '', giro: '',
   direccion: '', comuna: '', ciudad: '', telefono: '', email: '', web: '',
-  representante: 'Agustín Ignacio Muñoz Rocha', repRut: '20.287.686-2', repTelefono: '', repEmail: 'agustin@amrfilms.com',
+  representante: '', repRut: '', repTelefono: '', repEmail: '',
   // V7.10: datos bancarios (para futuras transferencias) y enlaces/integraciones (para futuros botones: subir a Drive, abrir Milanote/Chipax, agendar en Calendar)
   bancoNombre: '', bancoTipoCuenta: '', bancoNumero: '', bancoTitular: '', bancoRut: '', bancoEmailPagos: '',
   driveLink: '', milanoteLink: '', chipaxLink: '', googleCalendarId: '',
@@ -16383,9 +16387,9 @@ function openEmpresaPerfil() {
           <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Estos datos se usan como <strong>empresa emisora</strong> en los documentos (hojas de llamado, plan de rodaje, cotizaciones y, a futuro, contratos). Quedan guardados con el OS.</p>
           <div class="config-section-title" style="margin-bottom:8px;">Empresa</div>
           <div class="emp-grid">
-            ${field('nombreFicticio','Nombre de fantasía', E.nombreFicticio, 'Primate Films')}
-            ${field('razonSocial','Razón social', E.razonSocial, 'La Hectárea SpA')}
-            ${field('rut','RUT empresa', E.rut, '77.398.011-K')}
+            ${field('nombreFicticio','Nombre de fantasía', E.nombreFicticio, 'Nombre comercial de la productora')}
+            ${field('razonSocial','Razón social', E.razonSocial, 'Razón social (SpA, Ltda…)')}
+            ${field('rut','RUT empresa', E.rut, '76.123.456-7')}
             ${field('giro','Giro', E.giro, 'Producción audiovisual')}
             ${field('direccion','Dirección', E.direccion, 'Calle, número, oficina')}
             ${field('comuna','Comuna', E.comuna, 'Providencia')}
@@ -16397,7 +16401,7 @@ function openEmpresaPerfil() {
           <div class="config-section-title" style="margin:18px 0 8px;">Representante legal</div>
           <div class="emp-grid">
             ${field('representante','Nombre', E.representante, 'Nombre completo')}
-            ${field('repRut','RUT representante', E.repRut, '20.287.686-2')}
+            ${field('repRut','RUT representante', E.repRut, '12.345.678-9')}
             ${field('repTelefono','Teléfono', E.repTelefono, '+56 9 ...')}
             ${field('repEmail','Email', E.repEmail, 'persona@...')}
           </div>
@@ -19140,26 +19144,36 @@ async function dalBootLegal(opts) {
    organization_profile: 1 fila por organización, todo el bloque en `profile`
    jsonb (28 campos heterogéneos que el cliente lee/escribe como bloque). */
 async function dalLoadPerfil() {
+  /* V11.0.0 · multi-tenant: devuelve { profile, nombreCanonico } de la
+     organización ACTIVA. `profile` es el bloque jsonb de organization_profile
+     (puede ser {} si la organización aún no lo completa); `nombreCanonico` es
+     organizations.nombre (CHECK en BD: nunca vacío), el respaldo del nombre de
+     fantasía. Una organización sin fila en organization_profile es un caso
+     VÁLIDO (org recién aprovisionada), no un error: devuelve profile {}. */
   if (!sb) return null;
   try {
-    const { data, error } = await sb.from('organization_profile').select('profile').eq('organization_id', ORG_ID).maybeSingle();
-    if (error) throw error;
-    if (!data || !data.profile || typeof data.profile !== 'object') return null;
-    return data.profile;
+    const [perfilRes, orgRes] = await Promise.all([
+      sb.from('organization_profile').select('profile').eq('organization_id', ORG_ID).maybeSingle(),
+      sb.from('organizations').select('nombre').eq('id', ORG_ID).maybeSingle()
+    ]);
+    if (perfilRes.error) throw perfilRes.error;
+    const profile = (perfilRes.data && perfilRes.data.profile && typeof perfilRes.data.profile === 'object') ? perfilRes.data.profile : {};
+    const nombreCanonico = (!orgRes.error && orgRes.data && orgRes.data.nombre) ? String(orgRes.data.nombre).trim() : '';
+    return { profile: profile, nombreCanonico: nombreCanonico };
   } catch (e) { console.error('[dal] excepcion al leer perfil', e); return null; }
 }
-function dalApplyPerfil(profile) {
-  Object.assign(EMPRESA_PERFIL, profile);   // bloque sobre los valores actuales
+function dalApplyPerfil(profile, nombreCanonico) {
+  if (profile && typeof profile === 'object') Object.assign(EMPRESA_PERFIL, profile);   // bloque sobre los valores actuales
+  /* Respaldo del nombre de fantasía: si el perfil no lo trae, usa el nombre
+     canónico de la organización (organizations.nombre). */
+  if (!(String(EMPRESA_PERFIL.nombreFicticio || '').trim()) && nombreCanonico) EMPRESA_PERFIL.nombreFicticio = nombreCanonico;
   PERFIL_SOURCE = 'supabase';
 }
 async function dalBootPerfil(opts) {
   const silent = opts && opts.silent;
-  const profile = await dalLoadPerfil();
-  if (!profile) { if (!silent) console.warn('[dal] sin perfil de Supabase; mantiene su estado actual'); return false; }
-  dalApplyPerfil(profile);
-  if (!silent) {
-    /* V10.5.1: notificación de boot de migración removida (obsoleta). */
-  }
+  const res = await dalLoadPerfil();
+  if (!res) { if (!silent) console.warn('[dal] sin perfil de Supabase; mantiene su estado actual'); return false; }
+  dalApplyPerfil(res.profile, res.nombreCanonico);
   return true;
 }
 
@@ -20365,7 +20379,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V10.9.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.0.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -20398,7 +20412,7 @@ async function cloudGate(onUnlock) {
   ov.innerHTML = `
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
       <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
-      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Acceso del equipo · Primate Films</div>
+      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Acceso del equipo</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:0 0 auto;">
@@ -20739,6 +20753,9 @@ async function abrirPerfilUsuario(modoOnboarding, onDone) {
     _PERFIL_CTX = { email: email, cuentaId: (cuenta && cuenta.id) || null, onDone: onDone || null, onboarding: modoOnboarding };
     _perfilRender(prof, cuenta, email, modoOnboarding);
   } catch (e) {
+    /* V11.0.0: reportar siempre el error real antes de continuar; un fallo
+       silencioso aquí fue lo que ocultó el bug del onboarding en V10.8.0. */
+    console.error('[perfil] abrirPerfilUsuario falló', e);
     if (modoOnboarding && typeof onDone === 'function') onDone();
   }
 }
@@ -20810,7 +20827,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
 
         <div class="pf-sec">
           <p class="pf-sec-t">Cuenta bancaria</p>
-          <label class="pf-check"><input type="checkbox" id="pf_ext" ${ext ? 'checked' : ''} onchange="_perfilToggleExt()"> Cuenta en el extranjero</label>
+          <label class="pf-check"><input type="checkbox" id="pf_ext" ${ext ? 'checked' : ''}> Cuenta en el extranjero</label>
           <div id="pf_bloqueCL" style="${ext ? 'display:none;' : ''}">
             <div class="pf-grid">
               <div class="pf-f"><label>Banco</label>${bancoSel}</div>
@@ -20826,14 +20843,135 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       </div>
       <div class="pf-bar"><div class="pf-bar-in">
         <span class="spacer">Tus datos quedan guardados solo en tu cuenta.</span>
-        <button class="btn btn-secondary" onclick="_perfilOmitir()">${modoOnboarding ? 'Completar después' : 'Cerrar'}</button>
-        <button class="btn btn-primary" onclick="_perfilGuardar()">Guardar</button>
+        <button class="btn btn-secondary" id="pf_btnOmitir">${modoOnboarding ? 'Completar después' : 'Cerrar'}</button>
+        <button class="btn btn-primary" id="pf_btnGuardar">Guardar</button>
       </div></div>`;
     document.body.appendChild(ov);
+    _perfilBind();
   } catch (e) {
+    /* V11.0.0: un fallo de render ya NO se traga el formulario en silencio.
+       Se reporta el error real y se intenta el formulario de respaldo (DOM
+       puro, sin innerHTML ni atributos on*: inmune a CSP estrictas). Solo si
+       el respaldo también falla se continúa al arranque. */
+    console.error('[perfil] el render principal falló; se usa el formulario de respaldo', e);
     _perfilCerrar();
-    if (modoOnboarding && _PERFIL_CTX && typeof _PERFIL_CTX.onDone === 'function') _PERFIL_CTX.onDone();
+    try {
+      _perfilRenderFallback(prof, cuenta, email, modoOnboarding);
+    } catch (e2) {
+      console.error('[perfil] el formulario de respaldo también falló', e2);
+      _perfilCerrar();
+      if (modoOnboarding && _PERFIL_CTX && typeof _PERFIL_CTX.onDone === 'function') _PERFIL_CTX.onDone();
+    }
   }
+}
+
+/* V11.0.0 · Enlace programático de los controles del perfil (sin atributos
+   on* en el HTML: bajo una CSP estricta, los manejadores inline son código
+   evaluado desde strings y el navegador los rechaza; addEventListener no). */
+function _perfilBind() {
+  var ext = document.getElementById('pf_ext');
+  if (ext) ext.addEventListener('change', _perfilToggleExt);
+  var bo = document.getElementById('pf_btnOmitir');
+  if (bo) bo.addEventListener('click', _perfilOmitir);
+  var bg = document.getElementById('pf_btnGuardar');
+  if (bg) bg.addEventListener('click', function () { _perfilGuardar(); });
+}
+
+/* V11.0.0 · Formulario de respaldo del perfil personal. Construido SOLO con
+   API de DOM (createElement / textContent / addEventListener): cero innerHTML,
+   cero manejadores inline, cero evaluación de strings. Si el render principal
+   falla por la razón que sea (CSP, Trusted Types, una extensión), este
+   formulario mínimo igual aparece y guarda con el mismo _perfilGuardar()
+   (usa los mismos ids de campo). */
+function _perfilRenderFallback(prof, cuenta, email, modoOnboarding) {
+  prof = prof || {}; cuenta = cuenta || {};
+  var ext = !!cuenta.es_extranjera;
+  var ov = document.createElement('div'); ov.id = 'perfilUsuario';
+  var s = ov.style;
+  s.position = 'fixed'; s.top = '0'; s.left = '0'; s.right = '0'; s.bottom = '0';
+  s.zIndex = '99998'; s.overflowY = 'auto'; s.background = '#16171c'; s.color = '#eceae6';
+  s.fontFamily = 'system-ui, sans-serif'; s.padding = '34px 18px 80px';
+
+  var box = document.createElement('div');
+  box.style.maxWidth = '560px'; box.style.margin = '0 auto';
+
+  var h = document.createElement('h1');
+  h.textContent = modoOnboarding ? 'Cuéntanos quién eres' : 'Tus datos personales';
+  h.style.fontSize = '24px'; h.style.margin = '0 0 6px';
+  var lede = document.createElement('p');
+  lede.textContent = 'Estos son tus datos como persona, no los de una productora. Te acompañan en cada productora donde colabores.' + (modoOnboarding ? ' Puedes completarlos ahora o más tarde desde tu perfil.' : '');
+  lede.style.color = '#a9a69f'; lede.style.margin = '0 0 22px'; lede.style.fontSize = '14px';
+  box.appendChild(h); box.appendChild(lede);
+
+  function campo(id, label, valor, tipo) {
+    var w = document.createElement('div'); w.style.margin = '0 0 12px';
+    var l = document.createElement('label');
+    l.textContent = label; l.style.display = 'block'; l.style.fontSize = '12px';
+    l.style.color = '#8d8a84'; l.style.marginBottom = '4px'; l.htmlFor = id;
+    var inp = document.createElement(tipo === 'textarea' ? 'textarea' : 'input');
+    inp.id = id; inp.value = (valor == null ? '' : String(valor));
+    if (tipo === 'textarea') inp.rows = 3;
+    inp.style.width = '100%'; inp.style.boxSizing = 'border-box'; inp.style.padding = '9px 11px';
+    inp.style.border = '1px solid #3a3c44'; inp.style.borderRadius = '7px';
+    inp.style.background = '#1e2026'; inp.style.color = '#eceae6'; inp.style.fontSize = '14px';
+    w.appendChild(l); w.appendChild(inp); box.appendChild(w);
+    return inp;
+  }
+
+  campo('pf_nombre', 'Nombre', prof.nombre);
+  campo('pf_apellido', 'Apellido', prof.apellido);
+  campo('pf_rut', 'RUT', prof.rut);
+  campo('pf_email', 'Correo', prof.email || email);
+  campo('pf_telefono', 'Celular', prof.telefono);
+  campo('pf_direccion', 'Calle y número', prof.direccion);
+  campo('pf_dir2', 'Departamento, oficina, etc. (opcional)', prof.direccion_linea2);
+  campo('pf_comuna', 'Comuna', prof.comuna);
+  campo('pf_ciudad', 'Ciudad', prof.ciudad);
+  campo('pf_region', 'Región', prof.region);
+
+  var chkW = document.createElement('label');
+  chkW.style.display = 'flex'; chkW.style.alignItems = 'center'; chkW.style.gap = '8px';
+  chkW.style.fontSize = '13px'; chkW.style.color = '#a9a69f'; chkW.style.margin = '0 0 12px'; chkW.style.cursor = 'pointer';
+  var chk = document.createElement('input'); chk.type = 'checkbox'; chk.id = 'pf_ext'; chk.checked = ext;
+  chkW.appendChild(chk); chkW.appendChild(document.createTextNode(' Cuenta en el extranjero'));
+  box.appendChild(chkW);
+
+  var bloqueCL = document.createElement('div'); bloqueCL.id = 'pf_bloqueCL';
+  box.appendChild(bloqueCL);
+  var keep = box; // los campos se agregan a `box` vía campo(); redirigimos temporalmente
+  box = bloqueCL;
+  var bancoNombre = ext ? '' : (typeof _dalBancoNombre === 'function' ? _dalBancoNombre(cuenta.bank_codigo_sbif) : '');
+  campo('perfilBanco', 'Banco', bancoNombre);
+  campo('pf_tipocuenta', 'Tipo de cuenta (corriente, vista, ahorro, RUT)', ext ? '' : (cuenta.tipo_cuenta || ''));
+  campo('pf_ncuenta', 'Número de cuenta', ext ? '' : cuenta.numero_cuenta);
+  box = keep;
+  var bloqueEXT = document.createElement('div'); bloqueEXT.id = 'pf_bloqueEXT';
+  box.appendChild(bloqueEXT);
+  box = bloqueEXT;
+  campo('pf_extra', 'Datos bancarios (banco, IBAN/SWIFT, titular, país…)', ext ? cuenta.datos_extra : '', 'textarea');
+  box = keep;
+  bloqueCL.style.display = ext ? 'none' : '';
+  bloqueEXT.style.display = ext ? '' : 'none';
+  chk.addEventListener('change', _perfilToggleExt);
+
+  var bar = document.createElement('div');
+  bar.style.display = 'flex'; bar.style.justifyContent = 'flex-end'; bar.style.gap = '10px'; bar.style.marginTop = '18px';
+  function boton(txt, primario, fn) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+    b.style.padding = '10px 16px'; b.style.borderRadius = '7px'; b.style.fontSize = '14px';
+    b.style.fontWeight = '600'; b.style.cursor = 'pointer';
+    b.style.border = primario ? 'none' : '1px solid #3a3c44';
+    b.style.background = primario ? '#b9573d' : 'transparent';
+    b.style.color = primario ? '#fff' : '#eceae6';
+    b.addEventListener('click', fn);
+    bar.appendChild(b);
+  }
+  boton(modoOnboarding ? 'Completar después' : 'Cerrar', false, _perfilOmitir);
+  boton('Guardar', true, function () { _perfilGuardar(); });
+  box.appendChild(bar);
+
+  ov.appendChild(box);
+  document.body.appendChild(ov);
 }
 
 function _perfilToggleExt() {
@@ -20899,13 +21037,14 @@ async function iniciarSesionTakeOS() {
       var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
       if (uid) {
         var pr = await client.from('user_profiles').select('user_id').eq('user_id', uid).maybeSingle();
+        if (pr.error) console.warn('[perfil] no se pudo verificar el perfil personal; se omite el onboarding', pr.error);
         if (!pr.error && (!pr || !pr.data)) {
           abrirPerfilUsuario(true, function () { resolverEspacioYArrancar(); });
           return;
         }
       }
     }
-  } catch (e) { /* seguimos al arranque */ }
+  } catch (e) { console.error('[perfil] verificación de onboarding falló; se continúa al arranque', e); }
   resolverEspacioYArrancar();
 }
 
