@@ -7548,11 +7548,18 @@ function renderBDLocacionesList() {
     const dir = locFullAddress(l) || 'Sin dirección';
     const nc = (l.contactos || []).length; const nf = (l.fotos || []).length;
     const pc = locPrimaryContact(l);
+    const _f0b = (l.fotos && l.fotos[0]) || null;
+    const _s0b = _f0b ? (_f0b.url || _f0b.dataUrl || '') : '';
+    let _thumb;
+    if (_s0b) _thumb = '<img src="' + safeUrl(_s0b) + '" style="width:100%;height:100%;object-fit:cover;" alt="">';
+    else if (_f0b && _f0b.path) { _thumb = '<span id="locThumb_' + l.locId + '">…</span>'; _locThumbAsync(l.locId, _f0b.path); }
+    else _thumb = '<span>Sin fotos</span>';
     return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--border-soft);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--bg-surface);">
-      <div style="min-width:0;">
-        <div style="font-weight:600;font-size:14px;color:var(--ink-primary);">${e(l.nombre || l.locId)}</div>
+      <div style="width:56px;height:56px;flex:0 0 56px;border-radius:8px;overflow:hidden;background:var(--bg-elev,#1b1b19);display:grid;place-items:center;font-size:9.5px;color:var(--ink-faint);text-align:center;">${_thumb}</div>
+      <div style="min-width:0;flex:1;">
+        <div style="font-weight:600;font-size:14px;color:var(--ink-primary);">${e(l.nombre || '')}</div>
         <div style="font-size:12px;color:var(--ink-secondary);margin-top:2px;">${e(dir)}</div>
-        <div style="font-size:11px;color:var(--ink-faint);margin-top:4px;">${e(l.locId)} · ${nc} contacto${nc === 1 ? '' : 's'}${pc ? ' (' + e(pc.nombre || '') + ')' : ''} · ${nf} foto${nf === 1 ? '' : 's'}</div>
+        <div style="font-size:11px;color:var(--ink-faint);margin-top:4px;">${nc} contacto${nc === 1 ? '' : 's'}${pc ? ' (' + e(pc.nombre || '') + ')' : ''} · ${nf} foto${nf === 1 ? '' : 's'}</div>
       </div>
       <button class="btn btn-secondary btn-sm" style="white-space:nowrap;" onclick="openLocDetail('${e(l.locId)}')">Ver / editar</button>
     </div>`;
@@ -7650,6 +7657,11 @@ function renderBDEmpresasList() {
 }
 
 /* Listado de Talentos (V7.1) */
+/* V11.5.0 · los talentos son personas: su ficha se edita desde aquí también. */
+function bdTalentoEditar(nombre) {
+  for (const id in BD_CONTACTOS) { if (BD_CONTACTOS[id] && BD_CONTACTOS[id].nombre === nombre) { openPersonaForm('edit', id); return; } }
+  showToast({ kind: 'info', title: 'Ficha no encontrada', body: 'Este talento no tiene ficha de persona en la BD.' });
+}
 function renderBDTalentosList() {
   const container = document.getElementById('personRows');
   const footer = document.getElementById('personListFooter');
@@ -7681,7 +7693,7 @@ function renderBDTalentosList() {
     const t = BD_TALENTOS[k];
     const _edadT = _edadDesde(t.fechaNacimiento) || t.edad || '';
     const meta = [_edadT ? _edadT + ' años' : '', t.altura ? t.altura + 'm' : '', t.genero || '', t.apariencia || ''].filter(Boolean).join(' · ');
-    return `<div style="background:var(--bg-surface);border:1px solid var(--border-soft);border-radius:8px;padding:12px 16px;margin-bottom:8px;">
+    return `<div style="background:var(--bg-surface);border:1px solid var(--border-soft);border-radius:8px;padding:12px 16px;margin-bottom:8px;cursor:pointer;" title="Editar ficha" onclick="bdTalentoEditar('${escapeHtml(k).replace(/'/g, '&#39;')}')">
       <div style="display:flex;align-items:flex-start;gap:16px;">
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;color:var(--ink-primary);font-size:14px;">${escapeHtml(t.nombre || k)}</div>
@@ -9117,8 +9129,10 @@ function renderInfoProyecto() {
       </div>
     </div>
 
-    <!-- RESUMEN FINANCIERO -->
-    <div class="form-section">
+    <!-- RESUMEN FINANCIERO · V11.5.0: eliminado de Info Proyecto por decisión
+         de Agustín — vive solo en Presupuesto (fuente única). Sección oculta;
+         el HTML muerto se retira en la próxima pasada de este módulo. -->
+    <div class="form-section" style="display:none;">
       <div class="form-section-title">Resumen financiero</div>
       <div class="form-section-subtitle">Alimentado automáticamente desde Presupuesto. No editable aquí.</div>
       <div class="kpi-bar">
@@ -11381,6 +11395,9 @@ function renderSummaryFin() {
     </div>
   ` : '';
 
+  /* V11.5.0 · el Resumen financiero contiene la ganancia: oculto a los
+     perfiles Producción (3) y Asistencia (4) por decisión de Agustín. */
+  if (TAKEOS_PERFIL && (TAKEOS_PERFIL.codigo === 3 || TAKEOS_PERFIL.codigo === 4)) { el.innerHTML = ''; return; }
   el.innerHTML = `
     ${spotlightHtml}
     <div class="summary-fin-header">
@@ -12192,7 +12209,7 @@ function renderCotizacion() {
   const ip = project.data.infoProyecto;
   document.getElementById('moduleHeaderActions').innerHTML =
     `<div style="display:flex;gap:8px;">
-       <button class="btn btn-secondary btn-sm" onclick="cotExportCartaPDF()">Exportar PDF</button>
+       <button class="btn btn-secondary btn-sm" onclick="cotPreviewPDF()">Previsualizar PDF</button>
        <button class="btn btn-primary btn-sm" onclick="cotAddOferta()">+ Nueva oferta</button>
      </div>`;
 
@@ -12234,7 +12251,14 @@ function cotMetaCardHTML(project, c, ip, fechaVal) {
     </div>
     <div class="cot-field" style="margin-top:14px;">
       <label>Descripción del proyecto <span class="tt" data-tip="Es única y compartida por todas las ofertas: describe el proyecto, no cada alternativa comercial. Aparece una vez en la Carta.">?</span></label>
-      <textarea class="cot-input" placeholder="Describe el proyecto (concepto, alcance general)…"
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="btn btn-ghost btn-sm" style="font-weight:800;min-width:30px;" title="Negrita (envuelve la selección en **)" onclick="cotDescWrap('**')">B</button>
+        <button class="btn btn-ghost btn-sm" style="font-style:italic;min-width:30px;" title="Cursiva (envuelve la selección en *)" onclick="cotDescWrap('*')">I</button>
+        <span style="font-size:10.5px;color:var(--ink-faint);align-self:center;">**negrita** · *cursiva* — se aplican en el PDF</span>
+      </div>
+      <textarea class="cot-input" id="cotDescTa" placeholder="Describe el proyecto (concepto, alcance general)…"
+                style="min-height:160px;${c.descAlto ? 'height:' + c.descAlto + 'px;' : ''}"
+                onmouseup="cotDescGuardarAlto(this)"
                 onchange="cotSetMeta('descripcionProyecto', this.value)">${escapeHtml(c.descripcionProyecto || '')}</textarea>
     </div>
     <p style="font-size:11.5px;color:var(--ink-faint);margin:12px 0 0;line-height:1.5;">
@@ -12528,7 +12552,8 @@ function cotSnapRowHTML(ofId, section, dept, r, idx) {
 }
 
 /* ─── HANDLERS ─────────────────────────────────────────────────────── */
-function cotSetMeta(field, value) { ensureCotizacion(STATE.currentProject)[field] = value; }
+function cotSetMeta(k0) { if (_cotBloqueada(k0)) { try { renderCotizacion(); } catch (e) {} return; } return _cotSetMetaReal.apply(null, arguments); }
+function _cotSetMetaReal(field, value) { ensureCotizacion(STATE.currentProject)[field] = value; }
 function cotSetCondicion(key, value) { ensureCotizacion(STATE.currentProject).condiciones[key] = value; }
 function cotSetCondicionMoney(el, key) {
   const c = ensureCotizacion(STATE.currentProject);
@@ -12814,7 +12839,11 @@ function cotBuildCartaHTML(project) {
   const c = ensureCotizacion(project);
   const ip = project.data.infoProyecto;
   const cond = c.condiciones;
-  const fecha = cotFechaFmt(ip.fechaCotizacion || new Date().toISOString().slice(0, 10));
+  /* V11.5.0 · la portada muestra la fecha/hora de GENERACIÓN (no la fecha
+     congelada de la primera cotización) + la versión del documento. */
+  const _gen = new Date();
+  const _hhmm = String(_gen.getHours()).padStart(2, '0') + ':' + String(_gen.getMinutes()).padStart(2, '0');
+  const fecha = cotFechaFmt(_gen.toISOString().slice(0, 10)) + ' · ' + _hhmm + ' hrs<br><span style="font-size:.85em;opacity:.8;">V.' + ((c.exportNum || 0) + (c.exportada ? 0 : 1)) + '</span>';
   const rep = c.representanteCliente || ip.contactoCliente || '';
   const ofertas = c.ofertas || [];
   const desc = (c.descripcionProyecto || '').trim();
@@ -12921,7 +12950,7 @@ function cotBuildCartaHTML(project) {
         <h1>Cotización<span class="a">Audiovisual</span></h1>
       </div>
       <div class="org">
-        ${orgLogo() ? ('<img class="logo" src="' + safeUrl(orgLogo()) + '" alt="">') : ''}
+        ${orgLogo() ? ('<img class="logo" style="border:none;background:transparent;padding:0;box-shadow:none;border-radius:0;object-fit:contain;" src="' + safeUrl(orgLogo()) + '" alt="">') : ''}
         <div class="name">${escapeHtml(orgNombre() || 'Productora')}</div>
         <div class="role">Productora Audiovisual</div>
         <div class="date">${escapeHtml(fecha)}</div>
@@ -12930,10 +12959,10 @@ function cotBuildCartaHTML(project) {
     <div class="meta">
       ${metaRows.map(r => `<div class="row"><span class="k">${escapeHtml(r[0])}</span><span class="v">${escapeHtml(r[1])}</span></div>`).join('')}
     </div>
-    ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${escapeHtml(desc)}</p></div>` : ''}
+    ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${cotDescHtml(desc)}</p></div>` : ''}
     ${ofertas.map((o, i) => cotCartaOfertaSection(o, cond, i, ofertas.length)).join('')}
     ${cotCartaCondiciones(cond)}
-    <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL'))} · Documento de cotización confidencial</div>
+    <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL', { hour12: false }))} · Documento de cotización confidencial</div>
   </body></html>`;
 }
 
@@ -13011,13 +13040,107 @@ function cotExportPresupuestoCSV(ofId) {
   showToast({ kind: 'success', title: 'Presupuesto exportado', body: `Se descargó <strong>${escapeHtml(fname)}</strong>. Ábrelo en Excel o Google Sheets.` });
 }
 
-function cotExportCartaPDF() {
-  const project = STATE.currentProject;
+/* V11.5.0 · markdown-lite de la descripción: **negrita**, *cursiva*, saltos. */
+function cotDescGuardarAlto(ta) {
+  /* V11.5.0 · el alto que el usuario estira queda persistido (sin re-render):
+     antes, cualquier click fuera devolvía el campo al tamaño default. */
+  try {
+    const project = STATE.currentProject; if (!project || !ta) return;
+    const c = ensureCotizacion(project);
+    const h = Math.round(ta.getBoundingClientRect().height);
+    if (h && Math.abs((c.descAlto || 0) - h) > 4) { c.descAlto = h; markDirty(); }
+  } catch (e) {}
+}
+function cotDescWrap(mark) {
+  const ta = document.getElementById('cotDescTa'); if (!ta) return;
+  const s = ta.selectionStart, e0 = ta.selectionEnd;
+  const sel = ta.value.slice(s, e0) || 'texto';
+  ta.value = ta.value.slice(0, s) + mark + sel + mark + ta.value.slice(e0);
+  ta.focus(); ta.setSelectionRange(s + mark.length, s + mark.length + sel.length);
+  cotSetMeta('descripcionProyecto', ta.value);
+}
+function cotDescHtml(t) {
+  return escapeHtml(String(t || ''))
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+/* V11.5.0 · Previsualizar PDF: elegir logo (de la galería del perfil de
+   empresa) y orientación antes de exportar. Las 3 plantillas y la paleta de
+   colores (cuando Diseño la capture) llegan sobre este mismo motor. */
+function cotExportCartaPDF() { cotPreviewPDF(); }
+function cotPreviewPDF() {
+  const project = STATE.currentProject; if (!project) return;
+  const logos = (typeof _orgLogos === 'function') ? _orgLogos().filter(function (l) { return l.dataUrl; }) : [];
+  const opts = logos.map(function (l, i) {
+    return '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;padding:6px 10px;cursor:pointer;">'
+      + '<input type="radio" name="cotPrevLogo" value="' + l.id + '"' + (l.principal ? ' checked' : '') + '>'
+      + '<img src="' + safeUrl(l.dataUrl) + '" style="height:26px;max-width:70px;object-fit:contain;">'
+      + '<span style="font-size:12px;color:var(--ink-secondary);">' + escapeHtml(l.nombre || ('Logo ' + (i + 1))) + '</span></label>';
+  }).join('');
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">'
+    + '<div class="modal-header"><div class="modal-title">Previsualizar PDF de cotización</div></div>'
+    + '<div class="modal-body">'
+    + (opts ? '<div class="emp-field" style="margin-bottom:12px;"><label>Logo para este documento</label><div style="display:flex;gap:8px;flex-wrap:wrap;">' + opts + '</div></div>' : '')
+    + '<div class="emp-field"><label>Orientación</label><select class="select" id="cotPrevOrient"><option value="portrait" selected>↕ Vertical</option><option value="landscape">↔ Horizontal</option></select></div>'
+    + '<p style="font-size:11px;color:var(--ink-faint);margin:10px 0 0;line-height:1.5;">Próximamente sobre este mismo motor: plantillas de cotización y color de énfasis desde tu paleta (Diseño).</p>'
+    + '</div>'
+    + '<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cotPreviewGenerar()">Generar PDF</button></div>'
+    + '</div></div>';
+}
+function cotPreviewGenerar() {
+  const project = STATE.currentProject; if (!project) return;
   const ip = project.data.infoProyecto;
-  const html = cotBuildCartaHTML(project);
-  const fname = `Cotización - ${ip.nombreProyecto || project.name || 'Proyecto'}${ip.cliente ? ' - ' + ip.cliente : ''}`;
+  const c = ensureCotizacion(project);
+  let html = cotBuildCartaHTML(project);
+  // Logo elegido (reemplaza el principal en el HTML ya construido)
+  try {
+    const sel = document.querySelector('input[name="cotPrevLogo"]:checked');
+    if (sel) {
+      const l = _orgLogos().find(function (x) { return x.id === sel.value; });
+      const actual = orgLogo();
+      if (l && l.dataUrl && actual && l.dataUrl !== actual) html = html.split(actual).join(l.dataUrl);
+    }
+  } catch (e) {}
+  // Orientación
+  const orient = (document.getElementById('cotPrevOrient') || {}).value || 'portrait';
+  html = html.replace('</head>', '<style>@page { size: A4 ' + orient + '; }</style></head>');
+  if (html.indexOf('@page { size: A4') === -1) html = '<style>@page { size: A4 ' + orient + '; }</style>' + html;
+  // Versionado + bloqueo: exportar fija la versión y bloquea la edición.
+  if (!c.exportada) { c.exportNum = (c.exportNum || 0) + 1; c.exportada = true; markDirty(); }
+  const vTxt = 'V.' + (c.exportNum || 1);
+  const fname = `Cotización - ${ip.nombreProyecto || project.name || 'Proyecto'}${ip.cliente ? ' - ' + ip.cliente : ''} - ${vTxt}`;
+  closeModal();
   printViaIframe(html, fname);
-  showToast({ kind: 'success', title: 'Carta lista para PDF', body: 'Se abrió el diálogo de impresión. Elige <strong>“Guardar como PDF”</strong> como destino.' });
+  showToast({ kind: 'success', title: 'Carta lista para PDF (' + vTxt + ')', body: 'Se abrió el diálogo de impresión. Elige <strong>“Guardar como PDF”</strong>. Esta versión queda bloqueada: cualquier edición pedirá confirmación.' });
+}
+/* Guard de versión exportada: avisa y ofrece nueva versión o edición consciente. */
+function _cotBloqueada(k) {
+  if (k === 'descAlto') return false;
+  const project = STATE.currentProject; if (!project) return false;
+  const c = ensureCotizacion(project);
+  if (!c.exportada) return false;
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">'
+    + '<div class="modal-header"><div class="modal-title">Esta versión ya se exportó</div></div>'
+    + '<div class="modal-body"><p style="margin:0;font-size:13px;color:var(--ink-secondary);line-height:1.6;">La <strong>V.' + (c.exportNum || 1) + '</strong> de esta cotización ya fue exportada. Lo sano es crear una versión nueva para los cambios; modificar la exportada solo tiene sentido si aún no salió de la productora (ej. correcciones del CEO antes de enviar a cliente).</p></div>'
+    + '<div class="modal-footer">'
+    + '<button class="btn" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn btn-secondary" onclick="cotDesbloquearMisma()">Quiero modificar esta versión de todas formas</button>'
+    + '<button class="btn btn-primary" onclick="cotNuevaVersion()">Crear nueva versión</button>'
+    + '</div></div></div>';
+  return true;
+}
+function cotNuevaVersion() {
+  const c = ensureCotizacion(STATE.currentProject);
+  c.exportada = false;   // el próximo export incrementa a V.(n+1)
+  markDirty(); closeModal();
+  showToast({ kind: 'success', title: 'Versión nueva abierta', body: 'Estás editando la V.' + ((c.exportNum || 0) + 1) + '. Se fija al exportarla.' });
+}
+function cotDesbloquearMisma() {
+  const c = ensureCotizacion(STATE.currentProject);
+  c.exportada = false; c.exportNum = Math.max(0, (c.exportNum || 1) - 1);   // re-exportar mantiene el número
+  markDirty(); closeModal();
+  showToast({ kind: 'warning', title: 'Editando una versión ya exportada', body: 'Sigues en la V.' + ((c.exportNum || 0) + 1) + '. El PDF anterior con ese número queda obsoleto.' });
 }
 
 
@@ -13628,7 +13751,7 @@ function docRemoveArchivo(id) {
    extienda el modelo (handoff enviado). La invitación real a externos
    (correo + consentir_invitacion) está pendiente de Auth y Legal: aquí
    el externo queda registrado como «Invitación pendiente» sin envío. */
-const CARGOS_PRESETS = ['Director/a', 'Productor/a Ejecutivo/a', 'Productor/a', 'Jefe/a de Producción', 'Director/a de Fotografía', 'Asistente de Dirección', 'Asistente de Producción', 'Dirección de Arte'];
+const CARGOS_PRESETS = ['Director/a', 'Productor/a Ejecutivo/a', 'Productor/a', 'Jefe/a de Producción', 'Director/a de Fotografía', 'Asistente de Dirección', 'Asistente de Producción', 'Director/a de Arte'];
 const CARGOS_PERFILES_INTERNO = ['Administrador', 'Ejecutivo', 'Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Finanzas / CFO', 'Invitado'];
 const CARGOS_PERFILES_EXTERNO = ['Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Invitado'];   // Administrador y Finanzas no se ofrecen a externos
 let _CARGO_EDIT = null;
@@ -13835,8 +13958,11 @@ function cargoAbrirModal(editId) {
   const selCargoVal = edit ? (esPreset ? edit.cargo : '__otro') : '';
   let optsCargo = CARGOS_PRESETS.map(function (p) { return '<option' + (p === selCargoVal ? ' selected' : '') + '>' + escapeHtml(p) + '</option>'; }).join('');
   optsCargo += '<option value="__otro"' + (selCargoVal === '__otro' ? ' selected' : '') + '>Otro (especificar)…</option>';
+  let optsCargo2 = '<option value="">— Sin rol secundario</option>' + CARGOS_PRESETS.map(function (p) { return '<option>' + escapeHtml(p) + '</option>'; }).join('') + '<option value="__otro">Otro (especificar)…</option>';
   const tipo = edit ? (edit.tipo || 'interno') : 'interno';
-  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">'
+  /* V11.5.0: el backdrop ya no cierra el modal (se perdía lo escrito con un
+     click accidental); solo Cancelar o guardar. */
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">'
     + '<div class="modal-header"><div class="modal-title">' + (edit ? 'Editar cargo' : 'Asignar un cargo') + '</div></div>'
     + '<div class="modal-body">'
     /* V11.4.0 · Tipo va PRIMERO: determina qué personas se ofrecen abajo. */
@@ -13845,11 +13971,16 @@ function cargoAbrirModal(editId) {
     +     '<option value="externo"' + (tipo === 'externo' ? ' selected' : '') + '>Externo (freelance / invitado)</option>'
     +   '</select><div id="cg_tipoHint" style="font-size:11.5px;color:var(--ink-faint);margin-top:5px;line-height:1.5;"></div></div>'
     +   '<div class="emp-field" style="margin-bottom:12px;"><label>Cargo</label><select class="select" id="cg_cargo" onchange="_cargoSelChanged(this.value)">' + optsCargo + '</select>'
-    +     '<input class="input" id="cg_otro" placeholder="Escribe el cargo (ej. Gaffer, Sonidista, Entrevistador)" style="display:' + (selCargoVal === '__otro' ? 'block' : 'none') + ';margin-top:8px;" value="' + (edit && !esPreset ? escapeHtml(edit.cargo || '') : '') + '"></div>'
+    +     '<input class="input" id="cg_otro" placeholder="Escribe el cargo (ej. Gaffer, Sonidista, Entrevistador)" style="display:' + (selCargoVal === '__otro' ? 'block' : 'none') + ';margin-top:8px;" value="' + (edit && !esPreset ? escapeHtml(edit.cargo || '') : '') + '">'
+    +     (edit ? '' : '<button class="btn btn-ghost btn-sm" id="cg_addRol2" style="margin-top:8px;" onclick="_cargoAgregarRol2()">+ Agregar rol secundario</button>'
+    +       '<div id="cg_rol2Wrap" style="display:none;margin-top:8px;"><label style="font-size:11.5px;color:var(--ink-faint);">Rol secundario (misma persona, mismo perfil)</label>'
+    +         '<select class="select" id="cg_cargo2" onchange="var o=document.getElementById(\'cg_otro2\'); if(o) o.style.display = this.value===\'__otro\' ? \'block\' : \'none\';">' + optsCargo2 + '</select>'
+    +         '<input class="input" id="cg_otro2" placeholder="Escribe el rol secundario" style="display:none;margin-top:8px;"></div>')
+    +   '</div>'
     +   '<div class="emp-field" style="margin-bottom:12px;"><label>Persona</label>'
     +     '<span class="combobox-wrap cbx-anchored" style="display:block;">'
     +       '<input class="input combobox-input" id="cg_persona" placeholder="Escribe para buscar…" autocomplete="off" value="' + (edit ? escapeHtml(edit.personaNombre || '') : '') + '"'
-    +         ' onfocus="cargoComboboxFilter(this)" oninput="cargoComboboxFilter(this)" onblur="comboboxCloseDelayed(this)">'
+    +         ' onfocus="cargoComboboxFilter(this)" oninput="cargoComboboxFilter(this)" onblur="comboboxCloseDelayed(this)" onchange="cargoPersonaChanged(this.value)">'
     +       '<div class="combobox-dropdown" hidden></div>'
     +     '</span></div>'
     +   '<div class="emp-field" style="margin-bottom:12px;"><label>Perfil de acceso</label><select class="select" id="cg_perfil" onchange="_cargoPerfilChecklist(this.value)">' + _cargoOpcionesPerfil(tipo, edit ? edit.perfil : 'Producción') + '</select>'
@@ -13900,6 +14031,19 @@ function cargoComboboxFilter(inputEl) {
   dropdown.onmousedown = function (e) { if (!e.target.closest('.combobox-option')) e.preventDefault(); };
   if (wrap.classList.contains('cbx-anchored')) { dropdown.style.left = ''; dropdown.style.top = ''; dropdown.style.width = ''; }
 }
+function cargoPersonaChanged(v) {
+  /* V11.5.0 · si la persona existe en la BD y tiene mail, el campo de correo
+     del externo se completa solo (modificable). */
+  try {
+    const em = document.getElementById('cg_email'); if (!em || em.value.trim()) return;
+    const p = BD_PERSONAS[String(v || '').trim()];
+    if (p && (p.mail || p.email)) em.value = p.mail || p.email;
+  } catch (e) {}
+}
+function _cargoAgregarRol2() {
+  var w = document.getElementById('cg_rol2Wrap'); var b = document.getElementById('cg_addRol2');
+  if (w) w.style.display = 'block'; if (b) b.style.display = 'none';
+}
 function cargoIrAInvitar() {
   closeModal();
   try { openEmpresaPerfil(); setTimeout(function () { try { _empShowSub('equipo'); } catch (e) {} }, 120); }
@@ -13922,7 +14066,7 @@ async function _cargoPerfilChecklist(perfilNombre) {
     const p = perfiles.find(function (x) { return x.codigo === codigo; });
     if (!p) { box.textContent = 'Permisos no disponibles.'; return; }
     if (!_CARGO_PERM_CACHE[p.id]) {
-      const r = await sb.from('profile_permissions').select('module_code, nivel').eq('profile_id', p.id);
+      const r = await sb.from('profile_permissions').select('modulo, nivel').eq('profile_id', p.id);
       if (r.error) throw r.error;
       _CARGO_PERM_CACHE[p.id] = r.data || [];
     }
@@ -13930,7 +14074,7 @@ async function _cargoPerfilChecklist(perfilNombre) {
     if (!perms.length) { box.textContent = 'Permisos no disponibles.'; return; }
     box.innerHTML = perms.map(function (pr) {
       const niv = (pr.nivel === 'E') ? '<strong style="color:var(--positive);">E</strong>' : (pr.nivel === 'L' ? '<strong style="color:var(--warning);">L</strong>' : '<span style="color:var(--ink-faint);">—</span>');
-      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--rule);"><span>' + escapeHtml(_PERM_MOD_LABELS[pr.module_code] || pr.module_code) + '</span><span>' + niv + '</span></div>';
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--rule);"><span>' + escapeHtml(_PERM_MOD_LABELS[pr.modulo] || pr.modulo) + '</span><span>' + niv + '</span></div>';
     }).join('');
   } catch (e) { box.textContent = 'Permisos no disponibles (lectura restringida).'; }
 }
@@ -13956,6 +14100,14 @@ function cargoGuardarModal() {
   };
   const idx = cargos.findIndex(function (c) { return c.id === row.id; });
   if (idx >= 0) cargos[idx] = row; else cargos.push(row);
+  /* V11.5.0 · rol secundario = segunda fila (misma persona/tipo/perfil).
+     Decisión: filas separadas y no texto concatenado, para que RECI, la
+     invitación y los conteos sigan operando por rol. */
+  const sel2 = g('cg_cargo2');
+  const rol2 = sel2 === '__otro' ? g('cg_otro2') : sel2;
+  if (!_CARGO_EDIT && rol2 && rol2 !== cargoNombre) {
+    cargos.push({ id: 'CG-' + Math.random().toString(36).slice(2, 10), cargo: rol2, custom: sel2 === '__otro', personaNombre: persona, contactId: row.contactId || null, tipo: tipo, perfil: perfil, estado: row.estado, invitedUserId: null });
+  }
   _CARGO_EDIT = null;
   const email = (document.getElementById('cg_email') ? String(document.getElementById('cg_email').value || '').trim() : '');
   closeModal();
@@ -18036,6 +18188,10 @@ function openPersonaForm(mode, contactId) {
         <div class="modal-body" style="max-height: 68vh; overflow: auto;">
           <div class="form-grid cols-2">
             ${_pfHeader('Identidad')}
+            <div style="grid-column:1/-1;border:1px solid var(--accent);border-radius:10px;padding:12px 14px;background:var(--bg-card);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div style="font-size:12.5px;color:var(--ink-secondary);line-height:1.5;"><strong>¿Prefieres que la persona ingrese sus propios datos?</strong><br>Invítala con un link: crea su cuenta, llena su perfil una sola vez y autoriza compartirlo contigo (Ley 21.719).</div>
+              <button class="btn btn-primary btn-sm" onclick="closeModal(); _empAbrirInvitar();">Invitar con link</button>
+            </div>
             ${_pfField('Nombre completo *', 'pf_nombre', src.nombre, { placeholder: 'Nombre y apellido', span: 2 })}
             ${_pfField('RUT', 'pf_rut', src.rut, { placeholder: '12.345.678-9' })}
             ${_pfField('Teléfono', 'pf_tel', src.telefono, { placeholder: '+56 9 …' })}
@@ -21248,7 +21404,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.4.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.5.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21558,6 +21714,7 @@ async function cloudGate(onUnlock) {
     }
   } catch (e) { /* si falla, seguimos y mostramos el login */ }
   _bootVeilOff();
+  setTimeout(function () { try { if (sessionStorage.getItem('takeos_inv_pendiente')) { var h = document.getElementById('cgInvHint'); if (h) h.style.display = 'block'; } } catch (e) {} }, 400);
 
   const ov = document.createElement('div');
   ov.id = 'cloudGate';
@@ -21566,6 +21723,7 @@ async function cloudGate(onUnlock) {
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
       <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
       <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después TakeOS vuelve a pedir autenticación.</div>
+        <div id="cgInvHint" style="display:none;border:1px solid #4a7;border-radius:8px;padding:10px 12px;margin-bottom:18px;font-size:12.5px;color:#9c8;line-height:1.5;">Te invitaron a colaborar. Entra con Google y tu <strong>cuenta se crea sola</strong>; al entrar verás la invitación.</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:0 0 auto;">
