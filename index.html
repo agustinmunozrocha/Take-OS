@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TakeOS · Primate Films</title>
+<title>TakeOS</title>
 
 <!--
   ════════════════════════════════════════════════════════════════════
@@ -4429,10 +4429,10 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
   <header class="topbar">
     <div class="topbar-left">
       <div class="brand" onclick="navigateToControlRoom()">
-        <div class="brand-logo">P</div>
+        <div class="brand-logo" id="brandLogo">T</div>
         <div>
           <span class="brand-name">TakeOS</span>
-          <span class="brand-sub">Primate Films</span>
+          <span class="brand-sub" id="brandSub"></span>
           <span class="brand-ver" id="brandVer"></span>
         </div>
       </div>
@@ -4461,8 +4461,8 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
       <!-- V7.4: las herramientas globales (BD, Guardar/Cargar OS, Snapshots, tema, admin)
            viven en el panel de Configuración. La barra solo deja Deshacer (uso frecuente). -->
       <button class="topbar-user topbar-config-btn" onclick="openConfigPanel()" title="Configuración (⌘ , / Ctrl ,)">
-        <div class="user-avatar">AM</div>
-        <span class="user-name">Agustín M.</span>
+        <div class="user-avatar" id="userAvatar"></div>
+        <span class="user-name" id="userName">Mi cuenta</span>
         <svg class="config-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <button class="topbar-save-btn" id="logoutBtn" onclick="confirmLogout()" title="Cerrar sesión en TakeOS">
@@ -4487,8 +4487,8 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
     <div class="cr-header">
       <div class="cr-title-block">
         <span class="cr-eyebrow">Control Room</span>
-        <h1 class="cr-title">Buenos días, Agustín.</h1>
-        <p class="cr-subtitle">Vista global de todos los proyectos de Primate Films.</p>
+        <h1 class="cr-title" id="crGreeting">Buenos días.</h1>
+        <p class="cr-subtitle" id="crSubtitle">Vista global de todos tus proyectos.</p>
       </div>
       <div class="cr-actions">
         <button class="btn btn-secondary" id="importProjectBtn" onclick="document.getElementById('importProjectFileInput').click()"
@@ -6678,7 +6678,7 @@ const MODULES = {
     layer: 'Pendiente V6',
     scope: 'project',
     render: null,
-    description: 'Espejo de la cuenta bancaria de producción más detalle de cada movimiento. Convive con Rinde Gastos (herramienta externa actual de Primate Films). Integración futura como meta de roadmap.'
+    description: 'Espejo de la cuenta bancaria de producción más detalle de cada movimiento. Convive con herramientas externas de rinde de gastos (ej. Rindegastos). Integración futura como meta de roadmap.'
   },
   'entregables': {
     title: 'Entregables',
@@ -7092,7 +7092,7 @@ function prOpenCols() {
   const tipoSel = (col, idx) => `<select class="pr-col-tipo" onchange="prSetColTipo(${idx}, this.value)"><option value="texto" ${col.tipo === 'texto' ? 'selected' : ''}>Texto</option><option value="imagen" ${col.tipo === 'imagen' ? 'selected' : ''}>Imagen</option><option value="mixto" ${col.tipo === 'mixto' ? 'selected' : ''}>Texto + Imagen</option><option value="check" ${col.tipo === 'check' ? 'selected' : ''}>Casilla ✓</option></select>`;
   const extraRows = c.extra.map((col, idx) => `<div class="pr-colcfg ${col.on ? '' : 'is-off'}"><button class="pr-tool" onclick="prMoveCol(${idx},-1)" title="Subir" ${idx === 0 ? 'disabled' : ''}>⌃</button><button class="pr-tool" onclick="prMoveCol(${idx},1)" title="Bajar" ${idx === c.extra.length - 1 ? 'disabled' : ''}>⌄</button><input class="pr-col-name" value="${escapeHtml(col.label)}" onchange="prSetColLabel(${idx}, this.value)">${tipoSel(col, idx)}<label class="pr-col-on"><input type="checkbox" ${col.on ? 'checked' : ''} onchange="prToggleColOn(${idx})"> visible</label><button class="pr-tool pr-tool-del" onclick="prDelColumna(${idx})" title="Eliminar columna">✕</button></div>`).join('');
   const estructura = `<div class="pr-col-group"><div class="pr-col-group-t">Estructura <span class="pr-col-lock">orden y nombre fijos</span></div><div class="pr-struct-list"><span class="pr-struct-pill is-locked">Inicio</span><span class="pr-struct-pill is-locked">Duración</span><label class="pr-struct-pill"><input type="checkbox" ${c.termino !== false ? 'checked' : ''} onchange="prToggleStruct('termino')"> Término</label><label class="pr-struct-pill"><input type="checkbox" ${c.escPlano !== false ? 'checked' : ''} onchange="prToggleStruct('escPlano')"> Esc / Plano</label><span class="pr-struct-pill is-locked">Acción / Situación</span></div><p class="pr-col-note">Siempre van primero y en este orden. Lo de abajo es libre.</p></div>`;
-  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:640px;"><div class="modal-header"><div class="modal-title">Columnas del plan</div></div><div class="modal-body">${estructura}<div class="pr-col-group"><div class="pr-col-group-t">Columnas configurables</div><div class="pr-colcfg-list">${extraRows}</div><button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="prAddColumna()">+ Agregar columna personalizada</button></div></div><div class="modal-footer"><button class="btn" onclick="prResetCols()">Volver al preset Primate</button><button class="btn btn-primary" onclick="closeModal()">Listo</button></div></div></div>`;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:640px;"><div class="modal-header"><div class="modal-title">Columnas del plan</div></div><div class="modal-body">${estructura}<div class="pr-col-group"><div class="pr-col-group-t">Columnas configurables</div><div class="pr-colcfg-list">${extraRows}</div><button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="prAddColumna()">+ Agregar columna personalizada</button></div></div><div class="modal-footer"><button class="btn" onclick="prResetCols()">Volver al preset por defecto</button><button class="btn btn-primary" onclick="closeModal()">Listo</button></div></div></div>`;
 }
 function prReopenCols() { renderPlanRodaje(); setTimeout(prOpenCols, 0); }
 function prToggleStruct(key) { const c = ensurePlanRodaje(STATE.currentProject).columnas; c[key] = !(c[key] !== false); markDirty(); prReopenCols(); }
@@ -10123,7 +10123,7 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
   const _sortBar = _sortActive
     ? `<div class="budget-sort-bar">Orden por columna activo (solo en pantalla; no altera el orden guardado) <button type="button" class="budget-sort-restore" onclick="budgetSortClear('${sectionKey}', ${_deptArg})">↺ Restaurar orden</button></div>`
     : '';
-  const _costoRealTip = '<span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para Primate.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span>';
+  const _costoRealTip = '<span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para la empresa.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span>';
   return `
     ${_sortBar}
     <table class="data-table budget-table ${budgetStateClass}" id="${tableId}">
@@ -11237,7 +11237,7 @@ function renderSummaryFin() {
     <div class="ganancia-spotlight ${gfClass}">
       <div class="spotlight-row">
         <div>
-          <div class="spotlight-label">Ganancia Final Real <span class="tt" data-tip="Presupuesto Cliente − Costo de Producción real − Suma de comisiones.\n\nEs lo que efectivamente queda para Primate Films después de pagar todo y repartir comisiones. El número más importante del proyecto desde el punto de vista financiero." style="background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.3);">?</span></div>
+          <div class="spotlight-label">Ganancia Final Real <span class="tt" data-tip="Presupuesto Cliente − Costo de Producción real − Suma de comisiones.\n\nEs lo que efectivamente queda para la empresa después de pagar todo y repartir comisiones. El número más importante del proyecto desde el punto de vista financiero." style="background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.3);">?</span></div>
           <div class="spotlight-value">${fmtMoney(gfReal)}</div>
           <div class="spotlight-sub">${(margenPctReal * 100).toFixed(1)}% del presupuesto cliente</div>
         </div>
@@ -11321,7 +11321,7 @@ function renderSummaryFin() {
 
         <tr>
           <td>Gastos administrativos
-            <span class="tt" data-tip="% sobre subtotal producción. Cubre overhead operativo de Primate Films (oficina, herramientas, contadora, etc.). Default: 5%.">?</span>
+            <span class="tt" data-tip="% sobre subtotal producción. Cubre el overhead operativo de la empresa (oficina, herramientas, contadora, etc.). Default: 5%.">?</span>
           </td>
           <td class="input-cell-narrow">
             <input type="number" step="0.5" min="0" max="100"
@@ -12635,6 +12635,7 @@ function cotCartaOfertaSection(o, cond, i, total) {
 }
 
 function cotCartaCondiciones(cond) {
+  const PROD = (typeof orgNombre === 'function' ? orgNombre() : '') || 'la Productora';
   const block = (title, items) => `<div class="cond-block">
     <div class="eyebrow accent">${escapeHtml(title)}</div>
     <ul class="cond-list">${items.map(x => `<li>${x}</li>`).join('')}</ul>
@@ -12644,7 +12645,7 @@ function cotCartaCondiciones(cond) {
     ${block('Condiciones de Pago', [
       `${cond.abonoPct}% del monto total hasta ${cond.abonoPlazoDiasHabiles} días hábiles después de la aprobación del proyecto.`,
       `${cond.saldoPct}% restante hasta ${cond.saldoPlazoDias} días después de la entrega final satisfactoria.`,
-      `El incumplimiento de pagos autoriza a Primate Films a suspender los trabajos y/o retener la entrega de material.`,
+      `El incumplimiento de pagos autoriza a ${PROD} a suspender los trabajos y/o retener la entrega de material.`,
       ...(cond.montosMasIVA ? ['Todos los montos están sujetos a IVA.'] : [])
     ])}
     ${block('Entregas y Correcciones', [
@@ -12657,20 +12658,20 @@ function cotCartaCondiciones(cond) {
     ])}
     ${block('Derechos de Uso y Propiedad Intelectual', [
       `El proyecto final se entrega con derechos de uso limitados a las plataformas, territorios y plazos definidos en la cotización.`,
-      `El material crudo es propiedad exclusiva de Primate Films, salvo compra expresa de derechos.`,
-      `Primate Films podrá utilizar el material final en su portafolio y canales promocionales.`,
-      `Los guiones, conceptos creativos y tratamientos desarrollados son propiedad de Primate Films, incluso si el proyecto no se ejecuta.`
+      `El material crudo es propiedad exclusiva de ${PROD}, salvo compra expresa de derechos.`,
+      `${PROD} podrá utilizar el material final en su portafolio y canales promocionales.`,
+      `Los guiones, conceptos creativos y tratamientos desarrollados son propiedad de ${PROD}, incluso si el proyecto no se ejecuta.`
     ])}
     ${block('Responsabilidad y Limitaciones', [
-      `Primate Films no se responsabiliza por condiciones climáticas adversas o fuerza mayor, negligencia o incumplimiento del cliente en entrega de insumos o aprobaciones, ni arrepentimiento del cliente respecto a guiones o lineamientos aprobados en preproducción.`,
-      `Cancelación antes del rodaje: Primate Films retendrá lo ya pagado (mínimo el ${cond.cancelacionAntesPct}%).`,
+      `${PROD} no se responsabiliza por condiciones climáticas adversas o fuerza mayor, negligencia o incumplimiento del cliente en entrega de insumos o aprobaciones, ni arrepentimiento del cliente respecto a guiones o lineamientos aprobados en preproducción.`,
+      `Cancelación antes del rodaje: ${PROD} retendrá lo ya pagado (mínimo el ${cond.cancelacionAntesPct}%).`,
       `Cancelación después del rodaje: el cliente deberá pagar el ${cond.cancelacionDespuesPct}% del valor total.`
     ])}
     ${block('Reprogramaciones', [
       `Si el cliente solicita reprogramar el rodaje con menos de ${cond.reprogramacionAvisoDiasHabiles} días hábiles de anticipación, se aplicará un cargo adicional del ${cond.reprogramacionPct}% del valor total.`
     ])}
     ${block('Confidencialidad', [
-      `Primate Films no divulgará información sensible o estratégica del cliente obtenida durante la ejecución del proyecto.`,
+      `${PROD} no divulgará información sensible o estratégica del cliente obtenida durante la ejecución del proyecto.`,
       `Esta obligación no aplica a información pública o de libre acceso.`
     ])}
     ${block('Validez de la Cotización', [
@@ -12787,12 +12788,12 @@ function cotBuildCartaHTML(project) {
   <body>
     <div class="cover">
       <div class="left">
-        <div class="kicker">Primate Films · Productora Audiovisual</div>
+        <div class="kicker">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Productora Audiovisual</div>
         <h1>Cotización<span class="a">Audiovisual</span></h1>
       </div>
       <div class="org">
         <img class="logo" src="${safeUrl(COT_LOGO)}" alt="">
-        <div class="name">Primate Films</div>
+        <div class="name">${escapeHtml(orgNombre() || 'Productora')}</div>
         <div class="role">Productora Audiovisual</div>
         <div class="date">${escapeHtml(fecha)}</div>
       </div>
@@ -12803,7 +12804,7 @@ function cotBuildCartaHTML(project) {
     ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${escapeHtml(desc)}</p></div>` : ''}
     ${ofertas.map((o, i) => cotCartaOfertaSection(o, cond, i, ofertas.length)).join('')}
     ${cotCartaCondiciones(cond)}
-    <div class="foot">Primate Films · Generado ${escapeHtml(new Date().toLocaleString('es-CL'))} · Documento de cotización confidencial</div>
+    <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL'))} · Documento de cotización confidencial</div>
   </body></html>`;
 }
 
@@ -12935,20 +12936,28 @@ function notifDefaultTemplates() {
   ];
 }
 
-const NOTIF_EMPRESA_DEFAULT = {
-  razonSocial: 'La Hectárea SpA',
-  rut: '77.398.011-K',
-  direccion: 'Av. Manquehue Sur 555 dpto 510, Las Condes',
-  giro: 'Producción y Comercialización de Audiovisuales',
-  mail: 'agustin@amrfilms.com',
-  numero: '+56 9 6689 8055'
-};
+/* V11.1.0 · multi-tenant: el remitente por defecto sale del perfil de la
+   organización activa (EMPRESA_PERFIL), NUNCA de datos cableados. Si el perfil
+   aún no se completa, los campos quedan vacíos (no se filtran datos de otra
+   organización). */
+function notifEmpresaDefault() {
+  var e = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL) ? EMPRESA_PERFIL : {};
+  var dir = [e.direccion, e.comuna, e.ciudad].filter(Boolean).join(', ');
+  return {
+    razonSocial: e.razonSocial || '',
+    rut: e.rut || '',
+    direccion: dir || '',
+    giro: e.giro || '',
+    mail: e.email || '',
+    numero: e.telefono || ''
+  };
+}
 function notifLoadConfig() {
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(NOTIF_CFG_KEY) || 'null'); } catch (e) { cfg = null; }
   if (!cfg) {
     cfg = {
-      empresa: Object.assign({}, NOTIF_EMPRESA_DEFAULT),
+      empresa: notifEmpresaDefault(),
       remitente: { nombre: '', numero: '', rol: '' },
       linkFormulario: '',
       templates: notifDefaultTemplates()
@@ -12956,7 +12965,7 @@ function notifLoadConfig() {
   }
   if (!cfg.empresa) cfg.empresa = { razonSocial: '', rut: '', direccion: '', giro: '', mail: '', numero: '' };
   // Backfill: si algún dato de empresa está vacío, completa con el default (no pisa lo que el usuario haya editado).
-  Object.keys(NOTIF_EMPRESA_DEFAULT).forEach(k => { if (!cfg.empresa[k]) cfg.empresa[k] = NOTIF_EMPRESA_DEFAULT[k]; });
+  (function(){ var d = notifEmpresaDefault(); Object.keys(d).forEach(function(k){ if (!cfg.empresa[k]) cfg.empresa[k] = d[k]; }); })();
   if (!cfg.remitente) cfg.remitente = { nombre: '', numero: '', rol: '' };
   if (cfg.linkFormulario === undefined) cfg.linkFormulario = '';
   if (!Array.isArray(cfg.templates) || !cfg.templates.length) cfg.templates = notifDefaultTemplates();
@@ -13092,9 +13101,9 @@ function _renderNotificacionesLegacy() {
         <span style="font-size:12px;color:var(--ink-faint);">${st.showCfg ? '▾ ocultar' : '▸ mostrar'}</span>
       </div>
       ${st.showCfg ? `
-      <p style="font-size:11.5px;color:var(--ink-faint);margin:4px 0 14px;">Datos constantes de Primate y del remitente. Se guardan en este navegador y sirven para todos los proyectos.</p>
+      <p style="font-size:11.5px;color:var(--ink-faint);margin:4px 0 14px;">Datos constantes de la empresa y del remitente. Se guardan en este navegador y sirven para todos los proyectos.</p>
       <div class="form-grid cols-3">
-        <div class="field"><label class="field-label">Razón social (Primate)</label><input class="input" value="${escapeHtml(cfg.empresa.razonSocial)}" oninput="notifSetCfg('empresa.razonSocial',this.value)"></div>
+        <div class="field"><label class="field-label">Razón social</label><input class="input" value="${escapeHtml(cfg.empresa.razonSocial)}" oninput="notifSetCfg('empresa.razonSocial',this.value)"></div>
         <div class="field"><label class="field-label">RUT empresa</label><input class="input" value="${escapeHtml(cfg.empresa.rut)}" oninput="notifSetCfg('empresa.rut',this.value)"></div>
         <div class="field"><label class="field-label">Giro</label><input class="input" value="${escapeHtml(cfg.empresa.giro)}" oninput="notifSetCfg('empresa.giro',this.value)"></div>
         <div class="field"><label class="field-label">Dirección empresa</label><input class="input" value="${escapeHtml(cfg.empresa.direccion)}" oninput="notifSetCfg('empresa.direccion',this.value)"></div>
@@ -13897,7 +13906,7 @@ function buildPrintDoc(titleText, subtitle, bodyHTML) {
   <body>
     <div class="head"><div class="title">${e(titleText)}</div>${subtitle ? `<div class="sub">${e(subtitle)}</div>` : ''}</div>
     ${bodyHTML}
-    <div class="foot">Primate Films · Generado ${e(new Date().toLocaleString('es-CL'))}</div>
+    <div class="foot">${e(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${e(new Date().toLocaleString('es-CL'))}</div>
   </body></html>`;
 }
 
@@ -14479,7 +14488,7 @@ function exportScoutingPDF() {
   <body><h1>Plan de Scouting</h1><div class="sub">${e(ip.cliente || '')}${ip.nombreProyecto ? ' · ' + e(ip.nombreProyecto) : ''}</div>
   <div class="meta">Fecha: <b>${e(s.fecha ? fmtFechaLarga(s.fecha) : '—')}</b> · Inicio: <b>${e(s.inicio || '—')}</b> · Término aprox.: <b>${e(fin)}</b><br>Quiénes van: <b>${e((s.quienes || []).filter(Boolean).join(', ') || '—')}</b></div>
   <table><thead><tr><th>Hora</th><th>Dur.</th><th>Locación</th><th>Contacto</th><th>Qué revisar</th><th>Responsable</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="foot"><span>Primate Films · Plan de Scouting</span><span>${e(new Date().toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))}</span></div>
+  <div class="foot"><span>${e(orgNombre())}${orgNombre() ? ' · ' : ''}Plan de Scouting</span><span>${e(new Date().toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))}</span></div>
   </body></html>`;
   printViaIframe(html, 'Plan de Scouting');
 }
@@ -14591,12 +14600,12 @@ function legalRep() {
   const e = EMPRESA_PERFIL || {};
   const dom = [e.direccion, e.comuna, e.ciudad].filter(Boolean).join(', ');   // V10.5.1: comuna y ciudad ahora son campos separados
   return {
-    razon: e.razonSocial || 'La Hectárea SpA',
-    rutEmp: e.rut || '77.398.011-K',
-    marca: e.nombreFicticio || 'Primate Films',
-    rep: e.representante || 'Agustín Ignacio Muñoz Rocha',
-    rutRep: e.repRut || '20.287.686-2',
-    domEmp: dom || 'Santiago'
+    razon: e.razonSocial || '',
+    rutEmp: e.rut || '',
+    marca: e.nombreFicticio || '',
+    rep: e.representante || '',
+    rutRep: e.repRut || '',
+    domEmp: dom || ''
   };
 }
 function legalFindContact(nombre) {
@@ -14675,7 +14684,7 @@ function renderLegal() {
   const project = STATE.currentProject; if (!project) return;
   const st = _legalState();
   const content = document.getElementById('moduleContent');
-  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de TakeOS sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en el contrato real de Primate). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
+  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de TakeOS sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en un contrato real de referencia). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
   const subtabs = `<div class="lgl-subtabs">
     <button class="lgl-subtab ${st.sub === 'docs' ? 'on' : ''}" onclick="legalSetSub('docs')">Documentos</button>
     <button class="lgl-subtab ${st.sub === 'tpl' ? 'on' : ''}" onclick="legalSetSub('tpl')">Plantillas</button>
@@ -15420,7 +15429,7 @@ function renderHojaLlamado() {
         <div class="hl-info-grid">
           <div><span class="hl-k">Cliente</span><span class="hl-v">${escapeHtml(ip.cliente || '—')}</span></div>
           <div><span class="hl-k">Agencia</span><span class="hl-v">${escapeHtml(ip.agencia || 'No aplica')}</span></div>
-          <div><span class="hl-k">Productora</span><span class="hl-v">${escapeHtml(ip.productora || 'Primate Films')}</span></div>
+          <div><span class="hl-k">Productora</span><span class="hl-v">${escapeHtml(ip.productora || orgNombre())}</span></div>
           <div><span class="hl-k">Productor(a) Ejecutivo(a)</span><span class="hl-v">${escapeHtml(ip.productorEjecutivo || '—')}</span></div>
           <div><span class="hl-k">Director(a)</span><span class="hl-v">${escapeHtml(ip.director || '—')}</span></div>
           <div><span class="hl-k">Jefe de Producción</span><span class="hl-v">${escapeHtml(ip.jefeProduccion || '—')}</span></div>
@@ -15757,7 +15766,7 @@ function buildHojaLlamadoPrintHTML(project, sel) {
     <tbody>${extRows}</tbody></table>` : ''}
 
     <div class="foot">
-      <span>Primate Films · Documento operativo del día de rodaje</span>
+      <span>${e(orgNombre())}${orgNombre() ? ' · ' : ''}Documento operativo del día de rodaje</span>
       <span>${e(verLabel)}${stamp ? ' · ' + e(stamp) : ''}</span>
     </div>
   </body></html>`;
@@ -15954,7 +15963,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
   const stamp = plan.lastExport ? plan.lastExport.at : new Date().toLocaleString('es-CL');
   const resp = (dd.header.responsable || '').trim();
   const respC = (dd.header.responsableContacto || '').trim();
-  const footLeft = resp ? ('Responsable del plan: ' + e(resp) + (respC ? (' · ' + e(respC)) : '')) : e(EP.nombreFicticio || 'Primate Films');
+  const footLeft = resp ? ('Responsable del plan: ' + e(resp) + (respC ? (' · ' + e(respC)) : '')) : e(EP.nombreFicticio || '');
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Plan de Rodaje</title>
   <style>
     @page { size: letter ${orient}; margin: 10mm; }
@@ -15992,7 +16001,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
   </style></head>
   <body>
     <div class="ph-top">
-      <div class="ph-prod">${e(EP.nombreFicticio || 'Primate Films')}</div>
+      <div class="ph-prod">${e(EP.nombreFicticio || '')}</div>
       <div class="ph-title">PLAN DE RODAJE</div>
       <div class="ph-ver"><b>${e(verLabel)}</b><br>${e(stamp)}</div>
     </div>
@@ -19143,6 +19152,31 @@ async function dalBootLegal(opts) {
 /* ── V9.4.8 · Perfil de empresa (EMPRESA_PERFIL), singleton transversal ────
    organization_profile: 1 fila por organización, todo el bloque en `profile`
    jsonb (28 campos heterogéneos que el cliente lee/escribe como bloque). */
+/* V11.1.0 · identidad de la organización y del usuario activos en la UI.
+   El nombre de la organización sale del perfil de empresa cargado (EMPRESA_PERFIL),
+   nunca cableado; el del usuario, del perfil personal. Todo con null-checks para
+   que un DOM incompleto jamás rompa el arranque. */
+var USER_NOMBRE = '';
+var USER_APELLIDO = '';
+function orgNombre() {
+  var e = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL) ? EMPRESA_PERFIL : {};
+  return String(e.nombreFicticio || e.razonSocial || '').trim();
+}
+function aplicarMarcaOrg() {
+  var nom = orgNombre();
+  try { document.title = nom ? ('TakeOS · ' + nom) : 'TakeOS'; } catch (e) {}
+  try { var bs = document.getElementById('brandSub'); if (bs) bs.textContent = nom; } catch (e) {}
+  try { var bl = document.getElementById('brandLogo'); if (bl) bl.textContent = (nom ? nom.charAt(0).toUpperCase() : 'T'); } catch (e) {}
+  try { var cs = document.getElementById('crSubtitle'); if (cs) cs.textContent = nom ? ('Vista global de todos los proyectos de ' + nom + '.') : 'Vista global de todos tus proyectos.'; } catch (e) {}
+}
+function aplicarUsuario() {
+  var nom = String(USER_NOMBRE || '').trim();
+  var ape = String(USER_APELLIDO || '').trim();
+  try { var g = document.getElementById('crGreeting'); if (g) g.textContent = nom ? ('Buenos días, ' + nom + '.') : 'Buenos días.'; } catch (e) {}
+  try { var un = document.getElementById('userName'); if (un) un.textContent = nom ? (nom + (ape ? (' ' + ape.charAt(0).toUpperCase() + '.') : '')) : 'Mi cuenta'; } catch (e) {}
+  try { var av = document.getElementById('userAvatar'); if (av) av.textContent = (nom ? nom.charAt(0).toUpperCase() : '') + (ape ? ape.charAt(0).toUpperCase() : ''); } catch (e) {}
+}
+
 async function dalLoadPerfil() {
   /* V11.0.0 · multi-tenant: devuelve { profile, nombreCanonico } de la
      organización ACTIVA. `profile` es el bloque jsonb de organization_profile
@@ -19168,6 +19202,7 @@ function dalApplyPerfil(profile, nombreCanonico) {
      canónico de la organización (organizations.nombre). */
   if (!(String(EMPRESA_PERFIL.nombreFicticio || '').trim()) && nombreCanonico) EMPRESA_PERFIL.nombreFicticio = nombreCanonico;
   PERFIL_SOURCE = 'supabase';
+  try { aplicarMarcaOrg(); } catch (e) {}
 }
 async function dalBootPerfil(opts) {
   const silent = opts && opts.silent;
@@ -19961,7 +19996,7 @@ function _dalProyectoPartes(p) {
 
   const info = {
     cliente: cliente, clienteEmpresaId: p.cliente_empresa_id || '', agencia: agencia,
-    nombreProyecto: p.nombre_proyecto || '', servicio: p.servicio || 'Producción', productora: p.productora || 'Primate Films',
+    nombreProyecto: p.nombre_proyecto || '', servicio: p.servicio || 'Producción', productora: p.productora || orgNombre(),
     derechos: { tiempo: p.derechos_tiempo || '', plataformas: p.derechos_plataformas || '', territorio: p.derechos_territorio || '' },
     contactoCliente: p.contacto_cliente || '', mailContactoCliente: p.mail_contacto_cliente || '', telefonoContactoCliente: p.telefono_contacto_cliente || '',
     contactoAgencia: p.contacto_agencia || '', mailContactoAgencia: p.mail_contacto_agencia || '', telefonoContactoAgencia: p.telefono_contacto_agencia || '',
@@ -20379,7 +20414,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.0.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.1.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21004,6 +21039,7 @@ async function _perfilGuardar() {
     };
     var up = await client.from('user_profiles').upsert(prof, { onConflict: 'user_id' });
     if (up.error) throw up.error;
+    USER_NOMBRE = prof.nombre || ''; USER_APELLIDO = prof.apellido || ''; try { aplicarUsuario(); } catch (e) {}
 
     var extEl = document.getElementById('pf_ext'); var ext = extEl ? extEl.checked : false;
     var bancoNombre = g('perfilBanco'), tipo = g('pf_tipocuenta'), num = g('pf_ncuenta'), datosExtra = g('pf_extra');
@@ -21036,8 +21072,9 @@ async function iniciarSesionTakeOS() {
       var ures = await client.auth.getUser();
       var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
       if (uid) {
-        var pr = await client.from('user_profiles').select('user_id').eq('user_id', uid).maybeSingle();
+        var pr = await client.from('user_profiles').select('user_id, nombre, apellido').eq('user_id', uid).maybeSingle();
         if (pr.error) console.warn('[perfil] no se pudo verificar el perfil personal; se omite el onboarding', pr.error);
+        if (!pr.error && pr && pr.data) { USER_NOMBRE = String(pr.data.nombre || '').trim(); USER_APELLIDO = String(pr.data.apellido || '').trim(); try { aplicarUsuario(); } catch (e) {} }
         if (!pr.error && (!pr || !pr.data)) {
           abrirPerfilUsuario(true, function () { resolverEspacioYArrancar(); });
           return;
@@ -21050,6 +21087,8 @@ async function iniciarSesionTakeOS() {
 
 document.addEventListener('DOMContentLoaded', () => {
   try { const _bv = document.getElementById('brandVer'); if (_bv) _bv.textContent = 'v' + String(TAKEOS_VERSION || '').replace(/^[vV]\.?/, ''); } catch (e) {}
+  try { aplicarMarcaOrg(); } catch (e) {}
+  try { aplicarUsuario(); } catch (e) {}
   applyStoredTheme();   // V7.2: aplicar tema guardado antes de renderizar
   renderMetrics();
   renderKanban();
