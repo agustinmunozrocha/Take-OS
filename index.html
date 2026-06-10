@@ -3029,6 +3029,10 @@ tr.row-drop-after > td { box-shadow: inset 0 -2px 0 var(--accent, #B03A2F); }
   color: #fff;
 }
 .toast-body { color: rgba(255,255,255,0.85); font-size: 12px; }
+.btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; filter: saturate(.35); }
+.btn:disabled:hover, .btn[disabled]:hover { transform: none; box-shadow: none; }
+.toast.error { background: var(--negative, #c0392b); }
+.toast.error .toast-body { color: rgba(255,255,255,0.92); }
 .toast.success { background: var(--positive); }
 .toast.success .toast-body { color: rgba(255,255,255,0.92); }
 .toast.warning { background: var(--warning); }
@@ -8819,20 +8823,37 @@ function buildPersonasDatalist() {
    clienteEmpresaId; el texto "Cliente" queda como nombre visible. Habilita la
    ficha de la empresa (proyectos, pagado, margen). */
 function empresaSelectInfoHTML(ip) {
+  /* V11.3.1 · combobox estándar también aquí (era el último select rígido).
+     Sigue vinculando por ID (no por texto): al elegir una empresa del
+     desplegable se guarda su identificador; texto que no coincide con
+     ninguna empresa no toca el vínculo y muestra la advertencia. */
   const cur = ip.clienteEmpresaId || '';
-  const ids = Object.keys(BD_EMPRESAS_BYID).sort((a, b) => (BD_EMPRESAS_BYID[a].nombreFantasia || '').localeCompare(BD_EMPRESAS_BYID[b].nombreFantasia || ''));
-  const opts = ['<option value="">(sin vincular)</option>'].concat(ids.map(id => {
-    const e = BD_EMPRESAS_BYID[id];
-    return `<option value="${id}" ${cur === id ? 'selected' : ''}>${escapeHtml(e.nombreFantasia || id)}${e.razonSocial ? ' · ' + escapeHtml(e.razonSocial) : ''}</option>`;
-  })).join('');
-  const sel = `<select class="input" onchange="updateInfoField('clienteEmpresaId', this.value); renderInfoProyecto();">${opts}</select>`;
+  const curNombre = (cur && BD_EMPRESAS_BYID[cur]) ? (BD_EMPRESAS_BYID[cur].nombreFantasia || '') : '';
+  const cbx = `<span class="combobox-wrap cbx-anchored" style="display:block;">
+    <input class="input combobox-input" value="${escapeHtml(curNombre)}" placeholder="Escribe para buscar y vincular…" autocomplete="off"
+           onfocus="comboboxFilterEmpresas(this)"
+           oninput="comboboxFilterEmpresas(this)"
+           onblur="comboboxCloseDelayed(this)"
+           onchange="infoVincularEmpresaPorNombre(this.value)">
+    <div class="combobox-dropdown" hidden></div>
+  </span>
+  <div id="bdwarn-vinculo" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ Esa empresa no está en la BD: el vínculo no cambió. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" onclick="navigateToModule('bd-personas')">+ Agregarla a la BD</button></div>`;
   let sugg = '';
   if (!cur && ip.cliente) {
+    const ids = Object.keys(BD_EMPRESAS_BYID);
     const q = _normKey(ip.cliente);
     const match = ids.find(id => _normKey(BD_EMPRESAS_BYID[id].nombreFantasia || '') === q || _normKey(BD_EMPRESAS_BYID[id].razonSocial || '') === q);
     if (match) sugg = `<div style="margin-top:6px;"><button class="btn btn-secondary btn-sm" onclick="infoVincularEmpresa('${match}')">Vincular a «${escapeHtml(BD_EMPRESAS_BYID[match].nombreFantasia)}» (coincide con el nombre)</button></div>`;
   }
-  return sel + sugg;
+  return cbx + sugg;
+}
+function infoVincularEmpresaPorNombre(v) {
+  const nombre = String(v || '').trim();
+  const warn = document.getElementById('bdwarn-vinculo');
+  if (!nombre) { updateInfoField('clienteEmpresaId', ''); renderInfoProyecto(); return; }
+  const emp = BD_EMPRESAS[nombre];
+  if (emp && emp._id) { if (warn) warn.style.display = 'none'; updateInfoField('clienteEmpresaId', emp._id); renderInfoProyecto(); return; }
+  if (warn) warn.style.display = 'flex';
 }
 /* V11.3.0 · Cliente/Agencia con el combobox estándar de empresas + autofill.
    Si la empresa existe en la BD: al seleccionarla se completan mail y teléfono
@@ -8865,6 +8886,23 @@ function infoEmpresaChanged(field, value) {
     markDirty();
     renderInfoProyecto();
     showToast({ kind: 'info', title: 'Datos completados desde la BD', body: 'Mail y teléfono de contacto se rellenaron solos (solo los campos vacíos).' });
+  }
+}
+function infoContactoChanged(field, value) {
+  updateInfoField(field, value);
+  const p = BD_PERSONAS[String(value || '').trim()];
+  if (!p) return;
+  const ip = STATE.currentProject && STATE.currentProject.data ? STATE.currentProject.data.infoProyecto : null;
+  if (!ip) return;
+  let lleno = false;
+  const mailF = field === 'contactoCliente' ? 'mailContactoCliente' : 'mailContactoAgencia';
+  const telF = field === 'contactoCliente' ? 'telefonoContactoCliente' : 'telefonoContactoAgencia';
+  if (!String(ip[mailF] || '').trim() && (p.mail || p.email)) { ip[mailF] = p.mail || p.email; lleno = true; }
+  if (!String(ip[telF] || '').trim() && p.telefono) { ip[telF] = p.telefono; lleno = true; }
+  if (lleno) {
+    markDirty();
+    renderInfoProyecto();
+    showToast({ kind: 'info', title: 'Datos completados desde la BD', body: 'Mail y teléfono se rellenaron solos (solo los campos vacíos).' });
   }
 }
 function infoVincularEmpresa(id) { updateInfoField('clienteEmpresaId', id); renderInfoProyecto(); }
@@ -8964,7 +9002,14 @@ function renderInfoProyecto() {
       <div class="form-grid cols-3">
         <div class="field">
           <label class="field-label">Contacto principal</label>
-          <input class="input" value="${escapeHtml(ip.contactoCliente)}" oninput="updateInfoField('contactoCliente', this.value)" placeholder="Nombre y apellido">
+          <span class="combobox-wrap person-combobox cbx-anchored" style="display:block;">
+            <input class="input combobox-input" value="${escapeHtml(ip.contactoCliente)}" placeholder="Escribe para buscar en la Base de Datos…" autocomplete="off"
+                   onfocus="comboboxOpen(this)"
+                   oninput="comboboxFilter(this); updateInfoField('contactoCliente', this.value);"
+                   onblur="comboboxCloseDelayed(this)"
+                   onchange="infoContactoChanged('contactoCliente', this.value)">
+            <div class="combobox-dropdown" hidden></div>
+          </span>
         </div>
         <div class="field">
           <label class="field-label">Mail</label>
@@ -8976,7 +9021,14 @@ function renderInfoProyecto() {
         </div>
         <div class="field">
           <label class="field-label">Contacto Agencia</label>
-          <input class="input" value="${escapeHtml(ip.contactoAgencia || '')}" oninput="updateInfoField('contactoAgencia', this.value)" placeholder="Nombre y apellido (si aplica)">
+          <span class="combobox-wrap person-combobox cbx-anchored" style="display:block;">
+            <input class="input combobox-input" value="${escapeHtml(ip.contactoAgencia || '')}" placeholder="Escribe para buscar en la Base de Datos…" autocomplete="off"
+                   onfocus="comboboxOpen(this)"
+                   oninput="comboboxFilter(this); updateInfoField('contactoAgencia', this.value);"
+                   onblur="comboboxCloseDelayed(this)"
+                   onchange="infoContactoChanged('contactoAgencia', this.value)">
+            <div class="combobox-dropdown" hidden></div>
+          </span>
         </div>
         <div class="field">
           <label class="field-label">Mail Agencia</label>
@@ -13383,13 +13435,15 @@ function renderDocumentos() {
      adjunta un archivo, un link, o deja solo el registro (documento pendiente). */
   const items = (docs.items || []).slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
   content.innerHTML = `
+    <div id="docDropZone" ondragover="docDragOver(event)" ondragleave="docDragLeave(event)" ondrop="docDrop(event)" style="border-radius:12px;transition:outline .15s;outline:2px dashed transparent;outline-offset:6px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:var(--space-4);flex-wrap:wrap;">
-      <p style="margin:0;font-size:13px;color:var(--ink-secondary);line-height:1.5;max-width:62ch;">Repositorio de documentación del proyecto: producción, creativo, legal, cliente, referencias o gestión interna. Cada documento lleva nombre libre, descripción y, si corresponde, un archivo adjunto (PDF, imágenes, Office, hasta 15 MB) o un link.</p>
+      <p style="margin:0;font-size:13px;color:var(--ink-secondary);line-height:1.5;max-width:62ch;">Repositorio de documentación del proyecto: producción, creativo, legal, cliente, referencias o gestión interna. Cada documento lleva nombre libre, descripción y, si corresponde, un archivo adjunto (PDF, imágenes, Office, hasta 15 MB) o un link. <strong>También puedes arrastrar archivos aquí</strong>: cada uno crea su documento.</p>
       <button class="btn btn-primary" onclick="docAdd()">+ Agregar documento</button>
     </div>
     ${items.length
       ? `<div style="display:flex;flex-direction:column;gap:10px;">${items.map(d => docRowHTML(d)).join('')}</div>`
-      : `<div style="border:1px dashed var(--rule);border-radius:12px;padding:36px;text-align:center;color:var(--ink-faint);font-size:13px;">Aún no hay documentos en este proyecto.<br><span style="font-size:12px;">Ejemplos: Brief cliente · Tratamiento de dirección · Referencias visuales · Guion aprobado · Moodboard · Minuta reunión inicial.</span></div>`}
+      : `<div style="border:1px dashed var(--rule);border-radius:12px;padding:36px;text-align:center;color:var(--ink-faint);font-size:13px;">Aún no hay documentos en este proyecto. Arrastra archivos aquí o usa «+ Agregar documento».<br><span style="font-size:12px;">Ejemplos: Brief cliente · Tratamiento de dirección · Referencias visuales · Guion aprobado · Moodboard · Minuta reunión inicial.</span></div>`}
+    </div>
   `;
   document.getElementById('moduleHeaderActions').innerHTML = '';
 }
@@ -13423,6 +13477,22 @@ function docRowHTML(d) {
 function docAdd(cat) {
   const project = STATE.currentProject; const docs = ensureDocs(project);
   docs.items.push({ id: docNewId(), categoria: cat || 'general', titulo: '', url: '', notas: '', ts: new Date().toISOString() });
+  markDirty(); renderDocumentos();
+}
+function docDragOver(ev) { ev.preventDefault(); const z = document.getElementById('docDropZone'); if (z) z.style.outline = '2px dashed var(--accent)'; }
+function docDragLeave(ev) { const z = document.getElementById('docDropZone'); if (z) z.style.outline = '2px dashed transparent'; }
+function docDrop(ev) {
+  ev.preventDefault();
+  const z = document.getElementById('docDropZone'); if (z) z.style.outline = '2px dashed transparent';
+  const files = (ev.dataTransfer && ev.dataTransfer.files) ? Array.from(ev.dataTransfer.files) : [];
+  if (!files.length) return;
+  const docs = ensureDocs(STATE.currentProject);
+  files.forEach(function (file) {
+    const titulo = String(file.name || 'Documento').replace(/\.[^.]+$/, '');
+    const d = { id: docNewId(), categoria: 'general', titulo: titulo, url: '', notas: '', ts: new Date().toISOString() };
+    docs.items.push(d);
+    _docAdjuntarFile(d.id, file);
+  });
   markDirty(); renderDocumentos();
 }
 function docSet(id, field, val) {
@@ -13464,28 +13534,33 @@ async function _uploadDocPDF(projId, file) {
 const DOC_EXT_PERMITIDAS = /\.(pdf|jpe?g|png|gif|webp|docx?|xlsx?|pptx?|txt|csv|zip)$/i;
 function docAttachPDF(id, input) {
   const file = input && input.files && input.files[0]; if (!file) return;
-  /* V11.3.0 · ya no es solo PDF: el bucket acepta PDF, imágenes, Office,
-     texto/CSV y ZIP (allow-list actualizado en Storage). */
-  if (!DOC_EXT_PERMITIDAS.test(file.name || '')) { showToast({ kind: 'warning', title: 'Formato no permitido', body: 'Acepta PDF, imágenes, Word/Excel/PowerPoint, TXT, CSV o ZIP. Para otros formatos, usa el link.' }); input.value = ''; return; }
-  if (file.size > DOC_PDF_MAX) { showToast({ kind: 'warning', title: 'Archivo muy grande', body: 'El PDF supera los 15 MB. Súbelo a Drive/Dropbox y pega el link, o comprímelo.' }); input.value = ''; return; }
+  _docAdjuntarFile(id, file);
+  try { input.value = ''; } catch (e) {}
+}
+/* V11.3.1 · adjunto reutilizable: lo usan el botón «Adjuntar archivo» y el
+   arrastre de archivos al módulo (cada drop crea documento + adjunta). */
+function _docAdjuntarFile(id, file) {
+  if (!file) return;
+  if (!DOC_EXT_PERMITIDAS.test(file.name || '')) { showToast({ kind: 'warning', title: 'Formato no permitido', body: 'Acepta PDF, imágenes, Word/Excel/PowerPoint, TXT, CSV o ZIP. Para otros formatos, usa el link.' }); return; }
+  if (file.size > DOC_PDF_MAX) { showToast({ kind: 'warning', title: 'Archivo muy grande', body: 'El archivo supera los 15 MB. Súbelo a Drive/Dropbox y pega el link, o comprímelo.' }); return; }
   const project = STATE.currentProject;
   // 1) intenta subir a Storage; 2) si no, cae a base64 local (fail-safe).
   _uploadDocPDF(project ? project.id : '', file).then(function (up) {
     const docs = ensureDocs(STATE.currentProject); const d = docs.items.find(x => x.id === id); if (!d) return;
     if (up && up.path) {
-      d.archivo = { nombre: file.name || 'documento.pdf', path: up.path, size: file.size };
+      d.archivo = { nombre: file.name || 'documento', path: up.path, size: file.size };
       markDirty(); autosaveNow();
       try { if (project) dalTouchProyecto(project); } catch (e) {}   // sincroniza la RUTA (no el binario)
       renderDocumentos();
-      showToast({ kind: 'success', title: 'PDF subido', body: (file.name || 'PDF') + ' quedó en la nube.' });
+      showToast({ kind: 'success', title: 'Archivo subido', body: (file.name || 'Archivo') + ' quedó en la nube.' });
       return;
     }
     // Fallback: base64 local (como antes). Acá sí aplica el tope chico del modo local.
-    if (file.size > 600 * 1024) { showToast({ kind: 'warning', title: 'Sin nube disponible', body: 'Storage no está disponible y el PDF supera ~600 KB para guardarlo local. Usa el link, o reintenta cuando el bucket exista.' }); input.value = ''; return; }
+    if (file.size > 600 * 1024) { showToast({ kind: 'warning', title: 'Sin nube disponible', body: 'Storage no está disponible y el archivo supera ~600 KB para guardarlo local. Usa el link, o reintenta más tarde.' }); return; }
     const reader = new FileReader();
     reader.onload = function () {
       const d2 = ensureDocs(STATE.currentProject).items.find(x => x.id === id);
-      if (d2) { d2.archivo = { nombre: file.name || 'documento.pdf', dataUrl: reader.result, size: file.size }; markDirty(); autosaveNow(); renderDocumentos(); showToast({ kind: 'info', title: 'PDF adjuntado (local)', body: (file.name || 'PDF') + ' quedó en este navegador; sube a la nube al activar Storage.' }); }
+      if (d2) { d2.archivo = { nombre: file.name || 'documento', dataUrl: reader.result, size: file.size }; markDirty(); autosaveNow(); renderDocumentos(); showToast({ kind: 'info', title: 'Archivo adjuntado (local)', body: (file.name || 'Archivo') + ' quedó en este navegador; sube a la nube al activar Storage.' }); }
     };
     reader.onerror = function () { showToast({ kind: 'error', title: 'No se pudo leer', body: 'Hubo un problema leyendo el archivo.' }); };
     reader.readAsDataURL(file);
@@ -13661,7 +13736,9 @@ function renderCargos() {
       + td(sinPersona ? '<span style="color:var(--ink-faint);">— Sin asignar —</span>' : escapeHtml(c.personaNombre))
       + td(sinPersona ? '—' : _cargoPill(c.tipo === 'externo' ? 'Externo' : 'Interno', c.tipo === 'externo' ? 'ext' : 'int'))
       + td(sinPersona ? '—' : escapeHtml(c.perfil || '—'))
-      + td(sinPersona ? '—' : _cargoPill(estLabel, estTone))
+      + td(sinPersona ? '—' : (c.estado === 'pendiente'
+          ? '<a style="cursor:pointer;text-decoration:none;" title="Copiar el link de invitación de esta persona" onclick="cargoCopiarInvitacion(\'' + c.id + '\')">' + _cargoPill(estLabel + ' ⧉', estTone) + '</a>'
+          : _cargoPill(estLabel, estTone)))
       + '<td style="padding:9px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap;">' + acciones + '</td>'
       + '</tr>';
   });
@@ -13676,12 +13753,30 @@ function renderCargos() {
     +     '<tbody>' + (rows || '<tr><td colspan="6" style="padding:22px;text-align:center;color:var(--ink-faint);font-size:13px;">Aún no hay cargos asignados en este proyecto.</td></tr>') + '</tbody>'
     +   '</table>'
     + '</div>'
-    + '<p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.55;">Asignar un cargo a alguien de tu equipo solo registra el rol que cumple en esta producción. Asignárselo a un externo lo deja como «Invitación pendiente»: el envío real de la invitación (correo + consentimiento Ley 21.719) se activa cuando Auth y Legal habiliten el canal. La tabla logística del crew se sigue alimentando sola desde el Presupuesto; los cargos son la capa de arriba.</p>'
+    + '<p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.55;">Asignar un cargo a alguien de tu equipo solo registra el rol que cumple en esta producción. Asignárselo a un externo con su correo genera la invitación (con consentimiento Ley 21.719): la pastilla «Invitación pendiente» copia el link al hacer click. La tabla logística del crew se sigue alimentando sola desde el Presupuesto; los cargos son la capa de arriba.</p>'
     + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--ink-faint);">Los cargos se sincronizan con la base (tabla project_cargos). Asignar un cargo externo con correo genera la invitación con su link.</p>';
 }
 function _cargoOpcionesPerfil(tipo, sel) {
   const lista = tipo === 'externo' ? CARGOS_PERFILES_EXTERNO : CARGOS_PERFILES_INTERNO;
   return lista.map(function (p) { return '<option' + (p === sel ? ' selected' : '') + '>' + escapeHtml(p) + '</option>'; }).join('');
+}
+/* V11.3.1 · click en la pastilla «Invitación pendiente» = copiar su link.
+   El token vive en org_invitations (SELECT de miembros); se busca por cargo. */
+async function cargoCopiarInvitacion(cargoId) {
+  try {
+    const r = await sb.from('org_invitations').select('id')
+      .eq('cargo_id', cargoId).eq('estado', 'pendiente')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false }).limit(1);
+    if (r.error) throw r.error;
+    const inv = (r.data && r.data[0]) || null;
+    if (!inv) { showToast({ kind: 'info', title: 'Sin invitación activa', body: 'Este cargo no tiene una invitación vigente. Usa «Cambiar» y agrega su correo para generar una.' }); return; }
+    const link = invitacionLink(inv.id);
+    try { await navigator.clipboard.writeText(link); showToast({ kind: 'success', title: 'Link copiado', body: link }); }
+    catch (e) { window.prompt('Copia el link de invitación:', link); }
+  } catch (e) {
+    showToast({ kind: 'error', title: 'No se pudo obtener el link', body: (e && e.message) ? String(e.message) : 'Reintenta.', duration: 7000 });
+  }
 }
 function _cargoTipoChanged(v) {
   const ew = document.getElementById('cg_emailWrap'); if (ew) ew.style.display = v === 'externo' ? 'block' : 'none';
@@ -13760,7 +13855,7 @@ function cargoGuardarModal() {
       const codigo = PERFIL_CODIGO_POR_NOMBRE[perfil] || 6;
       dalInvitar(email, 'externo', codigo, row.id, project.id)
         .then(function (res) { renderCargos(); _invMostrarResultado(res); })
-        .catch(function (e) { showToast({ kind: 'negative', title: 'No se pudo invitar', body: ((e && e.message) || '').replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 }); });
+        .catch(function (e) { showToast({ kind: 'error', title: 'No se pudo invitar', body: ((e && e.message) || '').replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 }); });
     } else if (tipo === 'externo' && persona) {
       showToast({ kind: 'info', title: 'Cargo registrado', body: 'Quedó como invitación pendiente. Agrega su correo (Cambiar) para generar el link de invitación.' });
     } else {
@@ -16472,6 +16567,11 @@ function closeModal() {
 /* ─── PANEL DE CONFIGURACIÓN (V7.4) ────────────────────────────────────
    Casa de las herramientas globales que antes saturaban la barra superior.
    Deshacer se queda en la barra (uso frecuente). Atajo: ⌘ , / Ctrl , */
+/* V11.3.1 · vuelta al «panel personal» (Tu espacio) desde el Control Room.
+   Recarga con ?espacio=1: con la sesión vigente (TTL) no pide login. */
+function irAlPanelPersonal() {
+  window.location.href = window.location.pathname + '?espacio=1';
+}
 function openConfigPanel() {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
@@ -16517,6 +16617,10 @@ function openConfigPanel() {
               <button class="topbar-save-btn" onclick="closeConfigPanel(); abrirPerfilUsuario(false);" title="Tus datos personales (nombre, correo, celular, dirección, cuenta bancaria). Son tuyos y te acompañan en cada productora donde colabores.">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
                 Mis datos personales
+              </button>
+              <button class="topbar-save-btn" onclick="irAlPanelPersonal()" title="Tu espacio: las productoras donde eres interno y los proyectos donde colaboras como externo, más tus invitaciones pendientes.">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Panel personal
               </button>
             </div>
           </div>
@@ -16827,7 +16931,8 @@ async function _empCambiarPerfil(memId, profileId) {
     if (r.error) throw r.error;
     showToast({ kind: 'success', title: 'Perfil actualizado', body: 'El cambio rige desde su próxima sesión.' });
   } catch (e) {
-    showToast({ kind: 'negative', title: 'No se pudo cambiar', body: 'Cambiar perfiles es facultad del Administrador.', duration: 7000 });
+    var det = (e && e.message) ? String(e.message).replace(/^memberships:\s*/i, '') : 'Cambiar perfiles es facultad del Administrador.';
+    showToast({ kind: 'error', title: 'No se pudo cambiar', body: det, duration: 8000 });
     _empCargarEquipo();
   }
 }
@@ -16854,7 +16959,7 @@ async function _empEnviarInvitacion() {
     _invMostrarResultado(res);
     _empCargarEquipo();
   } catch (e) {
-    showToast({ kind: 'negative', title: 'No se pudo invitar', body: ((e && e.message) || '').replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 });
+    showToast({ kind: 'error', title: 'No se pudo invitar', body: ((e && e.message) || '').replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 });
   }
 }
 async function _empCancelarInvitacion(token) {
@@ -16863,7 +16968,7 @@ async function _empCancelarInvitacion(token) {
     if (error) throw error;
     showToast({ kind: 'info', title: 'Invitación cancelada', body: 'El link dejó de ser válido.' });
   } catch (e) {
-    showToast({ kind: 'negative', title: 'No se pudo cancelar', body: ((e && e.message) || '').replace(/^invitacion:\s*/i, '') || 'Reintenta.', duration: 7000 });
+    showToast({ kind: 'error', title: 'No se pudo cancelar', body: ((e && e.message) || '').replace(/^invitacion:\s*/i, '') || 'Reintenta.', duration: 7000 });
   }
   _empCargarEquipo();
 }
@@ -16891,15 +16996,23 @@ async function _empCargarEquipo() {
       + '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Estado</th>'
       + '</tr></thead><tbody>';
     var soyAdmin = (typeof authEsAdmin === 'function') ? (!TAKEOS_PERFIL || authEsAdmin()) : true;
+    /* V11.3.1 · candado de último Administrador: si la org tiene un solo
+       admin activo, su perfil no se puede cambiar desde aquí (la base además
+       lo rechaza con trigger; esto evita siquiera ofrecerlo). */
+    var adminIds = perfiles.filter(function (p) { return p.codigo === 1; }).map(function (p) { return p.id; });
+    var adminsActivos = rows.filter(function (r) { return r.estado === 'activo' && adminIds.indexOf(r.profile_id) >= 0; });
     rows.forEach(function (m) {
       var nom = (m.contact_id && typeof BD_CONTACTOS !== 'undefined' && BD_CONTACTOS[m.contact_id] && BD_CONTACTOS[m.contact_id].nombre) ? BD_CONTACTOS[m.contact_id].nombre : '';
       if (!nom && typeof DAL_SESSION_UID !== 'undefined' && m.user_id === DAL_SESSION_UID) nom = ((typeof USER_NOMBRE !== 'undefined' ? USER_NOMBRE : '') + ' ' + (typeof USER_APELLIDO !== 'undefined' ? USER_APELLIDO : '')).trim();
       var perfilNom = (m.permission_profiles && m.permission_profiles.nombre) ? m.permission_profiles.nombre : '—';
       var perfilCell;
-      if (soyAdmin && perfiles.length) {
+      var esUnicoAdmin = adminsActivos.length === 1 && adminsActivos[0].id === m.id;
+      if (soyAdmin && perfiles.length && !esUnicoAdmin) {
         perfilCell = '<select class="select" style="font-size:12.5px;padding:4px 8px;" onchange="_empCambiarPerfil(\'' + m.id + '\', this.value)">'
           + perfiles.map(function (p) { return '<option value="' + p.id + '"' + (p.id === m.profile_id ? ' selected' : '') + '>' + escapeHtml(p.nombre) + '</option>'; }).join('')
           + '</select>';
+      } else if (esUnicoAdmin) {
+        perfilCell = escapeHtml(perfilNom) + ' <span style="font-size:10px;color:var(--ink-faint);" title="Única persona con perfil Administrador: asigna otro Administrador antes de poder cambiar este perfil.">🔒 único admin</span>';
       } else { perfilCell = escapeHtml(perfilNom); }
       var est = String(m.estado || '');
       var estLabel = est === 'activo' ? 'Activo' : (est === 'pendiente' ? 'Invitación pendiente' : (est || '—'));
@@ -17010,9 +17123,9 @@ function _empLogoPick(input) {
         if (out.length > MAX_BYTES * 1.37) { showToast({ kind: 'warning', title: 'Logo muy pesado', body: 'Incluso reducido supera 350 KB. Usa una imagen más simple.' }); return; }
         _empLogoSet(out);
         showToast({ kind: 'success', title: 'Logo guardado', body: 'Se aplicará a los documentos de la productora.' });
-      } catch (e) { showToast({ kind: 'negative', title: 'No se pudo procesar la imagen', body: 'Intenta con otro archivo.' }); }
+      } catch (e) { showToast({ kind: 'error', title: 'No se pudo procesar la imagen', body: 'Intenta con otro archivo.' }); }
     };
-    img.onerror = function () { showToast({ kind: 'negative', title: 'Archivo no válido', body: 'Usa PNG, JPG o SVG.' }); };
+    img.onerror = function () { showToast({ kind: 'error', title: 'Archivo no válido', body: 'Usa PNG, JPG o SVG.' }); };
     img.src = dataUrl;
   };
   reader.readAsDataURL(f);
@@ -21008,7 +21121,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.3.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.3.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21083,7 +21196,7 @@ async function abrirInvitacionRecibida(token) {
     info = data || {};
   } catch (e) {
     const msg = (e && e.message) ? String(e.message) : 'No se pudo abrir la invitación.';
-    showToast({ kind: 'negative', title: 'Invitación no disponible', body: msg.replace(/^invitacion:\s*/i, ''), duration: 9000 });
+    showToast({ kind: 'error', title: 'Invitación no disponible', body: msg.replace(/^invitacion:\s*/i, ''), duration: 9000 });
     resolverEspacioYArrancar();
     return;
   }
@@ -21091,10 +21204,14 @@ async function abrirInvitacionRecibida(token) {
     showToast({ kind: 'info', title: 'Ya eres parte', body: 'Tu cuenta ya pertenece a esta productora.' });
     _setOrgActiva(info.org_id); arrancarTakeOS(); return;
   }
+  /* V11.3.1: si la pantalla 'Tu espacio' está abierta, se quita: la
+     invitación quedaba renderizada DEBAJO de ella (z-index) y parecía
+     que el botón no hacía nada. */
+  try { const esp = document.getElementById('espacioUsuario'); if (esp) esp.remove(); } catch (e) {}
   const ov = document.createElement('div');
   ov.id = 'invitacionRecibida';
   ov.innerHTML = '<style>'
-    + '#invitacionRecibida{position:fixed;inset:0;z-index:99997;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}'
+    + '#invitacionRecibida{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}'
     + '#invitacionRecibida .iw{max-width:560px;margin:0 auto;padding:46px 24px 80px;}'
     + '#invitacionRecibida .ibrand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;margin-bottom:26px;}'
     + '#invitacionRecibida .imk{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--ink-onAccent);display:grid;place-items:center;font-weight:700;}'
@@ -21105,6 +21222,8 @@ async function abrirInvitacionRecibida(token) {
     + '#invitacionRecibida .iterms{max-height:180px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;padding:12px 14px;font-size:12.5px;line-height:1.6;color:var(--ink-secondary);background:var(--bg-surface);margin:14px 0 10px;white-space:pre-wrap;}'
     + '#invitacionRecibida .iconsent{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;cursor:pointer;}'
     + '#invitacionRecibida .iacts{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}'
+    + '#invitacionRecibida .btn[disabled]{opacity:.45;cursor:not-allowed;filter:saturate(.3);}'
+    + '#invitacionRecibida .btn[disabled]:hover{transform:none;box-shadow:none;filter:saturate(.3);}'
     + '#invitacionRecibida .iperfil{border:1px dashed var(--warning);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--ink-secondary);margin:14px 0 0;line-height:1.5;}'
     + '</style>'
     + '<div class="iw">'
@@ -21152,7 +21271,7 @@ async function invAceptar(token, orgId, perfilCompleto) {
     arrancarTakeOS();
   } catch (e) {
     const msg = (e && e.message) ? String(e.message) : 'No se pudo completar.';
-    showToast({ kind: 'negative', title: 'No se pudo aceptar', body: msg.replace(/^consentir_invitacion:\s*/i, ''), duration: 9000 });
+    showToast({ kind: 'error', title: 'No se pudo aceptar', body: msg.replace(/^consentir_invitacion:\s*/i, ''), duration: 9000 });
     if (btn) { btn.disabled = false; btn.textContent = 'Aceptar y colaborar'; }
   }
 }
@@ -21712,7 +21831,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
         </div>
       </div>
       <div class="pf-bar"><div class="pf-bar-in">
-        <span class="spacer">Tus datos quedan guardados solo en tu cuenta.</span>
+        <span class="spacer" id="pf_msg">Tus datos quedan guardados solo en tu cuenta.</span>
         <button class="btn btn-secondary" id="pf_btnOmitir">${modoOnboarding ? 'Completar después' : 'Cerrar'}</button>
         <button class="btn btn-primary" id="pf_btnGuardar">Guardar</button>
       </div></div>`;
@@ -21745,6 +21864,23 @@ function _perfilBind() {
   if (bo) bo.addEventListener('click', _perfilOmitir);
   var bg = document.getElementById('pf_btnGuardar');
   if (bg) bg.addEventListener('click', function () { _perfilGuardar(); });
+  /* V11.3.1 · Guardar apagado hasta completar los obligatorios (nombre,
+     apellido, RUT) — misma regla cosmética que el Aceptar de la invitación. */
+  ['pf_nombre', 'pf_apellido', 'pf_rut'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', _perfilToggleGuardar);
+  });
+  _perfilToggleGuardar();
+}
+function _perfilToggleGuardar() {
+  var g = function (id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  var ok = !!(g('pf_nombre') && g('pf_apellido') && g('pf_rut'));
+  var bg = document.getElementById('pf_btnGuardar');
+  if (bg) { bg.disabled = !ok; bg.title = ok ? '' : 'Completa nombre, apellido y RUT para guardar.'; }
+}
+function _perfilMsg(texto, esError) {
+  var el = document.getElementById('pf_msg');
+  if (el) { el.textContent = texto; el.style.color = esError ? 'var(--negative, #c0392b)' : 'var(--positive, #2e7d32)'; el.style.fontWeight = '600'; }
 }
 
 /* V11.0.0 · Formulario de respaldo del perfil personal. Construido SOLO con
@@ -21896,10 +22032,16 @@ async function _perfilGuardar() {
       var cu = await client.from('user_bank_accounts').upsert(ctaRow);
       if (cu.error) throw cu.error;
     }
-    try { showToast({ kind: 'positive', title: 'Perfil guardado', body: 'Tus datos personales quedaron guardados.' }); } catch (e) {}
+    try { showToast({ kind: 'success', title: 'Perfil guardado', body: 'Tus datos personales quedaron guardados.' }); } catch (e) {}
+    _perfilMsg('Guardado ✓', false);
     _perfilOmitir();
   } catch (e) {
-    try { showToast({ kind: 'negative', title: 'No se pudo guardar', body: 'Revisa los datos e inténtalo de nuevo.' }); } catch (_) {}
+    /* V11.3.1: el error se muestra DENTRO del overlay (el toast quedaba
+       tapado por el propio formulario) y con el mensaje real del backend. */
+    console.error('[perfil] guardado falló', e);
+    var det = (e && (e.message || e.error_description || e.hint)) ? String(e.message || e.error_description || e.hint) : 'Error desconocido.';
+    _perfilMsg('No se pudo guardar: ' + det, true);
+    try { showToast({ kind: 'error', title: 'No se pudo guardar tu perfil', body: det, duration: 9000 }); } catch (_) {}
   }
 }
 
