@@ -4590,6 +4590,10 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
           <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3-3-3"/><path d="M19 14V4"/></svg>
           Crew
         </div>
+        <div class="sidebar-item" data-module="cargos" onclick="navigateToModule('cargos')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/><path d="M12 12v3"/></svg>
+          Cargos
+        </div>
         <div class="sidebar-item" data-module="documentos" onclick="navigateToModule('documentos')">
           <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Documentos
@@ -6607,6 +6611,15 @@ const MODULES = {
     scope: 'project',
     render: () => renderCrew(),
     description: 'Espejo automático del Presupuesto (solo confirmados con nombre asignado). Auto-lookup desde BD de Personas para datos operativos.'
+  },
+  'cargos': {
+    title: 'Cargos',
+    subtitle: 'Quién ocupa cada cargo del proyecto y con qué perfil de acceso.',
+    eyebrow: 'Equipo',
+    layer: 'Implementado · V11.2 Capa 1 (persistencia provisional)',
+    scope: 'project',
+    render: () => renderCargos(),
+    description: 'Capa de asignación sobre el Crew: cargo, persona, tipo (interno/externo) y perfil de acceso. El envío real de invitaciones a externos se activa con el sistema de invitaciones (Auth + Legal).'
   },
   'rodajes': {
     title: 'Rodajes',
@@ -12792,7 +12805,7 @@ function cotBuildCartaHTML(project) {
         <h1>Cotización<span class="a">Audiovisual</span></h1>
       </div>
       <div class="org">
-        <img class="logo" src="${safeUrl(COT_LOGO)}" alt="">
+        ${orgLogo() ? ('<img class="logo" src="' + safeUrl(orgLogo()) + '" alt="">') : ''}
         <div class="name">${escapeHtml(orgNombre() || 'Productora')}</div>
         <div class="role">Productora Audiovisual</div>
         <div class="date">${escapeHtml(fecha)}</div>
@@ -13452,6 +13465,180 @@ function docRemoveArchivo(id) {
       }
     }
   });
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   V11.2.0 · CARGOS DEL PROYECTO
+   ════════════════════════════════════════════════════════════════════
+   Capa de asignación sobre el Crew: define quién ocupa cada cargo del
+   proyecto, si es interno o externo y con qué perfil de acceso.
+
+   PERSISTENCIA PROVISIONAL: el RPC guardar_proyecto tiene un payload
+   cerrado y no acepta claves nuevas, así que los cargos se guardan en
+   localStorage por organización + proyecto hasta que el BD Expert
+   extienda el modelo (handoff enviado). La invitación real a externos
+   (correo + consentir_invitacion) está pendiente de Auth y Legal: aquí
+   el externo queda registrado como «Invitación pendiente» sin envío. */
+const CARGOS_PRESETS = ['Director', 'Productor', 'Director de Fotografía', 'Asistente de Dirección', 'Asistente de Producción', 'Dirección de Arte', 'Sonido directo', 'Gaffer'];
+const CARGOS_PERFILES_INTERNO = ['Administrador', 'Ejecutivo', 'Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Finanzas / CFO', 'Invitado'];
+const CARGOS_PERFILES_EXTERNO = ['Producción', 'Asistencia de Producción', 'Coordinación', 'Creativo', 'Invitado'];   // Administrador y Finanzas no se ofrecen a externos
+let _CARGO_EDIT = null;
+
+function _puedeAsignarCargos() {
+  if (!TAKEOS_PERFIL) return true;   // fail-open coherente con Gate B
+  return TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.codigo === 2;
+}
+function _cargosKey(project) { return 'takeos_cargos_' + ORG_ID + '_' + project.id; }
+function ensureCargos(project) {
+  if (!Array.isArray(project.data.cargos)) {
+    let st = null;
+    try { st = JSON.parse(localStorage.getItem(_cargosKey(project)) || 'null'); } catch (e) { st = null; }
+    project.data.cargos = Array.isArray(st) ? st : [];
+  }
+  return project.data.cargos;
+}
+function _cargosSave(project) {
+  try { localStorage.setItem(_cargosKey(project), JSON.stringify(project.data.cargos || [])); } catch (e) {}
+  markDirty();
+}
+function _cargoPill(txt, tone) {
+  const map = {
+    ok:   'color:var(--positive);background:var(--positive-bg);border:1px solid var(--positive);',
+    pend: 'color:var(--warning);background:var(--warning-bg);border:1px solid var(--warning);',
+    no:   'color:var(--negative);background:var(--negative-bg);border:1px solid var(--negative);',
+    int:  'color:var(--ink-secondary);border:1px solid var(--rule);',
+    ext:  'color:var(--accent);border:1px solid var(--accent);'
+  };
+  return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;' + (map[tone] || map.int) + '">' + escapeHtml(txt) + '</span>';
+}
+function renderCargos() {
+  const project = STATE.currentProject;
+  if (!project) return;
+  const content = document.getElementById('moduleContent');
+  if (!content) return;
+  const cargos = ensureCargos(project);
+  const puede = _puedeAsignarCargos();
+  const th = (t) => '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">' + t + '</th>';
+  const td = (h) => '<td style="padding:9px 10px;border-bottom:1px solid var(--rule);font-size:13px;">' + h + '</td>';
+  let rows = '';
+  cargos.forEach(function (c) {
+    const sinPersona = !(c.personaNombre || '').trim();
+    const estLabel = sinPersona ? '—' : (c.estado === 'activo' ? 'Activo' : (c.estado === 'pendiente' ? 'Invitación pendiente' : (c.estado === 'rechazo' ? 'Rechazó' : (c.estado || '—'))));
+    const estTone = c.estado === 'activo' ? 'ok' : (c.estado === 'pendiente' ? 'pend' : (c.estado === 'rechazo' ? 'no' : 'int'));
+    const acciones = puede
+      ? ('<button class="btn btn-ghost btn-sm" onclick="cargoEditar(\'' + c.id + '\')">' + (sinPersona ? 'Asignar' : (c.estado === 'rechazo' ? 'Reasignar' : 'Cambiar')) + '</button> '
+        + '<button class="btn btn-ghost btn-sm" onclick="cargoQuitar(\'' + c.id + '\')" title="Eliminar este cargo del proyecto">Quitar</button>')
+      : '';
+    rows += '<tr>'
+      + td('<strong>' + escapeHtml(c.cargo || '—') + '</strong>' + (c.custom ? ' <span style="color:var(--ink-faint);font-size:11px;">(personalizado)</span>' : ''))
+      + td(sinPersona ? '<span style="color:var(--ink-faint);">— Sin asignar —</span>' : escapeHtml(c.personaNombre))
+      + td(sinPersona ? '—' : _cargoPill(c.tipo === 'externo' ? 'Externo' : 'Interno', c.tipo === 'externo' ? 'ext' : 'int'))
+      + td(sinPersona ? '—' : escapeHtml(c.perfil || '—'))
+      + td(sinPersona ? '—' : _cargoPill(estLabel, estTone))
+      + '<td style="padding:9px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap;">' + acciones + '</td>'
+      + '</tr>';
+  });
+  content.innerHTML = ''
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">'
+    +   '<div style="display:flex;gap:8px;align-items:center;">' + _cargoPill('● interno', 'int') + ' ' + _cargoPill('● externo', 'ext') + '</div>'
+    +   (puede ? '<button class="btn btn-primary btn-sm" onclick="cargoAbrirModal()">+ Asignar un cargo</button>' : '<span style="font-size:12px;color:var(--ink-faint);">Asignar cargos es facultad de Administrador y Ejecutivo.</span>')
+    + '</div>'
+    + '<div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--bg-card);">'
+    +   '<table style="width:100%;border-collapse:collapse;">'
+    +     '<thead><tr>' + th('Cargo') + th('Persona') + th('Tipo') + th('Perfil de acceso') + th('Estado') + '<th></th></tr></thead>'
+    +     '<tbody>' + (rows || '<tr><td colspan="6" style="padding:22px;text-align:center;color:var(--ink-faint);font-size:13px;">Aún no hay cargos asignados en este proyecto.</td></tr>') + '</tbody>'
+    +   '</table>'
+    + '</div>'
+    + '<p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.55;">Asignar un cargo a alguien de tu equipo solo registra el rol que cumple en esta producción. Asignárselo a un externo lo deja como «Invitación pendiente»: el envío real de la invitación (correo + consentimiento Ley 21.719) se activa cuando Auth y Legal habiliten el canal. La tabla logística del crew se sigue alimentando sola desde el Presupuesto; los cargos son la capa de arriba.</p>'
+    + '<p style="margin:6px 0 0;font-size:11.5px;color:var(--ink-faint);">Persistencia provisional en este navegador — la sincronización con la base llega con la extensión del modelo (handoff a BD).</p>';
+}
+function _cargoOpcionesPerfil(tipo, sel) {
+  const lista = tipo === 'externo' ? CARGOS_PERFILES_EXTERNO : CARGOS_PERFILES_INTERNO;
+  return lista.map(function (p) { return '<option' + (p === sel ? ' selected' : '') + '>' + escapeHtml(p) + '</option>'; }).join('');
+}
+function _cargoTipoChanged(v) {
+  const sel = document.getElementById('cg_perfil');
+  if (sel) sel.innerHTML = _cargoOpcionesPerfil(v, v === 'externo' ? 'Creativo' : 'Producción');
+  const hint = document.getElementById('cg_tipoHint');
+  if (hint) hint.textContent = v === 'externo'
+    ? 'Externo: queda como «Invitación pendiente». Administrador y Finanzas no se ofrecen a externos.'
+    : 'Interno: ya tiene acceso por su membresía; aquí solo registras el cargo que cumple en este proyecto.';
+}
+function _cargoSelChanged(v) {
+  const otro = document.getElementById('cg_otro');
+  if (otro) otro.style.display = v === '__otro' ? '' : 'none';
+}
+function cargoAbrirModal(editId) {
+  const project = STATE.currentProject; if (!project) return;
+  if (!_puedeAsignarCargos()) { showToast({ kind: 'warning', title: 'Sin permiso', body: 'Asignar cargos es facultad de Administrador y Ejecutivo.' }); return; }
+  const cargos = ensureCargos(project);
+  const edit = editId ? cargos.find(function (c) { return c.id === editId; }) : null;
+  _CARGO_EDIT = edit ? edit.id : null;
+  const esPreset = edit && CARGOS_PRESETS.indexOf(edit.cargo) >= 0;
+  const selCargoVal = edit ? (esPreset ? edit.cargo : '__otro') : '';
+  let optsCargo = CARGOS_PRESETS.map(function (p) { return '<option' + (p === selCargoVal ? ' selected' : '') + '>' + escapeHtml(p) + '</option>'; }).join('');
+  optsCargo += '<option value="__otro"' + (selCargoVal === '__otro' ? ' selected' : '') + '>Otro (especificar)…</option>';
+  const nombres = (typeof BD_CONTACTOS !== 'undefined') ? Object.keys(BD_CONTACTOS).map(function (id) { return BD_CONTACTOS[id] && BD_CONTACTOS[id].nombre; }).filter(Boolean) : [];
+  const dl = '<datalist id="cg_personas">' + nombres.map(function (n) { return '<option value="' + escapeHtml(n) + '">'; }).join('') + '</datalist>';
+  const tipo = edit ? (edit.tipo || 'interno') : 'interno';
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:540px;">'
+    + '<div class="modal-header"><div class="modal-title">' + (edit ? 'Editar cargo' : 'Asignar un cargo') + '</div></div>'
+    + '<div class="modal-body">'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Cargo</label><select class="select" id="cg_cargo" onchange="_cargoSelChanged(this.value)">' + optsCargo + '</select>'
+    +     '<input class="input" id="cg_otro" placeholder="Escribe el cargo (ej. Entrevistador)" style="display:' + (selCargoVal === '__otro' ? 'block' : 'none') + ';margin-top:8px;" value="' + (edit && !esPreset ? escapeHtml(edit.cargo || '') : '') + '"></div>'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Persona</label><input class="input" id="cg_persona" list="cg_personas" placeholder="Busca en tu base de datos o escribe un nombre" value="' + (edit ? escapeHtml(edit.personaNombre || '') : '') + '">' + dl + '</div>'
+    +   '<div class="emp-field" style="margin-bottom:12px;"><label>Tipo</label><select class="select" id="cg_tipo" onchange="_cargoTipoChanged(this.value)">'
+    +     '<option value="interno"' + (tipo !== 'externo' ? ' selected' : '') + '>Interno (de mi equipo)</option>'
+    +     '<option value="externo"' + (tipo === 'externo' ? ' selected' : '') + '>Externo (freelance / invitado)</option>'
+    +   '</select><div id="cg_tipoHint" style="font-size:11.5px;color:var(--ink-faint);margin-top:5px;line-height:1.5;"></div></div>'
+    +   '<div class="emp-field"><label>Perfil de acceso</label><select class="select" id="cg_perfil">' + _cargoOpcionesPerfil(tipo, edit ? edit.perfil : 'Producción') + '</select></div>'
+    + '</div>'
+    + '<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cargoGuardarModal()">' + (edit ? 'Guardar cambios' : 'Asignar') + '</button></div>'
+    + '</div></div>';
+  _cargoTipoChanged(document.getElementById('cg_tipo').value);
+  if (edit && edit.perfil) { const s = document.getElementById('cg_perfil'); if (s) s.value = edit.perfil; }
+}
+function cargoEditar(id) { cargoAbrirModal(id); }
+function cargoGuardarModal() {
+  const project = STATE.currentProject; if (!project) return;
+  const g = function (id) { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  const selCargo = g('cg_cargo');
+  const cargoNombre = selCargo === '__otro' ? g('cg_otro') : selCargo;
+  if (!cargoNombre) { showToast({ kind: 'warning', title: 'Falta el cargo', body: 'Elige un cargo o escribe uno personalizado.' }); return; }
+  const persona = g('cg_persona');
+  const tipo = g('cg_tipo') === 'externo' ? 'externo' : 'interno';
+  const perfil = g('cg_perfil');
+  const cargos = ensureCargos(project);
+  const row = {
+    id: _CARGO_EDIT || ('CG-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    cargo: cargoNombre,
+    custom: CARGOS_PRESETS.indexOf(cargoNombre) < 0,
+    personaNombre: persona,
+    tipo: tipo,
+    perfil: persona ? perfil : '',
+    estado: !persona ? 'sin-asignar' : (tipo === 'externo' ? 'pendiente' : 'activo')
+  };
+  const idx = cargos.findIndex(function (c) { return c.id === row.id; });
+  if (idx >= 0) cargos[idx] = row; else cargos.push(row);
+  _CARGO_EDIT = null;
+  _cargosSave(project);
+  closeModal();
+  renderCargos();
+  if (tipo === 'externo' && persona) {
+    showToast({ kind: 'info', title: 'Cargo registrado', body: 'La invitación a ' + persona + ' queda pendiente: el envío real se activa con el sistema de invitaciones.' });
+  } else {
+    showToast({ kind: 'success', title: 'Cargo guardado', body: cargoNombre + (persona ? (' → ' + persona) : ' (sin asignar)') + '.' });
+  }
+}
+function cargoQuitar(id) {
+  const project = STATE.currentProject; if (!project) return;
+  const cargos = ensureCargos(project);
+  const c = cargos.find(function (x) { return x.id === id; });
+  if (!c) return;
+  if (!confirm('¿Quitar el cargo «' + (c.cargo || '') + '» de este proyecto?')) return;
+  project.data.cargos = cargos.filter(function (x) { return x.id !== id; });
+  _cargosSave(project);
+  renderCargos();
 }
 
 function renderCrew() {
@@ -16393,6 +16580,12 @@ function openEmpresaPerfil() {
       <div class="modal" onclick="event.stopPropagation()" style="max-width:640px;max-height:88vh;display:flex;flex-direction:column;">
         <div class="modal-header"><div class="modal-title">Perfil de la empresa / productora</div></div>
         <div class="modal-body" style="overflow-y:auto;flex:1 1 auto;">
+          <div style="display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--rule);padding-bottom:10px;">
+            <button class="btn btn-sm" id="empTabdatos" onclick="_empShowSub('datos')">Datos de la empresa</button>
+            <button class="btn btn-ghost btn-sm" id="empTabequipo" onclick="_empShowSub('equipo')">Equipo</button>
+            <button class="btn btn-ghost btn-sm" id="empTabdiseno" onclick="_empShowSub('diseno')">Diseño</button>
+          </div>
+          <div id="empSubDatos">
           <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Estos datos se usan como <strong>empresa emisora</strong> en los documentos (hojas de llamado, plan de rodaje, cotizaciones y, a futuro, contratos). Quedan guardados con el OS.</p>
           <div class="config-section-title" style="margin-bottom:8px;">Empresa</div>
           <div class="emp-grid">
@@ -16437,10 +16630,29 @@ function openEmpresaPerfil() {
             ${field('remitenteRol','Rol del remitente', E.remitenteRol, 'Productor, AD…')}
             ${field('remitenteNumero','Número del remitente', E.remitenteNumero, '+56 9 …')}
           </div>
+          </div>
+          <div id="empSubEquipo" style="display:none;">
+            <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Las personas de tu planta. Ven los proyectos de la productora según su perfil de acceso.</p>
+            <div id="empEquipoTabla" style="border:1px solid var(--rule);border-radius:8px;padding:12px;font-size:13px;color:var(--ink-secondary);">Cargando equipo…</div>
+            <p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">Incorporar gente nueva al equipo llega con el sistema de invitaciones (pendiente del texto legal v1.0 y del canal de correo). Por ahora las membresías se gestionan desde la base de datos.</p>
+          </div>
+          <div id="empSubDiseno" style="display:none;">
+            <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Tu logo aparece en los documentos que genera TakeOS (por ahora, la carta de cotización). PNG, JPG o SVG, idealmente cuadrado y liviano.</p>
+            <div id="empLogoPrev" style="width:120px;height:120px;border:1px dashed var(--rule);border-radius:10px;display:grid;place-items:center;margin-bottom:12px;overflow:hidden;background:var(--bg-card);color:var(--ink-faint);font-size:12px;">Sin logo</div>
+            <input type="file" id="empLogoInput" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="_empLogoPick(this)">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-sm" onclick="document.getElementById('empLogoInput').click()">Subir logo</button>
+              <button class="btn btn-ghost btn-sm" onclick="_empLogoUsarProvisional()">Usar isotipo provisional (AMR)</button>
+              <button class="btn btn-ghost btn-sm" onclick="_empLogoQuitar()">Quitar</button>
+            </div>
+            <p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">El logo se guarda con el perfil de la organización y se sincroniza solo. Más adelante: manual de marca completo y documentos que lo respeten.</p>
+          </div>
         </div>
         <div class="modal-footer"><button class="btn" onclick="openConfigPanel()">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresaPerfil()">Guardar perfil</button></div>
       </div>
     </div>`;
+  try { _empCargarEquipo(); } catch (e) {}
+  try { _empLogoRefresh(); } catch (e) {}
 }
 function saveEmpresaPerfil() {
   const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','ciudad','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
@@ -16449,6 +16661,105 @@ function saveEmpresaPerfil() {
   showToast({ kind: 'success', title: 'Perfil guardado', body: 'Los datos de la empresa se aplicarán a los documentos. Recuerda Guardar OS para respaldarlo.' });
   openConfigPanel();
 }
+
+/* ═══ V11.2.0 · Configuración de la productora: subtabs, equipo y diseño ═══ */
+function _empShowSub(k) {
+  var map = { datos: 'empSubDatos', equipo: 'empSubEquipo', diseno: 'empSubDiseno' };
+  Object.keys(map).forEach(function (key) {
+    var el = document.getElementById(map[key]); if (el) el.style.display = (key === k) ? '' : 'none';
+    var btn = document.getElementById('empTab' + key);
+    if (btn) { btn.classList.toggle('btn-ghost', key !== k); }
+  });
+}
+async function _empCargarEquipo() {
+  var box = document.getElementById('empEquipoTabla'); if (!box) return;
+  if (!sb) { box.textContent = 'Sin conexión a la base.'; return; }
+  try {
+    var res = await sb.from('memberships')
+      .select('user_id, tipo, estado, contact_id, permission_profiles(nombre)')
+      .eq('organization_id', ORG_ID);
+    if (res.error) throw res.error;
+    var rows = res.data || [];
+    if (!rows.length) { box.textContent = 'Sin membresías visibles. (El RLS puede limitar esta vista a tu propio registro.)'; return; }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+      + '<thead><tr>'
+      + '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Persona</th>'
+      + '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Perfil de acceso</th>'
+      + '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Tipo</th>'
+      + '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Estado</th>'
+      + '</tr></thead><tbody>';
+    rows.forEach(function (m) {
+      var nom = (m.contact_id && typeof BD_CONTACTOS !== 'undefined' && BD_CONTACTOS[m.contact_id] && BD_CONTACTOS[m.contact_id].nombre) ? BD_CONTACTOS[m.contact_id].nombre : '';
+      if (!nom && typeof DAL_SESSION_UID !== 'undefined' && m.user_id === DAL_SESSION_UID) nom = ((typeof USER_NOMBRE !== 'undefined' ? USER_NOMBRE : '') + ' ' + (typeof USER_APELLIDO !== 'undefined' ? USER_APELLIDO : '')).trim();
+      var perfilNom = (m.permission_profiles && m.permission_profiles.nombre) ? m.permission_profiles.nombre : '—';
+      var est = String(m.estado || '');
+      var estLabel = est === 'activo' ? 'Activo' : (est === 'pendiente' ? 'Invitación enviada' : (est || '—'));
+      var estColor = est === 'activo' ? 'var(--positive)' : 'var(--warning)';
+      html += '<tr>'
+        + '<td style="padding:7px 8px;border-bottom:1px solid var(--rule);">' + escapeHtml(nom || '—') + '</td>'
+        + '<td style="padding:7px 8px;border-bottom:1px solid var(--rule);">' + escapeHtml(perfilNom) + '</td>'
+        + '<td style="padding:7px 8px;border-bottom:1px solid var(--rule);text-transform:capitalize;">' + escapeHtml(m.tipo || '—') + '</td>'
+        + '<td style="padding:7px 8px;border-bottom:1px solid var(--rule);color:' + estColor + ';font-weight:600;">' + escapeHtml(estLabel) + '</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+    box.innerHTML = html;
+  } catch (e) {
+    console.warn('[empresa] no se pudo cargar el equipo', e);
+    box.textContent = 'No se pudo cargar el equipo (puede ser una restricción de lectura del RLS).';
+  }
+}
+function orgLogo() {
+  var e = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL) ? EMPRESA_PERFIL : {};
+  return (e.logoDataUrl && String(e.logoDataUrl).indexOf('data:image/') === 0) ? e.logoDataUrl : '';
+}
+function _empLogoRefresh() {
+  var box = document.getElementById('empLogoPrev'); if (!box) return;
+  var lg = orgLogo();
+  box.innerHTML = lg ? '<img src="' + safeUrl(lg) + '" alt="" style="max-width:100%;max-height:100%;object-fit:contain;">' : 'Sin logo';
+}
+function _empLogoSet(dataUrl) {
+  EMPRESA_PERFIL.logoDataUrl = dataUrl || '';
+  markDirty(); _dalPerfilSaveSoon(); _empLogoRefresh();
+}
+function _empLogoPick(input) {
+  var f = input && input.files && input.files[0]; if (!f) return;
+  input.value = '';
+  var MAX_BYTES = 350 * 1024;
+  var reader = new FileReader();
+  reader.onload = function () {
+    var dataUrl = String(reader.result || '');
+    if (f.type === 'image/svg+xml') {
+      if (f.size > MAX_BYTES) { showToast({ kind: 'warning', title: 'SVG muy pesado', body: 'Usa un SVG de menos de 350 KB o súbelo como PNG/JPG.' }); return; }
+      _empLogoSet(dataUrl);
+      showToast({ kind: 'success', title: 'Logo guardado', body: 'Se aplicará a los documentos de la productora.' });
+      return;
+    }
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var MAXD = 480;
+        var w = img.width, h = img.height;
+        if (w > MAXD || h > MAXD) { var k = Math.min(MAXD / w, MAXD / h); w = Math.round(w * k); h = Math.round(h * k); }
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        var out = cv.toDataURL('image/png');
+        if (out.length > MAX_BYTES * 1.37) out = cv.toDataURL('image/jpeg', 0.85);   // base64 ≈ +37%
+        if (out.length > MAX_BYTES * 1.37) { showToast({ kind: 'warning', title: 'Logo muy pesado', body: 'Incluso reducido supera 350 KB. Usa una imagen más simple.' }); return; }
+        _empLogoSet(out);
+        showToast({ kind: 'success', title: 'Logo guardado', body: 'Se aplicará a los documentos de la productora.' });
+      } catch (e) { showToast({ kind: 'negative', title: 'No se pudo procesar la imagen', body: 'Intenta con otro archivo.' }); }
+    };
+    img.onerror = function () { showToast({ kind: 'negative', title: 'Archivo no válido', body: 'Usa PNG, JPG o SVG.' }); };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(f);
+}
+function _empLogoUsarProvisional() {
+  if (typeof COT_LOGO !== 'undefined' && COT_LOGO) { _empLogoSet(COT_LOGO); showToast({ kind: 'success', title: 'Isotipo provisional aplicado', body: 'Puedes reemplazarlo cuando tengas el logo definitivo.' }); }
+}
+function _empLogoQuitar() { _empLogoSet(''); showToast({ kind: 'info', title: 'Logo quitado', body: 'Los documentos saldrán sin logo.' }); }
+
 document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === ',') {
     e.preventDefault();
@@ -18799,6 +19110,11 @@ function offerAutosaveRestore() {
    datos: sin sesión válida, no se ve nada. La URL también es pública.
    Lo único secreto (email/contraseña) lo escribe el usuario en el login;
    nunca vive en este archivo. */
+/* V11.2.1 · señal de regreso fresco del OAuth. Se captura al cargar la
+   página, ANTES de que el cliente de Supabase procese y limpie la URL.
+   Es la única vía por la que una sesión puede entrar sin pasar por el
+   botón de login: porque la autenticación acaba de ocurrir. */
+const AUTH_RETORNO_OAUTH = /[#?&](access_token|refresh_token|code)=/.test(window.location.hash + ' ' + window.location.search);
 const SUPABASE_URL = 'https://zplcgetquwxybkrpmcvl.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_7uqLCLXBeZLn1Upr-ZScYQ_lclLnVha';
 let sb = null;
@@ -19263,6 +19579,7 @@ const MODULE_PERM_CODE = {
   'presupuesto': 'presupuesto',
   'cotizacion': 'cotizacion',
   'crew': 'operacion_creatividad',
+  'cargos': 'operacion_creatividad',
   'documentos': 'operacion_creatividad',
   'rodajes': 'operacion_creatividad',
   'locaciones': 'operacion_creatividad',
@@ -20414,7 +20731,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.1.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.2.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -20435,10 +20752,42 @@ async function cloudGate(onUnlock) {
   const client = supabaseInit();
   if (!client) { onUnlock(); return; }   // fallback: sin Supabase, no bloqueamos
 
-  // ¿Ya hay sesión activa? Entonces no mostramos el login.
+  /* V11.2.1 · AUTENTICACIÓN OBLIGATORIA EN CADA ENTRADA.
+     Una sesión solo entra si nació en ESTA carga de página (regreso del
+     OAuth de Google). Una sesión restaurada del almacenamiento del navegador
+     se descarta y se vuelve a pedir login. Esto cierra el bug de sesión
+     cruzada (una sesión ajena guardada en el navegador entraba sola, sin
+     pasar por Google) y aplica la política de Agustín: imposible entrar a
+     TakeOS sin autenticarse, como Chipax. */
   try {
-    const { data } = await client.auth.getSession();
-    if (data && data.session) { onUnlock(); return; }
+    if (AUTH_RETORNO_OAUTH) {
+      // Regreso fresco de Google: la sesión puede tardar un instante en quedar lista.
+      let sess = null;
+      for (let i = 0; i < 15; i++) {
+        const { data } = await client.auth.getSession();
+        sess = (data && data.session) ? data.session : null;
+        if (sess) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (sess) {
+        // Limpia los restos del OAuth de la URL para que un refresh no se confunda.
+        try {
+          const qs = window.location.search
+            .replace(/[?&](code|access_token|refresh_token|expires_in|expires_at|token_type|provider_token|provider_refresh_token|type)=[^&]*/g, '')
+            .replace(/^&/, '?');
+          history.replaceState(null, '', window.location.pathname + (qs === '?' ? '' : qs));
+        } catch (e) {}
+        onUnlock(); return;
+      }
+      console.warn('[auth] regreso del OAuth sin sesión utilizable; se muestra el login');
+    } else {
+      const { data } = await client.auth.getSession();
+      if (data && data.session) {
+        const quien = (data.session.user && data.session.user.email) ? data.session.user.email : '(desconocido)';
+        console.info('[auth] sesión guardada de ' + quien + ' descartada: TakeOS exige autenticación explícita en cada entrada (V11.2.1).');
+        try { await client.auth.signOut({ scope: 'local' }); } catch (e) {}
+      }
+    }
   } catch (e) { /* si falla, seguimos y mostramos el login */ }
 
   const ov = document.createElement('div');
@@ -20447,7 +20796,7 @@ async function cloudGate(onUnlock) {
   ov.innerHTML = `
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
       <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
-      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Acceso del equipo</div>
+      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Por seguridad, TakeOS pide autenticación cada vez que entras.</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:0 0 auto;">
@@ -20474,7 +20823,13 @@ async function cloudGate(onUnlock) {
       const redirectTo = window.location.origin + window.location.pathname;
       const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: redirectTo }
+        options: {
+          redirectTo: redirectTo,
+          /* V11.2.1: fuerza el selector de cuentas de Google en cada login.
+             Sin esto, Google reutiliza en silencio la última cuenta autorizada
+             y nunca te deja elegir con cuál entrar. */
+          queryParams: { prompt: 'select_account' }
+        }
       });
       if (error) {
         err.textContent = 'No se pudo iniciar sesión con Google. Reintenta.';
@@ -20838,6 +21193,15 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
         <h1 class="pf-h1">${modoOnboarding ? 'Cuéntanos quién eres' : 'Tus datos personales'}</h1>
         <p class="pf-lede">Estos son tus datos como persona, no los de una productora. Son tuyos y te acompañan en cada productora donde colabores.${modoOnboarding ? ' Puedes completarlos ahora o más tarde desde tu perfil.' : ''}</p>
 
+        <div class="pf-sec" style="border-left:3px solid var(--accent);">
+          <p class="pf-sec-t">Privacidad de tus datos</p>
+          <p style="margin:0 0 10px;font-size:13px;color:var(--ink-secondary);line-height:1.55;">Esta información es <strong>absolutamente privada</strong>: no la ve nadie — ni las productoras ni quienes desarrollan TakeOS — a menos que tú lo autorices. Cuando una productora te invite a colaborar, vas a poder revisar y aceptar (o rechazar) los términos antes de que tus datos se compartan con ella. Puedes revocar esa autorización en cualquier momento.</p>
+          <details style="font-size:12.5px;color:var(--ink-secondary);">
+            <summary style="cursor:pointer;color:var(--ink-faint);font-weight:600;">Vista previa · términos de incorporación a una productora (v.0 provisional)</summary>
+            <div style="margin-top:8px;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--bg-card);line-height:1.6;">Al aceptar una invitación, autorizas a la productora que te invita a incorporar tus datos personales (nombre, RUT, correo, teléfono, dirección y los datos bancarios que tengas en tu perfil) a su base de contactos, con el fin de gestionar tu participación en el proyecto: contratos, hojas de llamado, pagos y coordinación de producción. Esa productora será la responsable del tratamiento de esos datos, en los términos de la Ley 21.719. Puedes revocar esta autorización en cualquier momento desde tu perfil; la revocación no afecta los documentos ya emitidos.<br><span style="color:var(--ink-faint);">[Texto provisional v.0 — el definitivo lo fija Legal y quedará registrado con su versión y fecha.]</span></div>
+          </details>
+        </div>
+
         <div class="pf-sec">
           <p class="pf-sec-t">Identidad</p>
           <div class="pf-grid">
@@ -21037,6 +21401,11 @@ async function _perfilGuardar() {
       direccion: g('pf_direccion'), direccion_linea2: g('pf_dir2'), comuna: g('pf_comuna'),
       ciudad: g('pf_ciudad'), region: g('pf_region')
     };
+    /* V11.2.0 · semáforo del perfil (handoff BD §A.3): completado_at se marca
+       solo cuando la identidad mínima está completa (nombre + apellido + RUT).
+       Si falta algo, la clave se omite y el valor existente no se pisa:
+       NULL = perfil incompleto, que es lo que lee el muro post-pago. */
+    if (prof.nombre && prof.apellido && prof.rut) prof.completado_at = new Date().toISOString();
     var up = await client.from('user_profiles').upsert(prof, { onConflict: 'user_id' });
     if (up.error) throw up.error;
     USER_NOMBRE = prof.nombre || ''; USER_APELLIDO = prof.apellido || ''; try { aplicarUsuario(); } catch (e) {}
