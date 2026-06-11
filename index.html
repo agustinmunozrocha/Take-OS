@@ -20135,7 +20135,7 @@ function supabaseInit() {
    Próximo paso: un botón "Salir" en la barra superior. */
 window.logoutTakeOS = async function () {
   try { if (sb) await sb.auth.signOut(); } catch (e) {}
-  try { localStorage.removeItem('takeos_auth_at'); localStorage.removeItem('takeos_auth_uid'); } catch (e) {}
+  try { localStorage.removeItem('takeos_auth_at'); localStorage.removeItem('takeos_auth_uid'); localStorage.removeItem('takeos_usuario_actual'); localStorage.removeItem('takeos_usuario_uid'); } catch (e) {}
   location.reload();
 };
 /* Cierre de sesion con confirmacion (boton "Salir" de la barra superior). */
@@ -20514,14 +20514,29 @@ async function dalLoadPerfil() {
      VÁLIDO (org recién aprovisionada), no un error: devuelve profile {}. */
   if (!sb) return null;
   try {
-    const [perfilRes, orgRes] = await Promise.all([
+    const [perfilRes, orgRes, brandRes] = await Promise.all([
       sb.from('organization_profile').select('profile').eq('organization_id', ORG_ID).maybeSingle(),
-      sb.from('organizations').select('nombre').eq('id', ORG_ID).maybeSingle()
+      sb.from('organizations').select('nombre').eq('id', ORG_ID).maybeSingle(),
+      /* V11.9.4 · branding público (logo + nombre + web): legible por CUALQUIER
+         miembro activo (organization_branding). Un colaborador no-admin no puede
+         leer organization_profile (datos sensibles), pero sí esto, así que su
+         header ya muestra el logo y el nombre de la productora. */
+      sb.from('organization_branding').select('logo_data_url, logos, nombre_ficticio, web').eq('organization_id', ORG_ID).maybeSingle()
     ]);
     if (perfilRes.error) throw perfilRes.error;
     const profile = (perfilRes.data && perfilRes.data.profile && typeof perfilRes.data.profile === 'object') ? perfilRes.data.profile : {};
     const nombreCanonico = (!orgRes.error && orgRes.data && orgRes.data.nombre) ? String(orgRes.data.nombre).trim() : '';
-    return { profile: profile, nombreCanonico: nombreCanonico };
+    /* El branding va de BASE y el perfil completo (Admin) lo sobreescribe si lo
+       trae; así el Admin no pierde nada y el colaborador igual ve logo+nombre. */
+    const b = (!brandRes.error && brandRes.data) ? brandRes.data : null;
+    const branding = b ? {
+      logoDataUrl: b.logo_data_url || '',
+      logos: (b.logos != null ? b.logos : undefined),
+      nombreFicticio: b.nombre_ficticio || '',
+      web: b.web || ''
+    } : {};
+    const merged = Object.assign({}, branding, profile);
+    return { profile: merged, nombreCanonico: nombreCanonico };
   } catch (e) { console.error('[dal] excepcion al leer perfil', e); return null; }
 }
 function dalApplyPerfil(profile, nombreCanonico) {
@@ -20559,11 +20574,36 @@ async function dalResolveIdentidad() {
     if (!sess || !sess.user) return;
     DAL_SESSION_UID = sess.user.id || null;
     DAL_SESSION_EMAIL = (sess.user.email || '').toLowerCase();
-    if (DAL_SESSION_EMAIL) {
-      let match = null;
-      Object.keys(BD_CONTACTOS).forEach(id => { const c = BD_CONTACTOS[id]; if (c && (c.email || '').toLowerCase() === DAL_SESSION_EMAIL) match = c; });
-      if (match && match.nombre) { setCurrentUser(match.nombre); window.__TAKEOS_USER = match.nombre; try { renderTopbarUser(); } catch (e) {} }
+    /* V11.9.3 · BUG-6 (refuerzo) · si el nombre cacheado en este navegador es de
+       OTRA sesión (otro usuario lo usó antes), lo limpiamos de inmediato, para
+       que no se vea ni un instante el nombre de otra persona mientras resolvemos
+       la identidad real. Recomendación del BD Expert: no arrastrar al usuario
+       anterior al cambiar de sesión. */
+    try {
+      const uidCache = localStorage.getItem('takeos_usuario_uid') || '';
+      if (uidCache && uidCache !== DAL_SESSION_UID) {
+        USUARIO_ACTUAL = ''; window.__TAKEOS_USER = '';
+        try { localStorage.removeItem('takeos_usuario_actual'); } catch (e) {}
+        try { renderTopbarUser(); } catch (e) {}
+      }
+    } catch (e) {}
+    /* V11.9.2 · BUG-6 · la identidad del header sale del PROPIO perfil del
+       usuario (user_profiles, siempre legible porque es su fila), NO de
+       BD_CONTACTOS — que un Invitado sin proyectos no puede ver. Antes, si no
+       había match en los contactos, no se actualizaba el nombre y quedaba el de
+       la sesión anterior cacheado en el navegador (se veía el nombre de otra
+       persona en el saludo/avatar). El match por contacto queda como respaldo. */
+    let nombreReal = '';
+    if (DAL_SESSION_UID) {
+      try {
+        const pr = await sb.from('user_profiles').select('nombre, apellido').eq('user_id', DAL_SESSION_UID).maybeSingle();
+        if (pr && pr.data) nombreReal = ((pr.data.nombre || '') + ' ' + (pr.data.apellido || '')).trim();
+      } catch (e) {}
     }
+    if (!nombreReal && DAL_SESSION_EMAIL) {
+      Object.keys(BD_CONTACTOS).forEach(id => { const c = BD_CONTACTOS[id]; if (c && (c.email || '').toLowerCase() === DAL_SESSION_EMAIL && c.nombre) nombreReal = c.nombre; });
+    }
+    if (nombreReal) { setCurrentUser(nombreReal); window.__TAKEOS_USER = nombreReal; try { localStorage.setItem('takeos_usuario_uid', DAL_SESSION_UID || ''); } catch (e) {} try { renderTopbarUser(); } catch (e) {} }
   } catch (e) { console.error('[dal] identidad', e); }
 }
 
@@ -21753,7 +21793,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.9.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.9.4';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21936,7 +21976,7 @@ async function invRechazar(token) {
    descartable por sesión, sin pop-up. Medición vía analytics_events.
    ════════════════════════════════════════════════════════════════════ */
 const TAKEOS_MARCA = 'TakeOS';                          // placeholder configurable (marca en standby)
-const TAKEOS_LANDING_URL = 'https://www.takeos.cl';     // placeholder configurable (dominio en standby)
+const TAKEOS_LANDING_URL = 'https://agustinmunozrocha.github.io/takeos-landing/';   // landing real (Agustín, jun 2026)
 const _CTA_PROD_DISMISS_KEY = 'takeos_cta_prod_dismissed';   // por sesión
 async function _ctaProdEvento(nombre, props) {
   try { if (sb) await sb.from('analytics_events').insert(Object.assign({ event_name: nombre }, props ? { props: props } : {})); } catch (e) {}
