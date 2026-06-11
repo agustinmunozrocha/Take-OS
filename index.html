@@ -4529,11 +4529,6 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
         <div class="metric-trend">mayo 2026</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Monto en producción</div>
-        <div class="metric-value" id="metric-amount">—</div>
-        <div class="metric-trend">activos · CLP</div>
-      </div>
-      <div class="metric-card">
         <div class="metric-label">Requieren atención</div>
         <div class="metric-value" id="metric-alerts">—</div>
         <div class="metric-trend">tareas y señales tuyas</div>
@@ -5710,7 +5705,7 @@ let EMPRESA_PERFIL = {
   representante: '', repRut: '', repTelefono: '', repEmail: '',
   // V7.10: datos bancarios (para futuras transferencias) y enlaces/integraciones (para futuros botones: subir a Drive, abrir Milanote/Chipax, agendar en Calendar)
   bancoNombre: '', bancoTipoCuenta: '', bancoNumero: '', bancoTitular: '', bancoRut: '', bancoEmailPagos: '',
-  driveLink: '', milanoteLink: '', chipaxLink: '', googleCalendarId: '',
+  driveLink: '', milanoteLink: '', chipaxLink: '', googleCalendarId: '', usaChipax: false,
   // V7.13: remitente para correos + link del formulario de pago (los lee Notificaciones)
   linkFormularioPago: '', remitenteNombre: '', remitenteRol: '', remitenteNumero: ''
 };
@@ -6412,7 +6407,7 @@ function renderMetrics() {
 
   document.getElementById('metric-active').textContent = active.length;
   document.getElementById('metric-closed-month').textContent = closedMay.length;
-  document.getElementById('metric-amount').textContent = formatCLP(totalAmount);
+  /* V11.7.0 · el monto en producción se movió a Finanzas (bird view del CFO). */
   document.getElementById('metric-alerts').textContent = projectsNeedingAttention(currentUser());
 }
 
@@ -7428,6 +7423,10 @@ function renderModule(key) {
    `BD_PERSONAS[nombre]` directamente.
    ════════════════════════════════════════════════════════════════════ */
 
+function cfgSetUsaChipax(on) {
+  try { EMPRESA_PERFIL.usaChipax = !!on; markDirty(); _dalPerfilSaveSoon(); } catch (e) {}
+  const w = document.getElementById('cfgChipaxLinkWrap'); if (w) w.style.display = on ? '' : 'none';
+}
 function bdSetFormLink(v) { if (typeof EMPRESA_PERFIL !== 'undefined') { EMPRESA_PERFIL.linkFormularioPago = (v || '').trim(); markDirty(); _dalPerfilSaveSoon(); } }
 function renderBDPersonas() {
   const content = document.getElementById('moduleContent');
@@ -12799,8 +12798,7 @@ function cotCartaOfertaSection(o, cond, i, total) {
   </section>`;
 }
 
-function cotCartaCondiciones(cond) {
-  const PROD = (typeof orgNombre === 'function' ? orgNombre() : '') || 'la Productora';
+function cotCartaCondiciones(cond, project) {
   const block = (title, items) => `<div class="cond-block">
     <div class="eyebrow accent">${escapeHtml(title)}</div>
     <ul class="cond-list">${items.map(x => `<li>${x}</li>`).join('')}</ul>
@@ -12937,7 +12935,7 @@ function cotBuildCartaHTML(project) {
     </div>
     ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${cotDescHtml(desc)}</p></div>` : ''}
     ${ofertas.map((o, i) => cotCartaOfertaSection(o, cond, i, ofertas.length)).join('')}
-    ${cotCartaCondiciones(cond)}
+    ${cotCartaCondiciones(cond, project)}
     <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL', { hour12: false }))} · Documento de cotización confidencial</div>
   </body></html>`;
 }
@@ -14928,8 +14926,10 @@ const LOC_CSS = `<style>
 .loc-block-tag.proj{background:rgba(120,120,200,.16);color:#9a9ad0;}
 .loc-field{margin-bottom:9px;}
 .loc-field label{display:block;font-size:11px;color:var(--ink-mut,#b5b5ad);margin-bottom:3px;}
-.loc-gallery{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
-.loc-thumb{position:relative;width:84px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--border,#2a2a28);cursor:pointer;}
+.loc-gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+.loc-thumb{position:relative;width:100%;aspect-ratio:4/3;height:auto;border-radius:8px;overflow:hidden;border:1px solid var(--border,#2a2a28);cursor:grab;}
+.loc-thumb.dragging{opacity:.4;}
+.loc-thumb.dragover{outline:2px solid var(--accent,#c2410c);outline-offset:2px;}
 .loc-thumb img{width:100%;height:100%;object-fit:cover;}
 .loc-thumb-x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:12px;line-height:1;}
 .loc-foto-add{width:84px;height:64px;border:1px dashed var(--border,#3a3a36);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-faint,#8a8a82);font-size:22px;}
@@ -15026,28 +15026,25 @@ function openLocDetail(locId) {
               <div style="margin-top:7px;"><label style="font-size:11px;color:var(--ink-mut);">Observaciones</label><input class="input" value="${e(c.obs || '')}" onchange="locSetContacto('${locId}',${i},'obs',this.value)"></div>
             </div>`).join('') || '<div style="font-size:12px;color:var(--ink-faint);margin-bottom:8px;">Sin contactos aún. Agrega a quien coordinas la locación.</div>';
   /* V11.6.1 · la primera foto es el thumbnail de la locación (cards de
-     proyecto y BD): ahora se puede elegir con ★ «Hacer portada» y ordenar
-     con ‹ ›. */
-  const _nfg = (l.fotos || []).length;
-  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb" style="position:relative;">
-      <img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" onclick="locLightbox('${locId}',${i})">
+     proyecto y BD): se reordena por drag & drop (la primera es la portada). */
+  /* V11.7.0 · galería con DRAG & DROP: arrastras para reordenar y la primera
+     foto es el thumbnail. Sin estrella ni flechas (se eliminaron). */
+  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb" draggable="true"
+      ondragstart="locFotoDragStart(event,'${locId}',${i})" ondragend="locFotoDragEnd(event)"
+      ondragover="locFotoDragOver(event)" ondragleave="locFotoDragLeave(event)" ondrop="locFotoDrop(event,'${locId}',${i})">
+      <img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" onclick="locLightbox('${locId}',${i})" style="pointer-events:none;">
       <button class="loc-thumb-x" onclick="event.stopPropagation();locDelFoto('${locId}',${i})" title="Quitar">×</button>
-      ${i === 0 ? `<span style="position:absolute;left:4px;top:4px;font-size:9px;font-weight:700;background:rgba(0,0,0,.62);color:#ffd86b;border-radius:999px;padding:1px 7px;pointer-events:none;">★ Portada</span>` : ''}
-      <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:4px;padding:3px 0;background:linear-gradient(transparent, rgba(0,0,0,.55));">
-        ${i > 0 ? `<button onclick="event.stopPropagation();locFotoMover('${locId}',${i},-1)" title="Mover a la izquierda" style="border:none;border-radius:4px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;cursor:pointer;padding:1px 6px;">‹</button>` : ''}
-        ${i > 0 ? `<button onclick="event.stopPropagation();locFotoPortada('${locId}',${i})" title="Hacer portada (thumbnail de la locación)" style="border:none;border-radius:4px;background:rgba(0,0,0,.55);color:#ffd86b;font-size:11px;cursor:pointer;padding:1px 6px;">★</button>` : ''}
-        ${i < _nfg - 1 ? `<button onclick="event.stopPropagation();locFotoMover('${locId}',${i},1)" title="Mover a la derecha" style="border:none;border-radius:4px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;cursor:pointer;padding:1px 6px;">›</button>` : ''}
-      </div>
+      ${i === 0 ? `<span style="position:absolute;left:5px;top:5px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.62);color:#ffd86b;border-radius:999px;padding:2px 8px;pointer-events:none;">★ Portada</span>` : ''}
     </div>`).join('');
   try { setTimeout(function(){ _resolveLocFotoUrls(locId); }, 0); } catch (e) {}
   const estadoChips = uso ? Object.keys(LOC_ESTADOS).map(s => `<button class="loc-chip ${uso.estado === s ? 'on' : ''}" onclick="locSetEstado('${locId}','${s}')">${LOC_ESTADOS[s]}</button>`).join('') : '';
   document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:760px;width:94vw;max-height:88vh;overflow:auto;">
     <div class="modal-header"><div class="modal-title">${e(l.nombre || 'Locación')} · ${e(l.locId)}</div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);">×</button></div>
     <div class="modal-body">
-      <div class="loc-block">
+      ${uso ? `<div class="loc-block">
         <div class="loc-block-h">Estado en este proyecto</div>
-        ${uso ? `<div class="loc-filters" style="margin:0;">${estadoChips}</div>` : `<div style="font-size:12.5px;color:var(--ink-secondary);">Esta locación vive en la Base de Datos pero no está agregada a este proyecto. Para usarla aquí, agrégala desde el módulo Locaciones del proyecto.</div>`}
-      </div>
+        <div class="loc-filters" style="margin:0;">${estadoChips}</div>
+      </div>` : ''}
       <div class="loc-modal-grid">
         <div>
           <div class="loc-block">
@@ -15075,8 +15072,10 @@ function openLocDetail(locId) {
           <div class="loc-block">
             <div class="loc-block-h">Galería de scouting <span class="loc-block-tag bd">BD · reutilizable</span></div>
             <div class="loc-gallery">${galeria}<label class="loc-foto-add" title="Agregar fotos (se comprimen solas)">+<input type="file" accept="image/*" multiple style="display:none" onchange="locAddFotos('${locId}',this)"></label></div>
-            <div style="font-size:11px;color:var(--ink-faint);margin-top:7px;">Las fotos se comprimen a máx. 1280 px. Click para ampliar.</div>
-            <div style="font-size:11px;color:var(--accent,#c2410c);margin-top:6px;line-height:1.45;">⚠ Por ahora las fotos se guardan <b>solo en este navegador</b>; aún no se sincronizan en la nube. Para fotos compartidas entre dispositivos falta integrarlas a Supabase Storage.</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap;">
+              <div style="font-size:11px;color:var(--ink-faint);">Arrastra para reordenar · la primera foto es la portada · máx. 1280 px · click para ampliar.</div>
+              ${(l.fotos || []).length ? `<button class="btn btn-secondary btn-sm" onclick="locDescargarFotos('${locId}')">⬇ Descargar todo</button>` : ''}
+            </div>
           </div>
           ${uso ? `<div class="loc-block">
             <div class="loc-block-h">Uso en este proyecto <span class="loc-block-tag proj">solo de este proyecto</span></div>
@@ -15177,21 +15176,43 @@ async function locAddFotos(locId, inputEl) {
   showToast({ kind: 'success', title: 'Fotos agregadas', body: msg + '.' });
   openLocDetail(locId);
 }
-function locFotoMover(locId, i, dir) {
+let _LOC_DRAG = null;
+function locFotoDragStart(ev, locId, i) { _LOC_DRAG = { locId: locId, i: i }; ev.currentTarget.classList.add('dragging'); try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(i)); } catch (e) {} }
+function locFotoDragEnd(ev) { ev.currentTarget.classList.remove('dragging'); document.querySelectorAll('.loc-thumb.dragover').forEach(function (el) { el.classList.remove('dragover'); }); }
+function locFotoDragOver(ev) { ev.preventDefault(); try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {} ev.currentTarget.classList.add('dragover'); }
+function locFotoDragLeave(ev) { ev.currentTarget.classList.remove('dragover'); }
+function locFotoDrop(ev, locId, destino) {
+  ev.preventDefault(); ev.currentTarget.classList.remove('dragover');
+  if (!_LOC_DRAG || _LOC_DRAG.locId !== locId) return;
+  const origen = _LOC_DRAG.i; _LOC_DRAG = null;
+  if (origen === destino) return;
   const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return;
-  const j = i + dir; if (j < 0 || j >= l.fotos.length) return;
-  const t = l.fotos[i]; l.fotos[i] = l.fotos[j]; l.fotos[j] = t;
+  const f = l.fotos.splice(origen, 1)[0];
+  l.fotos.splice(destino, 0, f);
   markDirty(); autosaveNow();
   try { _dalLocacionSaveSoon(locId); } catch (e) {}
   openLocDetail(locId);
 }
-function locFotoPortada(locId, i) {
-  const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos) || i <= 0) return;
-  const f = l.fotos.splice(i, 1)[0]; l.fotos.unshift(f);
-  markDirty(); autosaveNow();
-  try { _dalLocacionSaveSoon(locId); } catch (e) {}
-  openLocDetail(locId);
-  showToast({ kind: 'success', title: 'Portada actualizada', body: 'Esta foto es ahora el thumbnail de la locación.' });
+async function locDescargarFotos(locId) {
+  const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos) || !l.fotos.length) return;
+  showToast({ kind: 'info', title: 'Preparando descarga', body: 'Bajando ' + l.fotos.length + ' foto(s)…' });
+  for (let i = 0; i < l.fotos.length; i++) {
+    const f = l.fotos[i];
+    let url = f.url || f._signedUrl;
+    if (!url && f.path && sb && sb.storage) {
+      try { const { data } = await sb.storage.from(STORAGE_BUCKET_FOTOS).createSignedUrl(f.path, 600); url = data && data.signedUrl; } catch (e) {}
+    }
+    if (!url) continue;
+    try {
+      const resp = await fetch(url); const blob = await resp.blob();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      const base = String(l.nombre || 'locacion').replace(/[^a-zA-Z0-9._-]/g, '_');
+      a.download = base + '_' + String(i + 1).padStart(2, '0') + '.jpg';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { try { URL.revokeObjectURL(a.href); a.remove(); } catch (e) {} }, 1500);
+      await new Promise(function (r) { setTimeout(r, 350); });   // separa las descargas
+    } catch (e) { /* omite la que falle */ }
+  }
 }
 function locDelFoto(locId, i) {
   const l = bdLocFind(locId); if (!l || !Array.isArray(l.fotos)) return;
@@ -15201,13 +15222,52 @@ function locDelFoto(locId, i) {
   if (f && f.path) { try { _dalLocacionSaveSoon(locId); } catch (e) {} }
   openLocDetail(locId);
 }
+let _LOC_LB = null;
 function locLightbox(locId, i) {
-  const l = bdLocFind(locId); if (!l || !l.fotos[i]) return;
+  const l = bdLocFind(locId); if (!l || !l.fotos || !l.fotos[i]) return;
+  _LOC_LB = { locId: locId, i: i, n: l.fotos.length };
+  _locLbRender();
+  document.removeEventListener('keydown', _locLbKey);
+  document.addEventListener('keydown', _locLbKey);
+}
+function _locLbSrc(locId, i) {
+  const l = bdLocFind(locId); if (!l || !l.fotos[i]) return _LOC_FOTO_PLACEHOLDER;
+  const f = l.fotos[i];
+  if (!(f.url || f._signedUrl) && f.path && sb && sb.storage) {
+    sb.storage.from(STORAGE_BUCKET_FOTOS).createSignedUrl(f.path, 3600).then(function (r) {
+      if (r && r.data && r.data.signedUrl) { f._signedUrl = r.data.signedUrl; const img = document.getElementById('locLbImg'); if (img && _LOC_LB && _LOC_LB.i === i) img.src = r.data.signedUrl; }
+    }).catch(function () {});
+  }
+  return f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER;
+}
+function _locLbRender() {
+  if (!_LOC_LB) return;
   const old = document.getElementById('locLb'); if (old) old.remove();
   const div = document.createElement('div'); div.id = 'locLb'; div.className = 'loc-lightbox';
-  div.onclick = () => div.remove();
-  div.innerHTML = `<button class="loc-lightbox-x">×</button><img src="${safeUrl(l.fotos[i].url || l.fotos[i]._signedUrl || _LOC_FOTO_PLACEHOLDER)}" alt="">`;
+  div.onclick = (ev) => { if (ev.target === div) _locLbClose(); };
+  const multi = _LOC_LB.n > 1;
+  div.innerHTML = `<button class="loc-lightbox-x" onclick="_locLbClose()">×</button>`
+    + (multi ? `<button class="loc-lb-nav prev" onclick="event.stopPropagation();_locLbMove(-1)" style="position:fixed;left:18px;top:50%;transform:translateY(-50%);font-size:34px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;z-index:2;">‹</button>` : '')
+    + `<img id="locLbImg" src="${safeUrl(_locLbSrc(_LOC_LB.locId, _LOC_LB.i))}" alt="">`
+    + (multi ? `<button class="loc-lb-nav next" onclick="event.stopPropagation();_locLbMove(1)" style="position:fixed;right:18px;top:50%;transform:translateY(-50%);font-size:34px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:52px;height:52px;cursor:pointer;z-index:2;">›</button>` : '')
+    + (multi ? `<div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;font-size:12px;background:rgba(0,0,0,.5);padding:3px 12px;border-radius:999px;">${_LOC_LB.i + 1} / ${_LOC_LB.n}</div>` : '');
   document.body.appendChild(div);
+}
+function _locLbMove(dir) {
+  if (!_LOC_LB) return;
+  _LOC_LB.i = (_LOC_LB.i + dir + _LOC_LB.n) % _LOC_LB.n;
+  const img = document.getElementById('locLbImg'); if (img) img.src = safeUrl(_locLbSrc(_LOC_LB.locId, _LOC_LB.i));
+  const ind = document.querySelector('#locLb div'); if (ind) ind.textContent = (_LOC_LB.i + 1) + ' / ' + _LOC_LB.n;
+}
+function _locLbClose() {
+  const d = document.getElementById('locLb'); if (d) d.remove();
+  document.removeEventListener('keydown', _locLbKey); _LOC_LB = null;
+}
+function _locLbKey(ev) {
+  if (!_LOC_LB) return;
+  if (ev.key === 'ArrowLeft') { ev.preventDefault(); _locLbMove(-1); }
+  else if (ev.key === 'ArrowRight') { ev.preventDefault(); _locLbMove(1); }
+  else if (ev.key === 'Escape') { ev.preventDefault(); _locLbClose(); }
 }
 
 function openLocAdd() {
@@ -17308,7 +17368,16 @@ function openEmpresaPerfil() {
           <div class="emp-grid">
             ${field('driveLink','Link al Drive', E.driveLink, 'https://drive.google.com/...')}
             ${field('milanoteLink','Link a Milanote', E.milanoteLink, 'https://app.milanote.com/...')}
-            ${field('chipaxLink','Link a Chipax', E.chipaxLink, 'https://chipax.com/...')}
+            <div style="grid-column:1/-1;border:1px solid var(--rule);border-radius:10px;padding:12px 14px;background:var(--bg-surface);display:flex;align-items:flex-start;gap:12px;margin-top:4px;">
+              <div style="width:42px;height:42px;border-radius:8px;background:#0a1f44;display:grid;place-items:center;flex:0 0 42px;font-weight:800;color:#fff;font-size:15px;letter-spacing:.02em;">cp</div>
+              <div style="flex:1;min-width:0;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--ink-primary);">
+                  <input type="checkbox" id="cfgUsaChipax" ${E.usaChipax ? 'checked' : ''} onchange="cfgSetUsaChipax(this.checked)"> Usamos Chipax
+                </label>
+                <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.5;">Chipax es un sistema de gestión financiera y conciliación bancaria. Al activarlo, TakeOS habilita la <strong>exportación masiva de gastos validados</strong> en el formato que Chipax importa, para registrar la contabilidad sin digitar gasto por gasto.</div>
+                <div id="cfgChipaxLinkWrap" style="margin-top:8px;${E.usaChipax ? '' : 'display:none;'}">${field('chipaxLink','Link a tu Chipax (opcional)', E.chipaxLink, 'https://chipax.com/...')}</div>
+              </div>
+            </div>
             ${field('googleCalendarId','ID Google Calendar', E.googleCalendarId, 'xxxx@group.calendar.google.com')}
             ${field('linkFormularioPago','Link del formulario de pago', E.linkFormularioPago, 'https://forms.gle/…')}
           </div>
@@ -17346,7 +17415,7 @@ function openEmpresaPerfil() {
   try { _empLogoRefresh(); } catch (e) {}
 }
 function saveEmpresaPerfil() {
-  const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','ciudad','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
+  const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','ciudad','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','usaChipax','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
   keys.forEach(k => { const el = document.getElementById('emp_' + k); if (el) EMPRESA_PERFIL[k] = el.value.trim(); });
   markDirty(); _dalPerfilSaveSoon();
   showToast({ kind: 'success', title: 'Perfil guardado', body: 'Los datos de la empresa se aplicarán a los documentos. Recuerda Guardar OS para respaldarlo.' });
@@ -21600,7 +21669,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.6.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.7.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -22892,7 +22961,7 @@ function renderGastos() {
       <div class="go-card go-grow">
         <div class="go-card-h"><h3>Registro de gastos <span class="go-faint">· ${gs.length} gastos</span></h3>
           <div class="go-actions">
-            <button class="btn btn-secondary btn-sm" onclick="goOpenExport('${project.id}')">⬇ Exportar a Chipax</button>
+            ${_usaChipax() ? `<button class="btn btn-secondary btn-sm" onclick="goOpenExport('${project.id}')">⬇ Exportar a Chipax</button>` : ''}
             <button class="btn btn-secondary btn-sm" onclick="goOpenQuick()">⚡ Captura rápida</button>
             <button class="btn btn-primary btn-sm" onclick="goOpenGasto()">+ Agregar gasto</button>
           </div></div>
@@ -23169,6 +23238,82 @@ function openGlobalCFO() {
   renderModule('cfo');
   window.scrollTo(0, 0);
 }
+/* V11.7.0 · Chipax solo se muestra si la productora declara que lo usa
+   (config de empresa → Enlaces e integraciones). */
+function _usaChipax() { try { return !!(EMPRESA_PERFIL && EMPRESA_PERFIL.usaChipax); } catch (e) { return false; } }
+/* ════════════════════════════════════════════════════════════════════
+   V11.7.0 · BIRD VIEW FINANCIERO DE LA PRODUCTORA
+   Vista macro: proyectos en curso, cuánto facturarán (valor a cliente),
+   cuánto se ha cobrado (abonos/cuotas, registrado por el CFO) y el saldo
+   por cobrar. El detalle vive en el presupuesto de cada proyecto: un click
+   en la fila lleva allá. Montos macro, nada de micro-detalle.
+   ════════════════════════════════════════════════════════════════════ */
+function _projValorCliente(p) {
+  try { const f = p.data.finanzas || {}; return (f.presupuestoCliente != null && f.presupuestoCliente > 0) ? f.presupuestoCliente : (typeof cotRealPresup === 'function' ? cotRealPresup(p) : 0); } catch (e) { return 0; }
+}
+function _projCobrado(p) {
+  try { const f = p.data.finanzas || {}; if (Array.isArray(f.pagosCliente)) return f.pagosCliente.reduce(function (s, x) { return s + (Number(x.monto) || 0); }, 0); return Number(f.cobradoCliente) || 0; } catch (e) { return 0; }
+}
+function cfoBirdView() {
+  const activos = PROJECTS.filter(p => !['cerrado', 'rechazado'].includes(p.state));
+  let totVal = 0, totCob = 0;
+  const filas = activos.map(function (p) {
+    const val = _projValorCliente(p), cob = _projCobrado(p), saldo = Math.max(0, val - cob);
+    totVal += val; totCob += cob;
+    const pct = val > 0 ? Math.min(100, Math.round(cob / val * 100)) : 0;
+    return `<tr style="cursor:pointer;" onclick="cfoIrAPresupuesto('${p.id}')" title="Ver el presupuesto de este proyecto">
+      <td>${escapeHtml(goProjName(p))}<div class="go-sub">${escapeHtml((STATES[p.state] && STATES[p.state].name) || p.state || '')}</div></td>
+      <td class="go-num">${fmtMoney(val)}</td>
+      <td class="go-num" style="color:var(--positive);">${fmtMoney(cob)}</td>
+      <td class="go-num" style="color:${saldo > 0 ? 'var(--accent-deep,#c2410c)' : 'var(--ink-faint)'};">${fmtMoney(saldo)}</td>
+      <td style="min-width:90px;"><div style="background:var(--rule);border-radius:999px;height:7px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:var(--positive);"></div></div><div class="go-sub" style="text-align:right;">${pct}%</div></td>
+      <td><button class="go-mini" onclick="event.stopPropagation();cfoRegistrarPago('${p.id}')">+ Registrar pago</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="go-faint" style="padding:16px;">Sin proyectos activos.</td></tr>';
+  const saldoTot = Math.max(0, totVal - totCob);
+  return `<div class="go-card" style="margin-bottom:14px;">
+    <div class="go-card-h"><h3>Vista general de la productora <span class="go-faint">· ${activos.length} proyecto(s) en curso · macro · el detalle vive en cada presupuesto</span></h3></div>
+    ${(typeof _PAGOS_CLIENTE_BACKEND === 'undefined' || !_PAGOS_CLIENTE_BACKEND) ? '<div style="font-size:11px;color:var(--ink-faint);padding:0 14px 8px;">Los pagos registrados se guardan en este navegador por ahora; la sincronización entre dispositivos llega con la próxima extensión de la base.</div>' : ''}
+    <div class="go-card-b go-tablewrap">
+      <table class="go-tbl"><thead><tr><th>Proyecto</th><th class="go-num">Facturará</th><th class="go-num">Cobrado</th><th class="go-num">Por cobrar</th><th>Avance cobro</th><th></th></tr></thead>
+      <tbody>${filas}</tbody>
+      <tfoot><tr style="font-weight:700;border-top:2px solid var(--rule);"><td>Total productora</td><td class="go-num">${fmtMoney(totVal)}</td><td class="go-num" style="color:var(--positive);">${fmtMoney(totCob)}</td><td class="go-num" style="color:var(--accent-deep,#c2410c);">${fmtMoney(saldoTot)}</td><td colspan="2"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>`;
+}
+function cfoIrAPresupuesto(projId) {
+  if (!PROJECTS.find(x => x.id === projId)) return;
+  closeModalGlobalIfAny();
+  navigateToProject(projId);
+  setTimeout(function () { try { navigateToModule('presupuesto'); } catch (e) {} }, 90);
+}
+function closeModalGlobalIfAny() { try { const m = document.getElementById('moduleContent'); } catch (e) {} }
+function cfoRegistrarPago(projId) {
+  const p = PROJECTS.find(x => x.id === projId); if (!p) return;
+  const val = _projValorCliente(p), cob = _projCobrado(p), saldo = Math.max(0, val - cob);
+  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px;">'
+    + '<div class="modal-header"><div class="modal-title">Registrar pago de cliente</div></div>'
+    + '<div class="modal-body">'
+    + '<p style="margin:0 0 12px;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;"><strong>' + escapeHtml(goProjName(p)) + '</strong><br>Facturará ' + fmtMoney(val) + ' · cobrado ' + fmtMoney(cob) + ' · por cobrar <strong>' + fmtMoney(saldo) + '</strong></p>'
+    + '<div class="emp-field" style="margin-bottom:10px;"><label>Monto recibido (CLP)</label><input class="input" id="cfoPagoMonto" type="number" inputmode="numeric" placeholder="0"></div>'
+    + '<div class="emp-field"><label>Nota (opcional)</label><input class="input" id="cfoPagoNota" placeholder="Ej. Abono 50%, cuota 1 de 3…"></div>'
+    + '</div>'
+    + '<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cfoGuardarPago(\'' + projId + '\')">Registrar</button></div>'
+    + '</div></div>';
+}
+function cfoGuardarPago(projId) {
+  const p = PROJECTS.find(x => x.id === projId); if (!p) return;
+  const monto = Number((document.getElementById('cfoPagoMonto') || {}).value || 0);
+  if (!monto || monto <= 0) { showToast({ kind: 'warning', title: 'Monto inválido', body: 'Ingresa un monto mayor a 0.' }); return; }
+  const nota = String((document.getElementById('cfoPagoNota') || {}).value || '').trim();
+  if (!p.data.finanzas) p.data.finanzas = {};
+  if (!Array.isArray(p.data.finanzas.pagosCliente)) p.data.finanzas.pagosCliente = [];
+  p.data.finanzas.pagosCliente.push({ monto: monto, nota: nota, fecha: new Date().toISOString().slice(0, 10) });
+  markDirty(); try { dalTouchProyecto(p); } catch (e) {}
+  closeModal(); renderCFO();
+  showToast({ kind: 'success', title: 'Pago registrado', body: fmtMoney(monto) + ' en ' + goProjName(p) + '.' });
+}
 function renderCFO() {
   const cont = document.getElementById('moduleContent');
   if (!cont) return;
@@ -23182,26 +23327,28 @@ function renderCFO() {
 
   cont.innerHTML = `
   <div class="go-wrap">
-    <div class="go-note">Consolida los gastos de <b>todos los proyectos</b>. El CFO valida gastos, administra los <b>pagos pendientes</b> (reembolsos y prontos pagos) y exporta a Chipax y a Office Banking sin entrar proyecto por proyecto.</div>
+    ${cfoBirdView()}
+    <div class="go-note">Consolida los gastos de <b>todos los proyectos</b>. El CFO valida gastos, administra los <b>pagos pendientes</b> (reembolsos y prontos pagos)${_usaChipax() ? ' y exporta a Chipax' : ''} y genera las nóminas de transferencias sin entrar proyecto por proyecto.</div>
     <div class="go-card"><div class="go-card-b"><div class="go-kpis">
       <div class="go-kpi"><div class="l">Gasto del mes</div><div class="v">${fmtMoney(totalMes)}</div><div class="s">${all.length} gastos · ${PROJECTS.length} proyectos</div></div>
       <div class="go-kpi warn"><div class="l">Por validar</div><div class="v">${pend.length}</div><div class="s">listos, esperando al CFO</div></div>
       <div class="go-kpi acc"><div class="l">Reembolsos por pagar</div><div class="v">${reemb.length}</div><div class="s">${fmtMoney(reembMonto)} a transferir</div></div>
       <div class="go-kpi acc"><div class="l">Prontos pagos</div><div class="v">${pp.length}</div><div class="s">${fmtMoney(ppMonto)} a transferir</div></div>
-      <div class="go-kpi pos"><div class="l">Validado</div><div class="v">${validados}</div><div class="s">listo para Chipax</div></div>
+      <div class="go-kpi pos"><div class="l">Validado</div><div class="v">${validados}</div><div class="s">${_usaChipax() ? 'listo para Chipax' : 'gastos validados'}</div></div>
     </div></div></div>
     <div class="go-tabs">
       <button class="go-tab ${GO_STATE.cfoTab === 'validacion' ? 'on' : ''}" onclick="goSetCfoTab('validacion')">Validación${pend.length ? '<span class="b">' + pend.length + '</span>' : ''}</button>
       <button class="go-tab ${GO_STATE.cfoTab === 'reembolsos' ? 'on' : ''}" onclick="goSetCfoTab('reembolsos')">Reembolsos${reemb.length ? '<span class="b">' + reemb.length + '</span>' : ''}</button>
       <button class="go-tab ${GO_STATE.cfoTab === 'prontospagos' ? 'on' : ''}" onclick="goSetCfoTab('prontospagos')">Prontos Pagos${pp.length ? '<span class="b">' + pp.length + '</span>' : ''}</button>
       <button class="go-tab ${GO_STATE.cfoTab === 'proyectos' ? 'on' : ''}" onclick="goSetCfoTab('proyectos')">Por proyecto</button>
-      <button class="go-tab ${GO_STATE.cfoTab === 'export' ? 'on' : ''}" onclick="goSetCfoTab('export')">Exportar a Chipax</button>
+      ${_usaChipax() ? `<button class="go-tab ${GO_STATE.cfoTab === 'export' ? 'on' : ''}" onclick="goSetCfoTab('export')">Exportar a Chipax</button>` : ''}
     </div>
     <div id="go-cfo-body">${goCfoBody()}</div>
   </div>`;
 }
 function goSetCfoTab(t) { GO_STATE.cfoTab = t; renderCFO(); }
 function goCfoBody() {
+  if (GO_STATE.cfoTab === 'export' && !_usaChipax()) GO_STATE.cfoTab = 'validacion';
   if (GO_STATE.cfoTab === 'validacion') return goCfoValidacion();
   if (GO_STATE.cfoTab === 'reembolsos') return goCfoReembolsos();
   if (GO_STATE.cfoTab === 'prontospagos') return goCfoProntosPagos();
