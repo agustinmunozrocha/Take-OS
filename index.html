@@ -14262,7 +14262,19 @@ function cargoGuardarModal() {
       const codigo = PERFIL_CODIGO_POR_NOMBRE[perfil] || 6;
       dalInvitar(email, 'externo', codigo, row.id, project.id)
         .then(function (res) { renderCargos(); _invMostrarResultado(res); })
-        .catch(function (e) { showToast({ kind: 'error', title: 'No se pudo invitar', body: ((e && e.message) || '').replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 }); });
+        .catch(function (e) {
+          const msg = ((e && e.message) || '');
+          if (/ya pertenece/i.test(msg)) {
+            /* La persona ya es miembro de la organización: el cargo quedó
+               huérfano (pendiente, sin invitación). Lo quitamos para que la UI
+               no muestre una invitación que no existe. */
+            project.data.cargos = ensureCargos(project).filter(function (x) { return x.id !== row.id; });
+            _cargosSave(project); renderCargos();
+            showToast({ kind: 'warning', title: 'Ya es parte de tu productora', body: 'Esta persona ya colabora con tu productora, así que no se le envía una invitación nueva. Sumarla directamente a un proyecto es una mejora que está en camino.', duration: 10000 });
+          } else {
+            showToast({ kind: 'error', title: 'No se pudo invitar', body: msg.replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 });
+          }
+        });
     } else if (tipo === 'externo' && persona) {
       showToast({ kind: 'info', title: 'Cargo registrado', body: 'Quedó como invitación pendiente. Agrega su correo (Cambiar) para generar el link de invitación.' });
     } else {
@@ -21447,7 +21459,7 @@ function _dalProyectoPayload(project) {
   (d.equipos || []).forEach(function(r,i){ pushRow('tecnica', r, i); });   // equipos(cliente)==tecnica(BD)
   (d.talentos || []).forEach(function(r,i){ pushRow('talentos', r, i); });
   // cotización viva (solo si hay al menos una oferta)
-  let cot = null;
+  let cot;   /* V11.8.3 · undefined (no null) para que JSON.stringify lo omita y el RPC no choque */
   const c = d.cotizacion;
   if (c && Array.isArray(c.ofertas) && c.ofertas.length) {
     cot = {
@@ -21461,7 +21473,7 @@ function _dalProyectoPayload(project) {
     };
   }
   // versiones (historial)
-  let versiones = null;
+  let versiones;   /* V11.8.3 · idem: undefined cuando no hay historial */
   const cs = d.cotizaciones;
   if (cs && Array.isArray(cs.versiones) && cs.versiones.length) {
     versiones = cs.versiones.map(function(v){ return { numero: (v.numero != null ? v.numero : 1), esActiva: (v.id === cs.activoId), snapshot: v, nota: v.nota || '' }; });
@@ -21680,7 +21692,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.8.2';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.8.3';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
