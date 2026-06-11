@@ -4464,6 +4464,19 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
       <input type="file" id="loadFileInput" accept="application/json,.json" style="display:none;" onchange="importSaveFromInput(this)">
       <!-- V7.4: las herramientas globales (BD, Guardar/Cargar OS, Snapshots, tema, admin)
            viven en el panel de Configuración. La barra solo deja Deshacer (uso frecuente). -->
+      <div class="notif-wrap" style="position:relative;">
+        <button class="topbar-user" id="notifBtn" onclick="bellToggle()" title="Avisos" style="position:relative;padding:8px 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span id="notifBadge" style="display:none;position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:var(--accent,#c2410c);color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;box-sizing:border-box;">0</span>
+        </button>
+        <div id="notifPanel" hidden style="position:absolute;right:0;top:calc(100% + 8px);width:344px;max-height:460px;background:var(--bg-card,#1b1c20);border:1px solid var(--rule,#2a2a28);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.4);z-index:1200;overflow:hidden;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--rule,#2a2a28);">
+            <span style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">Avisos</span>
+            <button onclick="notifMarcarTodas()" style="background:none;border:none;color:var(--accent,#c2410c);font-size:11.5px;cursor:pointer;font-family:inherit;">Marcar todas como leídas</button>
+          </div>
+          <div id="notifList" style="overflow:auto;max-height:400px;"></div>
+        </div>
+      </div>
       <button class="topbar-user topbar-config-btn" onclick="openConfigPanel()" title="Configuración (⌘ , / Ctrl ,)">
         <div class="user-avatar" id="userAvatar"></div>
         <span class="user-name" id="userName">Mi cuenta</span>
@@ -6548,7 +6561,14 @@ function navigateToProject(projectId) {
     </div>
   `;
 
-  navigateToModule('info-proyecto');
+  /* V11.8.4 · al entrar a un proyecto, abrir Info Proyecto solo si el perfil
+     puede verlo; si no (Coordinación, Creativo, Invitado), abrir directo el
+     primer módulo visible, sin el toast de "sin acceso". Esto acompaña el fix
+     de RLS del BD Expert: esos perfiles ya verán el proyecto y deben aterrizar
+     en algo que sí pueden usar (Crew/Cargos/Tareas…). */
+  var _modIni = (typeof authPuedeVer === 'function' && !authPuedeVer('info-proyecto'))
+    ? (_firstVisibleModule() || 'info-proyecto') : 'info-proyecto';
+  navigateToModule(_modIni);
   captureUndoBaseline();  // V5.11 (Nota 1)
   window.scrollTo(0, 0);
 }
@@ -9334,8 +9354,28 @@ async function confirmDeleteProject(id) {
   showToast({ kind: 'success', title: 'Proyecto movido a la papelera', body: `“${escapeHtml(name)}” se puede restaurar desde la Papelera en el Control Room.` });
 }
 
+/* V11.9.0 · trae de la base los proyectos borrados (deleted_at IS NOT NULL) y
+   los ensambla a TRASH, para que la Papelera muestre también los eliminados en
+   sesiones anteriores (antes solo veía los borrados en la sesión actual). */
+async function dalCargarPapelera() {
+  if (!sb || PROJECTS_SOURCE !== 'supabase') return;
+  let rows = null;
+  try { rows = await dalLoadProyectos(true); } catch (e) { return; }
+  if (!rows || !rows.length) return;
+  rows.forEach(function (p) {
+    if (TRASH.find(function (x) { return x.id === p.id; })) return;   // ya está en memoria
+    const partes = _dalProyectoPartes(p);
+    const proj = { id: p.id, name: partes.nombre, client: partes.cliente, state: partes.estado, pe: partes.pe || '—', amount: 0, currency: 'CLP', alerts: 0, lastActivity: '', date: '—', data: buildDefaultProjectData() };
+    try { _dalFusionarProyecto(proj, partes); } catch (e) {}
+    proj._deletedAt = p.deleted_at || new Date().toISOString();
+    proj._deletedState = partes.estado;
+    DAL_KNOWN_PROJECT_IDS.add(p.id);
+    TRASH.push(proj);
+  });
+}
 /* V5.10 (Respuesta 1): Papelera — listar, restaurar. */
-function openTrash() {
+async function openTrash() {
+  await dalCargarPapelera();
   if (TRASH.length === 0) {
     showModal({ title: 'Papelera vacía', body: 'No hay proyectos eliminados. Cuando elimines un proyecto, queda aquí por si necesitas recuperarlo.', confirmLabel: 'Cerrar', cancelLabel: '', onConfirm: () => {} });
     return;
@@ -14265,12 +14305,23 @@ function cargoGuardarModal() {
         .catch(function (e) {
           const msg = ((e && e.message) || '');
           if (/ya pertenece/i.test(msg)) {
-            /* La persona ya es miembro de la organización: el cargo quedó
-               huérfano (pendiente, sin invitación). Lo quitamos para que la UI
-               no muestre una invitación que no existe. */
-            project.data.cargos = ensureCargos(project).filter(function (x) { return x.id !== row.id; });
-            _cargosSave(project); renderCargos();
-            showToast({ kind: 'warning', title: 'Ya es parte de tu productora', body: 'Esta persona ya colabora con tu productora, así que no se le envía una invitación nueva. Sumarla directamente a un proyecto es una mejora que está en camino.', duration: 10000 });
+            /* V11.9.0 · ya es miembro activo → se suma DIRECTO al proyecto
+               (decisión b: ya consintió a nivel organización), con aviso in-app.
+               El RPC pone el cargo en activo y le stampa el usuario. */
+            sb.rpc('asignar_cargo_a_miembro', { p_project_id: project.id, p_cargo_id: row.id, p_email: email })
+              .then(function (r) {
+                if (r.error) throw r.error;
+                const cc = ensureCargos(project).find(function (x) { return x.id === row.id; });
+                if (cc) { cc.estado = 'activo'; cc.invitedUserId = (r.data && r.data.user_id) || cc.invitedUserId || null; }
+                renderCargos();
+                showToast({ kind: 'success', title: 'Sumado al proyecto', body: persona + ' ya es parte de tu productora, así que se sumó directo a este proyecto y le llegó un aviso.', duration: 9000 });
+              })
+              .catch(function (e2) {
+                /* No es miembro activo / sin cuenta → quitamos el huérfano y avisamos. */
+                project.data.cargos = ensureCargos(project).filter(function (x) { return x.id !== row.id; });
+                _cargosSave(project); renderCargos();
+                showToast({ kind: 'warning', title: 'No se pudo sumar', body: ((e2 && e2.message) || '').replace(/^[a-z_]+:\s*/i, '') || 'Esta persona no es un miembro activo. Usa la invitación normal con su correo.', duration: 9000 });
+              });
           } else {
             showToast({ kind: 'error', title: 'No se pudo invitar', body: msg.replace(/^invitar:\s*/i, '') || 'Reintenta.', duration: 8000 });
           }
@@ -21360,9 +21411,9 @@ function _dalFusionarProyecto(target, partes) {
   // locaciones/tareas/senales/crewExtra/responsables/asistentes/crewExternos/gastosOp: intactos (estado actual). rodajes/planRodaje/hojaLlamado: desde Supabase (4a).
 }
 
-async function dalLoadProyectos() {
+async function dalLoadProyectos(soloBorrados) {
   if (!sb) return null;
-  const sel = 'id,nombre_proyecto,categoria,es_remunerado,cliente_empresa_id,cliente_contacto_id,agencia_empresa_id,cliente_texto,agencia_texto,servicio,productora,derechos_tiempo,derechos_plataformas,derechos_territorio,contacto_cliente,mail_contacto_cliente,telefono_contacto_cliente,contacto_agencia,mail_contacto_agencia,telefono_contacto_agencia,condicion_pago,fecha_cotizacion,fecha_aprobacion,fecha_entrega_final,fecha_pago,estado,aprobado_at,cerrado_at,'
+  const sel = 'id,nombre_proyecto,categoria,es_remunerado,cliente_empresa_id,cliente_contacto_id,agencia_empresa_id,cliente_texto,agencia_texto,servicio,productora,derechos_tiempo,derechos_plataformas,derechos_territorio,contacto_cliente,mail_contacto_cliente,telefono_contacto_cliente,contacto_agencia,mail_contacto_agencia,telefono_contacto_agencia,condicion_pago,fecha_cotizacion,fecha_aprobacion,fecha_entrega_final,fecha_pago,estado,aprobado_at,cerrado_at,deleted_at,'
     + 'project_assignments(contact_id,function_id,project_functions(nombre)),'
     + 'project_financials(presupuesto_cliente,gastos_admin_pct,he_recargo_default,frozen),'
     + 'project_commissions(label,mode,value,posicion),'
@@ -21385,7 +21436,9 @@ async function dalLoadProyectos() {
     + 'project_signals(id,tipo,seccion,descripcion,creada_ts,visto_por,meta,posicion),'
     + 'project_documents(id,categoria,titulo,url,notas,archivo_nombre,archivo_path,archivo_size,ts,posicion)';
   try {
-    const { data, error } = await sb.from('projects').select(sel).eq('organization_id', ORG_ID).is('deleted_at', null);
+    let q = sb.from('projects').select(sel).eq('organization_id', ORG_ID);
+    q = soloBorrados ? q.not('deleted_at', 'is', null) : q.is('deleted_at', null);
+    const { data, error } = await q;
     if (error) throw error;
     return data || [];
   } catch (e) { console.error('[dal] cargar proyectos', e); return null; }
@@ -21692,7 +21745,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.8.3';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.9.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -22196,7 +22249,7 @@ function updateThemeButton(theme) {
 const PERFIL_NOMBRES = {1:'Administrador',2:'Ejecutivo',3:'Producción',4:'Asistencia de Producción',5:'Coordinación',6:'Creativo',7:'Invitado',8:'Finanzas'};
 
 function arrancarTakeOS() {
-  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ dalBootProyectos(); });
+  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ return dalBootProyectos(); }).then(function(){ try { notifInit(); } catch (e) {} });
 }
 
 function _espIniciales(txt){
@@ -23380,6 +23433,92 @@ function openGlobalCFO() {
 /* V11.7.0 · Chipax solo se muestra si la productora declara que lo usa
    (config de empresa → Enlaces e integraciones). */
 function _usaChipax() { try { return !!(EMPRESA_PERFIL && EMPRESA_PERFIL.usaChipax); } catch (e) { return false; } }
+/* ════════════════════════════════════════════════════════════════════
+   V11.9.0 · CAMPANITA DE AVISOS IN-APP
+   Lee de user_notifications (RLS filtra a los del usuario) y marca leídos con
+   marcar_notificaciones_leidas. Es el buzón inmediato dentro de la app, distinto
+   de la cola de emails (Resend, pendiente). Los avisos los crean RPCs del
+   servidor (p. ej. asignar_cargo_a_miembro); el cliente solo lee y marca leído.
+   ════════════════════════════════════════════════════════════════════ */
+let NOTIF = [];
+let _NOTIF_TIMER = null;
+let _NOTIF_OUTSIDE = false;
+async function notifCargar() {
+  if (!sb || PROJECTS_SOURCE !== 'supabase') return;
+  try {
+    const { data, error } = await sb.from('user_notifications').select('*').order('created_at', { ascending: false }).limit(50);
+    if (error) throw error;
+    NOTIF = data || [];
+    notifPintarBadge();
+    const p = document.getElementById('notifPanel');
+    if (p && !p.hasAttribute('hidden')) notifRenderPanel();
+  } catch (e) { /* silencioso: la campanita no debe romper nada */ }
+}
+function _notifNoLeidas() { return NOTIF.filter(function (n) { return !n.read_at; }).length; }
+function notifPintarBadge() {
+  const b = document.getElementById('notifBadge'); if (!b) return;
+  const n = _notifNoLeidas();
+  if (n > 0) { b.textContent = n > 9 ? '9+' : String(n); b.style.display = ''; }
+  else b.style.display = 'none';
+}
+function _notifHace(ts) {
+  if (!ts) return '';
+  const d = new Date(ts), seg = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seg < 60) return 'hace un momento';
+  if (seg < 3600) return 'hace ' + Math.floor(seg / 60) + ' min';
+  if (seg < 86400) return 'hace ' + Math.floor(seg / 3600) + ' h';
+  if (seg < 604800) return 'hace ' + Math.floor(seg / 86400) + ' día(s)';
+  return d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function notifRenderPanel() {
+  const cont = document.getElementById('notifList'); if (!cont) return;
+  if (!NOTIF.length) { cont.innerHTML = '<div style="padding:26px 16px;text-align:center;color:var(--ink-faint);font-size:13px;">No tienes avisos.</div>'; return; }
+  cont.innerHTML = NOTIF.map(function (n) {
+    const noLeido = !n.read_at;
+    const irA = n.project_id ? (' onclick="notifAbrir(\'' + n.project_id + '\')" style="cursor:pointer;"') : '';
+    return '<div' + irA + ' style="display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--rule,#2a2a28);' + (noLeido ? 'background:rgba(194,65,12,.06);' : '') + (n.project_id ? 'cursor:pointer;' : '') + '">'
+      + '<div style="flex:0 0 8px;">' + (noLeido ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--accent,#c2410c);margin-top:5px;"></div>' : '') + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      + '<div style="font-weight:600;font-size:13px;color:var(--ink-primary);margin-bottom:2px;">' + escapeHtml(n.titulo || 'Aviso') + '</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-secondary);line-height:1.45;">' + escapeHtml(n.cuerpo || '') + '</div>'
+      + '<div style="font-size:11px;color:var(--ink-faint);margin-top:4px;">' + _notifHace(n.created_at) + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+function bellToggle() {
+  const p = document.getElementById('notifPanel'); if (!p) return;
+  const abrir = p.hasAttribute('hidden');
+  if (abrir) {
+    notifRenderPanel(); p.removeAttribute('hidden');
+    notifCargar();                 // refresca al abrir
+    setTimeout(notifMarcarTodas, 1200);   // tras un momento, marca leídos y limpia el badge
+  } else { p.setAttribute('hidden', ''); }
+}
+async function notifMarcarTodas() {
+  const ids = NOTIF.filter(function (n) { return !n.read_at; }).map(function (n) { return n.id; });
+  if (!ids.length) return;
+  const now = new Date().toISOString();
+  NOTIF.forEach(function (n) { if (!n.read_at) n.read_at = now; });   // optimista
+  notifPintarBadge(); notifRenderPanel();
+  try { if (sb) await sb.rpc('marcar_notificaciones_leidas', { p_ids: ids }); } catch (e) {}
+}
+function notifAbrir(projectId) {
+  const p = document.getElementById('notifPanel'); if (p) p.setAttribute('hidden', '');
+  if (PROJECTS.find(function (x) { return x.id === projectId; })) navigateToProject(projectId);
+}
+function notifInit() {
+  notifCargar();
+  if (_NOTIF_TIMER) clearInterval(_NOTIF_TIMER);
+  _NOTIF_TIMER = setInterval(notifCargar, 60000);   // refresco cada minuto
+  if (!_NOTIF_OUTSIDE) {
+    _NOTIF_OUTSIDE = true;
+    document.addEventListener('click', function (ev) {
+      const p = document.getElementById('notifPanel'); if (!p || p.hasAttribute('hidden')) return;
+      const w = ev.target.closest && ev.target.closest('.notif-wrap');
+      if (!w) p.setAttribute('hidden', '');
+    });
+  }
+}
 /* ════════════════════════════════════════════════════════════════════
    V11.7.1 · PAGOS DE CLIENTE EN SUPABASE (handoff BD resuelto)
    Tabla project_client_payments (SELECT directo, RLS por finanzas_consolidada
