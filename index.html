@@ -21669,7 +21669,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.7.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.8.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21843,6 +21843,51 @@ async function invRechazar(token) {
   }
   _invCerrarOverlay();
   resolverEspacioYArrancar();
+}
+/* ════════════════════════════════════════════════════════════════════
+   V11.8.0 · CTA "¿Tienes una productora?" (land-and-expand)
+   Para usuarios persona natural SIN productora (cero membresías activas).
+   Copy verbatim de Marketing (no editar). "Saber más" → LANDING pública en
+   pestaña nueva (NO a crear cuenta ni a precios). Anti-cortisol: discreto,
+   descartable por sesión, sin pop-up. Medición vía analytics_events.
+   ════════════════════════════════════════════════════════════════════ */
+const TAKEOS_MARCA = 'TakeOS';                          // placeholder configurable (marca en standby)
+const TAKEOS_LANDING_URL = 'https://www.takeos.cl';     // placeholder configurable (dominio en standby)
+const _CTA_PROD_DISMISS_KEY = 'takeos_cta_prod_dismissed';   // por sesión
+async function _ctaProdEvento(nombre, props) {
+  try { if (sb) await sb.from('analytics_events').insert(Object.assign({ event_name: nombre }, props ? { props: props } : {})); } catch (e) {}
+}
+function _ctaProdDescartado() {
+  try { return sessionStorage.getItem(_CTA_PROD_DISMISS_KEY) === '1'; } catch (e) { return false; }
+}
+function ctaProdCerrar() {
+  try { sessionStorage.setItem(_CTA_PROD_DISMISS_KEY, '1'); } catch (e) {}
+  const el = document.getElementById('espCtaProd'); if (el) el.remove();
+}
+function ctaProdSaberMas() {
+  _ctaProdEvento('cta_productora_click');
+  try { window.open(TAKEOS_LANDING_URL, '_blank', 'noopener'); } catch (e) { window.location.href = TAKEOS_LANDING_URL; }
+}
+function _espInyectarCtaProductora() {
+  /* Solo en "Tu espacio" de una cuenta SIN productora. La condición de
+     targeting (cero membresías activas) la decide el llamador. */
+  if (_ctaProdDescartado()) return;
+  try {
+    const host = document.getElementById('espacioUsuario'); if (!host) return;
+    if (host.querySelector('#espCtaProd')) return;
+    const cont = host.querySelector('.esp-wrap') || host.firstElementChild || host;
+    const sec = document.createElement('div');
+    sec.id = 'espCtaProd';
+    sec.style.cssText = 'max-width:680px;margin:18px auto 0;';
+    sec.innerHTML = '<div style="position:relative;border:1px solid var(--rule);border-radius:14px;padding:20px 22px;background:linear-gradient(135deg, var(--bg-card), var(--bg-surface));overflow:hidden;">'
+      + '<button onclick="ctaProdCerrar()" title="Cerrar" aria-label="Cerrar" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--ink-faint);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;">×</button>'
+      + '<div style="font-weight:700;font-size:17px;color:var(--ink-primary);margin-bottom:6px;">¿Tienes una productora?</div>'
+      + '<div style="font-size:13px;color:var(--ink-secondary);line-height:1.55;max-width:52ch;margin-bottom:14px;">Esta es la punta del iceberg. ' + TAKEOS_MARCA + ' ordena tu productora entera: la plata, el equipo y tu paz.</div>'
+      + '<button class="btn btn-primary btn-sm" onclick="ctaProdSaberMas()">Saber más →</button>'
+      + '</div>';
+    cont.appendChild(sec);
+    _ctaProdEvento('cta_productora_impression', { slot: 'dashboard' });
+  } catch (e) {}
 }
 /* V11.4.0 · Herramientas personales en Tu espacio (preparación de frontend;
    el almacenamiento personal de estas herramientas viene en el handoff a BD). */
@@ -22179,7 +22224,7 @@ async function resolverEspacioYArrancar(){
     // V11.3.0 · bandeja interna: invitaciones pendientes del usuario.
     let _invs = [];
     try { const ir = await client.rpc('mis_invitaciones'); if (!ir.error && Array.isArray(ir.data)) _invs = ir.data; } catch (e) {}
-    if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); _espInyectarHerramientas(); return; }  // cuenta sin productora aún
+    if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); _espInyectarHerramientas(); _espInyectarCtaProductora(); return; }  // cuenta sin productora aún (land-and-expand)
     if (rows.length === 1 && !forzar && _invs.length === 0) { _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // una sola pertenencia: esa es la org activa
     renderEspacioUsuario(_espConstruir(rows, email));
     _espInyectarInvitaciones(_invs);
@@ -23237,10 +23282,68 @@ function openGlobalCFO() {
   document.getElementById('breadcrumb').innerHTML = `<span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-current">Finanzas · CFO</span>`;
   renderModule('cfo');
   window.scrollTo(0, 0);
+  /* V11.7.1 · precarga los pagos de cliente desde la base y re-renderiza el
+     Bird View cuando llegan (evita parpadeo: si ya estaban en memoria, no hace nada). */
+  if (sb && PROJECTS_SOURCE === 'supabase') {
+    dalCargarPagosClienteTodos().then(function () { if (STATE.currentModule === 'cfo') { try { renderCFO(); } catch (e) {} } });
+  }
 }
 /* V11.7.0 · Chipax solo se muestra si la productora declara que lo usa
    (config de empresa → Enlaces e integraciones). */
 function _usaChipax() { try { return !!(EMPRESA_PERFIL && EMPRESA_PERFIL.usaChipax); } catch (e) { return false; } }
+/* ════════════════════════════════════════════════════════════════════
+   V11.7.1 · PAGOS DE CLIENTE EN SUPABASE (handoff BD resuelto)
+   Tabla project_client_payments (SELECT directo, RLS por finanzas_consolidada
+   E|L + auth_ve_proyecto) y RPC guardar_pagos_cliente(project_id, pagos[])
+   con contrato de estado completo (mismo patrón que guardar_cargos).
+   El Bird View es síncrono y lee de p.data.finanzas.pagosCliente en memoria:
+   precargamos esa memoria desde la base antes de pintar el CFO, y cada
+   registro de pago escribe por el RPC y recarga ese proyecto.
+   ════════════════════════════════════════════════════════════════════ */
+const _PAGOS_CLIENTE_BACKEND = true;
+async function dalCargarPagosCliente(project) {
+  if (!project) return;
+  if (!sb || PROJECTS_SOURCE !== 'supabase') { if (!project.data.finanzas) project.data.finanzas = {}; if (!Array.isArray(project.data.finanzas.pagosCliente)) project.data.finanzas.pagosCliente = []; return; }
+  try {
+    const r = await sb.from('project_client_payments')
+      .select('monto, nota, fecha, posicion')
+      .eq('project_id', project.id).order('posicion', { ascending: true });
+    if (r.error) throw r.error;
+    if (!project.data.finanzas) project.data.finanzas = {};
+    project.data.finanzas.pagosCliente = (r.data || []).map(function (x) {
+      return { monto: Number(x.monto) || 0, nota: x.nota || '', fecha: x.fecha || '' };
+    });
+    project.data.finanzas._pagosOK = true;
+  } catch (e) {
+    console.warn('[dal] cargar pagos cliente', e);
+    if (!project.data.finanzas) project.data.finanzas = {};
+    if (!Array.isArray(project.data.finanzas.pagosCliente)) project.data.finanzas.pagosCliente = [];
+  }
+}
+async function dalCargarPagosClienteTodos() {
+  /* precarga los pagos de todos los proyectos activos (los que muestra el
+     Bird View) antes de renderizar el CFO. */
+  if (!sb || PROJECTS_SOURCE !== 'supabase') return;
+  const activos = PROJECTS.filter(function (p) { return !['cerrado', 'rechazado'].includes(p.state); });
+  for (const p of activos) {
+    if (!p.data.finanzas || !p.data.finanzas._pagosOK) { try { await dalCargarPagosCliente(p); } catch (e) {} }
+  }
+}
+async function dalGuardarPagosCliente(project) {
+  if (!sb || PROJECTS_SOURCE !== 'supabase' || !project) return false;
+  try {
+    const payload = (project.data.finanzas.pagosCliente || []).map(function (x) {
+      return { monto: Number(x.monto) || 0, nota: x.nota || '', fecha: x.fecha || new Date().toISOString().slice(0, 10) };
+    });
+    const { error } = await sb.rpc('guardar_pagos_cliente', { p_project_id: project.id, p_pagos: payload });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('[dal] guardar pagos cliente', e);
+    try { showToast({ kind: 'error', title: 'No se pudo guardar el pago', body: (e && e.message) ? String(e.message).replace(/^[a-z_]+:\s*/i, '') : 'Reintenta.', duration: 8000 }); } catch (x) {}
+    return false;
+  }
+}
 /* ════════════════════════════════════════════════════════════════════
    V11.7.0 · BIRD VIEW FINANCIERO DE LA PRODUCTORA
    Vista macro: proyectos en curso, cuánto facturarán (valor a cliente),
@@ -23302,15 +23405,24 @@ function cfoRegistrarPago(projId) {
     + '<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cfoGuardarPago(\'' + projId + '\')">Registrar</button></div>'
     + '</div></div>';
 }
-function cfoGuardarPago(projId) {
+async function cfoGuardarPago(projId) {
   const p = PROJECTS.find(x => x.id === projId); if (!p) return;
   const monto = Number((document.getElementById('cfoPagoMonto') || {}).value || 0);
   if (!monto || monto <= 0) { showToast({ kind: 'warning', title: 'Monto inválido', body: 'Ingresa un monto mayor a 0.' }); return; }
   const nota = String((document.getElementById('cfoPagoNota') || {}).value || '').trim();
   if (!p.data.finanzas) p.data.finanzas = {};
   if (!Array.isArray(p.data.finanzas.pagosCliente)) p.data.finanzas.pagosCliente = [];
-  p.data.finanzas.pagosCliente.push({ monto: monto, nota: nota, fecha: new Date().toISOString().slice(0, 10) });
-  markDirty(); try { dalTouchProyecto(p); } catch (e) {}
+  /* V11.7.1 · optimista en memoria + persistencia por RPC (estado completo). */
+  const nuevo = { monto: monto, nota: nota, fecha: new Date().toISOString().slice(0, 10) };
+  p.data.finanzas.pagosCliente.push(nuevo);
+  const btn = document.querySelector('#modalRoot .btn-primary'); if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+  const ok = await dalGuardarPagosCliente(p);
+  if (!ok) {
+    // revertir el optimismo si la base lo rechazó
+    const idx = p.data.finanzas.pagosCliente.indexOf(nuevo); if (idx >= 0) p.data.finanzas.pagosCliente.splice(idx, 1);
+    if (btn) { btn.disabled = false; btn.textContent = 'Registrar'; }
+    return;
+  }
   closeModal(); renderCFO();
   showToast({ kind: 'success', title: 'Pago registrado', body: fmtMoney(monto) + ' en ' + goProjName(p) + '.' });
 }
