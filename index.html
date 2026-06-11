@@ -4772,7 +4772,10 @@ const LOC_ESTADOS = { candidata: 'Candidata', confirmada: 'Confirmada', descarta
 const REGIONES_CHILE = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "Libertador General Bernardo O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén del General Carlos Ibáñez del Campo', 'Magallanes y de la Antártica Chilena'];
 function regionSelectHTML(current, opts) {
   opts = opts || {};
-  const cur = current || '';
+  /* V11.8.1 · si `current` matchea una región chilena ignorando may/acentos,
+     usamos la forma canónica para que el <option> quede seleccionado. */
+  let cur = current || '';
+  try { const _c = (typeof _regionCanonica === 'function') ? _regionCanonica(cur) : null; if (_c) cur = _c; } catch (e) {}
   const inList = REGIONES_CHILE.indexOf(cur) !== -1;
   let o = '<option value=""' + (cur === '' ? ' selected' : '') + '>— Sin especificar</option>';
   if (cur && !inList) o += '<option value="' + escapeHtml(cur) + '" selected>' + escapeHtml(cur) + ' (texto)</option>';
@@ -17585,6 +17588,7 @@ async function _empCargarInvitaciones() {
     box.innerHTML = '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">Invitaciones pendientes</div>'
       + invs.map(function (i) {
           var meta = (i.perfil_nombre || PERFIL_NOMBRE_POR_CODIGO[i.perfil_codigo] || '');
+          if (i.persona_nombre || i.persona) meta = (i.persona_nombre || i.persona) + ' · ' + meta;
           if (i.cargo_nombre) meta += ' · ' + i.cargo_nombre;
           if (i.proyecto_nombre) meta += ' · ' + i.proyecto_nombre;
           meta += ' · ' + (i.tipo || '');
@@ -20421,7 +20425,14 @@ function aplicarMarcaOrg() {
   try { document.title = nom ? ('TakeOS · ' + nom) : 'TakeOS'; } catch (e) {}
   try { var bs = document.getElementById('brandSub'); if (bs) bs.textContent = nom; } catch (e) {}
   try { var bl = document.getElementById('brandLogo'); if (bl) bl.textContent = (nom ? nom.charAt(0).toUpperCase() : 'T'); } catch (e) {}
-  try { var cs = document.getElementById('crSubtitle'); if (cs) cs.textContent = nom ? ('Vista global de todos los proyectos de ' + nom + '.') : 'Vista global de todos tus proyectos.'; } catch (e) {}
+  try {
+    var cs = document.getElementById('crSubtitle');
+    if (cs) {
+      var _esExt = (typeof TAKEOS_PERFIL !== 'undefined' && TAKEOS_PERFIL && TAKEOS_PERFIL.tipo === 'externo');
+      if (_esExt) cs.textContent = 'Los proyectos a los que te han invitado a colaborar.';
+      else cs.textContent = nom ? ('Vista global de todos los proyectos de ' + nom + '.') : 'Vista global de todos tus proyectos.';
+    }
+  } catch (e) {}
 }
 function aplicarUsuario() {
   var nom = String(USER_NOMBRE || '').trim();
@@ -21669,7 +21680,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.8.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.8.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -21795,9 +21806,9 @@ async function abrirInvitacionRecibida(token) {
   document.body.appendChild(ov);
 }
 function _invCerrarOverlay() { const ov = document.getElementById('invitacionRecibida'); if (ov) ov.remove(); }
-function invCompletarPerfil(token) {
+function invCompletarPerfil(token, faltaBanca) {
   _invCerrarOverlay();
-  abrirPerfilUsuario(false, null);
+  abrirPerfilUsuario(false, null, !!faltaBanca);
   /* al cerrar el perfil, reabrimos la invitación con el estado fresco */
   const watcher = setInterval(function () {
     if (!document.getElementById('perfilUsuario')) { clearInterval(watcher); abrirInvitacionRecibida(token); }
@@ -21814,7 +21825,7 @@ async function invAceptar(token, orgId, perfilCompleto) {
     const cta = await sb.from('user_bank_accounts').select('id').limit(1);
     if (!cta.error && (!cta.data || !cta.data.length)) {
       showToast({ kind: 'warning', title: 'Falta tu cuenta bancaria', body: 'Para incorporarte a una productora necesitas datos bancarios en tu perfil (es como te pagan). Complétalos y vuelve a aceptar.', duration: 9000 });
-      invCompletarPerfil(token);
+      invCompletarPerfil(token, true);
       return;
     }
   } catch (e) { /* si la verificación falla, no bloquea */ }
@@ -22377,8 +22388,23 @@ function _perfilTipoCuentaOptions(cur) {
    de extranjería: sin columna es_extranjero en la base (handoff a BD), se
    infiere de una región guardada que no es chilena. El país del extranjero
    se guarda en la columna `region` (text) hasta que exista `pais`. */
+function _regionCanonica(valor) {
+  /* Devuelve la región canónica de REGIONES_CHILE que coincide con `valor`
+     ignorando mayúsculas/acentos/espacios. Esto sana el title-case del
+     normalizador de BD ("Metropolitana De Santiago" → "Metropolitana de
+     Santiago"). Si no hay match, devuelve null (es región extranjera/libre). */
+  try {
+    if (!valor || typeof REGIONES_CHILE === 'undefined') return null;
+    var norm = function (s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); };
+    var objetivo = norm(valor);
+    for (var i = 0; i < REGIONES_CHILE.length; i++) { if (norm(REGIONES_CHILE[i]) === objetivo) return REGIONES_CHILE[i]; }
+    return null;
+  } catch (e) { return null; }
+}
 function _perfilEsExtranjero(prof) {
-  try { return !!(prof && prof.region && typeof REGIONES_CHILE !== 'undefined' && REGIONES_CHILE.indexOf(prof.region) === -1); } catch (e) { return false; }
+  /* Es extranjero solo si tiene región Y esa región NO matchea ninguna chilena
+     (case/acentos-insensitive). El title-case de la BD ya no lo confunde. */
+  try { return !!(prof && prof.region && _regionCanonica(prof.region) === null); } catch (e) { return false; }
 }
 function _rutValido(s) {
   const x = String(s || '').toUpperCase().replace(/[^0-9K]/g, '');
@@ -22391,7 +22417,7 @@ function _rutValido(s) {
   const dvCalc = res === 11 ? '0' : (res === 10 ? 'K' : String(res));
   return dv === dvCalc;
 }
-async function abrirPerfilUsuario(modoOnboarding, onDone) {
+async function abrirPerfilUsuario(modoOnboarding, onDone, faltaBanca) {
   modoOnboarding = !!modoOnboarding;
   try {
     var client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
@@ -22409,7 +22435,7 @@ async function abrirPerfilUsuario(modoOnboarding, onDone) {
         }
       } catch (e) { /* sin datos: form vacío */ }
     }
-    _PERFIL_CTX = { email: email, cuentaId: (cuenta && cuenta.id) || null, onDone: onDone || null, onboarding: modoOnboarding };
+    _PERFIL_CTX = { email: email, cuentaId: (cuenta && cuenta.id) || null, onDone: onDone || null, onboarding: modoOnboarding, faltaBanca: !!faltaBanca };
     _perfilRender(prof, cuenta, email, modoOnboarding);
   } catch (e) {
     /* V11.0.0: reportar siempre el error real antes de continuar; un fallo
@@ -22424,6 +22450,12 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
     prof = prof || {}; cuenta = cuenta || {};
     var v = function (x) { return escapeHtml(x == null ? '' : String(x)); };
     var ext = !!cuenta.es_extranjera;
+    var faltaBanca = !!(_PERFIL_CTX && _PERFIL_CTX.faltaBanca);
+    /* V11.8.1 · sana el title-case del normalizador: si la región guardada
+       matchea una chilena (ignorando may/acentos), la reescribimos a su forma
+       canónica para que el dropdown la re-seleccione y no se active el modo
+       extranjero por una diferencia de capitalización. */
+    try { var _rc = _regionCanonica(prof.region); if (_rc) prof.region = _rc; } catch (e) {}
     var EXTRANJERO = _perfilEsExtranjero(prof);
     var bancoNombre = ext ? '' : (typeof _dalBancoNombre === 'function' ? _dalBancoNombre(cuenta.bank_codigo_sbif) : '');
     var bancoSel = (typeof bancoSelectHTML === 'function')
@@ -22479,7 +22511,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <div class="pf-grid">
             <div class="pf-f"><label>Nombre <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
             <div class="pf-f"><label>Apellidos <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
-            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="" disabled placeholder="Ej: Director de Fotografía, Productora, Gaffer…" title="Se habilita con la próxima extensión de la base de datos."><span style="font-size:11px;color:var(--ink-faint);">Se habilita pronto: será tu carta de presentación dentro de TakeOS.</span></div>
+            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="${v(prof.rol_publico)}" placeholder="Ej: Director de Fotografía, Productora, Gaffer…"><span style="font-size:11px;color:var(--ink-faint);">Será tu carta de presentación pública dentro de TakeOS (solo tu nombre y rol son visibles para otras productoras).</span></div>
           </div>
         </div>
 
@@ -22504,8 +22536,9 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           </div>
         </div>
 
-        <div class="pf-sec">
+        <div class="pf-sec" id="pf_secBanca">
           <p class="pf-sec-t">Cuenta bancaria</p>
+          ${faltaBanca ? '<div id="pf_bancaAviso" style="border:1px solid var(--warning);border-radius:8px;padding:11px 13px;margin-bottom:12px;background:rgba(234,179,8,.08);font-size:12.5px;color:var(--ink-secondary);line-height:1.55;"><strong>Para incorporarte a la productora, completa tus datos bancarios.</strong><br>Es como la productora te paga. Al crear tu cuenta no es obligatorio, pero sí para aceptar una invitación.</div>' : ''}
           <label class="pf-check"><input type="checkbox" id="pf_ext" ${ext ? 'checked' : ''}> Cuenta en el extranjero</label>
           <div id="pf_bloqueCL" style="${ext ? 'display:none;' : ''}">
             <div class="pf-grid">
@@ -22527,6 +22560,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       </div></div>`;
     document.body.appendChild(ov);
     _perfilBind();
+    if (faltaBanca) { try { setTimeout(function () { var s = document.getElementById('pf_secBanca'); if (s && s.scrollIntoView) s.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 250); } catch (e) {} }
   } catch (e) {
     /* V11.0.0: un fallo de render ya NO se traga el formulario en silencio.
        Se reporta el error real y se intenta el formulario de respaldo (DOM
@@ -22731,7 +22765,7 @@ async function _perfilGuardar() {
       user_id: uid, nombre: g('pf_nombre'), apellido: g('pf_apellido'), rut: g('pf_rut'),
       email: g('pf_email') || (_PERFIL_CTX && _PERFIL_CTX.email) || '', telefono: g('pf_telefono'),
       direccion: g('pf_direccion'), direccion_linea2: g('pf_dir2'), comuna: g('pf_comuna'),
-      ciudad: g('pf_ciudad'), region: g('pf_region')
+      ciudad: g('pf_ciudad'), region: g('pf_region'), rol_publico: g('pf_rol')
     };
     /* V11.2.0 · semáforo del perfil (handoff BD §A.3): completado_at se marca
        solo cuando la identidad mínima está completa (nombre + apellido + RUT).
