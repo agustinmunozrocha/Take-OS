@@ -4469,7 +4469,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span id="notifBadge" style="display:none;position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:var(--accent,#c2410c);color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;box-sizing:border-box;">0</span>
         </button>
-        <div id="notifPanel" hidden style="position:absolute;right:0;top:calc(100% + 8px);width:344px;max-height:460px;background:var(--bg-card,#1b1c20);border:1px solid var(--rule,#2a2a28);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.4);z-index:1200;overflow:hidden;display:flex;flex-direction:column;">
+        <div id="notifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:344px;max-height:460px;background:var(--bg-card,#1b1c20);border:1px solid var(--rule,#2a2a28);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.4);z-index:1200;overflow:hidden;display:none;flex-direction:column;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-bottom:1px solid var(--rule,#2a2a28);">
             <span style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">Avisos</span>
             <button onclick="notifMarcarTodas()" style="background:none;border:none;color:var(--accent,#c2410c);font-size:11.5px;cursor:pointer;font-family:inherit;">Marcar todas como leídas</button>
@@ -21793,7 +21793,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.9.4';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.9.6';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -22233,8 +22233,18 @@ async function cloudGate(onUnlock) {
         eBtn.disabled = false; eBtn.textContent = 'Entrar';
         return;
       }
-      /* sesión lista: sello TTL como en el resto del login y arranque. */
-      try { var uNow = await client.auth.getUser(); var uid2 = uNow && uNow.data && uNow.data.user ? uNow.data.user.id : ''; localStorage.setItem('takeos_auth_at', JSON.stringify({ uid: uid2, at: Date.now() })); } catch (e) {}
+      /* V11.9.6 · BUG-7 · dos arreglos:
+         1) Sello en el MISMO formato que Google: timestamp simple en
+            'takeos_auth_at' + uid en su propia clave 'takeos_auth_uid'. Antes se
+            guardaba como un objeto JSON, y el arranque lo lee con parseInt (=NaN)
+            y busca 'takeos_auth_uid' (que no existía) → descartaba la sesión al
+            recargar.
+         2) Remover el overlay del login: en el camino contraseña el overlay
+            #cloudGate ya está en pantalla, y nadie lo quitaba (con Google se va
+            porque la página recarga). Por eso el botón quedaba pegado en
+            "Entrando…" debajo de la cortina de carga. */
+      try { const uNow = await client.auth.getUser(); const uid2 = (uNow && uNow.data && uNow.data.user) ? uNow.data.user.id : ''; localStorage.setItem('takeos_auth_at', String(Date.now())); localStorage.setItem('takeos_auth_uid', uid2); } catch (e) {}
+      try { const g = document.getElementById('cloudGate'); if (g) g.remove(); } catch (e) {}
       _bootVeil('Cargando tus proyectos…');
       onUnlock();
     } catch (e) {
@@ -23499,7 +23509,7 @@ async function notifCargar() {
     NOTIF = data || [];
     notifPintarBadge();
     const p = document.getElementById('notifPanel');
-    if (p && !p.hasAttribute('hidden')) notifRenderPanel();
+    if (p && p.style.display !== 'none') notifRenderPanel();
   } catch (e) { /* silencioso: la campanita no debe romper nada */ }
 }
 function _notifNoLeidas() { return NOTIF.filter(function (n) { return !n.read_at; }).length; }
@@ -23535,12 +23545,12 @@ function notifRenderPanel() {
 }
 function bellToggle() {
   const p = document.getElementById('notifPanel'); if (!p) return;
-  const abrir = p.hasAttribute('hidden');
+  const abrir = (p.style.display === 'none' || !p.style.display);
   if (abrir) {
-    notifRenderPanel(); p.removeAttribute('hidden');
+    notifRenderPanel(); p.style.display = 'flex';
     notifCargar();                 // refresca al abrir
     setTimeout(notifMarcarTodas, 1200);   // tras un momento, marca leídos y limpia el badge
-  } else { p.setAttribute('hidden', ''); }
+  } else { p.style.display = 'none'; }
 }
 async function notifMarcarTodas() {
   const ids = NOTIF.filter(function (n) { return !n.read_at; }).map(function (n) { return n.id; });
@@ -23551,7 +23561,7 @@ async function notifMarcarTodas() {
   try { if (sb) await sb.rpc('marcar_notificaciones_leidas', { p_ids: ids }); } catch (e) {}
 }
 function notifAbrir(projectId) {
-  const p = document.getElementById('notifPanel'); if (p) p.setAttribute('hidden', '');
+  const p = document.getElementById('notifPanel'); if (p) p.style.display = 'none';
   if (PROJECTS.find(function (x) { return x.id === projectId; })) navigateToProject(projectId);
 }
 function notifInit() {
@@ -23561,9 +23571,9 @@ function notifInit() {
   if (!_NOTIF_OUTSIDE) {
     _NOTIF_OUTSIDE = true;
     document.addEventListener('click', function (ev) {
-      const p = document.getElementById('notifPanel'); if (!p || p.hasAttribute('hidden')) return;
+      const p = document.getElementById('notifPanel'); if (!p || p.style.display === 'none') return;
       const w = ev.target.closest && ev.target.closest('.notif-wrap');
-      if (!w) p.setAttribute('hidden', '');
+      if (!w) p.style.display = 'none';
     });
   }
 }
