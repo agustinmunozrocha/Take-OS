@@ -21680,7 +21680,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.8.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.8.2';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -22055,6 +22055,14 @@ async function cloudGate(onUnlock) {
         </svg>
         <span id="cloudGateGoogleLbl">Iniciar sesión con Google</span>
       </button>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;"><div style="flex:1;height:1px;background:#2a2c33;"></div><span style="color:#6a6d75;font-size:11px;">o con tu correo</span><div style="flex:1;height:1px;background:#2a2c33;"></div></div>
+      <input id="cgEmail" type="email" placeholder="tu@correo.cl" autocomplete="email"
+        style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #2a2c33;border-radius:8px;background:#16171c;color:#fff;font-size:14px;margin-bottom:9px;">
+      <input id="cgPass" type="password" placeholder="Contraseña" autocomplete="current-password"
+        style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #2a2c33;border-radius:8px;background:#16171c;color:#fff;font-size:14px;margin-bottom:11px;"
+        onkeydown="if(event.key==='Enter'){var b=document.getElementById('cgEntrar'); if(b) b.click();}">
+      <button id="cgEntrar"
+        style="width:100%;box-sizing:border-box;padding:12px;border:none;border-radius:8px;background:var(--accent,#c2410c);color:#fff;font-weight:600;font-size:14px;cursor:pointer;">Entrar</button>
       <div id="cloudGateErr" style="color:#e0533d;font-size:12px;margin-top:12px;min-height:14px;"></div>
       <div style="color:#4a4d55;font-size:11px;margin-top:16px;letter-spacing:0.04em;">${TAKEOS_VERSION}</div>
     </div>`;
@@ -22091,6 +22099,39 @@ async function cloudGate(onUnlock) {
     }
   };
   gBtn.onclick = signInGoogle;
+
+  /* V11.8.2 · login con email + contraseña. El proveedor ya está activo en
+     Supabase. Mismo destino que Google: onUnlock() arranca la app. */
+  const eBtn = ov.querySelector('#cgEntrar');
+  const emailInp = ov.querySelector('#cgEmail');
+  const passInp = ov.querySelector('#cgPass');
+  const signInPass = async () => {
+    err.textContent = '';
+    const correo = (emailInp.value || '').trim();
+    const clave = passInp.value || '';
+    if (!correo || !clave) { err.textContent = 'Escribe tu correo y contraseña.'; return; }
+    eBtn.disabled = true; eBtn.textContent = 'Entrando…';
+    try {
+      const { error } = await client.auth.signInWithPassword({ email: correo, password: clave });
+      if (error) {
+        const m = String(error.message || '');
+        if (/email not confirmed/i.test(m)) err.textContent = 'Revisa tu correo para confirmar tu cuenta antes de entrar.';
+        else err.textContent = 'Correo o contraseña incorrectos.';
+        eBtn.disabled = false; eBtn.textContent = 'Entrar';
+        return;
+      }
+      /* sesión lista: sello TTL como en el resto del login y arranque. */
+      try { var uNow = await client.auth.getUser(); var uid2 = uNow && uNow.data && uNow.data.user ? uNow.data.user.id : ''; localStorage.setItem('takeos_auth_at', JSON.stringify({ uid: uid2, at: Date.now() })); } catch (e) {}
+      _bootVeil('Cargando tus proyectos…');
+      onUnlock();
+    } catch (e) {
+      err.textContent = 'Error de conexión. Reintenta.';
+      eBtn.disabled = false; eBtn.textContent = 'Entrar';
+    }
+  };
+  eBtn.onclick = signInPass;
+  /* Preparado para el paso siguiente (SaaS): registro (signUp) y
+     "olvidé mi contraseña" (resetPasswordForEmail) se sumarán aquí. */
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -22522,6 +22563,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
             <div class="pf-f" id="pf_docWrap" style="${EXTRANJERO ? '' : 'display:none;'}"><label>Documento de identidad / pasaporte</label><input class="input" id="pf_doc" value="" disabled placeholder="Pasaporte u otro documento"><span style="font-size:11px;color:var(--ink-faint);">Se habilita con la próxima extensión de la base.</span></div>
             <div class="pf-f"><label>Correo <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
             <div class="pf-f"><label>Celular <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
+            <div class="pf-f"><label>Fecha de nacimiento</label><input class="input" id="pf_fnac" type="date" value="${v(prof.fecha_nacimiento)}"></div>
           </div>
         </div>
 
@@ -22693,6 +22735,7 @@ function _perfilRenderFallback(prof, cuenta, email, modoOnboarding) {
   campo('pf_comuna', 'Comuna', prof.comuna);
   campo('pf_ciudad', 'Ciudad', prof.ciudad);
   campo('pf_region', 'Región', prof.region);
+  campo('pf_fnac', 'Fecha de nacimiento', prof.fecha_nacimiento, 'date');
 
   var chkW = document.createElement('label');
   chkW.style.display = 'flex'; chkW.style.alignItems = 'center'; chkW.style.gap = '8px';
@@ -22765,7 +22808,7 @@ async function _perfilGuardar() {
       user_id: uid, nombre: g('pf_nombre'), apellido: g('pf_apellido'), rut: g('pf_rut'),
       email: g('pf_email') || (_PERFIL_CTX && _PERFIL_CTX.email) || '', telefono: g('pf_telefono'),
       direccion: g('pf_direccion'), direccion_linea2: g('pf_dir2'), comuna: g('pf_comuna'),
-      ciudad: g('pf_ciudad'), region: g('pf_region'), rol_publico: g('pf_rol')
+      ciudad: g('pf_ciudad'), region: g('pf_region'), rol_publico: g('pf_rol'), fecha_nacimiento: g('pf_fnac') || null
     };
     /* V11.2.0 · semáforo del perfil (handoff BD §A.3): completado_at se marca
        solo cuando la identidad mínima está completa (nombre + apellido + RUT).
