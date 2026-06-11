@@ -21317,21 +21317,28 @@ function _dalProyectoPartes(p) {
     const c = BD_CONTACTOS[a.contact_id];
     return c ? c.nombre : '';
   }
-  let cliente = p.cliente_texto || '';
-  if (!cliente && p.cliente_empresa_id && BD_EMPRESAS_BYID[p.cliente_empresa_id]) cliente = BD_EMPRESAS_BYID[p.cliente_empresa_id].nombreFantasia || '';
-  if (!cliente && p.cliente_contacto_id && BD_CONTACTOS[p.cliente_contacto_id]) cliente = BD_CONTACTOS[p.cliente_contacto_id].nombre || '';
-  let agencia = p.agencia_texto || '';
-  if (!agencia && p.agencia_empresa_id && BD_EMPRESAS_BYID[p.agencia_empresa_id]) agencia = BD_EMPRESAS_BYID[p.agencia_empresa_id].nombreFantasia || '';
+  /* V11.9.1 · el detalle comercial vive en project_commercial (RLS aparte).
+     Viene como objeto 1:1, o null/array vacío para perfiles sin info_proyecto
+     (Creativo/Coordinación/Invitado) → en ese caso los campos quedan vacíos, que
+     es el comportamiento correcto: ellos ven el proyecto pero no su comercial. */
+  const _pcRaw = p.project_commercial;
+  const com = Array.isArray(_pcRaw) ? (_pcRaw[0] || {}) : (_pcRaw || {});
+
+  let cliente = com.cliente_texto || '';
+  if (!cliente && com.cliente_empresa_id && BD_EMPRESAS_BYID[com.cliente_empresa_id]) cliente = BD_EMPRESAS_BYID[com.cliente_empresa_id].nombreFantasia || '';
+  if (!cliente && com.cliente_contacto_id && BD_CONTACTOS[com.cliente_contacto_id]) cliente = BD_CONTACTOS[com.cliente_contacto_id].nombre || '';
+  let agencia = com.agencia_texto || '';
+  if (!agencia && com.agencia_empresa_id && BD_EMPRESAS_BYID[com.agencia_empresa_id]) agencia = BD_EMPRESAS_BYID[com.agencia_empresa_id].nombreFantasia || '';
 
   const info = {
-    cliente: cliente, clienteEmpresaId: p.cliente_empresa_id || '', agencia: agencia,
+    cliente: cliente, clienteEmpresaId: com.cliente_empresa_id || '', agencia: agencia,
     nombreProyecto: p.nombre_proyecto || '', servicio: p.servicio || 'Producción', productora: p.productora || orgNombre(),
-    derechos: { tiempo: p.derechos_tiempo || '', plataformas: p.derechos_plataformas || '', territorio: p.derechos_territorio || '' },
-    contactoCliente: p.contacto_cliente || '', mailContactoCliente: p.mail_contacto_cliente || '', telefonoContactoCliente: p.telefono_contacto_cliente || '',
-    contactoAgencia: p.contacto_agencia || '', mailContactoAgencia: p.mail_contacto_agencia || '', telefonoContactoAgencia: p.telefono_contacto_agencia || '',
+    derechos: { tiempo: com.derechos_tiempo || '', plataformas: com.derechos_plataformas || '', territorio: com.derechos_territorio || '' },
+    contactoCliente: com.contacto_cliente || '', mailContactoCliente: com.mail_contacto_cliente || '', telefonoContactoCliente: com.telefono_contacto_cliente || '',
+    contactoAgencia: com.contacto_agencia || '', mailContactoAgencia: com.mail_contacto_agencia || '', telefonoContactoAgencia: com.telefono_contacto_agencia || '',
     productorEjecutivo: porFuncion('Productor Ejecutivo'), director: porFuncion('Director'), jefeProduccion: porFuncion('Jefe de Producción'),
-    condicionPago: p.condicion_pago || '', fechaCotizacion: p.fecha_cotizacion || '', fechaAprobacion: p.fecha_aprobacion || '',
-    fechaEntregaFinal: p.fecha_entrega_final || '', fechaPago: p.fecha_pago || ''
+    condicionPago: com.condicion_pago || '', fechaCotizacion: com.fecha_cotizacion || '', fechaAprobacion: com.fecha_aprobacion || '',
+    fechaEntregaFinal: p.fecha_entrega_final || '', fechaPago: com.fecha_pago || ''
   };
 
   const fin = p.project_financials || {};
@@ -21413,7 +21420,8 @@ function _dalFusionarProyecto(target, partes) {
 
 async function dalLoadProyectos(soloBorrados) {
   if (!sb) return null;
-  const sel = 'id,nombre_proyecto,categoria,es_remunerado,cliente_empresa_id,cliente_contacto_id,agencia_empresa_id,cliente_texto,agencia_texto,servicio,productora,derechos_tiempo,derechos_plataformas,derechos_territorio,contacto_cliente,mail_contacto_cliente,telefono_contacto_cliente,contacto_agencia,mail_contacto_agencia,telefono_contacto_agencia,condicion_pago,fecha_cotizacion,fecha_aprobacion,fecha_entrega_final,fecha_pago,estado,aprobado_at,cerrado_at,deleted_at,'
+  const sel = 'id,nombre_proyecto,categoria,es_remunerado,servicio,productora,fecha_entrega_final,estado,aprobado_at,cerrado_at,deleted_at,'
+    + 'project_commercial(cliente_empresa_id,cliente_contacto_id,agencia_empresa_id,cliente_texto,agencia_texto,derechos_tiempo,derechos_plataformas,derechos_territorio,contacto_cliente,mail_contacto_cliente,telefono_contacto_cliente,contacto_agencia,mail_contacto_agencia,telefono_contacto_agencia,condicion_pago,fecha_cotizacion,fecha_aprobacion,fecha_pago),'
     + 'project_assignments(contact_id,function_id,project_functions(nombre)),'
     + 'project_financials(presupuesto_cliente,gastos_admin_pct,he_recargo_default,frozen),'
     + 'project_commissions(label,mode,value,posicion),'
@@ -21745,7 +21753,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.9.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.9.1';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
