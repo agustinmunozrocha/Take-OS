@@ -9918,15 +9918,26 @@ function presupHistSummaryHTML(fin) {
 function presupHistDetailHTML(snap) {
   const e = escapeHtml;
   const numTd = 'style="text-align:right;font-variant-numeric:tabular-nums;"';
-  const fmtRow = (label, valor, cant, unidad, dte) => {
-    const sub = (Number(valor) || 0) * (Number(cant) || 0);
-    return `<tr><td>${e(label || '—')}</td><td ${numTd}>${fmtMoney(Number(valor) || 0)}</td><td ${numTd}>${cant != null ? e(String(cant)) : '1'}${unidad ? (' ' + e(unidad)) : ''}</td><td>${e(dte || '—')}</td><td ${numTd}>${fmtMoney(sub)}</td></tr>`;
+  /* V11.10.0 · BUG-8: la columna por línea ahora aplica el tratamiento del DTE
+     cotizado (boleta infla por retención; factura no, porque el IVA es crédito)
+     usando la MISMA lógica que el presupuesto en vivo (calcCostoEmpresa). Antes
+     mostraba valor×cantidad y lo llamaba "Subtotal", ignorando el impuesto del
+     DTE en las versiones históricas. Ahora se llama "Costo Cotizado" y refleja
+     el costo real para la empresa, consistente con el resto del sistema. */
+  const fmtRow = (label, valor, cant, unidad, dte, sectionKey) => {
+    const cc = calcCostoEmpresa(Number(valor) || 0, Number(cant) || 0, dte, sectionKey);
+    const costoCel = cc.error
+      ? `<span style="color:var(--ink-faint);">${e(cc.error)}</span>`
+      : fmtMoney(Math.round(cc.value || 0));
+    return `<tr><td>${e(label || '—')}</td><td ${numTd}>${fmtMoney(Number(valor) || 0)}</td><td ${numTd}>${cant != null ? e(String(cant)) : '1'}${unidad ? (' ' + e(unidad)) : ''}</td><td>${e(dte || '—')}</td><td ${numTd}>${costoCel}</td></tr>`;
   };
-  const sect = (titulo, rows) => rows.length ? `<div class="cot-card" style="margin-bottom:12px;"><div class="cot-card-title" style="margin:0 0 8px;">${e(titulo)}</div><div class="cotcmp-wrap"><table class="cotcmp-table"><thead><tr><th>Ítem</th><th ${numTd}>Valor</th><th ${numTd}>Cant.</th><th>DTE</th><th ${numTd}>Subtotal</th></tr></thead><tbody>${rows.join('')}</tbody></table></div></div>` : '';
+  const sect = (titulo, rows) => rows.length ? `<div class="cot-card" style="margin-bottom:12px;"><div class="cot-card-title" style="margin:0 0 8px;">${e(titulo)}</div><div class="cotcmp-wrap"><table class="cotcmp-table"><thead><tr><th>Ítem</th><th ${numTd}>Valor</th><th ${numTd}>Cant.</th><th>DTE</th><th ${numTd}>Costo Cotizado</th></tr></thead><tbody>${rows.join('')}</tbody></table></div></div>` : '';
   const serv = snap.servicios || {}; const serviciosRows = [];
-  Object.keys(serv).forEach(dept => { (serv[dept] || []).forEach(r => serviciosRows.push(fmtRow(r.rol || dept, r.valor, r.cantidad, r.unidad, r.dte))); });
-  const arr = (a) => (a || []).map(r => fmtRow(r.item, r.valor, r.cantidad, r.unidad, r.dte));
-  const out = sect('Servicios — Personal contratado', serviciosRows) + sect('Gastos de producción', arr(snap.gastos)) + sect('Técnica', arr(snap.equipos)) + sect('Talentos', arr(snap.talentos));
+  Object.keys(serv).forEach(dept => { (serv[dept] || []).forEach(r => serviciosRows.push(fmtRow(r.rol || dept, r.valor, r.cantidad, r.unidad, r.dte, 'servicios'))); });
+  const out = sect('Servicios — Personal contratado', serviciosRows)
+    + sect('Gastos de producción', (snap.gastos || []).map(r => fmtRow(r.item, r.valor, r.cantidad, r.unidad, r.dte, 'gastos')))
+    + sect('Técnica', (snap.equipos || []).map(r => fmtRow(r.item, r.valor, r.cantidad, r.unidad, r.dte, 'equipos')))
+    + sect('Talentos', (snap.talentos || []).map(r => fmtRow(r.item, r.valor, r.cantidad, r.unidad, r.dte, 'talentos')));
   return out || '<div class="cot-card"><p style="margin:0;font-size:12.5px;color:var(--ink-faint);">Esta versión no tenía filas de presupuesto.</p></div>';
 }
 function renderPresupuestoHistorico(project, version) {
@@ -12854,12 +12865,12 @@ function cotCartaCondiciones(cond, project) {
   </section>`;
 }
 
-function cotBuildCartaHTML(project) {
+function cotBuildCartaHTML(project, opts) {
+  opts = opts || cotPrevSettings();
   const c = ensureCotizacion(project);
   const ip = project.data.infoProyecto;
   const cond = c.condiciones;
-  /* V11.5.0 · la portada muestra la fecha/hora de GENERACIÓN (no la fecha
-     congelada de la primera cotización) + la versión del documento. */
+  /* V11.5.0 · la portada muestra fecha/hora de GENERACIÓN + versión del documento. */
   const _gen = new Date();
   const _hhmm = String(_gen.getHours()).padStart(2, '0') + ':' + String(_gen.getMinutes()).padStart(2, '0');
   const fecha = cotFechaFmt(_gen.toISOString().slice(0, 10)) + ' · ' + _hhmm + ' hrs · V.' + ((c.exportNum || 0) + (c.exportada ? 0 : 1));
@@ -12876,54 +12887,37 @@ function cotBuildCartaHTML(project) {
     ['Proyecto', ip.nombreProyecto || project.name],
     ['Jornadas de rodaje', jornadasTxt]
   ].filter(r => (r[1] || '').trim());
-  // V8.3.1 — Derechos en la portada (fuente única: Info Proyecto · bloque
-  // Derechos). Si un campo está vacío, no aparece (proyectos sin talentos).
   const _der = ip.derechos || {};
   [['Derechos · tiempo', _der.tiempo], ['Derechos · plataformas', _der.plataformas], ['Derechos · territorio', _der.territorio]]
     .filter(r => (r[1] || '').trim()).forEach(r => metaRows.push(r));
+  const logoData = cotPrevLogoData(opts);
+  const logoH = cotPrevLogoH(opts.logoSize);
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cotización — ${escapeHtml(ip.nombreProyecto || project.name || '')}</title>
+  ${cotPrevFontLink(opts.font)}
   <style>
-    :root{
-      --ink:#222221; --ink2:#555350; --ink3:#8a8780; --acc:#B03A2F;
-      --line:#e4e2db; --line-soft:#efede7; --band:#f7f6f2;
-    }
-    *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    /* Márgenes en TODAS las páginas: esto evita que la página 2+ quede pegada arriba. */
-    @page{ size:A4; margin:16mm 15mm; }
-    html,body{ background:#fff; margin:0; }
-    body{ font-family:'Poppins',-apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:var(--ink); font-size:11px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+    ${cotPrevBaseCSS(opts)}
     .eyebrow{ font-size:9px; text-transform:uppercase; letter-spacing:.2em; color:var(--ink3); font-weight:600; margin:0 0 7px; }
     .eyebrow.accent{ color:var(--acc); }
     .eyebrow.dim{ color:var(--ink3); }
-
-    /* COVER */
     .cover{ display:flex; justify-content:space-between; align-items:flex-start; gap:30px; }
     .cover .left{ flex:1; }
     .cover .kicker{ font-size:9px; letter-spacing:.28em; text-transform:uppercase; color:var(--ink3); margin-bottom:14px; }
     .cover h1{ font-size:44px; line-height:.97; font-weight:800; letter-spacing:.01em; margin:0; text-transform:uppercase; color:var(--ink); }
     .cover h1 .a{ color:var(--acc); display:block; }
     .org{ text-align:right; min-width:140px; }
-    .org .logo{ width:66px; height:66px; border-radius:9px; display:block; margin-left:auto; margin-bottom:9px; border:1px solid var(--line); object-fit:contain; }
+    .org .logo{ display:block; margin-left:auto; margin-bottom:9px; object-fit:contain; }
     .org .name{ font-weight:700; font-size:12px; color:var(--ink); }
     .org .role{ font-size:10px; color:var(--ink3); }
     .org .date{ font-size:10px; color:var(--ink2); margin-top:7px; font-variant-numeric:tabular-nums; }
-
     .meta{ margin:24px 0 0; padding-top:16px; border-top:1px solid var(--line); display:grid; grid-template-columns:1fr 1fr; gap:10px 40px; }
     .meta .row{ display:flex; flex-direction:column; gap:2px; }
     .meta .k{ font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink3); }
     .meta .v{ font-size:13px; color:var(--ink); font-weight:500; }
-
-    /* DESCRIPCIÓN GLOBAL (una sola vez) */
-    .project-desc{ margin:24px 0 4px; break-inside:avoid; }
-    .project-desc p{ color:var(--ink2); font-size:11.5px; line-height:1.7; margin:0; max-width:170mm; white-space:pre-wrap; }
-
-    /* OFFER — V6.5 (Nota 1): cada oferta ocupa su PROPIA plana completa.
-       Preferimos desperdiciar espacio antes que partir una oferta entre páginas. */
-    .offer{ break-before:page; break-inside:avoid; padding:0; }
+    .project-desc{ margin:24px 0 4px; }
+    .project-desc p{ color:var(--ink2); font-size:11.5px; line-height:1.7; margin:0; white-space:pre-wrap; }
     .pack-head{ margin-bottom:16px; padding-bottom:11px; border-bottom:1px solid var(--line); }
     .pack-head .pack-name{ font-size:23px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; color:var(--ink); }
-
     .ent-wrap{ margin:0 0 22px; }
     .ent-group{ margin:0 0 15px; }
     .ent-sub{ font-size:12.5px; font-weight:700; color:var(--ink); margin:0 0 7px; }
@@ -12934,15 +12928,12 @@ function cotBuildCartaHTML(project) {
     .ent-list{ list-style:none; margin:0; padding:0; }
     .ent-list li{ font-size:11.5px; color:var(--ink2); padding:2.5px 0 2.5px 15px; position:relative; }
     .ent-list li::before{ content:'—'; position:absolute; left:0; color:var(--acc); }
-
-    /* Mantener valor + incluye juntos (evita el total huérfano al pie de página) */
-    .offer-commercial{ break-inside:avoid; }
-    .valor-band{ margin:4px 0 24px; padding:16px 20px; background:var(--band); border:1px solid var(--line); border-left:3px solid var(--acc); border-radius:9px; display:flex; align-items:baseline; gap:18px; break-inside:avoid; }
+    .offer-commercial{ }
+    .valor-band{ margin:4px 0 24px; padding:16px 20px; background:var(--band); border:1px solid var(--line); border-left:3px solid var(--acc); border-radius:9px; display:flex; align-items:baseline; gap:18px; }
     .valor-label{ font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink3); }
     .valor-num{ font-size:28px; font-weight:800; color:var(--ink); margin-left:auto; }
     .valor-iva{ font-size:13px; font-weight:600; color:var(--acc); letter-spacing:.04em; }
-
-    .incl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:40px; break-inside:avoid; }
+    .incl-grid{ display:grid; grid-template-columns:1fr 1fr; gap:40px; }
     .mark-list{ list-style:none; margin:0; padding:0; }
     .mark-list li{ font-size:11.5px; padding:3px 0 3px 19px; position:relative; }
     .mark-list.incl li{ color:var(--ink); }
@@ -12950,38 +12941,37 @@ function cotBuildCartaHTML(project) {
     .mark-list.excl li{ color:var(--ink3); }
     .mark-list.excl li::before{ content:'✕'; position:absolute; left:0; color:var(--ink3); }
     .muted{ color:var(--ink3); font-size:11px; }
-
-    /* CONDITIONS */
-    .conditions{ break-before:page; }
+    .offer{ padding:0; }
     .cond-title{ font-size:21px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; margin:0 0 20px; padding-bottom:11px; border-bottom:1px solid var(--line); color:var(--ink); }
-    .cond-block{ margin:0 0 15px; break-inside:avoid; }
+    .cond-block{ margin:0 0 15px; }
     .cond-block .eyebrow{ margin-bottom:6px; }
     .cond-list{ list-style:none; margin:0; padding:0; }
     .cond-list li{ font-size:10.5px; color:var(--ink2); line-height:1.6; padding:2px 0 2px 14px; position:relative; }
     .cond-list li::before{ content:''; position:absolute; left:0; top:8px; width:4px; height:4px; border-radius:50%; background:var(--acc); }
-
-    .foot{ margin-top:26px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:8.5px; color:var(--ink3); letter-spacing:.03em; }
   </style></head>
   <body>
-    <div class="cover">
-      <div class="left">
-        <div class="kicker">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Productora Audiovisual</div>
-        <h1>Cotización<span class="a">Audiovisual</span></h1>
+    <div class="sheet">
+      <div class="cover">
+        <div class="left">
+          <div class="kicker">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Productora Audiovisual</div>
+          <h1>Cotización<span class="a">Audiovisual</span></h1>
+        </div>
+        <div class="org">
+          ${logoData ? ('<img class="logo" style="height:' + Math.round(logoH * 1.35) + 'px;max-width:240px;width:auto;" src="' + safeUrl(logoData) + '" alt="">') : ''}
+          <div class="name">${escapeHtml(orgNombre() || 'Productora')}</div>
+          <div class="role">Productora Audiovisual</div>
+          <div class="date">${escapeHtml(fecha)}</div>
+        </div>
       </div>
-      <div class="org">
-        ${orgLogo() ? ('<img class="logo" style="border:none;background:transparent;padding:0;box-shadow:none;border-radius:0;object-fit:contain;height:92px;max-width:240px;width:auto;" src="' + safeUrl(orgLogo()) + '" alt="">') : ''}
-        <div class="name">${escapeHtml(orgNombre() || 'Productora')}</div>
-        <div class="role">Productora Audiovisual</div>
-        <div class="date">${escapeHtml(fecha)}</div>
+      <div class="meta">
+        ${metaRows.map(r => `<div class="row"><span class="k">${escapeHtml(r[0])}</span><span class="v">${escapeHtml(r[1])}</span></div>`).join('')}
       </div>
+      ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${cotDescHtml(desc)}</p></div>` : ''}
     </div>
-    <div class="meta">
-      ${metaRows.map(r => `<div class="row"><span class="k">${escapeHtml(r[0])}</span><span class="v">${escapeHtml(r[1])}</span></div>`).join('')}
+    ${ofertas.map((o, i) => `<div class="sheet">${cotCartaOfertaSection(o, cond, i, ofertas.length)}</div>`).join('')}
+    <div class="sheet">${cotCartaCondiciones(cond, project)}
+      <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL', { hour12: false }))} · Documento de cotización confidencial</div>
     </div>
-    ${desc ? `<div class="project-desc"><div class="eyebrow accent">Descripción del proyecto</div><p>${cotDescHtml(desc)}</p></div>` : ''}
-    ${ofertas.map((o, i) => cotCartaOfertaSection(o, cond, i, ofertas.length)).join('')}
-    ${cotCartaCondiciones(cond, project)}
-    <div class="foot">${escapeHtml(orgNombre())}${orgNombre() ? ' · ' : ''}Generado ${escapeHtml(new Date().toLocaleString('es-CL', { hour12: false }))} · Documento de cotización confidencial</div>
   </body></html>`;
 }
 
@@ -13200,85 +13190,473 @@ function cotCondPreviewVivo() {
       + '<ul style="margin:0;padding-left:16px;">' + b.items.map(function (i) { return '<li style="font-size:11.5px;color:var(--ink-secondary);line-height:1.55;margin:2px 0;">' + i + '</li>'; }).join('') + '</ul></div>';
   }).join('');
 }
-/* V11.6.1 · plantillas de cotización: variaciones de estilo inyectadas sobre
-   el documento (mismo contenido, distinta personalidad). La elegida queda
-   recordada como default de la productora. Horizonte: color de énfasis desde
-   la paleta de Diseño, sobre estas mismas plantillas. */
-const COT_PLANTILLAS = [
-  { id: 'clasica', nombre: 'Clásica', css: '' },
-  { id: 'sobria', nombre: 'Sobria', css: ':root{--acc:#23231f;}' +
-      '.pack-head .pack-name,.cond-title{text-transform:none;letter-spacing:0;font-weight:700;}' +
-      '.cover h1 .a{color:var(--ink);}' +
-      '.pill{border-radius:3px;}' +
-      '.video{border-left-color:var(--line);}' +
-      '.ent-list li::before{color:var(--ink3);}' },
-  { id: 'bloque', nombre: 'Bloque', css: '.pack-head{background:var(--acc);border-bottom:none;border-radius:7px;padding:12px 16px;}' +
-      '.pack-head .pack-name{color:#fff;}' +
-      '.cond-title{border-bottom:3px solid var(--acc);}' +
-      '.meta{border-top:3px solid var(--acc);}' +
-      '.org .logo{border:none;}' }
+/* ════════════════════════════════════════════════════════════════════
+   V11.10.0 — MOTOR DE PREVISUALIZACIÓN DE DOCUMENTOS (transversal)
+   Reemplaza el previsualizador + export anteriores de la Cotización.
+   Pensado como DEFAULT para todos los documentos: el motor (CotPreview) es
+   document-agnostic; cada documento aporta solo su buildHTML. Geometría única
+   en mm → lo que se ve en pantalla es exactamente lo que sale en el PDF.
+   3 plantillas estructurales: Editorial / Carta formal / Manifiesto.
+   Personalización (plantilla, color, logo, tamaño de logo, tipografía,
+   orientación, formato, márgenes) persiste como default de la productora.
+   Sin literales de marca: nombre por orgNombre(), logo por _orgLogos(),
+   contacto por legalRep()/EMPRESA_PERFIL con fallback vacío.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Geometría única (mm → px y @page) ── */
+const COTPREV_MM2PX = 96 / 25.4;
+function cotPrevPageMm(fmt, orient) { const base = (fmt === 'carta') ? [215.9, 279.4] : [210, 297]; return orient === 'landscape' ? [base[1], base[0]] : base; }
+function cotPrevPagePx(fmt, orient) { const mm = cotPrevPageMm(fmt, orient); return [Math.round(mm[0] * COTPREV_MM2PX), Math.round(mm[1] * COTPREV_MM2PX)]; }
+function cotPrevLogoH(size) { return ({ s: 34, m: 52, l: 72 })[size] || 52; }
+
+/* ── Tipografías (la productora las define en Configuración → Diseño; horizonte) ── */
+const COTPREV_FONTS = [
+  { id: 'poppins', n: 'Poppins', css: "'Poppins',-apple-system,'Segoe UI',Roboto,Arial,sans-serif", link: 'Poppins:wght@300;400;500;600;700;800' },
+  { id: 'serif', n: 'Serif', css: "'Source Serif 4',Georgia,'Times New Roman',serif", link: 'Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400' },
+  { id: 'grotesk', n: 'Grotesca', css: "'Space Grotesk','Poppins',sans-serif", link: 'Space+Grotesk:wght@400;500;600;700' }
 ];
-function _cotTplDefault() {
-  try { return (EMPRESA_PERFIL && EMPRESA_PERFIL.cotPlantilla) || 'clasica'; } catch (e) { return 'clasica'; }
+function cotPrevFont(id) { return COTPREV_FONTS.find(f => f.id === id) || COTPREV_FONTS[0]; }
+function cotPrevFontLink(id) {
+  const f = cotPrevFont(id);
+  return '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=' + f.link + '&display=swap" rel="stylesheet">';
 }
-function cotTplRecordar(id) {
-  try { EMPRESA_PERFIL.cotPlantilla = id; markDirty(); _dalPerfilSaveSoon(); } catch (e) {}
+
+const COTPREV_PLANTILLAS = [
+  { id: 'editorial', n: 'Editorial', d: 'Portada de ficha + descripción; una plana por oferta con incluye/no incluye.' },
+  { id: 'carta', n: 'Carta formal', d: 'Membrete y carta firmada; presupuesto desglosado por departamento.' },
+  { id: 'manifiesto', n: 'Manifiesto', d: 'Portada statement con franja de color; el valor protagonista.' }
+];
+function cotPrevColores() { return ['#B03A2F', '#23231F', '#2E5B8A', '#3F7A52', '#7A4FB0', '#A6792B']; }
+
+/* ── Settings de documento por productora (personalización persistente) ── */
+function cotPrevSettings() {
+  let s = {};
+  try { s = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL && EMPRESA_PERFIL.cotDoc) ? EMPRESA_PERFIL.cotDoc : {}; } catch (e) { s = {}; }
+  let pl = s.plantilla;
+  if (!pl) { try { pl = EMPRESA_PERFIL && EMPRESA_PERFIL.cotPlantilla; } catch (e) {} }   // migra el viejo cotPlantilla (clasica/sobria/bloque → editorial)
+  if (pl !== 'editorial' && pl !== 'carta' && pl !== 'manifiesto') pl = 'editorial';
+  return {
+    plantilla: pl,
+    acc: s.acc || '#B03A2F',
+    font: (s.font === 'serif' || s.font === 'grotesk') ? s.font : 'poppins',
+    formato: (s.formato === 'carta') ? 'carta' : 'a4',
+    orientacion: (s.orientacion === 'landscape') ? 'landscape' : 'portrait',
+    margenMm: (typeof s.margenMm === 'number' && s.margenMm >= 8 && s.margenMm <= 34) ? s.margenMm : 16,
+    logoSize: (s.logoSize === 's' || s.logoSize === 'l') ? s.logoSize : 'm',
+    logoId: s.logoId || ''
+  };
 }
-let _COT_PREV_BASE = '';
+function cotPrevSaveSettings(patch) {
+  try {
+    if (!EMPRESA_PERFIL.cotDoc) EMPRESA_PERFIL.cotDoc = {};
+    Object.assign(EMPRESA_PERFIL.cotDoc, patch);
+    EMPRESA_PERFIL.cotPlantilla = EMPRESA_PERFIL.cotDoc.plantilla;   // compat con lecturas previas
+    markDirty(); _dalPerfilSaveSoon();
+  } catch (e) {}
+}
+
+/* ── Logo seleccionado (default = principal) ── */
+function cotPrevLogoData(opts) {
+  try {
+    const logos = _orgLogos().filter(l => l && l.dataUrl);
+    if (opts && opts.logoId) { const f = logos.find(l => l.id === opts.logoId); if (f) return f.dataUrl; }
+    return orgLogo();
+  } catch (e) { return ''; }
+}
+
+/* ── CSS base compartido: tokens + @page + modelo de hojas (.sheet) ──
+   .sheet usa min-height (no alto fijo) + overflow visible: el contenido real
+   nunca se recorta; si una plana excede, crece. En impresión, cada .sheet
+   parte en página nueva. La geometría sale de la misma fuente que el PDF. */
+function cotPrevBaseCSS(opts) {
+  const px = cotPrevPagePx(opts.formato, opts.orientacion);
+  const mm = cotPrevPageMm(opts.formato, opts.orientacion);
+  const mar = Math.round(opts.margenMm * COTPREV_MM2PX);
+  return `
+    :root{ --acc:${opts.acc}; --ink:#222221; --ink2:#555350; --ink3:#8a8780; --line:#e4e2db; --line-soft:#efede7; --band:#f7f6f2; }
+    @page{ size:${mm[0]}mm ${mm[1]}mm; margin:0; }
+    *{ box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    html,body{ background:transparent; }
+    body{ font-family:${cotPrevFont(opts.font).css}; color:var(--ink); font-size:11px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+    .sheet{ width:${px[0]}px; min-height:${px[1]}px; background:#fff; margin:0 auto 22px; padding:${mar}px; position:relative; overflow:visible; box-shadow:0 3px 18px rgba(0,0,0,.28); }
+    .sheet:first-child{ margin-top:0; }
+    @media print{ .sheet{ box-shadow:none; margin:0; break-before:page; min-height:0; } .sheet:first-child{ break-before:auto; } }
+    .foot{ margin-top:26px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:8.5px; color:var(--ink3); letter-spacing:.03em; }
+  `;
+}
+
+/* ── Servicios agrupados por departamento (base = real; alt = snapshot) ── */
+function cotPrevDepartamentos(project, o) {
+  const src = (o && !o.esBase && o.presupuestoAlt) ? o.presupuestoAlt : project.data;
+  const serv = (src && src.servicios) ? src.servicios : {};
+  const out = [];
+  Object.keys(serv).forEach(dept => {
+    const items = (serv[dept] || []).map(r => (r.rol || '').trim()).filter(Boolean);
+    if (items.length) out.push([dept, items]);
+  });
+  return out;
+}
+
+/* ── Modelo normalizado del documento desde el proyecto real (Carta/Manifiesto) ── */
+function cotPrevDocModel(project) {
+  const c = ensureCotizacion(project);
+  const ip = project.data.infoProyecto || {};
+  const cond = c.condiciones || {};
+  const _gen = new Date();
+  const _hhmm = String(_gen.getHours()).padStart(2, '0') + ':' + String(_gen.getMinutes()).padStart(2, '0');
+  const masIVA = !!cond.montosMasIVA;
+  const jornadasTxt = (c.jornadasRodaje !== undefined && String(c.jornadasRodaje).trim())
+    ? (String(c.jornadasRodaje).trim() + (String(c.jornadasRodaje).trim() === '1' ? ' jornada' : ' jornadas')) : '';
+  const der = ip.derechos || {};
+  const ofertas = (c.ofertas || []).map((o, i) => {
+    const ent = o.entregables || { videos: [], fotografia: [], otros: [] };
+    const videos = (ent.videos || []).filter(v => (v.nombre || '').trim() || (v.variables || []).some(x => (x || '').trim()))
+      .map(v => ({ nombre: (v.nombre || '').trim() || '—', formatos: (v.variables || []).filter(x => (x || '').trim()) }));
+    return {
+      nombre: o.nombre || '',
+      etiqueta: (i === 0 && o.esBase) ? 'Opción base' : 'Opción ' + String(i + 1).padStart(2, '0'),
+      sub: (o.descripcion || '').trim(),
+      valor: fmtMoney(o.valorCliente || 0),
+      videos: videos,
+      fotos: (ent.fotografia || []).filter(x => (x || '').trim()),
+      otros: (ent.otros || []).filter(x => (x || '').trim()),
+      incluye: (o.incluye || []).filter(x => (x || '').trim()),
+      noIncluye: (o.noIncluye || []).filter(x => (x || '').trim()),
+      departamentos: cotPrevDepartamentos(project, o)
+    };
+  });
+  return {
+    org: orgNombre(), fecha: cotFechaFmt(_gen.toISOString().slice(0, 10)) + ' · ' + _hhmm + ' hrs',
+    fechaCorta: cotFechaFmt(_gen.toISOString().slice(0, 10)),
+    cliente: ip.cliente || '', rep: c.representanteCliente || ip.contactoCliente || '',
+    dir: ip.director || '', pe: ip.productorEjecutivo || '',
+    proyecto: ip.nombreProyecto || project.name || '',
+    jornadas: jornadasTxt,
+    dTiempo: der.tiempo || '', dPlat: der.plataformas || '', dTerr: der.territorio || '',
+    desc: (c.descripcionProyecto || '').trim(),
+    ofertas: ofertas,
+    condiciones: cotCondBloques(project),   // [{titulo, items:[]}] (items ya escapados)
+    multi: ofertas.length > 1, masIVA: masIVA
+  };
+}
+
+/* ── PLANTILLA 2 · CARTA FORMAL (membrete + carta firmada + desglose por depto) ── */
+function cotTplCarta(M, opts) {
+  const E = escapeHtml;
+  const iva = M.masIVA ? ' + IVA' : '';
+  const logo = cotPrevLogoData(opts), logoH = cotPrevLogoH(opts.logoSize);
+  const lr = (typeof legalRep === 'function') ? legalRep() : {};
+  const ep = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL) ? EMPRESA_PERFIL : {};
+  const contacto = [lr.domEmp, ep.web, ep.telefono, ep.email].filter(x => x && String(x).trim()).map(E).join(' · ');
+  const repNom = M.rep || '';
+  const saludo = repNom ? ('Estimado/a ' + E(repNom.split(' ')[0]) + ':') : 'Estimado/a:';
+  const ficha = [['Cliente', M.cliente], ['Proyecto', M.proyecto], ['Dirección', M.dir], ['Jornadas', M.jornadas],
+    ['Derechos', [M.dTiempo, M.dPlat, M.dTerr].filter(Boolean).join(' · ')]].filter(r => (r[1] || '').trim());
+  const deptoOf = (of) => of.departamentos.length
+    ? of.departamentos.map(d => `<div class="dep"><div class="dep-h">§ ${E(d[0])}</div><ul>${d[1].map(i => '<li>' + E(i) + '</li>').join('')}</ul></div>`).join('')
+    : (of.incluye.length ? `<div class="dep"><div class="dep-h">§ Incluye</div><ul>${of.incluye.map(i => '<li>' + E(i) + '</li>').join('')}</ul></div>` : '');
+  const entOf = (of) => {
+    const items = [].concat(
+      of.videos.map(v => v.nombre + (v.formatos.length ? ' — ' + v.formatos.join(' · ') : '')),
+      of.fotos, of.otros
+    );
+    return items.length ? `<div class="dep"><div class="dep-h">§ Entregables</div><ul>${items.map(i => '<li>' + E(i) + '</li>').join('')}</ul></div>` : '';
+  };
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cotización — ${E(M.proyecto)}</title>
+  ${cotPrevFontLink(opts.font)}
+  <style>${cotPrevBaseCSS(opts)}
+    .membrete{ display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--acc); padding-bottom:14px; margin-bottom:28px; gap:20px; }
+    .membrete .addr{ font-size:8.5px; letter-spacing:.12em; color:var(--ink3); text-transform:uppercase; text-align:right; max-width:55%; }
+    .fecha{ text-align:right; font-size:11.5px; color:var(--ink2); margin-bottom:24px; }
+    .dest{ font-size:12.5px; line-height:1.55; margin-bottom:22px; }
+    .dest b{ font-weight:700; }
+    .saludo,.cuerpo{ font-size:12.5px; line-height:1.8; margin-bottom:15px; }
+    .ficha{ margin:20px 0; border-left:3px solid var(--acc); padding-left:16px; }
+    .ficha div{ font-size:12.5px; line-height:2; }
+    .ficha b{ display:inline-block; width:120px; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink3); }
+    .valorbox{ margin:24px 0; font-size:14px; }
+    .valorbox .vrow{ margin-bottom:6px; }
+    .valorbox b{ font-weight:800; color:var(--acc); }
+    .notas{ font-size:10.5px; color:var(--ink2); line-height:1.8; margin-top:18px; }
+    .firma{ margin-top:48px; font-size:12.5px; line-height:1.5; }
+    .firma .nm{ font-weight:700; }
+    .firma .rl{ color:var(--ink3); font-size:11px; }
+    .h2{ font-size:15px; font-weight:800; letter-spacing:.04em; margin-bottom:16px; }
+    .h2 .acc{ color:var(--acc); }
+    .dep{ margin-bottom:16px; }
+    .dep-h{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:var(--acc); border-bottom:1px solid var(--line); padding-bottom:5px; margin-bottom:8px; }
+    .dep li{ font-size:11.5px; line-height:1.8; color:var(--ink2); margin-left:16px; }
+    .nolist li{ font-size:11.5px; line-height:1.9; color:var(--ink2); margin-left:16px; }
+    .condmini .dep-h{ color:var(--ink); }
+    .condmini p,.condmini li{ font-size:10.5px; line-height:1.7; color:var(--ink2); margin-bottom:6px; }
+    .condmini ul{ margin:0 0 8px 16px; }
+  </style></head>
+  <body>
+    <div class="sheet">
+      <div class="membrete">${logo ? '<img src="' + safeUrl(logo) + '" style="height:' + Math.round(logoH * 1.1) + 'px;max-width:240px;object-fit:contain;" alt="">' : '<div style="font-weight:800;font-size:18px;">' + E(M.org || 'Productora') + '</div>'}${contacto ? '<div class="addr">' + contacto + '</div>' : ''}</div>
+      <div class="fecha">${M.org ? E(M.org) + ' · ' : ''}${E(M.fechaCorta)}</div>
+      <div class="dest">${repNom ? '<b>' + E(repNom) + '</b><br>' : ''}${E(M.cliente)}<br>Presente</div>
+      <div class="saludo">${saludo}</div>
+      <div class="cuerpo">Junto con saludar, adjunto presupuesto por la realización y producción audiovisual del proyecto que se detalla a continuación.</div>
+      ${ficha.length ? `<div class="ficha">${ficha.map(r => `<div><b>${E(r[0])}</b> ${E(r[1])}</div>`).join('')}</div>` : ''}
+      <div class="valorbox">${M.ofertas.map(of => `<div class="vrow">${E(of.etiqueta)}${of.sub ? ' — ' + E(of.sub) : ''} &nbsp; <b>${E(of.valor)}${iva}</b></div>`).join('')}</div>
+      <div class="notas">* En caso de suspensión o cancelación del proyecto, se cobrará lo producido hasta la fecha.<br>* Presupuesto válido por 5 días hábiles.${M.masIVA ? '<br>* Los valores no incluyen IVA.' : ''}</div>
+      ${M.pe ? `<div class="firma"><div class="nm">${E(M.pe)}</div><div class="rl">Producción Ejecutiva${M.org ? ' · ' + E(M.org) : ''}</div></div>` : ''}
+      <div class="foot">${M.org ? E(M.org) + ' · ' : ''}${E(M.proyecto)} · Cotización confidencial</div>
+    </div>
+    ${M.ofertas.map(of => `<div class="sheet">
+      <div class="h2">${E(of.etiqueta)}${of.sub ? ' — ' + E(of.sub.toUpperCase()) : ''} <span class="acc">· ${E(of.valor)}${iva}</span></div>
+      ${deptoOf(of)}
+      ${entOf(of)}
+      ${of.noIncluye.length ? `<div class="dep"><div class="dep-h">§ No incluye</div><ul class="nolist">${of.noIncluye.map(x => '<li>' + E(x) + '</li>').join('')}</ul></div>` : ''}
+    </div>`).join('')}
+    <div class="sheet">
+      <div class="h2">CONDICIONES DEL SERVICIO</div>
+      <div class="condmini">${M.condiciones.map(b => `<div class="dep-h" style="margin-top:14px;">${E(b.titulo)}</div><ul>${b.items.map(i => '<li>' + i + '</li>').join('')}</ul>`).join('')}</div>
+      <div class="foot">${M.org ? E(M.org) + ' · ' : ''}${E(M.proyecto)} · Cotización confidencial</div>
+    </div>
+  </body></html>`;
+}
+
+/* ── PLANTILLA 3 · MANIFIESTO (portada statement, valor protagonista, bloques) ── */
+function cotTplManifiesto(M, opts) {
+  const E = escapeHtml;
+  const iva = M.masIVA ? ' <span style="font-size:14px;font-weight:600;color:#888;">+ IVA</span>' : '';
+  const logo = cotPrevLogoData(opts), logoH = cotPrevLogoH(opts.logoSize);
+  const mar = Math.round(opts.margenMm * COTPREV_MM2PX);
+  const tags = [['Derechos · tiempo', M.dTiempo], ['Plataformas', M.dPlat], ['Territorio', M.dTerr]].filter(t => (t[1] || '').trim());
+  const incluyeOf = (of) => of.departamentos.length
+    ? of.departamentos.map(d => `<div class="depm"><div class="colh acc">§ ${E(d[0])}</div>${d[1].map(i => '<div class="li">' + E(i) + '</div>').join('')}</div>`).join('')
+    : of.incluye.map(i => '<div class="li">✓ ' + E(i) + '</div>').join('');
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Cotización — ${E(M.proyecto)}</title>
+  ${cotPrevFontLink(opts.font)}
+  <style>${cotPrevBaseCSS(opts)}
+    .sheet.cover{ display:flex; flex-direction:column; }
+    .brand{ display:flex; align-items:center; gap:12px; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink3); }
+    .mid{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+    .banda{ background:var(--acc); color:#fff; margin-left:-${mar}px; margin-right:-${mar}px; padding:46px ${mar}px; }
+    .banda .proj{ font-size:12px; letter-spacing:.28em; text-transform:uppercase; font-weight:700; margin-bottom:14px; opacity:.92; }
+    .banda h1{ font-size:50px; font-weight:800; line-height:1.04; letter-spacing:-.5px; }
+    .banda .cliente{ font-size:14px; margin-top:16px; opacity:.94; }
+    .pie{ font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink3); text-align:right; }
+    .blk{ margin-bottom:22px; }
+    .blk-h{ font-size:22px; font-weight:800; letter-spacing:-.3px; margin-bottom:10px; }
+    .blk-h span{ color:var(--acc); }
+    .bigp{ font-size:12.5px; line-height:1.85; color:var(--ink2); }
+    .gridtags{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+    .gt{ background:#f4f4ee; border-radius:9px; padding:12px; }
+    .gt .l{ font-size:8.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink3); }
+    .gt .v{ font-size:13px; font-weight:700; margin-top:3px; }
+    .valorpag{ display:flex; justify-content:space-between; align-items:flex-end; border-top:2px solid var(--acc); padding-top:16px; margin-bottom:24px; gap:18px; }
+    .valorpag .lbl{ font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink3); }
+    .valorpag .v{ font-size:30px; font-weight:800; color:var(--acc); white-space:nowrap; }
+    .twocol{ display:grid; grid-template-columns:1.4fr 1fr; gap:26px; }
+    .colh{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; font-weight:800; margin-bottom:8px; }
+    .colh.acc{ color:var(--acc); }
+    .colh.no{ color:var(--ink3); }
+    .depm{ margin-bottom:11px; }
+    .li{ font-size:11px; line-height:1.7; color:var(--ink2); }
+    .entbig{ margin-bottom:13px; border-left:4px solid var(--acc); padding:3px 0 3px 14px; }
+    .entbig .n{ font-size:13.5px; font-weight:700; color:var(--ink); }
+    .entbig .f{ font-size:10.5px; color:var(--ink3); margin-top:2px; }
+    .condrow{ margin-bottom:11px; }
+    .condrow .t{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:800; color:var(--acc); }
+    .condrow li{ font-size:10.5px; line-height:1.7; color:var(--ink2); margin-left:16px; }
+  </style></head>
+  <body>
+    <div class="sheet cover">
+      <div class="brand">${logo ? '<img src="' + safeUrl(logo) + '" style="height:' + Math.round(logoH * 0.9) + 'px;max-width:160px;object-fit:contain;" alt="">' : ''}<span>${E(M.org || 'Productora')}</span></div>
+      <div class="mid"><div class="banda">
+        <div class="proj">Cotización audiovisual · ${E(M.fechaCorta)}</div>
+        <h1>${E((M.proyecto || 'Proyecto').toUpperCase())}</h1>
+        <div class="cliente">${M.cliente ? 'Para ' + E(M.cliente) : ''}${M.dir ? ' · Dirección: ' + E(M.dir) : ''}</div>
+      </div></div>
+      <div class="pie">${E(M.org || '')}${M.org ? ' · ' : ''}Productora Audiovisual</div>
+    </div>
+    ${(M.desc || tags.length) ? `<div class="sheet">
+      <div class="blk"><div class="blk-h">El proyecto<span>.</span></div>${M.desc ? '<p class="bigp">' + cotDescHtml(M.desc) + '</p>' : ''}
+      ${tags.length ? `<div class="gridtags">${tags.map(t => `<div class="gt"><div class="l">${E(t[0])}</div><div class="v">${E(t[1])}</div></div>`).join('')}</div>` : ''}</div>
+    </div>` : ''}
+    ${M.ofertas.map(of => `<div class="sheet">
+      <div class="valorpag"><span class="lbl">${E(of.etiqueta)}${of.sub ? ' · ' + E(of.sub) : ''}</span><span class="v">${E(of.valor)}${iva}</span></div>
+      <div class="blk"><div class="twocol">
+        <div><div class="blk-h">Qué incluye<span>.</span></div>${incluyeOf(of)}</div>
+        <div><div class="blk-h">No incluye<span>.</span></div>${of.noIncluye.length ? of.noIncluye.map(x => '<div class="li">✕ ' + E(x) + '</div>').join('') : '<div class="li" style="color:#aaa;">—</div>'}</div>
+      </div></div>
+      ${(of.videos.length || of.fotos.length || of.otros.length) ? `<div class="blk"><div class="blk-h">Entregables<span>.</span></div>
+        ${of.videos.map(v => `<div class="entbig"><div class="n">${E(v.nombre)}</div>${v.formatos.length ? '<div class="f">' + E(v.formatos.join(' · ')) + '</div>' : ''}</div>`).join('')}
+        ${of.fotos.map(x => `<div class="entbig"><div class="n">${E(x)}</div></div>`).join('')}
+        ${of.otros.map(x => `<div class="entbig"><div class="n">${E(x)}</div></div>`).join('')}</div>` : ''}
+    </div>`).join('')}
+    <div class="sheet">
+      <div class="blk-h" style="margin-bottom:18px;">Condiciones del servicio<span>.</span></div>
+      ${M.condiciones.map(b => `<div class="condrow"><div class="t">${E(b.titulo)}</div><ul>${b.items.map(i => '<li>' + i + '</li>').join('')}</ul></div>`).join('')}
+      <div class="foot">${M.org ? E(M.org) + ' · ' : ''}${E(M.proyecto)} · Documento confidencial</div>
+    </div>
+  </body></html>`;
+}
+
+/* ── Dispatcher: cada documento aporta su buildHTML; el motor es agnóstico ── */
+function cotDocBuildHTML(project, opts) {
+  if (opts.plantilla === 'carta') return cotTplCarta(cotPrevDocModel(project), opts);
+  if (opts.plantilla === 'manifiesto') return cotTplManifiesto(cotPrevDocModel(project), opts);
+  return cotBuildCartaHTML(project, opts);   // editorial (render real, parametrizado)
+}
+
+/* ════ MOTOR DE PREVISUALIZACIÓN (document-agnostic, trasplantable) ════
+   Encuadra un HTML sin cortarlo: transform:scale() + wrapper redimensionado al
+   tamaño escalado. Pinch-zoom de trackpad (wheel+ctrlKey y gestos de Safari) sin
+   frenar el scroll nativo. Misma geometría que el PDF → fidelidad 1:1. */
+let _cotPrevOpts = null;
+const CotPreview = {
+  canvas: null, wrap: null, frame: null, pageW: 794, pageH: 1123, contentH: 1123, mode: 'page', zoom: 100, scale: 1, _bindInner: null, _onResize: null,
+  init(canvas, wrap, frame) {
+    this.canvas = canvas; this.wrap = wrap; this.frame = frame; this.mode = 'page'; this.zoom = 100;
+    const self = this;
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    this._onResize = function () { self.fit(); };
+    window.addEventListener('resize', this._onResize);
+    this.frame.addEventListener('load', function () { self._afterLoad(); });
+    const onWheel = function (e, inner) {
+      if (e.ctrlKey || e.metaKey) { e.preventDefault(); const d = Math.max(-30, Math.min(30, e.deltaY)); self.setZoom(Math.round(self.zoom * Math.exp(-d * 0.006))); return; }
+      if (inner) { self.canvas.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: 'instant' }); }
+    };
+    this.canvas.addEventListener('wheel', function (e) { onWheel(e, false); }, { passive: false });
+    this._bindInner = function () { try { self.frame.contentDocument.addEventListener('wheel', function (e) { onWheel(e, true); }, { passive: false }); } catch (e) {} };
+    let gz = 100;
+    this.canvas.addEventListener('gesturestart', function (e) { e.preventDefault(); gz = self.zoom; });
+    this.canvas.addEventListener('gesturechange', function (e) { e.preventDefault(); self.setZoom(Math.round(gz * e.scale)); });
+  },
+  load(html, pageW, pageH) { this.pageW = pageW; this.pageH = pageH; this.contentH = pageH; this.frame.srcdoc = html; },
+  _afterLoad() {
+    try { this.contentH = Math.max(this.frame.contentDocument.body.scrollHeight, this.pageH); } catch (e) { this.contentH = this.pageH; }
+    this.frame.style.width = this.pageW + 'px'; this.frame.style.height = this.contentH + 'px';
+    if (this._bindInner) this._bindInner();
+    this.fit();
+  },
+  setMode(m) { this.mode = m; this.fit(); this._syncUI(); },
+  setZoom(z) { this.mode = 'manual'; this.zoom = Math.max(25, Math.min(300, z)); this.fit(); this._syncUI(); },
+  fit() {
+    if (!this.canvas || !this.frame) return;
+    const pad = 48; const cw = this.canvas.clientWidth - pad, ch = this.canvas.clientHeight - pad; let s;
+    if (this.mode === 'page') s = Math.min(cw / this.pageW, ch / this.pageH);
+    else if (this.mode === 'width') s = cw / this.pageW;
+    else s = this.zoom / 100;
+    s = Math.max(0.1, s); this.scale = s;
+    this.frame.style.transform = 'scale(' + s + ')';
+    this.wrap.style.width = (this.pageW * s) + 'px';
+    this.wrap.style.height = (this.contentH * s) + 'px';
+    if (this.mode !== 'manual') this.zoom = Math.round(s * 100);
+    const zl = document.getElementById('cotPrevZoom'); if (zl) zl.textContent = Math.round(s * 100) + '%';
+  },
+  _syncUI() {
+    const p = document.getElementById('cotPrevFitPage'), w = document.getElementById('cotPrevFitWidth');
+    if (p) p.classList.toggle('on', this.mode === 'page'); if (w) w.classList.toggle('on', this.mode === 'width');
+  }
+};
+
+/* ── Panel de controles (transversal). Cada control actualiza _cotPrevOpts,
+   persiste como default de la productora y reconstruye el documento. ── */
+function _cotPrevOptBtn(label, onclick, on) {
+  return `<button onclick="${onclick}" style="flex:1;min-width:0;background:${on ? 'var(--accent,#B03A2F)' : 'var(--bg-surface-soft,#262624)'};border:1px solid ${on ? 'var(--accent,#B03A2F)' : 'var(--rule,#34342f)'};border-radius:7px;padding:7px 6px;color:${on ? '#fff' : 'var(--ink-secondary,#d3d6cb)'};font-size:11.5px;font-weight:${on ? '600' : '500'};cursor:pointer;text-align:center;">${label}</button>`;
+}
+function cotPrevPanelHTML() {
+  const o = _cotPrevOpts || cotPrevSettings();
+  const E = escapeHtml;
+  const grp = (title, inner, hint) => `<div style="padding:14px 16px;border-bottom:1px solid var(--rule,#34342f);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint,#71736a);font-weight:700;margin:0 0 10px;">${title}</div>${inner}${hint ? '<div style="font-size:10.5px;color:var(--ink-faint,#71736a);margin-top:8px;line-height:1.4;">' + hint + '</div>' : ''}</div>`;
+
+  const pl = COTPREV_PLANTILLAS.map(t => {
+    const on = o.plantilla === t.id;
+    return `<button onclick="cotPrevSetOpt('plantilla','${t.id}')" style="display:block;width:100%;text-align:left;margin-bottom:7px;background:${on ? 'var(--bg-elevated,#2e2e2b)' : 'var(--bg-surface-soft,#262624)'};border:1px solid ${on ? 'var(--accent,#B03A2F)' : 'var(--rule,#34342f)'};border-radius:8px;padding:9px 11px;color:var(--ink,#FDFEED);cursor:pointer;"><div style="font-size:12.5px;font-weight:600;">${t.n}</div><div style="font-size:10px;color:var(--ink-muted,#a0a399);line-height:1.35;margin-top:2px;">${t.d}</div></button>`;
+  }).join('');
+
+  const fo = `<div style="display:flex;gap:7px;">${COTPREV_FONTS.map(f => _cotPrevOptBtn(f.n, "cotPrevSetOpt('font','" + f.id + "')", o.font === f.id)).join('')}</div>`;
+
+  const colorSw = cotPrevColores().map(hex => {
+    const on = (o.acc || '').toLowerCase() === hex.toLowerCase();
+    return `<button onclick="cotPrevSetOpt('acc','${hex}')" title="${hex}" style="width:30px;height:30px;border-radius:8px;background:${hex};border:2px solid ${on ? 'var(--ink,#fff)' : 'transparent'};box-shadow:${on ? '0 0 0 2px var(--bg-surface,#222),0 0 0 4px var(--ink,#fff)' : 'none'};cursor:pointer;"></button>`;
+  }).join('');
+  const colorCtl = `<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">${colorSw}<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-muted,#a0a399);cursor:pointer;">Otro <input type="color" value="${o.acc || '#B03A2F'}" oninput="cotPrevSetOptLive('acc',this.value)" style="width:28px;height:28px;border:none;background:none;padding:0;cursor:pointer;"></label></div>`;
+
+  let logos = [];
+  try { logos = (typeof _orgLogos === 'function') ? _orgLogos().filter(l => l && l.dataUrl) : []; } catch (e) { logos = []; }
+  const logoCtl = logos.length
+    ? logos.map(l => { const on = o.logoId ? (o.logoId === l.id) : !!l.principal; return `<label style="display:flex;align-items:center;gap:7px;border:1px solid ${on ? 'var(--accent,#B03A2F)' : 'var(--rule,#34342f)'};border-radius:8px;padding:5px 8px;cursor:pointer;margin-bottom:6px;background:var(--bg-surface-soft,#262624);"><input type="radio" name="cotPrevLogo" ${on ? 'checked' : ''} onchange="cotPrevSetOpt('logoId','${l.id}')"><img src="${safeUrl(l.dataUrl)}" style="height:22px;max-width:64px;object-fit:contain;"><span style="font-size:11px;color:var(--ink-secondary,#d3d6cb);">${E(l.nombre || 'Logo')}</span></label>`; }).join('')
+    : '<div style="font-size:10.5px;color:var(--ink-faint,#71736a);line-height:1.4;">Carga el logo de la productora en Configuración → Diseño para que aparezca en los documentos.</div>';
+
+  const logoSz = `<div style="display:flex;gap:7px;">${[['s', 'Pequeño'], ['m', 'Mediano'], ['l', 'Grande']].map(z => _cotPrevOptBtn(z[1], "cotPrevSetOpt('logoSize','" + z[0] + "')", o.logoSize === z[0])).join('')}</div>`;
+  const orient = `<div style="display:flex;gap:7px;">${[['portrait', 'Vertical'], ['landscape', 'Horizontal']].map(x => _cotPrevOptBtn(x[1], "cotPrevSetOpt('orientacion','" + x[0] + "')", o.orientacion === x[0])).join('')}</div>`;
+  const formato = `<div style="display:flex;gap:7px;">${[['carta', 'Carta'], ['a4', 'A4']].map(x => _cotPrevOptBtn(x[1], "cotPrevSetOpt('formato','" + x[0] + "')", o.formato === x[0])).join('')}</div>`;
+  const marg = `<div style="display:flex;align-items:center;gap:10px;"><input type="range" min="8" max="34" value="${o.margenMm}" oninput="cotPrevSetOptLive('margenMm',+this.value);document.getElementById('cotPrevMargLbl').textContent=this.value+' mm';" style="flex:1;accent-color:var(--accent,#B03A2F);"><span id="cotPrevMargLbl" style="font-size:11.5px;color:var(--ink-secondary,#d3d6cb);min-width:44px;text-align:right;">${o.margenMm} mm</span></div>`;
+
+  return grp('Plantilla', pl)
+    + grp('Tipografía', fo, 'En TakeOS, la productora define sus tipografías en Configuración → Diseño.')
+    + grp('Color de énfasis', colorCtl, 'Se conectará a la paleta de Configuración → Diseño cuando esté disponible.')
+    + grp('Logo', logoCtl)
+    + grp('Tamaño del logo', logoSz)
+    + grp('Orientación', orient)
+    + grp('Formato', formato)
+    + grp('Márgenes', marg, 'Cambia el margen real del documento (afecta el PDF) y reflujan los contenidos.');
+}
+function cotPrevRenderPanel() { const p = document.getElementById('cotPrevPanel'); if (p) p.innerHTML = cotPrevPanelHTML(); }
+function cotPrevBuildAndLoad() {
+  const project = STATE.currentProject; if (!project || !_cotPrevOpts) return;
+  const px = cotPrevPagePx(_cotPrevOpts.formato, _cotPrevOpts.orientacion);
+  CotPreview.load(cotDocBuildHTML(project, _cotPrevOpts), px[0], px[1]);
+  const lbl = document.getElementById('cotPrevPageLbl');
+  if (lbl) lbl.textContent = (_cotPrevOpts.formato === 'carta' ? 'Carta' : 'A4') + ' · ' + (_cotPrevOpts.orientacion === 'portrait' ? 'vertical' : 'horizontal');
+}
+function cotPrevSetOpt(k, v) {
+  if (!_cotPrevOpts) return;
+  _cotPrevOpts[k] = v; const p = {}; p[k] = v; cotPrevSaveSettings(p);
+  cotPrevRenderPanel(); cotPrevBuildAndLoad();
+}
+function cotPrevSetOptLive(k, v) {
+  if (!_cotPrevOpts) return;
+  _cotPrevOpts[k] = v; const p = {}; p[k] = v; cotPrevSaveSettings(p);
+  cotPrevBuildAndLoad();
+}
+
+/* ── Abrir el previsualizador (estilo "Imprimir") ── */
 function cotPreviewPDF() {
   const project = STATE.currentProject; if (!project) return;
-  _COT_PREV_BASE = cotBuildCartaHTML(project);
-  const logos = (typeof _orgLogos === 'function') ? _orgLogos().filter(function (l) { return l.dataUrl; }) : [];
-  const opts = logos.map(function (l, i) {
-    return '<label style="display:flex;align-items:center;gap:6px;border:1px solid var(--rule);border-radius:8px;padding:5px 9px;cursor:pointer;">'
-      + '<input type="radio" name="cotPrevLogo" value="' + l.id + '"' + (l.principal ? ' checked' : '') + ' onchange="cotPrevRefresh()">'
-      + '<img src="' + safeUrl(l.dataUrl) + '" style="height:22px;max-width:60px;object-fit:contain;">'
-      + '<span style="font-size:11.5px;color:var(--ink-secondary);">' + escapeHtml(l.nombre || ('Logo ' + (i + 1))) + '</span></label>';
-  }).join('');
-  /* V11.6.0 · vista previa EN VIVO (como Legal): el documento se ve tal cual
-     saldrá, y se actualiza con cada elección. Horizonte: color de énfasis
-     desde la paleta de Diseño y plantillas, sobre este mismo motor. */
-  document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:960px;width:94vw;">'
-    + '<div class="modal-header"><div class="modal-title">Previsualizar PDF de cotización</div></div>'
-    + '<div class="modal-body" style="padding-bottom:6px;">'
-    + '<div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;">'
-    + (opts ? '<div class="emp-field" style="margin:0;"><label>Logo</label><div style="display:flex;gap:7px;flex-wrap:wrap;">' + opts + '</div></div>' : '')
-    + '<div class="emp-field" style="margin:0;"><label>Plantilla</label><select class="select" id="cotPrevTpl" onchange="cotPrevRefresh(); cotTplRecordar(this.value);">' + COT_PLANTILLAS.map(function (t) { return '<option value="' + t.id + '"' + (t.id === _cotTplDefault() ? ' selected' : '') + '>' + t.nombre + '</option>'; }).join('') + '</select></div>'
-    + '<div class="emp-field" style="margin:0;"><label>Orientación</label><select class="select" id="cotPrevOrient" onchange="cotPrevRefresh()"><option value="portrait" selected>↕ Vertical</option><option value="landscape">↔ Horizontal</option></select></div>'
-    + '</div>'
-    + '<iframe id="cotPrevFrame" style="width:100%;height:56vh;border:1px solid var(--rule);border-radius:8px;background:#fff;"></iframe>'
-    + '</div>'
-    + '<div class="modal-footer" style="flex-wrap:wrap;gap:8px;justify-content:flex-end;"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="cotPreviewGenerar()">Exportar PDF</button></div>'
-    + '</div></div>';
-  cotPrevRefresh();
+  _cotPrevOpts = cotPrevSettings();
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:1120px;width:96vw;padding:0;overflow:hidden;">
+    <div class="modal-header" style="padding:13px 18px;"><div class="modal-title">Previsualizar y exportar · Cotización</div></div>
+    <div style="display:flex;min-height:60vh;max-height:74vh;">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;background:#2a2a27;">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg-surface,#222);border-bottom:1px solid var(--rule,#34342f);flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="CotPreview.setZoom(CotPreview.zoom-10)" title="Alejar">−</button>
+          <span id="cotPrevZoom" style="font-size:12px;color:var(--ink-secondary,#d3d6cb);min-width:44px;text-align:center;font-variant-numeric:tabular-nums;">100%</span>
+          <button class="btn btn-sm" onclick="CotPreview.setZoom(CotPreview.zoom+10)" title="Acercar">+</button>
+          <span style="width:1px;height:18px;background:var(--rule,#34342f);margin:0 3px;"></span>
+          <button class="btn btn-sm" id="cotPrevFitPage" onclick="CotPreview.setMode('page')">Ajustar</button>
+          <button class="btn btn-sm" id="cotPrevFitWidth" onclick="CotPreview.setMode('width')">Ancho</button>
+          <span id="cotPrevPageLbl" style="font-size:11px;color:var(--ink-faint,#71736a);margin-left:6px;"></span>
+          <span style="font-size:10.5px;color:var(--ink-faint,#71736a);margin-left:auto;">Pellizca el trackpad o Ctrl/⌘ + rueda para zoom</span>
+        </div>
+        <div id="cotPrevCanvas" style="flex:1;overflow:auto;background:#2a2a27;padding:24px;">
+          <div id="cotPrevWrap" style="margin:0 auto;position:relative;"><iframe id="cotPrevFrame" title="preview" style="position:absolute;top:0;left:0;border:0;transform-origin:top left;background:transparent;"></iframe></div>
+        </div>
+      </div>
+      <div id="cotPrevPanel" style="width:266px;flex-shrink:0;border-left:1px solid var(--rule,#34342f);overflow-y:auto;background:var(--bg-surface,#222);">${cotPrevPanelHTML()}</div>
+    </div>
+    <div class="modal-footer" style="padding:12px 18px;justify-content:flex-end;gap:8px;flex-wrap:wrap;"><button class="btn" onclick="closeModal()">Cerrar</button><button class="btn btn-primary" onclick="cotPreviewGenerar()">Exportar PDF</button></div>
+  </div></div>`;
+  CotPreview.init(document.getElementById('cotPrevCanvas'), document.getElementById('cotPrevWrap'), document.getElementById('cotPrevFrame'));
+  cotPrevBuildAndLoad();
+  CotPreview.setMode('page');
 }
-function _cotPrevHTMLFinal() {
-  let html = _COT_PREV_BASE || '';
-  try {
-    const sel = document.querySelector('input[name="cotPrevLogo"]:checked');
-    if (sel) {
-      const l = _orgLogos().find(function (x) { return x.id === sel.value; });
-      const actual = orgLogo();
-      if (l && l.dataUrl && actual && l.dataUrl !== actual) html = html.split(actual).join(l.dataUrl);
-    }
-  } catch (e) {}
-  const orient = (document.getElementById('cotPrevOrient') || {}).value || 'portrait';
-  const tplId = (document.getElementById('cotPrevTpl') || {}).value || _cotTplDefault();
-  const tpl = COT_PLANTILLAS.find(function (t) { return t.id === tplId; }) || COT_PLANTILLAS[0];
-  const inj = '<style>@page { size: A4 ' + orient + '; }' + (tpl.css || '') + '</style>';
-  if (html.indexOf('</head>') >= 0) html = html.replace('</head>', inj + '</head>');
-  else html = inj + html;
-  return html;
-}
-function cotPrevRefresh() {
-  const fr = document.getElementById('cotPrevFrame'); if (!fr) return;
-  fr.srcdoc = _cotPrevHTMLFinal();
-}
+
+/* ── Exportar PDF: mismo HTML del preview vía printViaIframe (geometría 1:1).
+   Mantiene el bloqueo de versión exportada. ── */
 function cotPreviewGenerar() {
-  const project = STATE.currentProject; if (!project) return;
+  const project = STATE.currentProject; if (!project || !_cotPrevOpts) return;
   const ip = project.data.infoProyecto;
   const c = ensureCotizacion(project);
-  const html = _cotPrevHTMLFinal();
+  const html = cotDocBuildHTML(project, _cotPrevOpts);
   if (!c.exportada) { c.exportNum = (c.exportNum || 0) + 1; c.exportada = true; markDirty(); }
   const vTxt = 'V.' + (c.exportNum || 1);
   const fname = `Cotización - ${ip.nombreProyecto || project.name || 'Proyecto'}${ip.cliente ? ' - ' + ip.cliente : ''} - ${vTxt}`;
@@ -13286,6 +13664,7 @@ function cotPreviewGenerar() {
   printViaIframe(html, fname);
   showToast({ kind: 'success', title: 'Carta lista para PDF (' + vTxt + ')', body: 'Se abrió el diálogo de impresión. Elige <strong>“Guardar como PDF”</strong>. Esta versión queda bloqueada: cualquier edición pedirá confirmación.' });
 }
+
 /* Guard de versión exportada: avisa y ofrece nueva versión o edición consciente. */
 function _cotBloqueada(k) {
   if (k === 'descAlto') return false;
@@ -21803,7 +22182,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.9.7';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.10.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
