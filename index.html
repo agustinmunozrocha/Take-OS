@@ -13209,13 +13209,29 @@ function cotPrevPageMm(fmt, orient) { const base = (fmt === 'carta') ? [215.9, 2
 function cotPrevPagePx(fmt, orient) { const mm = cotPrevPageMm(fmt, orient); return [Math.round(mm[0] * COTPREV_MM2PX), Math.round(mm[1] * COTPREV_MM2PX)]; }
 function cotPrevLogoH(size) { return ({ s: 34, m: 52, l: 72 })[size] || 52; }
 
-/* ── Tipografías (la productora las define en Configuración → Diseño; horizonte) ── */
-const COTPREV_FONTS = [
+/* ── Tipografías · V11.11.0: dos del sistema + el repositorio tipográfico de
+   la marca (Configuración → Diseño, EMPRESA_PERFIL.tipografias). Las de marca
+   se cargan desde Google Fonts por nombre de familia (peso regular; la negrita
+   se sintetiza). Archivos de fuente propios (p. ej. Gotham licenciada) llegan
+   cuando se resuelva el almacenamiento. ── */
+const COTPREV_FONTS_SISTEMA = [
   { id: 'poppins', n: 'Poppins', css: "'Poppins',-apple-system,'Segoe UI',Roboto,Arial,sans-serif", link: 'Poppins:wght@300;400;500;600;700;800' },
-  { id: 'serif', n: 'Serif', css: "'Source Serif 4',Georgia,'Times New Roman',serif", link: 'Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400' },
-  { id: 'grotesk', n: 'Grotesca', css: "'Space Grotesk','Poppins',sans-serif", link: 'Space+Grotesk:wght@400;500;600;700' }
+  { id: 'serif', n: 'Serif', css: "'Source Serif 4',Georgia,'Times New Roman',serif", link: 'Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400' }
 ];
-function cotPrevFont(id) { return COTPREV_FONTS.find(f => f.id === id) || COTPREV_FONTS[0]; }
+function _cotPrevFamiliaGF(family) { return String(family || '').trim().replace(/\s+/g, '+'); }
+function cotPrevFonts() {
+  let org = [];
+  try {
+    org = ((EMPRESA_PERFIL && Array.isArray(EMPRESA_PERFIL.tipografias)) ? EMPRESA_PERFIL.tipografias : [])
+      .filter(t => t && String(t.family || '').trim())
+      .map(t => {
+        const fam = String(t.family).trim().replace(/['"<>]/g, '');
+        return { id: 'org_' + (t.id || fam), n: (t.nombre || fam), css: "'" + fam + "',-apple-system,'Segoe UI',sans-serif", link: _cotPrevFamiliaGF(fam) };
+      });
+  } catch (e) { org = []; }
+  return COTPREV_FONTS_SISTEMA.concat(org);
+}
+function cotPrevFont(id) { const all = cotPrevFonts(); return all.find(f => f.id === id) || all[0]; }
 function cotPrevFontLink(id) {
   const f = cotPrevFont(id);
   return '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=' + f.link + '&display=swap" rel="stylesheet">';
@@ -13226,7 +13242,21 @@ const COTPREV_PLANTILLAS = [
   { id: 'carta', n: 'Carta formal', d: 'Membrete y carta firmada; presupuesto desglosado por departamento.' },
   { id: 'manifiesto', n: 'Manifiesto', d: 'Portada statement con franja de color; el valor protagonista.' }
 ];
-function cotPrevColores() { return ['#B03A2F', '#23231F', '#2E5B8A', '#3F7A52', '#7A4FB0', '#A6792B']; }
+/* V11.11.0 · los colores de énfasis salen de la paleta de marca definida en
+   Configuración → Diseño (EMPRESA_PERFIL.coloresMarca). Si la productora aún
+   no define paleta, presets del sistema. */
+function _cotPrevHexValido(h) { return /^#[0-9a-fA-F]{6}$/.test(String(h || '')); }
+function cotPrevColores() {
+  try {
+    const m = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL && Array.isArray(EMPRESA_PERFIL.coloresMarca))
+      ? EMPRESA_PERFIL.coloresMarca.filter(_cotPrevHexValido) : [];
+    if (m.length) return m.slice(0, 10);
+  } catch (e) {}
+  return ['#B03A2F', '#23231F', '#2E5B8A', '#3F7A52', '#7A4FB0', '#A6792B'];
+}
+function cotPrevPaletaEsMarca() {
+  try { return !!(EMPRESA_PERFIL && Array.isArray(EMPRESA_PERFIL.coloresMarca) && EMPRESA_PERFIL.coloresMarca.filter(_cotPrevHexValido).length); } catch (e) { return false; }
+}
 
 /* ── Settings de documento por productora (personalización persistente) ── */
 function cotPrevSettings() {
@@ -13238,7 +13268,7 @@ function cotPrevSettings() {
   return {
     plantilla: pl,
     acc: s.acc || '#B03A2F',
-    font: (s.font === 'serif' || s.font === 'grotesk') ? s.font : 'poppins',
+    font: s.font || 'poppins',   // V11.11.0: ids dinámicos (sistema + marca); cotPrevFont() ya cae a Poppins si el id no existe
     formato: (s.formato === 'carta') ? 'carta' : 'a4',
     orientacion: (s.orientacion === 'landscape') ? 'landscape' : 'portrait',
     margenMm: (typeof s.margenMm === 'number' && s.margenMm >= 8 && s.margenMm <= 34) ? s.margenMm : 16,
@@ -13280,7 +13310,13 @@ function cotPrevBaseCSS(opts) {
     body{ font-family:${cotPrevFont(opts.font).css}; color:var(--ink); font-size:11px; line-height:1.55; -webkit-font-smoothing:antialiased; }
     .sheet{ width:${px[0]}px; min-height:${px[1]}px; background:#fff; margin:0 auto 22px; padding:${mar}px; position:relative; overflow:visible; box-shadow:0 3px 18px rgba(0,0,0,.28); }
     .sheet:first-child{ margin-top:0; }
-    @media print{ .sheet{ box-shadow:none; margin:0; break-before:page; min-height:0; } .sheet:first-child{ break-before:auto; } }
+    /* V11.11.0 · BUG paridad preview↔PDF: en print la hoja DEBE re-afirmar la
+       altura real de página (en mm, con 1mm de margen anti-derrame). Antes era
+       min-height:0 y la hoja colapsaba a la altura del contenido, rompiendo
+       cualquier layout vertical (flex/centrado) en el PDF aunque en pantalla
+       se viera bien. INVARIANTE para todo previsualizador futuro sobre este
+       motor: nunca colapsar la altura de hoja en @media print. */
+    @media print{ .sheet{ box-shadow:none; margin:0; break-before:page; width:${mm[0]}mm; min-height:${(mm[1] - 1)}mm; } .sheet:first-child{ break-before:auto; } }
     .foot{ margin-top:26px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:8.5px; color:var(--ink3); letter-spacing:.03em; }
   `;
 }
@@ -13572,7 +13608,7 @@ function cotPrevPanelHTML() {
     return `<button onclick="cotPrevSetOpt('plantilla','${t.id}')" style="display:block;width:100%;text-align:left;margin-bottom:7px;background:${on ? 'var(--bg-elevated,#2e2e2b)' : 'var(--bg-surface-soft,#262624)'};border:1px solid ${on ? 'var(--accent,#B03A2F)' : 'var(--rule,#34342f)'};border-radius:8px;padding:9px 11px;color:var(--ink,#FDFEED);cursor:pointer;"><div style="font-size:12.5px;font-weight:600;">${t.n}</div><div style="font-size:10px;color:var(--ink-muted,#a0a399);line-height:1.35;margin-top:2px;">${t.d}</div></button>`;
   }).join('');
 
-  const fo = `<div style="display:flex;gap:7px;">${COTPREV_FONTS.map(f => _cotPrevOptBtn(f.n, "cotPrevSetOpt('font','" + f.id + "')", o.font === f.id)).join('')}</div>`;
+  const fo = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">${cotPrevFonts().map(f => _cotPrevOptBtn(escapeHtml(f.n), "cotPrevSetOpt('font','" + f.id + "')", o.font === f.id)).join('')}</div>`;
 
   const colorSw = cotPrevColores().map(hex => {
     const on = (o.acc || '').toLowerCase() === hex.toLowerCase();
@@ -13592,8 +13628,8 @@ function cotPrevPanelHTML() {
   const marg = `<div style="display:flex;align-items:center;gap:10px;"><input type="range" min="8" max="34" value="${o.margenMm}" oninput="cotPrevSetOptLive('margenMm',+this.value);document.getElementById('cotPrevMargLbl').textContent=this.value+' mm';" style="flex:1;accent-color:var(--accent,#B03A2F);"><span id="cotPrevMargLbl" style="font-size:11.5px;color:var(--ink-secondary,#d3d6cb);min-width:44px;text-align:right;">${o.margenMm} mm</span></div>`;
 
   return grp('Plantilla', pl)
-    + grp('Tipografía', fo, 'En TakeOS, la productora define sus tipografías en Configuración → Diseño.')
-    + grp('Color de énfasis', colorCtl, 'Se conectará a la paleta de Configuración → Diseño cuando esté disponible.')
+    + grp('Tipografía', fo, cotPrevFonts().length > COTPREV_FONTS_SISTEMA.length ? 'Poppins y Serif son del sistema; el resto es el repositorio de tu marca (Configuración → Diseño).' : 'Poppins y Serif son del sistema. Agrega las tipografías de tu marca en Configuración → Diseño.')
+    + grp('Color de énfasis', colorCtl, cotPrevPaletaEsMarca() ? 'Paleta de la marca, definida en Configuración → Diseño.' : 'Aún no hay paleta de marca: defínela en Configuración → Diseño. Mientras tanto, presets del sistema.')
     + grp('Logo', logoCtl)
     + grp('Tamaño del logo', logoSz)
     + grp('Orientación', orient)
@@ -17765,9 +17801,15 @@ function _gsearchGo(i) {
 
 
 /* V7.9: perfil de la empresa/productora emisora (datos para documentos). */
-function openEmpresaPerfil() {
-  if (!_puedeModoAdmin()) { showToast({ kind: 'error', title: 'Perfil de empresa no disponible', body: 'Solo el perfil Administrador puede editar los datos de la empresa.' }); return; }
-  if (!(STATE && STATE.adminMode)) { requestAdminPassword(() => { STATE.adminMode = true; _applyAdminUI(); openEmpresaPerfil(); }); return; }
+function openEmpresaPerfil(subInicial) {
+  /* V11.11.0 · el panel es PÚBLICO para todo el equipo de la productora:
+     Equipo y Diseño son visibles para cualquier perfil (solo lectura para
+     quien no es Administrador). "Datos de la empresa" sigue siendo exclusivo
+     del Administrador y mantiene la barrera de Modo admin (protege datos
+     societarios y bancarios): para el resto de perfiles, esa pestaña
+     simplemente no existe. */
+  const esAdmin = _puedeModoAdmin();
+  const datosOK = esAdmin && !!(STATE && STATE.adminMode);
   const E = EMPRESA_PERFIL;
   const field = (id, label, val, ph) => `<div class="emp-field"><label>${label}</label><input id="emp_${id}" class="cot-input" value="${escapeHtml(val || '')}" placeholder="${ph || ''}"></div>`;
   document.getElementById('modalRoot').innerHTML = `
@@ -17776,11 +17818,11 @@ function openEmpresaPerfil() {
         <div class="modal-header"><div class="modal-title">Perfil de la empresa / productora</div></div>
         <div class="modal-body" style="overflow-y:auto;flex:1 1 auto;">
           <div style="display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--rule);padding-bottom:10px;">
-            <button class="btn btn-sm" id="empTabdatos" onclick="_empShowSub('datos')">Datos de la empresa</button>
+            ${esAdmin ? `<button class="btn btn-ghost btn-sm" id="empTabdatos" onclick="${datosOK ? "_empShowSub('datos')" : '_empDatosConClave()'}">Datos de la empresa${datosOK ? '' : ' 🔒'}</button>` : ''}
             <button class="btn btn-ghost btn-sm" id="empTabequipo" onclick="_empShowSub('equipo')">Equipo</button>
             <button class="btn btn-ghost btn-sm" id="empTabdiseno" onclick="_empShowSub('diseno')">Diseño</button>
           </div>
-          <div id="empSubDatos">
+          ${datosOK ? `<div id="empSubDatos">
           <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Estos datos se usan como <strong>empresa emisora</strong> en los documentos (hojas de llamado, plan de rodaje, cotizaciones y, a futuro, contratos). Quedan guardados con el OS.</p>
           <div class="config-section-title" style="margin-bottom:8px;">Empresa</div>
           <div class="emp-grid">
@@ -17834,32 +17876,51 @@ function openEmpresaPerfil() {
             ${field('remitenteRol','Rol del remitente', E.remitenteRol, 'Productor, AD…')}
             ${field('remitenteNumero','Número del remitente', E.remitenteNumero, '+56 9 …')}
           </div>
-          </div>
+          </div>` : ''}
           <div id="empSubEquipo" style="display:none;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;flex-wrap:wrap;">
               <p style="margin:0;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Las personas de tu planta. Ven los proyectos de la productora según su perfil de acceso.</p>
-              <button class="btn btn-primary btn-sm" onclick="_empAbrirInvitar()">+ Incorporar a alguien</button>
+              ${esAdmin ? `<button class="btn btn-primary btn-sm" onclick="_empAbrirInvitar()">+ Incorporar a alguien</button>` : ''}
             </div>
             <div id="empEquipoTabla" style="border:1px solid var(--rule);border-radius:8px;padding:12px;font-size:13px;color:var(--ink-secondary);">Cargando equipo…</div>
             <div id="empInvitacionesLista" style="margin-top:14px;"></div>
-            <p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">Incorporar internos es facultad del Administrador. La invitación se entrega por link copiable (y en la bandeja interna si la persona ya tiene cuenta); el envío automático por correo se activa cuando esté listo el canal de email.</p>
+            ${esAdmin ? `<p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">Incorporar internos es facultad del Administrador. La invitación se entrega por link copiable (y en la bandeja interna si la persona ya tiene cuenta); el envío automático por correo se activa cuando esté listo el canal de email.</p>` : `<p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">Incorporar personas y cambiar perfiles de acceso es facultad del Administrador. Aquí puedes ver quién compone el equipo, su perfil de acceso y su estado.</p>`}
           </div>
           <div id="empSubDiseno" style="display:none;">
-            <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">Sube todas las variaciones de tu logo (horizontal, isologo, versión clara…). La marcada como <strong>principal</strong> es la que hoy usan los documentos; elegir logo por documento llega más adelante. PNG, JPG o SVG, livianos.</p>
+            <p style="margin:0 0 14px;color:var(--ink-secondary);font-size:13px;line-height:1.5;">La identidad de la marca, a la vista de todo el equipo: descarga los logos, copia los colores y revisa las tipografías.${esAdmin ? '' : ' Editar la identidad es facultad del Administrador.'}</p>
+            <div class="config-section-title" style="margin:0 0 8px;">Logos</div>
             <div id="empLogosGaleria" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;"></div>
             <input type="file" id="empLogoInput" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="_empLogoPick(this)">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${esAdmin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-sm" onclick="document.getElementById('empLogoInput').click()">+ Subir variación</button>
               <button class="btn btn-ghost btn-sm" onclick="_empLogoUsarProvisional()">Agregar isotipo provisional (AMR)</button>
-            </div>
-            <p style="margin:12px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">Los logos se guardan con el perfil de la organización y se sincronizan solos. Hasta 8 variaciones de ~350 KB cada una.</p>
+            </div>` : ''}
+            <p style="margin:10px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">La variación marcada como <strong>principal</strong> es la que usan los documentos por defecto. Hasta 8 variaciones de ~350 KB cada una; todas descargables para el equipo.</p>
+            <div class="config-section-title" style="margin:20px 0 8px;">Colores de la marca</div>
+            <p style="margin:0 0 10px;color:var(--ink-secondary);font-size:12.5px;line-height:1.5;">La paleta oficial de la productora. Los previsualizadores de documentos la ofrecen como <strong>color de énfasis</strong>. Haz clic en un color para copiar su código hex.</p>
+            <div id="empColoresGaleria" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px;"></div>
+            ${esAdmin ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="color" id="empColorPick" value="#B03A2F" style="width:34px;height:34px;border:none;background:none;padding:0;cursor:pointer;" oninput="document.getElementById('empColorHex').value=this.value.toUpperCase();">
+              <input class="cot-input" id="empColorHex" placeholder="#B03A2F" style="width:130px;" onkeydown="if(event.key==='Enter')_empColorAgregar()">
+              <button class="btn btn-sm" onclick="_empColorAgregar()">+ Agregar color</button>
+            </div>` : ''}
+            <div class="config-section-title" style="margin:20px 0 8px;">Tipografías</div>
+            <p style="margin:0 0 10px;color:var(--ink-secondary);font-size:12.5px;line-height:1.5;">El repositorio tipográfico de la marca. Los previsualizadores de documentos las ofrecen junto a las dos del sistema (<strong>Poppins</strong> y <strong>Serif</strong>). Se cargan desde Google Fonts por el nombre exacto de la familia (p. ej. <strong>Oswald</strong>). La carga de archivos de fuente propios (p. ej. una Gotham licenciada) llega cuando se resuelva su almacenamiento.</p>
+            <div id="empTiposLista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+            ${esAdmin ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input class="cot-input" id="empTipoNombre" placeholder="Nombre visible (opcional)" style="width:190px;">
+              <input class="cot-input" id="empTipoFamilia" placeholder="Familia en Google Fonts" style="width:190px;" onkeydown="if(event.key==='Enter')_empTipoAgregar()">
+              <button class="btn btn-sm" onclick="_empTipoAgregar()">+ Agregar tipografía</button>
+            </div>` : ''}
           </div>
         </div>
-        <div class="modal-footer"><button class="btn" onclick="openConfigPanel()">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresaPerfil()">Guardar perfil</button></div>
+        <div class="modal-footer"><button class="btn" onclick="openConfigPanel()">Volver</button>${datosOK ? `<button class="btn btn-primary" onclick="saveEmpresaPerfil()">Guardar perfil</button>` : ''}</div>
       </div>
     </div>`;
+  _empShowSub(subInicial || (datosOK ? 'datos' : 'equipo'));
   try { _empCargarEquipo(); } catch (e) {}
   try { _empLogoRefresh(); } catch (e) {}
+  try { _empDisenoRefresh(); } catch (e) {}
 }
 function saveEmpresaPerfil() {
   const keys = ['nombreFicticio','razonSocial','rut','giro','direccion','comuna','ciudad','telefono','email','web','representante','repRut','repTelefono','repEmail','bancoNombre','bancoTipoCuenta','bancoNumero','bancoTitular','bancoRut','bancoEmailPagos','driveLink','milanoteLink','chipaxLink','googleCalendarId','usaChipax','linkFormularioPago','remitenteNombre','remitenteRol','remitenteNumero'];
@@ -18068,17 +18129,129 @@ function _empLogoSync() {
 }
 function _empLogoRefresh() {
   var box = document.getElementById('empLogosGaleria'); if (!box) return;
+  var adm = _puedeModoAdmin();   /* V11.11.0 · no-admins: ver y descargar; editar es del Administrador */
   var logos = _orgLogos();
   if (!logos.length) { box.innerHTML = '<div style="width:120px;height:120px;border:1px dashed var(--rule);border-radius:10px;display:grid;place-items:center;color:var(--ink-faint);font-size:12px;">Sin logos</div>'; return; }
   box.innerHTML = logos.map(function (l) {
-    return '<div style="width:150px;border:1px solid ' + (l.principal ? 'var(--accent)' : 'var(--rule)') + ';border-radius:10px;padding:8px;background:var(--bg-card);">'
+    return '<div style="width:160px;border:1px solid ' + (l.principal ? 'var(--accent)' : 'var(--rule)') + ';border-radius:10px;padding:8px;background:var(--bg-card);">'
       + '<div style="height:90px;display:grid;place-items:center;overflow:hidden;margin-bottom:6px;"><img src="' + safeUrl(l.dataUrl) + '" alt="" style="max-width:100%;max-height:100%;object-fit:contain;"></div>'
-      + '<input class="input" style="font-size:11.5px;padding:4px 6px;margin-bottom:6px;" value="' + escapeHtml(l.nombre || '') + '" placeholder="Nombre (ej. Horizontal claro)" onchange="_empLogoNombre(\'' + l.id + '\', this.value)">'
+      + '<input class="input" style="font-size:11.5px;padding:4px 6px;margin-bottom:6px;" value="' + escapeHtml(l.nombre || '') + '" placeholder="Nombre (ej. Horizontal claro)"' + (adm ? ' onchange="_empLogoNombre(\'' + l.id + '\', this.value)"' : ' readonly') + '>'
       + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
-      + (l.principal ? '<span style="font-size:10.5px;font-weight:700;color:var(--accent);align-self:center;">★ Principal</span>' : '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 7px;" onclick="_empLogoPrincipal(\'' + l.id + '\')">Hacer principal</button>')
-      + '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 7px;" onclick="_empLogoQuitar(\'' + l.id + '\')">Quitar</button>'
+      + '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 7px;" onclick="_empLogoDescargar(\'' + l.id + '\')">↓ Descargar</button>'
+      + (l.principal ? '<span style="font-size:10.5px;font-weight:700;color:var(--accent);align-self:center;">★ Principal</span>' : (adm ? '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 7px;" onclick="_empLogoPrincipal(\'' + l.id + '\')">Hacer principal</button>' : ''))
+      + (adm ? '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 7px;" onclick="_empLogoQuitar(\'' + l.id + '\')">Quitar</button>' : '')
       + '</div></div>';
   }).join('');
+}
+
+/* ═══ V11.11.0 · Diseño: descarga de logos, paleta de colores y repositorio
+   tipográfico de la marca. Todo persiste en EMPRESA_PERFIL (organization_profile
+   en Supabase, objeto completo): coloresMarca = ['#RRGGBB', ...] y
+   tipografias = [{id, nombre, family}]. Los previsualizadores los leen vía
+   cotPrevColores() y cotPrevFonts(). ═══ */
+function _empDatosConClave() {
+  requestAdminPassword(function () { STATE.adminMode = true; try { _applyAdminUI(); } catch (e) {} openEmpresaPerfil('datos'); });
+}
+function _empLogoDescargar(id) {
+  var l = _orgLogos().find(function (x) { return x.id === id; });
+  if (!l || !l.dataUrl) { showToast({ kind: 'error', title: 'Logo no disponible', body: 'Esta variación no tiene archivo guardado.' }); return; }
+  var ext = l.dataUrl.indexOf('image/svg') >= 0 ? 'svg' : (l.dataUrl.indexOf('image/jpeg') >= 0 ? 'jpg' : (l.dataUrl.indexOf('image/webp') >= 0 ? 'webp' : 'png'));
+  var base = ((orgNombre() || 'Logo') + (l.nombre ? ' - ' + l.nombre : '')).replace(/[\\/:*?"<>|]/g, '').trim() || 'logo';
+  var a = document.createElement('a');
+  a.href = l.dataUrl; a.download = base + '.' + ext;
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { a.remove(); }, 150);
+}
+function _empColores() {
+  if (!Array.isArray(EMPRESA_PERFIL.coloresMarca)) EMPRESA_PERFIL.coloresMarca = [];
+  return EMPRESA_PERFIL.coloresMarca;
+}
+function _empColorAgregar() {
+  var inp = document.getElementById('empColorHex');
+  var pick = document.getElementById('empColorPick');
+  var v = String((inp && inp.value.trim()) || (pick && pick.value) || '').trim();
+  if (v && v[0] !== '#') v = '#' + v;
+  v = v.toUpperCase();
+  if (!/^#[0-9A-F]{6}$/.test(v)) { showToast({ kind: 'error', title: 'Color inválido', body: 'Usa un código hex de 6 dígitos, por ejemplo <strong>#B03A2F</strong>.' }); return; }
+  var cols = _empColores();
+  if (cols.indexOf(v) >= 0) { showToast({ kind: 'info', title: 'Ya está en la paleta', body: v }); return; }
+  if (cols.length >= 10) { showToast({ kind: 'error', title: 'Paleta llena', body: 'Máximo 10 colores. Quita uno para agregar otro.' }); return; }
+  cols.push(v);
+  if (inp) inp.value = '';
+  markDirty(); _dalPerfilSaveSoon(); _empDisenoRefresh();
+}
+function _empColorQuitar(i) {
+  var cols = _empColores();
+  if (i < 0 || i >= cols.length) return;
+  cols.splice(i, 1);
+  markDirty(); _dalPerfilSaveSoon(); _empDisenoRefresh();
+}
+function _empColorCopiar(hex) {
+  try { navigator.clipboard.writeText(hex); showToast({ kind: 'success', title: 'Copiado', body: hex }); }
+  catch (e) { showToast({ kind: 'info', title: hex, body: 'Cópialo manualmente.' }); }
+}
+function _empTipos() {
+  if (!Array.isArray(EMPRESA_PERFIL.tipografias)) EMPRESA_PERFIL.tipografias = [];
+  return EMPRESA_PERFIL.tipografias;
+}
+function _empTipoLinkApp(family) {
+  /* Carga la familia en la app para que la muestra del repositorio se vea con
+     la tipografía real (los documentos cargan la suya aparte, vía cotPrevFontLink). */
+  try {
+    var fam = String(family || '').trim(); if (!fam) return;
+    var id = 'gfTipo_' + fam.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (document.getElementById(id)) return;
+    var l = document.createElement('link'); l.id = id; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=' + _cotPrevFamiliaGF(fam) + '&display=swap';
+    document.head.appendChild(l);
+  } catch (e) {}
+}
+function _empTipoAgregar() {
+  var nomEl = document.getElementById('empTipoNombre'), famEl = document.getElementById('empTipoFamilia');
+  var fam = String((famEl && famEl.value) || '').trim().replace(/['"<>]/g, '');
+  if (!fam) { showToast({ kind: 'error', title: 'Falta la familia', body: 'Indica el nombre exacto de la familia en Google Fonts, por ejemplo <strong>Oswald</strong>.' }); return; }
+  var tipos = _empTipos();
+  if (tipos.some(function (t) { return String(t.family || '').toLowerCase() === fam.toLowerCase(); })) { showToast({ kind: 'info', title: 'Ya está en el repositorio', body: fam }); return; }
+  if (tipos.length >= 6) { showToast({ kind: 'error', title: 'Repositorio lleno', body: 'Máximo 6 tipografías de marca.' }); return; }
+  tipos.push({ id: 'tf_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), nombre: String((nomEl && nomEl.value) || '').trim(), family: fam });
+  if (nomEl) nomEl.value = '';
+  if (famEl) famEl.value = '';
+  _empTipoLinkApp(fam);
+  markDirty(); _dalPerfilSaveSoon(); _empDisenoRefresh();
+  showToast({ kind: 'success', title: 'Tipografía agregada', body: 'Si la muestra se ve genérica, revisa que el nombre coincida exactamente con el de Google Fonts.' });
+}
+function _empTipoQuitar(id) {
+  EMPRESA_PERFIL.tipografias = _empTipos().filter(function (t) { return t.id !== id; });
+  markDirty(); _dalPerfilSaveSoon(); _empDisenoRefresh();
+}
+function _empDisenoRefresh() {
+  var adm = _puedeModoAdmin();
+  var cbox = document.getElementById('empColoresGaleria');
+  if (cbox) {
+    var cols = _empColores().filter(_cotPrevHexValido);
+    cbox.innerHTML = cols.length ? cols.map(function (hex, i) {
+      return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">'
+        + '<button title="Copiar ' + hex + '" onclick="_empColorCopiar(\'' + hex + '\')" style="width:46px;height:46px;border-radius:10px;background:' + hex + ';border:1px solid var(--rule);cursor:pointer;"></button>'
+        + '<span style="font-size:10px;color:var(--ink-muted);font-variant-numeric:tabular-nums;">' + hex + '</span>'
+        + (adm ? '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 6px;" onclick="_empColorQuitar(' + i + ')">Quitar</button>' : '')
+        + '</div>';
+    }).join('') : '<div style="font-size:12px;color:var(--ink-faint);">Sin paleta aún. Los previsualizadores ofrecen presets del sistema mientras tanto.</div>';
+  }
+  var tbox = document.getElementById('empTiposLista');
+  if (tbox) {
+    var tipos = _empTipos().filter(function (t) { return t && String(t.family || '').trim(); });
+    tipos.forEach(function (t) { _empTipoLinkApp(t.family); });
+    tbox.innerHTML = tipos.length ? tipos.map(function (t) {
+      var fam = String(t.family).replace(/['"<>]/g, '');
+      return '<div style="display:flex;align-items:center;gap:12px;border:1px solid var(--rule);border-radius:9px;padding:9px 12px;background:var(--bg-card);">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:12.5px;font-weight:600;">' + escapeHtml(t.nombre || fam) + ' <span style="font-weight:400;color:var(--ink-faint);font-size:11px;">· ' + escapeHtml(fam) + '</span></div>'
+        + '<div style="font-family:\'' + fam + '\',sans-serif;font-size:15px;color:var(--ink-secondary);margin-top:2px;">Cotización Audiovisual · 0123456789</div>'
+        + '</div>'
+        + (adm ? '<button class="btn btn-ghost btn-sm" style="font-size:10.5px;padding:2px 8px;" onclick="_empTipoQuitar(\'' + (t.id || '') + '\')">Quitar</button>' : '')
+        + '</div>';
+    }).join('') : '<div style="font-size:12px;color:var(--ink-faint);">Sin tipografías de marca. Los documentos usan las del sistema (Poppins y Serif).</div>';
+  }
 }
 function _empLogoNombre(id, v) { var l = _orgLogos().find(function (x) { return x.id === id; }); if (l) { l.nombre = String(v || '').trim(); markDirty(); _dalPerfilSaveSoon(); } }
 function _empLogoPrincipal(id) { _orgLogos().forEach(function (l) { l.principal = (l.id === id); }); _empLogoSync(); }
@@ -22182,7 +22355,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.10.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.11.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
