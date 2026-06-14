@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TakeOS · Mockup — Crear productora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --bg-page:#1a1a19; --bg-surface:#222221; --bg-surface-soft:#1e1e1d;
+  --bg-card:#262624; --bg-elevated:#2e2e2b;
+
+  --ink-primary:#FDFEED; --ink-secondary:#d3d6cb; --ink-muted:#a0a399; --ink-faint:#71736a;
+  --ink-onAccent:#FDFEED;
+
+  --accent:#B03A2F; --accent-deep:#d05a4d; --accent-soft:#6e3a33; --accent-bg:#2c1d1b;
+
+  --state-prep:#9aab74; --state-sale:#c79a5e; --state-prod:#6fa3b5;
+
+  --rule:#34342f; --rule-strong:#45453f; --rule-soft:#2a2a26;
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.35);
+  --shadow-md:0 4px 14px rgba(0,0,0,0.45);
+  --shadow-lg:0 14px 36px rgba(0,0,0,0.55);
+
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:24px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px; --space-8:64px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family:var(--font-sans);
+  background:var(--bg-page);
+  color:var(--ink-primary);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.45;
+}
+button{ font-family:inherit; }
+ul{ margin:0; padding:0; list-style:none; }
+a{ color:inherit; }
+
+/* ============ Componentes base (calcados de TakeOS) ============ */
+.input, .select, .textarea{
+  width:100%; font-family:inherit; font-size:13px;
+  color:var(--ink-primary); background:var(--bg-surface);
+  border:1px solid var(--rule); border-radius:var(--radius-sm);
+  padding:9px 11px;
+  transition:border-color .12s ease, background .12s ease;
+}
+.input:focus, .select:focus, .textarea:focus{
+  outline:none; border-color:var(--accent); background:var(--bg-elevated);
+}
+.input::placeholder, .textarea::placeholder{ color:var(--ink-faint); }
+.input.err, .select.err{ border-color:var(--accent-deep); }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  font-family:inherit; font-size:13px; font-weight:500;
+  padding:10px 16px; border-radius:var(--radius-sm);
+  border:1px solid var(--rule-strong); background:var(--bg-surface);
+  color:var(--ink-secondary); cursor:pointer; transition:all .12s ease;
+}
+.btn:hover{ background:var(--bg-surface-soft); border-color:var(--ink-faint); }
+.btn-primary{ background:var(--accent); color:var(--ink-onAccent); border-color:var(--accent); }
+.btn-primary:hover{ background:var(--accent-deep); border-color:var(--accent-deep); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.btn-ghost{ border-color:transparent; background:transparent; color:var(--ink-muted); }
+.btn-ghost:hover{ background:var(--bg-surface-soft); color:var(--ink-secondary); }
+.btn:disabled, .btn[disabled]{ opacity:.4; cursor:not-allowed; filter:saturate(.35); }
+.btn:disabled:hover, .btn[disabled]:hover{ transform:none; box-shadow:none; background:var(--accent); }
+.btn-block{ width:100%; }
+.btn-lg{ padding:13px 20px; font-size:14px; }
+
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500;
+  border:1px solid var(--rule-strong); background:var(--bg-surface);
+  color:var(--ink-secondary); cursor:pointer; transition:all .15s;
+}
+.chip:hover{ border-color:var(--ink-muted); }
+.chip.active{ background:var(--ink-primary); color:#1a1a19; border-color:var(--ink-primary); }
+
+:focus-visible{ outline:2px solid var(--accent-deep); outline-offset:2px; }
+
+/* ============ Cromo de mockup (barra superior dev) ============ */
+.chrome{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:var(--space-4); flex-wrap:wrap;
+  padding:10px 18px; background:var(--bg-surface-soft);
+  border-bottom:1px solid var(--rule);
+}
+.chrome .tag{
+  font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-faint); border:1px solid var(--rule); border-radius:999px;
+  padding:4px 10px;
+}
+.chrome .grow{ flex:1; }
+.chrome .label{ font-size:11px; color:var(--ink-muted); margin-right:4px; }
+
+/* ============ Layout de escenario ============ */
+.stage{ max-width:1080px; margin:0 auto; padding:var(--space-6) var(--space-4) var(--space-8); }
+.stage-narrow{ max-width:560px; }
+
+/* ============ Landing ============ */
+.hero{ text-align:center; padding:var(--space-7) 0 var(--space-6); }
+.hero .kicker{
+  font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--accent-deep); font-weight:600; margin-bottom:14px;
+}
+.hero h1{ font-size:clamp(30px,5vw,46px); font-weight:700; margin:0 0 14px; line-height:1.08; letter-spacing:-.01em; }
+.hero p{ font-size:16px; color:var(--ink-secondary); max-width:460px; margin:0 auto; }
+
+.planes-head{ text-align:center; margin:var(--space-6) 0 var(--space-5); }
+.planes-head h2{ font-size:22px; margin:0 0 6px; font-weight:600; }
+.planes-head p{ color:var(--ink-muted); font-size:14px; margin:0; }
+
+.planes-grid{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-4);
+}
+.plan-card{
+  position:relative; background:var(--bg-card); border:1px solid var(--rule);
+  border-radius:var(--radius-lg); padding:var(--space-5);
+  display:flex; flex-direction:column; gap:var(--space-4);
+  transition:border-color .15s, transform .15s;
+}
+.plan-card:hover{ border-color:var(--rule-strong); transform:translateY(-2px); }
+.plan-card.is-featured{ border-color:var(--accent-soft); box-shadow:0 0 0 1px var(--accent-soft); }
+.plan-badge{
+  position:absolute; top:-10px; right:16px;
+  font-size:10px; font-weight:600; letter-spacing:.04em;
+  background:var(--accent); color:var(--ink-onAccent);
+  padding:4px 10px; border-radius:999px; box-shadow:var(--shadow-sm);
+}
+.plan-featured-tag{
+  position:absolute; top:-10px; left:16px;
+  font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  background:var(--bg-elevated); color:var(--ink-secondary); border:1px solid var(--rule-strong);
+  padding:4px 10px; border-radius:999px;
+}
+.plan-name{ font-size:18px; font-weight:600; }
+.plan-price{ display:flex; align-items:baseline; gap:6px; }
+.plan-amount{ font-size:28px; font-weight:700; letter-spacing:-.01em; }
+.plan-period{ font-size:12px; color:var(--ink-muted); }
+.plan-eb{ font-size:11px; color:var(--state-sale); font-weight:500; }
+.plan-bullets{ display:flex; flex-direction:column; gap:8px; margin:2px 0 6px; }
+.plan-bullets li{ font-size:13px; color:var(--ink-secondary); display:flex; gap:8px; align-items:flex-start; }
+.plan-bullets li::before{ content:"›"; color:var(--accent-deep); font-weight:700; }
+.plan-cta{ margin-top:auto; }
+
+.landing-foot{ text-align:center; margin-top:var(--space-6); color:var(--ink-faint); font-size:12px; }
+
+/* ============ Encabezado de flujo ============ */
+.flow-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:var(--space-5); flex-wrap:wrap; }
+.brandline{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; }
+.brandline .dot{ width:9px; height:9px; border-radius:3px; background:var(--accent); display:inline-block; }
+.plan-chip{
+  display:inline-flex; align-items:center; gap:8px; font-size:12px;
+  background:var(--bg-card); border:1px solid var(--rule); border-radius:999px; padding:6px 13px;
+}
+.plan-chip b{ font-weight:600; }
+.plan-chip .x{ color:var(--ink-faint); }
+
+/* Stepper */
+.stepper{ display:flex; align-items:center; gap:0; margin:0 auto var(--space-5); max-width:520px; }
+.step{ display:flex; align-items:center; gap:9px; flex:1; }
+.step .num{
+  width:26px; height:26px; border-radius:50%; flex:0 0 26px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:600;
+  background:var(--bg-surface); border:1px solid var(--rule-strong); color:var(--ink-muted);
+}
+.step .txt{ font-size:12px; color:var(--ink-muted); white-space:nowrap; }
+.step.done .num{ background:var(--accent-soft); border-color:var(--accent-soft); color:var(--ink-primary); }
+.step.active .num{ background:var(--accent); border-color:var(--accent); color:var(--ink-onAccent); }
+.step.active .txt{ color:var(--ink-primary); font-weight:500; }
+.step .bar{ flex:1; height:1px; background:var(--rule); margin:0 6px; }
+.step:last-child .bar{ display:none; }
+
+/* Tarjeta de formulario */
+.card{
+  background:var(--bg-card); border:1px solid var(--rule);
+  border-radius:var(--radius-lg); padding:var(--space-6);
+}
+.card h3{ margin:0 0 4px; font-size:19px; font-weight:600; }
+.card .sub{ color:var(--ink-muted); font-size:13px; margin:0 0 var(--space-5); }
+
+.field{ margin-bottom:var(--space-4); }
+.field label{ display:block; font-size:12px; color:var(--ink-secondary); margin-bottom:6px; font-weight:500; }
+.field .opt{ color:var(--ink-faint); font-weight:400; }
+.field .hint{ font-size:11px; color:var(--ink-faint); margin-top:5px; }
+.field .msg-err{ font-size:11px; color:var(--accent-deep); margin-top:5px; display:none; }
+.field.show-err .msg-err{ display:block; }
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
+.rut-ok{ font-size:11px; color:var(--state-prep); margin-top:5px; display:none; }
+.rut-ok.on{ display:block; }
+
+.divider{ display:flex; align-items:center; gap:12px; margin:var(--space-5) 0; color:var(--ink-faint); font-size:11px; }
+.divider::before, .divider::after{ content:""; flex:1; height:1px; background:var(--rule); }
+
+.google-btn{
+  width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+  background:var(--bg-surface); border:1px solid var(--rule-strong); color:var(--ink-primary);
+  padding:11px; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer;
+  transition:all .12s;
+}
+.google-btn:hover{ background:var(--bg-surface-soft); border-color:var(--ink-muted); }
+.gmark{ width:16px; height:16px; }
+
+.actions{ display:flex; gap:var(--space-3); margin-top:var(--space-5); }
+.actions .grow{ flex:1; }
+
+/* T&C */
+.tyc-box{
+  background:var(--bg-surface-soft); border:1px solid var(--rule); border-radius:var(--radius-md);
+  padding:var(--space-4) var(--space-5); max-height:300px; overflow:auto; font-size:13px; color:var(--ink-secondary);
+}
+.tyc-box h4{ margin:0 0 4px; font-size:13px; color:var(--ink-primary); }
+.tyc-box p{ margin:0 0 14px; }
+.tyc-provisional{
+  font-size:11px; color:var(--state-sale); background:var(--accent-bg);
+  border:1px dashed var(--accent-soft); border-radius:var(--radius-sm);
+  padding:8px 12px; margin-bottom:var(--space-4);
+}
+.check-row{ display:flex; align-items:flex-start; gap:11px; margin-top:var(--space-5); cursor:pointer; }
+.check-row input{ width:18px; height:18px; margin-top:1px; accent-color:var(--accent); cursor:pointer; }
+.check-row span{ font-size:13px; color:var(--ink-secondary); }
+
+/* Pago */
+.pay-grid{ display:grid; grid-template-columns:1fr; gap:var(--space-5); }
+.pay-sim-banner{
+  font-size:12px; color:var(--state-sale); background:var(--accent-bg);
+  border:1px dashed var(--accent-soft); border-radius:var(--radius-sm);
+  padding:10px 13px; margin-bottom:var(--space-4);
+}
+.pay-summary{ background:var(--bg-surface-soft); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-4) var(--space-5); }
+.pay-line{ display:flex; justify-content:space-between; padding:7px 0; font-size:13px; color:var(--ink-secondary); }
+.pay-line.disc{ color:var(--state-sale); }
+.pay-line.total{ border-top:1px solid var(--rule); margin-top:6px; padding-top:12px; font-size:16px; font-weight:600; color:var(--ink-primary); }
+.pay-fake{ opacity:.65; pointer-events:none; }
+
+/* Éxito */
+.success{ text-align:center; padding:var(--space-6) 0; }
+.success .ring{
+  width:74px; height:74px; border-radius:50%; margin:0 auto var(--space-5);
+  background:var(--accent-bg); border:2px solid var(--accent); display:flex; align-items:center; justify-content:center;
+  color:var(--accent-deep); font-size:34px;
+}
+.success h3{ font-size:24px; margin:0 0 8px; }
+.success p{ color:var(--ink-secondary); font-size:15px; margin:0 auto var(--space-3); max-width:380px; }
+.success .role{ display:inline-flex; gap:8px; align-items:center; font-size:12px; background:var(--bg-card); border:1px solid var(--rule); border-radius:999px; padding:7px 14px; margin-top:6px; }
+
+/* ============ Shell / Control Room ============ */
+.shell{ display:grid; grid-template-columns:208px 1fr; min-height:560px; border:1px solid var(--rule); border-radius:var(--radius-lg); overflow:hidden; background:var(--bg-surface); }
+.sidebar{ background:var(--bg-surface-soft); border-right:1px solid var(--rule); padding:var(--space-4); display:flex; flex-direction:column; gap:4px; }
+.sb-brand{ display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px; padding:6px 8px 14px; }
+.sb-brand .dot{ width:9px; height:9px; border-radius:3px; background:var(--accent); }
+.nav-item{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:var(--radius-sm); font-size:13px; color:var(--ink-secondary); cursor:pointer; transition:background .12s; }
+.nav-item:hover{ background:var(--bg-surface); }
+.nav-item.active{ background:var(--bg-card); color:var(--ink-primary); }
+.nav-item .ico{ width:16px; text-align:center; opacity:.8; }
+.nav-item .priv{ margin-left:auto; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); border:1px solid var(--rule); border-radius:999px; padding:2px 6px; }
+
+.workspace{ display:flex; flex-direction:column; min-width:0; }
+.topbar{ display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--rule); }
+.topbar .org{ font-weight:600; font-size:14px; }
+.topbar .org .role-pill{ font-size:10px; font-weight:500; color:var(--ink-muted); border:1px solid var(--rule); border-radius:999px; padding:2px 8px; margin-left:8px; }
+.topbar .sp{ flex:1; }
+.bell{ position:relative; background:transparent; border:1px solid var(--rule); width:36px; height:36px; border-radius:var(--radius-sm); color:var(--ink-secondary); cursor:pointer; font-size:16px; }
+.bell:hover{ background:var(--bg-card); }
+.bell .badge{ position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; padding:0 4px; border-radius:999px; background:var(--accent); color:var(--ink-onAccent); font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.avatar{ width:34px; height:34px; border-radius:50%; background:var(--accent-soft); color:var(--ink-primary); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; }
+
+.notif-pop{ position:absolute; top:54px; right:20px; width:330px; background:var(--bg-elevated); border:1px solid var(--rule-strong); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:30; overflow:hidden; }
+.notif-pop .nh{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--rule); font-size:13px; font-weight:600; }
+.notif-pop .nh button{ background:transparent; border:none; color:var(--ink-faint); cursor:pointer; font-size:16px; }
+.notif{ padding:12px 14px; border-bottom:1px solid var(--rule-soft); display:flex; gap:11px; }
+.notif:last-child{ border-bottom:none; }
+.notif .ni{ font-size:15px; margin-top:1px; }
+.notif .nt{ font-size:13px; color:var(--ink-primary); }
+.notif .nd{ font-size:11px; color:var(--ink-muted); margin-top:2px; }
+.notif .tagb{ display:inline-block; font-size:9px; letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:999px; margin-top:6px; }
+.tagb.block{ background:var(--accent-bg); color:var(--accent-deep); border:1px solid var(--accent-soft); }
+.tagb.warn{ background:#2a2418; color:var(--state-sale); border:1px solid #5a4a2a; }
+
+.canvas{ padding:22px; overflow:auto; }
+.canvas h4{ margin:0 0 3px; font-size:17px; font-weight:600; }
+.canvas .csub{ color:var(--ink-muted); font-size:13px; margin:0 0 var(--space-5); }
+
+.proj-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:var(--space-4); }
+.proj-card{ background:var(--bg-card); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-4); cursor:pointer; transition:border-color .12s, transform .12s; min-height:128px; display:flex; flex-direction:column; }
+.proj-card:hover{ border-color:var(--rule-strong); transform:translateY(-2px); }
+.proj-card .pstate{ font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; align-self:flex-start; margin-bottom:auto; }
+.ps-prep{ background:#2a3018; color:var(--state-prep); border:1px solid #43521f; }
+.ps-prod{ background:#16282f; color:var(--state-prod); border:1px solid #234653; }
+.ps-sale{ background:#2a2418; color:var(--state-sale); border:1px solid #5a4a2a; }
+.proj-card .pname{ font-size:14px; font-weight:600; margin-top:12px; }
+.proj-card .pmeta{ font-size:11px; color:var(--ink-muted); margin-top:4px; }
+.proj-new{ border:1px dashed var(--rule-strong); background:transparent; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--ink-muted); font-size:13px; }
+.proj-new:hover{ color:var(--ink-secondary); border-color:var(--ink-faint); }
+.proj-new .plus{ font-size:24px; }
+.demo-tag{ font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-deep); border:1px solid var(--accent-soft); border-radius:999px; padding:2px 7px; margin-left:8px; }
+
+/* Proyecto abierto */
+.proj-head{ display:flex; align-items:center; gap:12px; margin-bottom:var(--space-4); }
+.back-btn{ background:transparent; border:1px solid var(--rule); border-radius:var(--radius-sm); width:32px; height:32px; color:var(--ink-secondary); cursor:pointer; }
+.back-btn:hover{ background:var(--bg-card); }
+.tabs{ display:flex; gap:4px; border-bottom:1px solid var(--rule); margin-bottom:var(--space-5); flex-wrap:wrap; }
+.tab{ padding:9px 14px; font-size:13px; color:var(--ink-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.tab:hover{ color:var(--ink-secondary); }
+.tab.active{ color:var(--ink-primary); border-bottom-color:var(--accent); }
+.tab-body{ background:var(--bg-surface-soft); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-5); min-height:200px; color:var(--ink-secondary); font-size:13px; }
+.tab-body .ph{ color:var(--ink-faint); font-size:12px; margin-top:8px; }
+.lock-hint{ display:flex; gap:12px; align-items:flex-start; background:var(--accent-bg); border:1px solid var(--accent-soft); border-radius:var(--radius-sm); padding:13px 15px; }
+.lock-hint .li{ font-size:18px; }
+.lock-hint .lt{ font-size:13px; color:var(--ink-primary); font-weight:500; }
+.lock-hint .ld{ font-size:12px; color:var(--ink-muted); margin-top:3px; }
+
+/* ============ Tour ============ */
+.tour-backdrop{ position:fixed; inset:0; background:rgba(10,10,9,.62); z-index:1000; }
+.tour-target{ position:relative; z-index:1002; outline:2px solid var(--accent-deep); outline-offset:4px; border-radius:var(--radius-sm); box-shadow:0 0 0 5px rgba(176,58,47,.32), var(--shadow-lg); }
+.tour-card{
+  position:fixed; left:50%; bottom:34px; transform:translateX(-50%);
+  width:min(420px, calc(100vw - 36px)); z-index:1003;
+  background:var(--bg-elevated); border:1px solid var(--rule-strong); border-radius:var(--radius-md);
+  box-shadow:var(--shadow-lg); padding:var(--space-5);
+}
+.tour-card .tc-step{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-deep); font-weight:600; margin-bottom:7px; }
+.tour-card h4{ margin:0 0 6px; font-size:16px; font-weight:600; }
+.tour-card p{ margin:0 0 var(--space-4); font-size:13px; color:var(--ink-secondary); }
+.tour-dots{ display:flex; gap:6px; }
+.tour-dots i{ width:7px; height:7px; border-radius:50%; background:var(--rule-strong); display:inline-block; }
+.tour-dots i.on{ background:var(--accent); }
+.tour-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.tour-foot .r{ display:flex; gap:8px; }
+
+/* ============ Drawer de notas de integración ============ */
+.notes-drawer{
+  position:fixed; top:0; right:0; height:100%; width:min(430px,92vw); z-index:60;
+  background:var(--bg-surface); border-left:1px solid var(--rule-strong); box-shadow:var(--shadow-lg);
+  transform:translateX(100%); transition:transform .22s ease; display:flex; flex-direction:column;
+}
+.notes-drawer.open{ transform:translateX(0); }
+.notes-h{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--rule); }
+.notes-h b{ font-size:14px; }
+.notes-h button{ background:transparent; border:none; color:var(--ink-faint); cursor:pointer; font-size:20px; }
+.notes-body{ padding:18px; overflow:auto; }
+.note{ border:1px solid var(--rule); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:11px; background:var(--bg-surface-soft); }
+.note .ns{ font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--accent-deep); font-weight:600; margin-bottom:5px; }
+.note .nm{ font-size:12px; color:var(--ink-secondary); }
+.note code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:var(--ink-primary); background:var(--bg-card); padding:1px 5px; border-radius:4px; }
+.note .pend{ display:inline-block; font-size:10px; color:var(--state-sale); border:1px solid #5a4a2a; border-radius:999px; padding:2px 7px; margin-top:7px; }
+.scrim{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:55; }
+
+/* ============ Responsive ============ */
+@media (max-width:820px){
+  .planes-grid{ grid-template-columns:1fr; }
+  .shell{ grid-template-columns:1fr; }
+  .sidebar{ flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--rule); }
+  .sb-brand{ display:none; }
+  .nav-item{ white-space:nowrap; }
+  .nav-item .priv{ display:none; }
+  .step .txt{ display:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="tag">Mockup · no conectado a backend</span>
+  <span class="tag">Crear productora</span>
+  <span class="grow"></span>
+  <span class="label">Entrada:</span>
+  <button class="chip" id="ent-landing" onclick="reiniciar('landing')">Desde la landing</button>
+  <button class="chip" id="ent-panel" onclick="reiniciar('panel')">Desde la app</button>
+  <button class="btn btn-ghost" onclick="reiniciar(estado.entryPoint)">↺ Reiniciar</button>
+  <button class="btn" onclick="toggleNotas()">ⓘ Notas de integración</button>
+</div>
+
+<div id="app"></div>
+
+<div class="scrim" id="scrim" style="display:none" onclick="toggleNotas()"></div>
+<aside class="notes-drawer" id="notas">
+  <div class="notes-h"><b>Costuras de integración</b><button onclick="toggleNotas()" aria-label="Cerrar">×</button></div>
+  <div class="notes-body" id="notas-body"></div>
+</aside>
+
+<script>
+/* ===================================================================
+   TakeOS — Mockup del flujo de creación de productora
+   HTML único · JS vanilla · estado en memoria (sin localStorage)
+   No llama a ningún backend. Cada paso anota su costura de integración.
+   =================================================================== */
+
+const IVA = 0.19;            // Chile
+const EARLY_BIRD = 0.50;     // -50% ambos ciclos, ventana cierra 1 oct 2026
+
+/* Precios y features: referencia GTM congelada (confirmar con producto). */
+const PLANES = {
+  gratis: {
+    id:'gratis', nombre:'Gratis', precio:0, precioLabel:'$0', periodo:'siempre', pago:false,
+    bullets:['1 proyecto activo','Hasta 4 colaboradores','Módulos esenciales']
+  },
+  rodaje: {
+    id:'rodaje', nombre:'Rodaje', precio:106800, precioLabel:'$106.800', periodo:'+ IVA / mes', pago:true, destacado:true,
+    bullets:['Proyectos ilimitados','Colaboradores ilimitados','Plan de rodaje, presupuesto y legal']
+  },
+  produccion: {
+    id:'produccion', nombre:'Producción', precio:214800, precioLabel:'$214.800', periodo:'+ IVA / mes', pago:true,
+    bullets:['Todo lo de Rodaje','Gestión multi-proyecto avanzada','Reportería y exportaciones']
+  }
+};
+
+/* Estado en memoria (se reinicia al recargar la página). */
+let estado = nuevoEstado('landing');
+function nuevoEstado(entryPoint){
+  return {
+    entryPoint,
+    plan: null,
+    persona: { nombre:'', apellido:'', mail:'' },
+    productora: { nombreVisible:'', razonSocial:'', rut:'', giro:'', direccion:'' },
+    aceptoTC: false,
+    pagado: false
+  };
+}
+
+let pantallaActual = null;
+let historial = [];
+let controlSubvista = 'proyectos';   // 'proyectos' | 'proyecto'
+let tabActiva = 'resumen';
+let tourPaso = 0;                    // 0 = sin tour
+let notifAbierta = false;
+
+const app = document.getElementById('app');
+
+/* ---------- Navegación ---------- */
+function ir(p, push=true){
+  if(push && pantallaActual) historial.push(pantallaActual);
+  pantallaActual = p;
+  render();
+  window.scrollTo({ top:0, behavior:'instant' in window ? 'instant' : 'auto' });
+}
+function volver(){
+  if(historial.length){ pantallaActual = historial.pop(); render(); }
+}
+function reiniciar(entryPoint){
+  estado = nuevoEstado(entryPoint);
+  historial = [];
+  tourPaso = 0; notifAbierta = false; controlSubvista = 'proyectos'; tabActiva = 'resumen';
+  if(entryPoint === 'panel'){
+    // Desde la app la persona YA existe (cuenta personal mínima ya creada).
+    estado.persona = { nombre:'Camila', apellido:'Soto', mail:'camila.soto@correo.cl' };
+    pantallaActual = 'panel';
+  } else {
+    pantallaActual = 'landing';
+  }
+  render();
+  window.scrollTo(0,0);
+}
+
+/* ---------- Router ---------- */
+function render(){
+  sincronizarChrome();
+  switch(pantallaActual){
+    case 'landing':     pantallaLanding(); break;
+    case 'panel':       pantallaPanel(); break;
+    case 'planes':      pantallaPlanes(); break;
+    case 'cuenta':      pantallaCuenta(); break;
+    case 'facturacion': pantallaFacturacion(); break;
+    case 'terminos':    pantallaTerminos(); break;
+    case 'pago':        pantallaPago(); break;
+    case 'creada':      pantallaCreada(); break;
+    case 'control':     pantallaControl(); break;
+    default:            pantallaLanding();
+  }
+}
+function sincronizarChrome(){
+  document.getElementById('ent-landing').classList.toggle('active', estado.entryPoint==='landing');
+  document.getElementById('ent-panel').classList.toggle('active', estado.entryPoint==='panel');
+}
+
+/* ===================================================================
+   Pantalla: LANDING  (entrada por planes)
+   Costura: sin backend. La selección de plan vive en memoria.
+   =================================================================== */
+function pantallaLanding(){
+  app.innerHTML = `
+    <div class="stage">
+      <div class="hero">
+        <div class="kicker">Gestión de producción audiovisual</div>
+        <h1>Tu productora, ordenada de punta a punta</h1>
+        <p>Proyectos, presupuestos, plan de rodaje y documentos legales en un solo lugar. Elige un plan para empezar.</p>
+      </div>
+      <div class="planes-head">
+        <h2>Elige tu plan</h2>
+        <p>Puedes cambiar de plan cuando quieras. Early Bird con 50% de descuento hasta el 1 de octubre de 2026.</p>
+      </div>
+      ${tarjetasPlanes()}
+      <div class="landing-foot">Al elegir un plan creas tu productora. La marca (logo, tipografías, colores) la cargas después, sin apuro.</div>
+    </div>`;
+  wirePlanes();
+}
+
+/* ===================================================================
+   Pantalla: PANEL PERSONAL  (segunda entrada: "¿Tienes una productora?")
+   Costura: cartel real = _espInyectarCtaProductora dentro de renderEspacioUsuario.
+   =================================================================== */
+function pantallaPanel(){
+  const ini = (estado.persona.nombre[0]||'C') + (estado.persona.apellido[0]||'S');
+  app.innerHTML = `
+    <div class="stage">
+      <div class="flow-top">
+        <div class="brandline"><span class="dot"></span> TakeOS · Panel personal</div>
+        <div class="plan-chip"><div class="avatar" style="width:24px;height:24px;font-size:11px">${ini}</div> ${estado.persona.nombre} ${estado.persona.apellido}</div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <h3>Hola, ${estado.persona.nombre}</h3>
+        <p class="sub">Este es tu panel personal. Aquí ves las productoras donde trabajas.</p>
+        <div style="font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Participas como externo en</div>
+        <div class="proj-grid">
+          <div class="proj-card"><span class="pstate ps-prod">Rodaje</span><div class="pname">Marea Negra</div><div class="pmeta">Productora Aurora · Dirección de fotografía</div></div>
+          <div class="proj-card"><span class="pstate ps-sale">Cotización</span><div class="pname">Spot Andes</div><div class="pmeta">Filmes del Sur · Cámara</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:var(--accent-soft);box-shadow:0 0 0 1px var(--accent-soft)">
+        <h3>¿Tienes una productora?</h3>
+        <p class="sub">Crea tu propia productora y administra tus proyectos, equipo y documentos. Quedas como administrador desde el primer día.</p>
+        <button class="btn btn-primary btn-lg" onclick="ir('planes')">Crear mi productora →</button>
+      </div>
+    </div>`;
+}
+
+/* ===================================================================
+   Pantalla: PLANES  (selección de plan dentro del flujo desde la app)
+   =================================================================== */
+function pantallaPlanes(){
+  app.innerHTML = `
+    <div class="stage">
+      <div class="flow-top">
+        <div class="brandline"><span class="dot"></span> Crear productora</div>
+        <button class="btn btn-ghost" onclick="volver()">← Volver</button>
+      </div>
+      <div class="planes-head">
+        <h2>Elige tu plan</h2>
+        <p>Eliges el plan y luego completas los datos de tu productora. Early Bird con 50% de descuento hasta el 1 de octubre de 2026.</p>
+      </div>
+      ${tarjetasPlanes()}
+    </div>`;
+  wirePlanes();
+}
+
+/* Componente reutilizable: tarjetas de planes */
+function tarjetasPlanes(){
+  const cards = Object.values(PLANES).map(p => `
+    <div class="plan-card ${p.destacado?'is-featured':''}">
+      ${p.destacado?`<span class="plan-featured-tag">Más elegido</span>`:''}
+      ${p.pago?`<span class="plan-badge">Early Bird −50%</span>`:''}
+      <div class="plan-name">${p.nombre}</div>
+      <div>
+        <div class="plan-price"><span class="plan-amount">${p.precioLabel}</span><span class="plan-period">${p.periodo}</span></div>
+        ${p.pago?`<div class="plan-eb">Early Bird: ${clp(Math.round(p.precio*(1-EARLY_BIRD)))} + IVA / mes</div>`:''}
+      </div>
+      <ul class="plan-bullets">${p.bullets.map(b=>`<li>${b}</li>`).join('')}</ul>
+      <button class="btn btn-primary plan-cta" data-plan="${p.id}">Elegir ${p.nombre}</button>
+    </div>`).join('');
+  return `<div class="planes-grid">${cards}</div>`;
+}
+function wirePlanes(){
+  app.querySelectorAll('.plan-cta').forEach(b => b.onclick = () => elegirPlan(b.dataset.plan));
+}
+function elegirPlan(id){
+  estado.plan = PLANES[id];
+  // Desde landing pedimos cuenta mínima; desde la app la cuenta ya existe.
+  if(estado.entryPoint === 'panel') ir('facturacion');
+  else ir('cuenta');
+}
+
+/* ===================================================================
+   Pantalla: CUENTA mínima  (persona primero, fricción mínima)
+   Costura: onboarding de perfil personal + requisitos_faltantes ('perfil').
+   =================================================================== */
+function pantallaCuenta(){
+  app.innerHTML = `
+    <div class="stage stage-narrow">
+      ${flowHeader()}
+      ${stepper(0)}
+      <div class="card">
+        <h3>Crea tu cuenta</h3>
+        <p class="sub">Solo lo mínimo para empezar. Completas el resto de tu perfil después.</p>
+
+        <button class="google-btn" onclick="continuarConGoogle()">
+          <svg class="gmark" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 18.9 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C40.9 36 44 30.6 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>
+          Continuar con Google
+        </button>
+
+        <div class="divider">o con tu correo</div>
+
+        <div class="field-row">
+          <div class="field" id="f-nombre">
+            <label for="i-nombre">Nombre</label>
+            <input class="input" id="i-nombre" placeholder="Tu nombre" value="${estado.persona.nombre}">
+            <div class="msg-err">Ingresa tu nombre.</div>
+          </div>
+          <div class="field" id="f-apellido">
+            <label for="i-apellido">Apellido</label>
+            <input class="input" id="i-apellido" placeholder="Tu apellido" value="${estado.persona.apellido}">
+            <div class="msg-err">Ingresa tu apellido.</div>
+          </div>
+        </div>
+        <div class="field" id="f-mail">
+          <label for="i-mail">Correo</label>
+          <input class="input" id="i-mail" type="email" placeholder="tu@correo.cl" value="${estado.persona.mail}">
+          <div class="hint">Te pedimos confirmar tu correo al activar la cuenta.</div>
+          <div class="msg-err">Ingresa un correo válido.</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary btn-block btn-lg" onclick="guardarCuenta()">Crear cuenta y continuar</button>
+        </div>
+      </div>
+    </div>`;
+  setTimeout(()=>{ const n=document.getElementById('i-nombre'); if(n) n.focus(); },30);
+}
+function continuarConGoogle(){
+  // Simulación: Google entrega nombre + correo verificados. Cero fricción.
+  estado.persona = { nombre:'Camila', apellido:'Soto', mail:'camila.soto@gmail.com' };
+  ir('facturacion');
+}
+function guardarCuenta(){
+  const nombre = val('i-nombre'), apellido = val('i-apellido'), mail = val('i-mail');
+  let ok = true;
+  ok = marcar('f-nombre', nombre.trim().length>0) && ok;
+  ok = marcar('f-apellido', apellido.trim().length>0) && ok;
+  ok = marcar('f-mail', mailValido(mail)) && ok;
+  if(!ok) return;
+  estado.persona = { nombre:nombre.trim(), apellido:apellido.trim(), mail:mail.trim() };
+  ir('facturacion');
+}
+
+/* ===================================================================
+   Pantalla: FACTURACIÓN  (datos mínimos obligatorios de la productora)
+   Costura: alimenta el perfil de empresa (Panel de Empresa). Branding va después.
+   =================================================================== */
+function pantallaFacturacion(){
+  const pr = estado.productora;
+  const gratis = estado.plan && !estado.plan.pago;   // plan Gratis: no se piden datos de facturación
+  app.innerHTML = `
+    <div class="stage stage-narrow">
+      ${flowHeader()}
+      ${stepper(1)}
+      <div class="card">
+        <h3>${gratis ? 'Tu productora' : 'Datos de tu productora'}</h3>
+        ${gratis ? '<p class="sub">Le pones nombre y empiezas. Los datos de facturación se piden cuando subas a un plan de pago.</p>' : ''}
+
+        <div class="field" id="f-nv">
+          <label for="i-nv">Nombre de la productora <span class="opt">(visible en el sistema)</span></label>
+          <input class="input" id="i-nv" placeholder="Ej: Filmes del Sur" value="${pr.nombreVisible}">
+          <div class="msg-err">Ingresa el nombre visible.</div>
+        </div>
+        ${gratis ? '' : `
+        <div class="field" id="f-rs">
+          <label for="i-rs">Razón social</label>
+          <input class="input" id="i-rs" placeholder="Ej: Filmes del Sur SpA" value="${pr.razonSocial}">
+          <div class="msg-err">Ingresa la razón social.</div>
+        </div>
+        <div class="field" id="f-rut">
+          <label for="i-rut">RUT de la empresa</label>
+          <input class="input" id="i-rut" placeholder="76.123.456-7" value="${pr.rut}">
+          <div class="rut-ok" id="rut-ok">✓ RUT válido</div>
+          <div class="msg-err">RUT inválido. Revisa el número y el dígito verificador.</div>
+        </div>
+        <div class="field" id="f-giro">
+          <label for="i-giro">Giro</label>
+          <input class="input" id="i-giro" placeholder="Ej: Producción audiovisual" value="${pr.giro}">
+          <div class="msg-err">Ingresa el giro.</div>
+        </div>
+        <div class="field" id="f-dir">
+          <label for="i-dir">Dirección</label>
+          <input class="input" id="i-dir" placeholder="Calle, número, comuna, ciudad" value="${pr.direccion}">
+          <div class="msg-err">Ingresa la dirección.</div>
+        </div>`}
+
+        <div class="actions">
+          <button class="btn" onclick="volver()">← Volver</button>
+          <button class="btn btn-primary grow btn-lg" onclick="guardarFacturacion()">Continuar</button>
+        </div>
+      </div>
+    </div>`;
+
+  if(!gratis){
+    const rut = document.getElementById('i-rut');
+    rut.addEventListener('blur', ()=>{
+      const v = rut.value.trim();
+      if(!v){ document.getElementById('rut-ok').classList.remove('on'); return; }
+      const ok = rutValido(v);
+      if(ok) rut.value = formatearRut(v);
+      document.getElementById('rut-ok').classList.toggle('on', ok);
+      marcar('f-rut', ok);
+    });
+  }
+  setTimeout(()=>{ const n=document.getElementById('i-nv'); if(n) n.focus(); },30);
+}
+function guardarFacturacion(){
+  const gratis = estado.plan && !estado.plan.pago;
+  const nv = val('i-nv');
+  if(gratis){
+    if(!marcar('f-nv', nv.trim().length>0)) return;
+    estado.productora = { nombreVisible:nv.trim(), razonSocial:'', rut:'', giro:'', direccion:'' };
+    ir('terminos');
+    return;
+  }
+  const rs=val('i-rs'), rut=val('i-rut'), giro=val('i-giro'), dir=val('i-dir');
+  let ok = true;
+  ok = marcar('f-nv', nv.trim().length>0) && ok;
+  ok = marcar('f-rs', rs.trim().length>0) && ok;
+  ok = marcar('f-rut', rutValido(rut)) && ok;
+  ok = marcar('f-giro', giro.trim().length>0) && ok;
+  ok = marcar('f-dir', dir.trim().length>0) && ok;
+  if(!ok) return;
+  estado.productora = {
+    nombreVisible:nv.trim(), razonSocial:rs.trim(),
+    rut:formatearRut(rut), giro:giro.trim(), direccion:dir.trim()
+  };
+  ir('terminos');
+}
+
+/* ===================================================================
+   Pantalla: TÉRMINOS  (último paso antes de pagar)
+   Costura: texto legal v0 provisional. Sociedad desarrolladora por constituir.
+   =================================================================== */
+function pantallaTerminos(){
+  app.innerHTML = `
+    <div class="stage stage-narrow">
+      ${flowHeader()}
+      ${stepper(2)}
+      <div class="card">
+        <h3>Términos y condiciones de servicio</h3>
+        <p class="sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de TakeOS y tu productora.</p>
+
+        <div class="tyc-provisional">Texto provisional, solo para demostrar el flujo. El definitivo lo define el área legal cuando la sociedad desarrolladora esté constituida.</div>
+
+        <div class="tyc-box">
+          <h4>1. Objeto</h4>
+          <p>La sociedad desarrolladora pone a disposición de la productora la plataforma TakeOS para la gestión de su producción audiovisual, según el plan contratado.</p>
+          <h4>2. Plan y pago</h4>
+          <p>La productora contrata el plan seleccionado y autoriza su cobro según el ciclo elegido. Los precios se expresan en pesos chilenos más IVA.</p>
+          <h4>3. Datos y privacidad</h4>
+          <p>El tratamiento de datos personales se rige por la normativa vigente, incluida la Ley 21.719. La productora es responsable de los datos que carga a la plataforma.</p>
+          <h4>4. Administración</h4>
+          <p>Quien crea la productora queda como administrador. La productora no puede quedar sin al menos un administrador.</p>
+          <h4>5. Vigencia y término</h4>
+          <p>El servicio se mantiene vigente mientras el plan esté activo. Cualquiera de las partes puede terminarlo según las condiciones del plan.</p>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" id="chk-tc" ${estado.aceptoTC?'checked':''} onchange="onTC()">
+          <span>He leído y acepto los términos y condiciones de servicio.</span>
+        </label>
+
+        <div class="actions">
+          <button class="btn" onclick="volver()">← Volver</button>
+          <button class="btn btn-primary grow btn-lg" id="btn-tc" ${estado.aceptoTC?'':'disabled'} onclick="aceptarTC()">
+            ${estado.plan && estado.plan.pago ? 'Continuar al pago' : 'Activar plan gratis'}
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+function onTC(){
+  estado.aceptoTC = document.getElementById('chk-tc').checked;
+  document.getElementById('btn-tc').disabled = !estado.aceptoTC;
+}
+function aceptarTC(){
+  if(!estado.aceptoTC) return;
+  if(estado.plan && estado.plan.pago) ir('pago');
+  else crearProductora();   // Plan gratis: sin pago, se crea directo.
+}
+
+/* ===================================================================
+   Pantalla: PAGO  (placeholder — el sistema de pago real está PENDIENTE)
+   Costura: integrar proveedor de pago antes de salir en vivo.
+   =================================================================== */
+function pantallaPago(){
+  const m = montos(estado.plan);
+  app.innerHTML = `
+    <div class="stage stage-narrow">
+      ${flowHeader()}
+      ${stepper(2)}
+      <div class="card">
+        <h3>Pago</h3>
+        <p class="sub">Plan ${estado.plan.nombre} · cobro mensual.</p>
+
+        <div class="pay-sim-banner">Demostración. No se procesa ningún pago real ni se capturan datos de tarjeta.</div>
+
+        <div class="pay-grid">
+          <div class="pay-summary">
+            <div class="pay-line"><span>Plan ${estado.plan.nombre} (mensual)</span><span>${clp(m.lista)}</span></div>
+            <div class="pay-line disc"><span>Descuento Early Bird (−50%)</span><span>−${clp(m.lista - m.neto)}</span></div>
+            <div class="pay-line"><span>Neto</span><span>${clp(m.neto)}</span></div>
+            <div class="pay-line"><span>IVA (19%)</span><span>${clp(m.iva)}</span></div>
+            <div class="pay-line total"><span>Total a pagar hoy</span><span>${clp(m.total)}</span></div>
+          </div>
+
+          <div class="pay-fake">
+            <div class="field"><label>Nombre en la tarjeta</label><input class="input" value="" placeholder="(simulación)"></div>
+            <div class="field"><label>Número de tarjeta</label><input class="input" value="" placeholder="•••• •••• •••• ••••"></div>
+            <div class="field-row">
+              <div class="field"><label>Vencimiento</label><input class="input" placeholder="MM/AA"></div>
+              <div class="field"><label>CVV</label><input class="input" placeholder="•••"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" onclick="volver()">← Volver</button>
+          <button class="btn btn-primary grow btn-lg" onclick="pagar()">Pagar ${clp(m.total)} (simulado)</button>
+        </div>
+      </div>
+    </div>`;
+}
+function pagar(){
+  estado.pagado = true;
+  crearProductora();
+}
+
+/* Crea la productora (mock). Costura real: provisionar_organizacion + seed_permisos_organizacion. */
+function crearProductora(){
+  // Aquí, en el software real, el creador queda Administrador interno (perfil fijo)
+  // y se enciende la bandera _TIENE_EMPRESA.
+  ir('creada');
+}
+
+/* ===================================================================
+   Pantalla: PRODUCTORA CREADA
+   =================================================================== */
+function pantallaCreada(){
+  app.innerHTML = `
+    <div class="stage stage-narrow">
+      <div class="card">
+        <div class="success">
+          <div class="ring">✓</div>
+          <h3>Tu productora está lista</h3>
+          <p><b>${estado.productora.nombreVisible}</b> ya está creada. Cargamos un proyecto de ejemplo para que explores el software.</p>
+          <div class="role">👑 Eres Administrador interno de ${estado.productora.nombreVisible}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary btn-block btn-lg" onclick="entrarAProductora()">Entrar a mi productora →</button>
+        </div>
+      </div>
+    </div>`;
+}
+function entrarAProductora(){
+  // Costura real: con empresa encendida, entra al Control Room de SU productora.
+  controlSubvista='proyectos'; tabActiva='resumen';
+  tourPaso = 1;               // arranca el tour guiado simple
+  notifAbierta = false;
+  ir('control');
+}
+
+/* ===================================================================
+   Pantalla: CONTROL ROOM (shell ilustrativo) + TOUR + NOTIFICACIONES
+   Nota: en el mockup esto es una representación. Al integrar, el tour
+   se monta sobre el Control Room real del software.
+   =================================================================== */
+const PROYECTOS_DEMO = [
+  { id:'comunidad', nombre:'La Comunidad del Anillo', estado:'Rodaje', cls:'ps-prod', meta:'Serie · 18 jornadas', demo:true },
+  { id:'moria', nombre:'Las Minas de Moria', estado:'Preproducción', cls:'ps-prep', meta:'Documental · en preparación' },
+  { id:'comarca', nombre:'Senderos de la Comarca — Spot', estado:'Cotización', cls:'ps-sale', meta:'Comercial · propuesta enviada' }
+];
+
+function pantallaControl(){
+  if(tourPaso > 0) controlSubvista = TOUR[tourPaso-1].vista;  // el tour manda la subvista
+  const ini = (estado.persona.nombre[0]||'A') + (estado.persona.apellido[0]||'');
+  app.innerHTML = `
+    <div class="stage" style="max-width:1180px">
+      <div class="shell">
+        <nav class="sidebar">
+          <div class="sb-brand"><span class="dot"></span> TakeOS</div>
+          <div class="nav-item active"><span class="ico">▦</span> Proyectos</div>
+          <div class="nav-item" id="nav-empresa"><span class="ico">◍</span> Panel de Empresa <span class="priv">Privado</span></div>
+          <div class="nav-item"><span class="ico">◷</span> Calendario</div>
+          <div class="nav-item"><span class="ico">⚖</span> Legal</div>
+          <div class="nav-item"><span class="ico">⚙</span> Configuración</div>
+        </nav>
+        <div class="workspace">
+          <div class="topbar">
+            <span class="org">${estado.productora.nombreVisible || 'Mi productora'}<span class="role-pill">Administrador · interno</span></span>
+            <span class="sp"></span>
+            <button class="bell" onclick="toggleNotif()" aria-label="Notificaciones">🔔<span class="badge">2</span></button>
+            <div class="avatar">${ini.toUpperCase()}</div>
+          </div>
+          ${notifAbierta ? popNotificaciones() : ''}
+          <div class="canvas">
+            ${controlSubvista==='proyectos' ? vistaProyectos() : vistaProyecto()}
+          </div>
+        </div>
+      </div>
+      ${tourPaso===0 ? '<div class="landing-foot">Tour finalizado. Puedes explorar el shell: abre el proyecto de ejemplo o revisa las notificaciones.</div>' : ''}
+    </div>
+    ${tourPaso>0 ? tourOverlay() : ''}`;
+
+  if(controlSubvista==='proyecto'){
+    app.querySelectorAll('.tab').forEach(t => t.onclick = ()=>{ tabActiva = t.dataset.tab; render(); });
+  } else {
+    app.querySelectorAll('.proj-card[data-open]').forEach(c => c.onclick = ()=>{
+      if(tourPaso>0) return; // durante el tour la navegación la maneja el tour
+      controlSubvista='proyecto'; tabActiva='resumen'; render();
+    });
+  }
+  if(tourPaso>0) resaltarObjetivoTour();
+}
+
+function vistaProyectos(){
+  const cards = PROYECTOS_DEMO.map(p => `
+    <div class="proj-card" data-open="1" ${p.demo?'id="proj-demo"':''}>
+      <span class="pstate ${p.cls}">${p.estado}</span>
+      <div class="pname">${p.nombre}${p.demo?'<span class="demo-tag">Ejemplo</span>':''}</div>
+      <div class="pmeta">${p.meta}</div>
+    </div>`).join('');
+  return `
+    <h4>Proyectos</h4>
+    <p class="csub">Estos proyectos de ejemplo vienen precargados para tu recorrido inicial.</p>
+    <div class="proj-grid">
+      <div class="proj-card proj-new" id="btn-nuevo-proyecto"><span class="plus">+</span> Nuevo proyecto</div>
+      ${cards}
+    </div>`;
+}
+
+function vistaProyecto(){
+  const tabs = [
+    {id:'resumen', t:'Resumen'},
+    {id:'presupuesto', t:'Presupuesto'},
+    {id:'rodaje', t:'Plan de rodaje'},
+    {id:'legal', t:'Legal'},
+    {id:'documentos', t:'Documentos'}
+  ];
+  return `
+    <div class="proj-head">
+      <button class="back-btn" onclick="(function(){controlSubvista='proyectos';render();})()" ${tourPaso>0?'disabled':''}>←</button>
+      <div><h4 style="margin:0">La Comunidad del Anillo</h4><div class="csub" style="margin:0">Serie · Rodaje</div></div>
+    </div>
+    <div class="tabs" id="tabs-proyecto">
+      ${tabs.map(t=>`<div class="tab ${tabActiva===t.id?'active':''}" data-tab="${t.id}" ${t.id==='presupuesto'?'id="tab-presupuesto"':''}>${t.t}</div>`).join('')}
+    </div>
+    <div class="tab-body">${cuerpoTab(tabActiva)}</div>`;
+}
+function cuerpoTab(tab){
+  if(tab==='legal'){
+    return `
+      <div class="lock-hint">
+        <div class="li">🔒</div>
+        <div>
+          <div class="lt">Completa los datos del representante legal</div>
+          <div class="ld">El generador de contratos se desbloquea cuando cargas el nombre y RUT del representante legal de la productora.</div>
+        </div>
+      </div>`;
+  }
+  const labels = {
+    resumen:'Vista general del proyecto: estado, equipo y avances.',
+    presupuesto:'Presupuesto del proyecto por departamento, con resumen y gastos.',
+    rodaje:'Jornadas, locaciones y citaciones del plan de rodaje.',
+    documentos:'Documentos del proyecto. Puedes adjuntar archivos de forma nativa.'
+  };
+  return `<div>${labels[tab]||''}</div><div class="ph">Vista de ejemplo — el contenido real se monta al integrar.</div>`;
+}
+
+/* ---------- Notificaciones ---------- */
+function toggleNotif(){ notifAbierta = !notifAbierta; render(); }
+function popNotificaciones(){
+  return `
+    <div class="notif-pop">
+      <div class="nh">Notificaciones <button onclick="toggleNotif()" aria-label="Cerrar">×</button></div>
+      <div class="notif">
+        <div class="ni">👤</div>
+        <div>
+          <div class="nt">Tus datos personales están incompletos</div>
+          <div class="nd">Complétalos para poder ser contratado como externo en otras productoras.</div>
+          <span class="tagb warn">Recordatorio</span>
+        </div>
+      </div>
+      <div class="notif">
+        <div class="ni">⚖</div>
+        <div>
+          <div class="nt">Faltan los datos del representante legal</div>
+          <div class="nd">Necesarios para generar documentos legales.</div>
+          <span class="tagb block">Bloquea herramienta</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ===================================================================
+   TOUR guiado simple (~5 pasos)
+   =================================================================== */
+const TOUR = [
+  { target:'#nav-empresa',       vista:'proyectos', titulo:'Panel de Empresa', texto:'Aquí está el Panel de Empresa. Es privado: solo el equipo interno de tu productora lo ve.' },
+  { target:'#btn-nuevo-proyecto',vista:'proyectos', titulo:'Crear un proyecto', texto:'Desde aquí creas un proyecto nuevo cuando lo necesites.' },
+  { target:'#proj-demo',         vista:'proyectos', titulo:'Proyecto de ejemplo', texto:'Cargamos un proyecto de ejemplo para que explores el software con contenido real.' },
+  { target:'#tabs-proyecto',     vista:'proyecto',  titulo:'Pestañas de trabajo', texto:'Dentro de un proyecto, cada pestaña es una herramienta: presupuesto, plan de rodaje, legal y más.' },
+  { target:'#tab-presupuesto',   vista:'proyecto',  titulo:'Presupuesto', texto:'Presupuesto es una de las herramientas centrales de cada proyecto.' }
+];
+function tourOverlay(){
+  const paso = TOUR[tourPaso-1];
+  const dots = TOUR.map((_,i)=>`<i class="${i===tourPaso-1?'on':''}"></i>`).join('');
+  const ultimo = tourPaso === TOUR.length;
+  return `
+    <div class="tour-backdrop"></div>
+    <div class="tour-card">
+      <div class="tc-step">Paso ${tourPaso} de ${TOUR.length}</div>
+      <h4>${paso.titulo}</h4>
+      <p>${paso.texto}</p>
+      <div class="tour-foot">
+        <div class="tour-dots">${dots}</div>
+        <div class="r">
+          <button class="btn btn-ghost" onclick="cerrarTour()">Saltar</button>
+          ${tourPaso>1?`<button class="btn" onclick="tourAnterior()">Anterior</button>`:''}
+          <button class="btn btn-primary" onclick="${ultimo?'cerrarTour()':'tourSiguiente()'}">${ultimo?'Listo':'Siguiente'}</button>
+        </div>
+      </div>
+    </div>`;
+}
+function resaltarObjetivoTour(){
+  const paso = TOUR[tourPaso-1];
+  const el = paso && document.querySelector(paso.target);
+  if(el){ el.classList.add('tour-target'); el.scrollIntoView({ block:'center', behavior:'auto' }); }
+}
+function tourSiguiente(){ if(tourPaso < TOUR.length){ tourPaso++; render(); } }
+function tourAnterior(){ if(tourPaso > 1){ tourPaso--; render(); } }
+function cerrarTour(){ tourPaso = 0; render(); }
+
+/* ===================================================================
+   Encabezado de flujo + stepper compartidos
+   =================================================================== */
+function flowHeader(){
+  const chip = estado.plan ? `
+    <div class="plan-chip">Plan <b>${estado.plan.nombre}</b> <span class="x">·</span> ${estado.plan.precioLabel}${estado.plan.pago?' + IVA/mes':''}</div>` : '';
+  return `
+    <div class="flow-top">
+      <div class="brandline"><span class="dot"></span> Crear productora</div>
+      ${chip}
+    </div>`;
+}
+function stepper(activo){
+  const dePago = !(estado.plan && !estado.plan.pago);   // true si plan de pago o aún sin plan
+  const pasos = dePago ? ['Cuenta', 'Facturación', 'Términos y pago'] : ['Cuenta', 'Tu productora', 'Términos'];
+  return `<div class="stepper">${pasos.map((p,i)=>{
+    const cls = i<activo ? 'done' : (i===activo ? 'active' : '');
+    return `<div class="step ${cls}"><div class="num">${i<activo?'✓':(i+1)}</div><div class="txt">${p}</div><div class="bar"></div></div>`;
+  }).join('')}</div>`;
+}
+
+/* ===================================================================
+   Validaciones y utilidades (portables al software real)
+   =================================================================== */
+function val(id){ const e=document.getElementById(id); return e ? e.value : ''; }
+function marcar(fieldId, ok){
+  const f = document.getElementById(fieldId);
+  if(f){
+    f.classList.toggle('show-err', !ok);
+    const inp = f.querySelector('.input,.select');
+    if(inp) inp.classList.toggle('err', !ok);
+  }
+  return ok;
+}
+function mailValido(m){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((m||'').trim()); }
+
+/* RUT chileno — validación módulo 11 (cuerpo + dígito verificador) */
+function limpiarRut(r){ return (r||'').replace(/[^0-9kK]/g,'').toUpperCase(); }
+function dvRut(cuerpo){
+  let suma=0, mul=2;
+  for(let i=cuerpo.length-1; i>=0; i--){
+    suma += parseInt(cuerpo[i],10) * mul;
+    mul = mul===7 ? 2 : mul+1;
+  }
+  const res = 11 - (suma % 11);
+  if(res===11) return '0';
+  if(res===10) return 'K';
+  return String(res);
+}
+function rutValido(r){
+  const c = limpiarRut(r);
+  if(c.length < 7) return false;             // RUT de empresa: al menos 6 dígitos + DV
+  const cuerpo = c.slice(0,-1), dv = c.slice(-1);
+  if(!/^\d+$/.test(cuerpo)) return false;
+  return dvRut(cuerpo) === dv;
+}
+function formatearRut(r){
+  const c = limpiarRut(r);
+  if(c.length < 2) return r;
+  const cuerpo = c.slice(0,-1), dv = c.slice(-1);
+  return cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g,'.') + '-' + dv;
+}
+
+function clp(n){ return '$' + Number(n).toLocaleString('es-CL'); }
+function montos(plan){
+  const lista = plan.precio;
+  const neto = Math.round(lista * (1 - EARLY_BIRD));
+  const iva = Math.round(neto * IVA);
+  return { lista, neto, iva, total: neto + iva };
+}
+
+/* ===================================================================
+   Drawer de notas de integración (para lectura sin abrir el código)
+   =================================================================== */
+const NOTAS = [
+  { s:'Landing / Planes', m:'Sin backend. La selección de plan vive en memoria. El plan elegido se arrastra por todo el flujo.' },
+  { s:'Cuenta mínima', m:'Reusa el onboarding de perfil personal y el patrón <code>requisitos_faltantes</code> (\'perfil\'). "Continuar con Google" = OAuth.' },
+  { s:'Facturación', m:'Alimenta el perfil de empresa (Panel de Empresa). El branding (logo, tipografías, colores) se completa después, por separado.' },
+  { s:'Términos', m:'Texto legal v0 / provisional. La sociedad desarrolladora aún no está constituida; Legal fija el definitivo.', pend:'Texto definitivo pendiente' },
+  { s:'Pago', m:'El sistema de pago real está PENDIENTE (requisito previo a salir en vivo). En el mockup es placeholder, sin captura de tarjeta.', pend:'Proveedor de pago pendiente' },
+  { s:'Crear productora', m:'RPC <code>provisionar_organizacion</code> + <code>seed_permisos_organizacion</code> (8 perfiles, matriz por organización). El creador queda Administrador interno.' },
+  { s:'Entrar a la productora', m:'Al crearla se enciende <code>_TIENE_EMPRESA</code> y entra al Control Room de SU productora. Invariante: sin empresa, jamás Control Room.' },
+  { s:'Notificaciones', m:'La campanita ya existe. Datos faltantes salen de <code>requisitos_faltantes</code> (\'perfil\' / \'banca\'). Legal bloquea; diseño solo advierte.' },
+  { s:'Entrada desde la app', m:'El cartel "¿Tienes una productora?" ya existe: <code>_espInyectarCtaProductora</code> dentro de <code>renderEspacioUsuario</code> (Panel Personal).' }
+];
+function toggleNotas(){
+  const d = document.getElementById('notas');
+  const s = document.getElementById('scrim');
+  const abierto = d.classList.toggle('open');
+  s.style.display = abierto ? 'block' : 'none';
+  if(abierto){
+    document.getElementById('notas-body').innerHTML = NOTAS.map(n=>`
+      <div class="note">
+        <div class="ns">${n.s}</div>
+        <div class="nm">${n.m}</div>
+        ${n.pend?`<span class="pend">⏳ ${n.pend}</span>`:''}
+      </div>`).join('');
+  }
+}
+
+/* ---------- Arranque ---------- */
+reiniciar('landing');
+</script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TakeOS · Mockup — Panel personal y multi-organización</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bg-page:#1a1a19; --bg-surface:#222221; --bg-surface-soft:#1e1e1d;
+  --bg-card:#262624; --bg-elevated:#2e2e2b;
+  --ink-primary:#FDFEED; --ink-secondary:#d3d6cb; --ink-muted:#a0a399; --ink-faint:#71736a;
+  --ink-onAccent:#FDFEED;
+  --accent:#B03A2F; --accent-deep:#d05a4d; --accent-soft:#6e3a33; --accent-bg:#2c1d1b;
+  --state-prep:#9aab74; --state-sale:#c79a5e; --state-prod:#6fa3b5; --state-post:#a487c4;
+  --rule:#34342f; --rule-strong:#45453f; --rule-soft:#2a2a26;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.35);
+  --shadow-md:0 4px 14px rgba(0,0,0,0.45);
+  --shadow-lg:0 14px 36px rgba(0,0,0,0.55);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:24px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px; --space-8:64px;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{ font-family:var(--font-sans); background:var(--bg-page); color:var(--ink-primary); -webkit-font-smoothing:antialiased; line-height:1.45; }
+button{ font-family:inherit; }
+ul{ margin:0; padding:0; list-style:none; }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; font-family:inherit; font-size:13px; font-weight:500; padding:10px 16px; border-radius:var(--radius-sm); border:1px solid var(--rule-strong); background:var(--bg-surface); color:var(--ink-secondary); cursor:pointer; transition:all .12s ease; }
+.btn:hover{ background:var(--bg-surface-soft); border-color:var(--ink-faint); }
+.btn-primary{ background:var(--accent); color:var(--ink-onAccent); border-color:var(--accent); }
+.btn-primary:hover{ background:var(--accent-deep); border-color:var(--accent-deep); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.btn-ghost{ border-color:transparent; background:transparent; color:var(--ink-muted); }
+.btn-ghost:hover{ background:var(--bg-surface-soft); color:var(--ink-secondary); }
+.btn-sm{ padding:7px 12px; font-size:12px; }
+.btn-lg{ padding:13px 20px; font-size:14px; }
+:focus-visible{ outline:2px solid var(--accent-deep); outline-offset:2px; }
+
+/* Cromo de mockup */
+.chrome{ position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; padding:10px 18px; background:var(--bg-surface-soft); border-bottom:1px solid var(--rule); }
+.chrome .tag{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); border:1px solid var(--rule); border-radius:999px; padding:4px 10px; }
+.chrome .grow{ flex:1; }
+.chrome .label{ font-size:11px; color:var(--ink-muted); margin-right:2px; }
+.chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500; border:1px solid var(--rule-strong); background:var(--bg-surface); color:var(--ink-secondary); cursor:pointer; transition:all .15s; }
+.chip:hover{ border-color:var(--ink-muted); }
+.chip.active{ background:var(--ink-primary); color:#1a1a19; border-color:var(--ink-primary); }
+
+/* ===== Panel personal ===== */
+.stage{ max-width:840px; margin:0 auto; padding:var(--space-6) var(--space-4) var(--space-8); }
+.pp-top{ display:flex; align-items:center; gap:14px; margin-bottom:var(--space-6); }
+.avatar{ width:46px; height:46px; border-radius:50%; background:var(--accent-soft); color:var(--ink-primary); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:600; flex:0 0 46px; }
+.pp-top .who{ flex:1; min-width:0; }
+.pp-top .who h1{ margin:0; font-size:21px; font-weight:700; letter-spacing:-.01em; }
+.pp-top .who span{ font-size:13px; color:var(--ink-muted); }
+.bell{ position:relative; background:transparent; border:1px solid var(--rule); width:38px; height:38px; border-radius:var(--radius-sm); color:var(--ink-secondary); cursor:pointer; font-size:16px; }
+.bell:hover{ background:var(--bg-card); }
+.bell .badge{ position:absolute; top:-6px; right:-6px; min-width:17px; height:17px; padding:0 4px; border-radius:999px; background:var(--accent); color:var(--ink-onAccent); font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.notif-pop{ position:absolute; top:52px; right:0; width:320px; background:var(--bg-elevated); border:1px solid var(--rule-strong); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:30; overflow:hidden; }
+.notif-pop .nh{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--rule); font-size:13px; font-weight:600; }
+.notif-pop .nh button{ background:transparent; border:none; color:var(--ink-faint); cursor:pointer; font-size:16px; }
+.notif{ padding:12px 14px; display:flex; gap:11px; }
+.notif .ni{ font-size:15px; margin-top:1px; }
+.notif .nt{ font-size:13px; color:var(--ink-primary); }
+.notif .nd{ font-size:11px; color:var(--ink-muted); margin-top:2px; }
+
+.sec{ margin-bottom:var(--space-6); }
+.sec-h{ display:flex; align-items:baseline; gap:10px; margin-bottom:var(--space-4); }
+.sec-h h2{ margin:0; font-size:13px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-secondary); }
+.sec-h .count{ font-size:12px; color:var(--ink-faint); }
+.sec-h .hint{ font-size:12px; color:var(--ink-faint); margin-left:auto; }
+
+/* Productoras internas */
+.org-card{ display:flex; align-items:center; gap:16px; background:var(--bg-card); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-4) var(--space-5); margin-bottom:11px; transition:border-color .12s, transform .12s; }
+.org-card:hover{ border-color:var(--rule-strong); transform:translateY(-1px); }
+.org-logo{ width:46px; height:46px; border-radius:var(--radius-sm); background:var(--bg-elevated); display:flex; align-items:center; justify-content:center; font-size:20px; flex:0 0 46px; }
+.org-card .info{ flex:1; min-width:0; }
+.org-card .info b{ font-size:16px; font-weight:600; display:block; }
+.org-card .info .role{ font-size:12px; color:var(--ink-muted); }
+.role-pill{ font-size:10px; font-weight:500; color:var(--state-prep); border:1px solid #43521f; border-radius:999px; padding:2px 9px; margin-left:8px; }
+
+/* Invitaciones pendientes */
+.invite{ display:flex; align-items:center; gap:15px; background:var(--accent-bg); border:1px solid var(--accent-soft); border-radius:var(--radius-md); padding:var(--space-4) var(--space-5); margin-bottom:11px; }
+.invite .ii{ font-size:20px; }
+.invite .meta{ flex:1; min-width:0; }
+.invite .meta b{ font-size:14px; font-weight:600; display:block; }
+.invite .meta span{ font-size:12px; color:var(--ink-secondary); }
+.invite .acts{ display:flex; gap:8px; }
+
+/* Proyectos externos, agrupados por productora */
+.ext-group{ border:1px solid var(--rule); border-radius:var(--radius-md); overflow:hidden; margin-bottom:11px; }
+.ext-org{ display:flex; align-items:center; gap:11px; padding:11px 16px; background:var(--bg-surface-soft); border-bottom:1px solid var(--rule); }
+.ext-org .eo-logo{ width:28px; height:28px; border-radius:var(--radius-sm); background:var(--bg-elevated); display:flex; align-items:center; justify-content:center; font-size:14px; }
+.ext-org b{ font-size:13px; font-weight:600; }
+.ext-org .extbadge{ font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--state-sale); border:1px solid #5a4a2a; border-radius:999px; padding:2px 8px; margin-left:auto; }
+.ext-proj{ display:flex; align-items:center; gap:12px; padding:13px 16px; cursor:pointer; transition:background .12s; }
+.ext-proj:hover{ background:var(--bg-surface); }
+.ext-proj + .ext-proj{ border-top:1px solid var(--rule-soft); }
+.ext-proj .pstate{ font-size:9px; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; }
+.ext-proj .pn{ font-size:14px; font-weight:500; flex:1; }
+.ext-proj .arrow{ color:var(--ink-faint); }
+.ps-prod{ background:#16282f; color:var(--state-prod); border:1px solid #234653; }
+.ps-prep{ background:#2a3018; color:var(--state-prep); border:1px solid #43521f; }
+.ps-sale{ background:#2a2418; color:var(--state-sale); border:1px solid #5a4a2a; }
+
+/* CTA productora */
+.cta-empresa{ border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-5); display:flex; align-items:center; gap:16px; }
+.cta-empresa.big{ border-color:var(--accent-soft); box-shadow:0 0 0 1px var(--accent-soft); background:var(--bg-card); }
+.cta-empresa .ce-info{ flex:1; }
+.cta-empresa .ce-info b{ font-size:15px; font-weight:600; display:block; }
+.cta-empresa .ce-info span{ font-size:12px; color:var(--ink-muted); }
+.cta-mini{ display:flex; justify-content:flex-end; }
+
+.empty-note{ font-size:13px; color:var(--ink-faint); padding:var(--space-4); border:1px dashed var(--rule-strong); border-radius:var(--radius-md); text-align:center; }
+
+/* ===== Shells de destino (Control Room / Proyecto) ===== */
+.dest{ max-width:1180px; margin:0 auto; padding:var(--space-5) var(--space-4) var(--space-8); }
+.shell{ display:grid; grid-template-columns:208px 1fr; min-height:520px; border:1px solid var(--rule); border-radius:var(--radius-lg); overflow:hidden; background:var(--bg-surface); }
+.shell.solo{ grid-template-columns:1fr; }
+.sidebar{ background:var(--bg-surface-soft); border-right:1px solid var(--rule); padding:var(--space-4); display:flex; flex-direction:column; gap:4px; }
+.sb-brand{ display:flex; align-items:center; gap:9px; font-weight:600; font-size:15px; padding:6px 8px 14px; }
+.sb-brand .dot{ width:9px; height:9px; border-radius:3px; background:var(--accent); }
+.nav-item{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:var(--radius-sm); font-size:13px; color:var(--ink-secondary); cursor:default; }
+.nav-item.active{ background:var(--bg-card); color:var(--ink-primary); }
+.nav-item .ico{ width:16px; text-align:center; opacity:.8; }
+.nav-item .priv{ margin-left:auto; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); border:1px solid var(--rule); border-radius:999px; padding:2px 6px; }
+
+.workspace{ display:flex; flex-direction:column; min-width:0; }
+.topbar{ display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid var(--rule); position:relative; }
+.topbar .back{ background:transparent; border:1px solid var(--rule); border-radius:var(--radius-sm); padding:7px 12px; font-size:12px; color:var(--ink-secondary); cursor:pointer; }
+.topbar .back:hover{ background:var(--bg-card); }
+.topbar .ctx{ font-weight:600; font-size:14px; }
+.topbar .ctx .sub{ font-size:11px; color:var(--ink-muted); font-weight:400; }
+.topbar .sp{ flex:1; }
+
+/* Selector de espacios */
+.switcher{ position:relative; }
+.switcher .sbtn{ display:inline-flex; align-items:center; gap:8px; background:var(--bg-card); border:1px solid var(--rule-strong); border-radius:var(--radius-sm); padding:8px 13px; font-size:12px; color:var(--ink-secondary); cursor:pointer; }
+.switcher .sbtn:hover{ border-color:var(--ink-faint); }
+.switcher .menu{ position:absolute; top:46px; right:0; width:300px; background:var(--bg-elevated); border:1px solid var(--rule-strong); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:30; overflow:hidden; padding:6px; }
+.sw-group{ font-size:10px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); padding:9px 10px 5px; }
+.sw-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; color:var(--ink-secondary); }
+.sw-item:hover{ background:var(--bg-surface); color:var(--ink-primary); }
+.sw-item.active{ background:var(--bg-card); color:var(--ink-primary); }
+.sw-item .si{ width:18px; text-align:center; }
+.sw-item .sx{ flex:1; min-width:0; }
+.sw-item .sx b{ font-size:13px; font-weight:500; display:block; }
+.sw-item .sx em{ font-size:11px; color:var(--ink-faint); font-style:normal; }
+
+.canvas{ padding:22px; overflow:auto; }
+.canvas h4{ margin:0 0 3px; font-size:17px; font-weight:600; }
+.canvas .csub{ color:var(--ink-muted); font-size:13px; margin:0 0 var(--space-5); }
+.proj-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:var(--space-4); }
+.proj-card{ background:var(--bg-card); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-4); min-height:120px; display:flex; flex-direction:column; }
+.proj-card .pstate{ font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; align-self:flex-start; margin-bottom:auto; }
+.proj-card .pname{ font-size:14px; font-weight:600; margin-top:12px; }
+.proj-card .pmeta{ font-size:11px; color:var(--ink-muted); margin-top:4px; }
+.proj-new{ border:1px dashed var(--rule-strong); background:transparent; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--ink-muted); font-size:13px; }
+.proj-new .plus{ font-size:24px; }
+
+/* Vista externa de proyecto */
+.ext-banner{ display:flex; gap:12px; align-items:flex-start; background:var(--accent-bg); border:1px solid var(--accent-soft); border-radius:var(--radius-md); padding:13px 16px; margin-bottom:var(--space-5); }
+.ext-banner .ebi{ font-size:18px; }
+.ext-banner .ebt{ font-size:13px; color:var(--ink-primary); font-weight:500; }
+.ext-banner .ebd{ font-size:12px; color:var(--ink-muted); margin-top:3px; }
+.tabs{ display:flex; gap:4px; border-bottom:1px solid var(--rule); margin-bottom:var(--space-5); flex-wrap:wrap; }
+.tab{ padding:9px 14px; font-size:13px; color:var(--ink-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.tab:hover{ color:var(--ink-secondary); }
+.tab.active{ color:var(--ink-primary); border-bottom-color:var(--accent); }
+.tab-body{ background:var(--bg-surface-soft); border:1px solid var(--rule); border-radius:var(--radius-md); padding:var(--space-5); min-height:180px; color:var(--ink-secondary); font-size:13px; }
+.tab-body .ph{ color:var(--ink-faint); font-size:12px; margin-top:8px; }
+
+/* Toast + drawer */
+.toast{ position:fixed; left:50%; bottom:34px; transform:translateX(-50%) translateY(10px); background:var(--bg-elevated); border:1px solid var(--rule-strong); border-radius:var(--radius-sm); padding:10px 16px; font-size:13px; color:var(--ink-primary); box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:all .2s; z-index:80; }
+.toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+.notes-drawer{ position:fixed; top:0; right:0; height:100%; width:min(440px,92vw); z-index:60; background:var(--bg-surface); border-left:1px solid var(--rule-strong); box-shadow:var(--shadow-lg); transform:translateX(100%); transition:transform .22s ease; display:flex; flex-direction:column; }
+.notes-drawer.open{ transform:translateX(0); }
+.notes-h{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--rule); }
+.notes-h b{ font-size:14px; }
+.notes-h button{ background:transparent; border:none; color:var(--ink-faint); cursor:pointer; font-size:20px; }
+.notes-body{ padding:18px; overflow:auto; }
+.note{ border:1px solid var(--rule); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:11px; background:var(--bg-surface-soft); }
+.note .ns{ font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--accent-deep); font-weight:600; margin-bottom:5px; }
+.note .nm{ font-size:12px; color:var(--ink-secondary); }
+.note code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:var(--ink-primary); background:var(--bg-card); padding:1px 5px; border-radius:4px; }
+.scrim{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:55; }
+
+@media (max-width:820px){
+  .shell{ grid-template-columns:1fr; }
+  .sidebar{ flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--rule); }
+  .sb-brand{ display:none; }
+  .nav-item .priv{ display:none; }
+}
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="tag">Mockup · no conectado a backend</span>
+  <span class="tag">Panel personal · multi-organización</span>
+  <span class="grow"></span>
+  <span class="label">Ver como:</span>
+  <button class="chip" id="m-con" onclick="setModo('con')">Con productora</button>
+  <button class="chip" id="m-sin" onclick="setModo('sin')">Solo externo / nuevo</button>
+  <button class="btn btn-ghost" onclick="toggleNotas()">ⓘ Notas de integración</button>
+</div>
+
+<div id="app"></div>
+
+<div class="toast" id="toast"></div>
+<div class="scrim" id="scrim" style="display:none" onclick="toggleNotas()"></div>
+<aside class="notes-drawer" id="notas">
+  <div class="notes-h"><b>Costuras de integración</b><button onclick="toggleNotas()" aria-label="Cerrar">×</button></div>
+  <div class="notes-body" id="notas-body"></div>
+</aside>
+
+<script>
+/* ===================================================================
+   TakeOS — Mockup del Panel personal y la navegación multi-organización
+   HTML único · JS vanilla · estado en memoria · sin backend.
+
+   Regla central (consolidado §5 · PRD · ADR-013):
+   - La UI es por usuario, no por empresa (identidad global, un login).
+   - Productoras donde eres INTERNO  → entras al Control Room.
+   - Proyectos donde eres EXTERNO    → entras SOLO al proyecto.
+   - Un externo JAMÁS entra al Control Room de una productora ajena.
+   =================================================================== */
+
+const PERSONA = { nombre:'Camila', apellido:'Soto', mail:'camila.soto@correo.cl' };
+
+// Productora propia (interno/admin). 99% de los casos: una sola.
+const PRODUCTORA_PROPIA = {
+  id:'bosque', nombre:'Bosque Films', rol:'Administradora',
+  proyectos:[
+    { id:'patagonia', nombre:'Documental Patagonia', estado:'Rodaje', cls:'ps-prod', meta:'Largometraje · 22 jornadas' },
+    { id:'banco', nombre:'Spot Banco Austral', estado:'Cotización', cls:'ps-sale', meta:'Comercial · propuesta enviada' }
+  ]
+};
+
+// Proyectos donde participa como externa, agrupados por productora ajena.
+const EXTERNOS = [
+  { orgId:'aurora', org:'Productora Aurora', proyectoId:'marea', proyecto:'Marea Negra', rol:'Creativa (externa)', estado:'Rodaje', cls:'ps-prod' },
+  { orgId:'sur', org:'Filmes del Sur', proyectoId:'andes', proyecto:'Spot Andes', rol:'Coordinación (externa)', estado:'Preproducción', cls:'ps-prep' }
+];
+
+let estado;
+function estadoInicial(){
+  return {
+    modo: 'con',                 // 'con' = tiene productora propia · 'sin' = solo externo / nuevo
+    invitaciones: [
+      { id:'inv1', org:'Cinetauro', proyecto:'Serie Cordillera', perfil:'Coordinación' }
+    ],
+    externos: EXTERNOS.map(e => ({ ...e })),
+    vista: 'panel',              // panel | controlroom | proyecto
+    ctxProyectoId: null,         // proyecto externo abierto
+    notifAbierta: false,
+    switcherAbierto: false
+  };
+}
+
+const app = document.getElementById('app');
+function reiniciar(){ estado = estadoInicial(); render(); }
+function setModo(m){ estado.modo = m; estado.vista = 'panel'; estado.switcherAbierto = false; render(); }
+
+function render(){
+  document.getElementById('m-con').classList.toggle('active', estado.modo==='con');
+  document.getElementById('m-sin').classList.toggle('active', estado.modo==='sin');
+  switch(estado.vista){
+    case 'panel':       vistaPanel(); break;
+    case 'controlroom': vistaControlRoom(); break;
+    case 'proyecto':    vistaProyecto(); break;
+    default:            vistaPanel();
+  }
+}
+
+/* ===================================================================
+   PANEL PERSONAL — espacio personal cross-tenant (home tras login)
+   Costura: renderEspacioUsuario. La lista sale de las membresías del
+   usuario (ADR-013). Invariante: sin empresa, jamás Control Room.
+   =================================================================== */
+function vistaPanel(){
+  const ini = (PERSONA.nombre[0]||'C') + (PERSONA.apellido[0]||'S');
+  const tieneEmpresa = estado.modo === 'con';
+
+  // Sección: tus productoras (interno)
+  let secInterno = '';
+  if(tieneEmpresa){
+    secInterno = `
+      <div class="sec">
+        <div class="sec-h"><h2>Tus productoras</h2><span class="count">1</span><span class="hint">acceso completo</span></div>
+        <div class="org-card">
+          <div class="org-logo">🎬</div>
+          <div class="info"><b>${PRODUCTORA_PROPIA.nombre}</b><span class="role">Eres administradora<span class="role-pill">Interna</span></span></div>
+          <button class="btn btn-primary" onclick="entrarControlRoom()">Entrar al Control Room</button>
+        </div>
+      </div>`;
+  }
+
+  // Sección: invitaciones pendientes (membresía 'pendiente')
+  let secInvit = '';
+  if(estado.invitaciones.length){
+    secInvit = `
+      <div class="sec">
+        <div class="sec-h"><h2>Invitaciones pendientes</h2><span class="count">${estado.invitaciones.length}</span></div>
+        ${estado.invitaciones.map(inv => `
+          <div class="invite">
+            <div class="ii">✉️</div>
+            <div class="meta"><b>${inv.org} te invitó a "${inv.proyecto}"</b><span>Como ${inv.perfil}. Al aceptar, compartes tus datos con esta productora.</span></div>
+            <div class="acts">
+              <button class="btn btn-sm" onclick="rechazarInvitacion('${inv.id}')">Rechazar</button>
+              <button class="btn btn-primary btn-sm" onclick="aceptarInvitacion('${inv.id}')">Aceptar</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // Sección: proyectos donde participas (externo)
+  const orgs = {};
+  estado.externos.forEach(e => { (orgs[e.orgId] = orgs[e.orgId] || { org:e.org, items:[] }).items.push(e); });
+  let secExterno = '';
+  const gruposHtml = Object.entries(orgs).map(([orgId, g]) => `
+    <div class="ext-group">
+      <div class="ext-org"><div class="eo-logo">🏢</div><b>${g.org}</b><span class="extbadge">Externo</span></div>
+      ${g.items.map(e => `
+        <div class="ext-proj" onclick="entrarProyecto('${e.proyectoId}')">
+          <span class="pstate ${e.cls}">${e.estado}</span>
+          <span class="pn">${e.proyecto}</span>
+          <span class="arrow">→</span>
+        </div>`).join('')}
+    </div>`).join('');
+  secExterno = `
+    <div class="sec">
+      <div class="sec-h"><h2>Proyectos donde participas</h2><span class="count">${estado.externos.length}</span><span class="hint">solo el proyecto, no la productora</span></div>
+      ${estado.externos.length ? gruposHtml : '<div class="empty-note">Cuando una productora te invite a un proyecto, aparecerá aquí.</div>'}
+    </div>`;
+
+  // CTA crear productora
+  let secCta;
+  if(tieneEmpresa){
+    secCta = `<div class="cta-mini"><button class="btn btn-sm" onclick="irACrear()">+ Crear otra productora</button></div>`;
+  } else {
+    secCta = `
+      <div class="cta-empresa big">
+        <div class="org-logo">🎬</div>
+        <div class="ce-info"><b>¿Tienes una productora?</b><span>Crea tu propia productora y administra tus proyectos, equipo y documentos. Quedas como administradora desde el primer día.</span></div>
+        <button class="btn btn-primary btn-lg" onclick="irACrear()">Crear mi productora →</button>
+      </div>`;
+  }
+
+  app.innerHTML = `
+    <div class="stage">
+      <div class="pp-top">
+        <div class="avatar">${ini.toUpperCase()}</div>
+        <div class="who"><h1>Hola, ${PERSONA.nombre}</h1><span>${PERSONA.mail}</span></div>
+        <button class="bell" onclick="toggleNotif()" aria-label="Notificaciones">🔔<span class="badge">1</span></button>
+      </div>
+      ${estado.notifAbierta ? popNotif() : ''}
+      ${secInterno}
+      ${secInvit}
+      ${secExterno}
+      ${secCta}
+    </div>`;
+}
+
+function popNotif(){
+  return `
+    <div style="position:relative">
+      <div class="notif-pop" style="right:18px;top:-8px">
+        <div class="nh">Notificaciones <button onclick="toggleNotif()" aria-label="Cerrar">×</button></div>
+        <div class="notif"><div class="ni">👤</div><div><div class="nt">Tus datos personales están incompletos</div><div class="nd">Complétalos para poder ser contratada como externa.</div></div></div>
+      </div>
+    </div>`;
+}
+function toggleNotif(){ estado.notifAbierta = !estado.notifAbierta; render(); }
+
+function aceptarInvitacion(id){
+  const inv = estado.invitaciones.find(i => i.id === id);
+  // Costura: consentir_invitacion → data_consents (ADR-020) + snapshot user_profiles→contacts; membresía pasa a 'activo'.
+  estado.externos.push({ orgId:inv.org.toLowerCase(), org:inv.org, proyectoId:inv.id+'-p', proyecto:inv.proyecto, rol:inv.perfil+' (externa)', estado:'Preproducción', cls:'ps-prep' });
+  estado.invitaciones = estado.invitaciones.filter(i => i.id !== id);
+  render();
+  toast('Te uniste a "' + inv.proyecto + '" en ' + inv.org);
+}
+function rechazarInvitacion(id){
+  const inv = estado.invitaciones.find(i => i.id === id);
+  estado.invitaciones = estado.invitaciones.filter(i => i.id !== id);
+  render();
+  toast('Invitación rechazada');
+}
+function irACrear(){ toast('Abre el flujo de creación de productora (mockup aparte)'); }
+
+/* ===================================================================
+   DESTINO INTERNO — Control Room de tu productora
+   Costura: entrar enciende el contexto de organización activa (motor V10.9.0)
+   y abre el Control Room. Solo donde eres interno.
+   =================================================================== */
+function vistaControlRoom(){
+  const p = PRODUCTORA_PROPIA;
+  app.innerHTML = `
+    <div class="dest">
+      <div class="shell">
+        <nav class="sidebar">
+          <div class="sb-brand"><span class="dot"></span> TakeOS</div>
+          <div class="nav-item active"><span class="ico">▦</span> Proyectos</div>
+          <div class="nav-item"><span class="ico">◍</span> Panel de Empresa <span class="priv">Privado</span></div>
+          <div class="nav-item"><span class="ico">◷</span> Calendario</div>
+          <div class="nav-item"><span class="ico">⚖</span> Legal</div>
+          <div class="nav-item"><span class="ico">⚙</span> Configuración</div>
+        </nav>
+        <div class="workspace">
+          <div class="topbar">
+            <button class="back" onclick="volverAlPanel()">← Panel personal</button>
+            <div class="ctx">${p.nombre}<div class="sub">Control Room · eres administradora (interna)</div></div>
+            <div class="sp"></div>
+            ${selectorEspacios('cr:'+p.id)}
+          </div>
+          <div class="canvas">
+            <h4>Proyectos</h4>
+            <p class="csub">Todos los proyectos de ${p.nombre}.</p>
+            <div class="proj-grid">
+              <div class="proj-card proj-new"><span class="plus">+</span> Nuevo proyecto</div>
+              ${p.proyectos.map(pr => `
+                <div class="proj-card">
+                  <span class="pstate ${pr.cls}">${pr.estado}</span>
+                  <div class="pname">${pr.nombre}</div>
+                  <div class="pmeta">${pr.meta}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ===================================================================
+   DESTINO EXTERNO — Vista de UN proyecto (nunca el Control Room ajeno)
+   Costura: RLS filtra por proyecto + perfil. El externo no ve Panel de
+   Empresa, ni finanzas, ni los demás proyectos de esa productora.
+   =================================================================== */
+function vistaProyecto(){
+  const e = estado.externos.find(x => x.proyectoId === estado.ctxProyectoId) || estado.externos[0];
+  app.innerHTML = `
+    <div class="dest">
+      <div class="shell solo">
+        <div class="workspace">
+          <div class="topbar">
+            <button class="back" onclick="volverAlPanel()">← Panel personal</button>
+            <div class="ctx">${e.proyecto}<div class="sub">${e.org} · participas como ${e.rol}</div></div>
+            <div class="sp"></div>
+            ${selectorEspacios('px:'+e.proyectoId)}
+          </div>
+          <div class="canvas">
+            <div class="ext-banner">
+              <div class="ebi">🔒</div>
+              <div>
+                <div class="ebt">Solo ves este proyecto</div>
+                <div class="ebd">No tienes acceso al Control Room de ${e.org} ni a sus otros proyectos. Como externa, ves únicamente lo que este proyecto comparte contigo.</div>
+              </div>
+            </div>
+            <div class="tabs" id="tabs">
+              <div class="tab active" data-tab="llamado">Hoja de llamado</div>
+              <div class="tab" data-tab="docs">Documentos</div>
+              <div class="tab" data-tab="tareas">Tareas</div>
+              <div class="tab" data-tab="cal">Calendario</div>
+            </div>
+            <div class="tab-body" id="tab-body">${cuerpoTabExterno('llamado', e)}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  app.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    app.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-body').innerHTML = cuerpoTabExterno(t.dataset.tab, e);
+  });
+}
+function cuerpoTabExterno(tab, e){
+  const m = {
+    llamado:`Hoja de llamado de "${e.proyecto}": horarios, locación, contactos de emergencia.`,
+    docs:`Documentos que ${e.org} comparte contigo en este proyecto.`,
+    tareas:`Tus tareas asignadas dentro de "${e.proyecto}".`,
+    cal:`Las fechas de "${e.proyecto}" en las que participas.`
+  };
+  return `<div>${m[tab]||''}</div><div class="ph">Vista de ejemplo — contenido filtrado a lo que este proyecto te comparte.</div>`;
+}
+
+/* ===================================================================
+   SELECTOR DE ESPACIOS — el "cambiar de productora/proyecto"
+   Regla clave: para productoras donde eres EXTERNO, el selector solo
+   ofrece proyectos, nunca un "Control Room".
+   =================================================================== */
+function selectorEspacios(actual){
+  const tieneEmpresa = estado.modo === 'con';
+  let menu = '';
+  if(estado.switcherAbierto){
+    const orgs = {};
+    estado.externos.forEach(e => { (orgs[e.orgId] = orgs[e.orgId] || { org:e.org, items:[] }).items.push(e); });
+
+    const itemInterno = tieneEmpresa ? `
+      <div class="sw-group">Tu productora · acceso completo</div>
+      <div class="sw-item ${actual==='cr:'+PRODUCTORA_PROPIA.id?'active':''}" onclick="entrarControlRoom()">
+        <span class="si">🎬</span><div class="sx"><b>${PRODUCTORA_PROPIA.nombre}</b><em>Control Room (interna)</em></div>
+      </div>` : '';
+
+    const itemsExternos = Object.values(orgs).map(g => `
+      <div class="sw-group">${g.org} · externo (solo proyectos)</div>
+      ${g.items.map(e => `
+        <div class="sw-item ${actual==='px:'+e.proyectoId?'active':''}" onclick="entrarProyecto('${e.proyectoId}')">
+          <span class="si">📁</span><div class="sx"><b>${e.proyecto}</b><em>Proyecto</em></div>
+        </div>`).join('')}`).join('');
+
+    menu = `
+      <div class="menu">
+        <div class="sw-item" onclick="volverAlPanel()"><span class="si">🏠</span><div class="sx"><b>Panel personal</b><em>Todos tus espacios</em></div></div>
+        ${itemInterno}
+        ${itemsExternos}
+      </div>`;
+  }
+  return `<div class="switcher">
+    <button class="sbtn" onclick="toggleSwitcher()">Cambiar de espacio ▾</button>
+    ${menu}
+  </div>`;
+}
+function toggleSwitcher(){ estado.switcherAbierto = !estado.switcherAbierto; render(); }
+function entrarControlRoom(){ estado.vista='controlroom'; estado.switcherAbierto=false; estado.notifAbierta=false; render(); window.scrollTo(0,0); }
+function entrarProyecto(id){ estado.vista='proyecto'; estado.ctxProyectoId=id; estado.switcherAbierto=false; estado.notifAbierta=false; render(); window.scrollTo(0,0); }
+function volverAlPanel(){ estado.vista='panel'; estado.switcherAbierto=false; render(); window.scrollTo(0,0); }
+
+/* ===================================================================
+   Utilidades + notas
+   =================================================================== */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=> t.classList.remove('on'), 2200);
+}
+
+const NOTAS = [
+  { s:'General', m:'La UI es <b>por usuario, no por empresa</b> (identidad global, un login — ADR-013). El panel personal es el home cross-tenant tras login (<code>renderEspacioUsuario</code>). <b>Invariante: sin empresa, jamás Control Room</b> (<code>_TIENE_EMPRESA</code>).' },
+  { s:'Tus productoras (interno)', m:'Membresías activas con rol interno. Entrar enciende el contexto de organización activa (motor de organización activa, V10.9.0) y abre el Control Room de esa productora.' },
+  { s:'Invitaciones pendientes', m:'Membresía en estado <code>pendiente</code> (ADR-004). Aceptar = <code>consentir_invitacion</code> → <code>data_consents</code> (ADR-020) + snapshot <code>user_profiles</code>→<code>contacts</code>; pasa a <code>activo</code>. Rechazar la descarta.' },
+  { s:'Proyectos donde participas (externo)', m:'Membresías externas. Entrar abre <b>solo el proyecto</b>: RLS filtra por proyecto + perfil. El externo no ve Panel de Empresa, ni finanzas, ni los demás proyectos de esa productora.' },
+  { s:'Selector de espacios', m:'Cambia el <code>organization_id</code> activo del contexto. Para productoras donde eres externo, <b>solo ofrece proyectos</b>, nunca un Control Room. Es la regla tajante hecha UI.' },
+  { s:'Crear productora', m:'Lleva al flujo de creación (<code>provisionar_organizacion</code>). El cartel "¿Tienes una productora?" es <code>_espInyectarCtaProductora</code>. Regla comercial registrada: segunda productora del mismo usuario = −50% (no se muestra todavía).' }
+];
+function toggleNotas(){
+  const d = document.getElementById('notas');
+  const s = document.getElementById('scrim');
+  const abierto = d.classList.toggle('open');
+  s.style.display = abierto ? 'block' : 'none';
+  if(abierto){
+    document.getElementById('notas-body').innerHTML = NOTAS.map(n => `
+      <div class="note"><div class="ns">${n.s}</div><div class="nm">${n.m}</div></div>`).join('');
+  }
+}
+
+/* Arranque */
+estado = estadoInicial();
+render();
+</script>
+</body>
+</html>
