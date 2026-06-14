@@ -21235,10 +21235,10 @@ const MODULE_PERM_CODE = {
   'tareas': 'tareas',
   'reporte-cierre': 'reporte_cierre'
 };
-/* Nivel para un código de módulo de BD. Fail-open: null (no cargado) => 'E';
+/* Nivel para un código de módulo de BD. Fail-closed: null (no cargado) => 'none';
    código ausente en la matriz cargada => 'E' (solo restringe el deny explícito). */
 function authNivel(modCode) {
-  if (!TAKEOS_ACCESO) return 'E';
+  if (!TAKEOS_ACCESO) return 'none';
   const n = TAKEOS_ACCESO[modCode];
   return n || 'E';
 }
