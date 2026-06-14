@@ -21236,11 +21236,12 @@ const MODULE_PERM_CODE = {
   'reporte-cierre': 'reporte_cierre'
 };
 /* Nivel para un código de módulo de BD. Fail-closed: null (no cargado) => 'none';
-   código ausente en la matriz cargada => 'E' (solo restringe el deny explícito). */
+   código ausente en la matriz cargada => 'none' (la matriz se siembra densa: si
+   falta una fila es anomalía, no un permiso legítimo => se niega por seguridad). */
 function authNivel(modCode) {
   if (!TAKEOS_ACCESO) return 'none';
   const n = TAKEOS_ACCESO[modCode];
-  return n || 'E';
+  return n || 'none';
 }
 function authNivelModulo(appKey) {
   const code = MODULE_PERM_CODE[appKey];
