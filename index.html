@@ -22690,6 +22690,163 @@ function _espInyectarInvitaciones(invs) {
   } catch (e) { console.warn('[inv] inyectar bandeja', e); }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   FRENTE A · CREAR PRODUCTORA — Paso A1: ESQUELETO del flujo
+   ─────────────────────────────────────────────────────────────────────
+   Overlay full-screen que guía la creación de una productora paso a paso,
+   con la estética aprobada (tarjeta + stepper, sobre los botones/inputs
+   reales del monolito). En A1 está SOLO el esqueleto: estado + router +
+   pasos como placeholders. El contenido de cada paso (cuenta, facturación
+   con RUT, términos, pago, cableado a la base y tour) llega en A2…A8.
+
+   DISPARADOR: la app abre este flujo cuando arranca con ?plan=<valor> en la
+   URL (valor ∈ {gratis, rodaje, produccion}). El plan NO se elige dentro de
+   la app: llega ya elegido desde la landing. La organización SIEMPRE nace
+   'free'; el plan se usa para la experiencia (mostrarlo) y, en A6, para el
+   pago tras un feature flag apagado.
+
+   CERO backend en A1: ninguna llamada a la base. El cableado real
+   (provisionar_organizacion y, aparte, organization_profile) es el Paso A7.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Catálogo mínimo de planes, SOLO para mostrar el nombre elegido. Precios,
+   Early Bird e IVA viven en A2/A6 (no se hardcodean acá). */
+const _CP_PLANES = {
+  gratis:     { id: 'gratis',     nombre: 'Gratis' },
+  rodaje:     { id: 'rodaje',     nombre: 'Rodaje' },
+  produccion: { id: 'produccion', nombre: 'Producción' }
+};
+
+/* Estado del flujo (en memoria; se reinicia cada vez que se abre). La
+   estructura está pensada para que el cableado de A7 calce limpio: separa
+   (a) lo que va a provisionar_organizacion(p_nombre, p_slug) de (b) lo que
+   va DESPUÉS y aparte a organization_profile (upsert, gateado por
+   datos_empresa = E). */
+let _cpEstado = null;
+function _cpEstadoInicial(planId) {
+  return {
+    plan: (planId && _CP_PLANES[planId]) ? planId : null,   // de la URL; la org nace 'free' igual
+    paso: 0,                                                 // índice del paso actual
+
+    // (a) → provisionar_organizacion(p_nombre, p_slug). El slug se deriva del
+    //     nombre (slugify) recién en A7; acá solo se recolecta el nombre.
+    organizacion: { nombre: '', slug: '' },
+
+    // (b) → organization_profile DESPUÉS y aparte (upsert). El nombre ficticio,
+    //     la web y el logo se derivan solos a organization_branding por trigger.
+    perfilEmpresa: { razonSocial: '', rut: '', giro: '', direccion: '', nombreFicticio: '', web: '' },
+
+    // (c) cuenta personal — solo para la entrada desde la landing (persona
+    //     nueva). En A3 esto reusa el OAuth/onboarding existente; no se reinventa.
+    persona: { nombre: '', apellido: '', email: '' },
+
+    aceptoTerminos: false,   // A5
+    pagado: false            // A6 (tras feature flag apagado)
+  };
+}
+
+/* Secuencia de pasos. 'pago' solo aparece en planes de pago (la org nace
+   'free' de todos modos). En A1 cada paso es un placeholder con su título. */
+function _cpPasos() {
+  const dePago = !!(_cpEstado && _cpEstado.plan && _cpEstado.plan !== 'gratis');
+  const pasos = [
+    { id: 'cuenta',   titulo: 'Tu cuenta',              construye: 'A3' },
+    { id: 'datos',    titulo: 'Datos de tu productora', construye: 'A4' },
+    { id: 'terminos', titulo: 'Términos y condiciones', construye: 'A5' }
+  ];
+  if (dePago) pasos.push({ id: 'pago', titulo: 'Pago', construye: 'A6' });
+  pasos.push({ id: 'creada', titulo: 'Productora creada', construye: 'A7 · A8' });
+  return pasos;
+}
+
+/* CSS del overlay, scopeado a #crearProductora. Los controles (botones,
+   inputs) son los componentes GLOBALES del monolito; acá solo el layout. */
+const _CP_CSS = `
+  #crearProductora{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
+  #crearProductora *{box-sizing:border-box;}
+  #crearProductora .cp-top{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;background:var(--bg-surface);border-bottom:1px solid var(--rule);}
+  #crearProductora .cp-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;}
+  #crearProductora .cp-mark{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--ink-onAccent);display:grid;place-items:center;font-weight:700;font-size:16px;}
+  #crearProductora .cp-plan{font-size:12.5px;color:var(--ink-secondary);border:1px solid var(--rule);border-radius:999px;padding:6px 13px;background:var(--bg-card);}
+  #crearProductora .cp-plan b{color:var(--ink-primary);font-weight:600;}
+  #crearProductora .cp-wrap{max-width:560px;margin:0 auto;padding:34px 24px 70px;}
+  #crearProductora .cp-stepper{display:flex;align-items:center;gap:6px;margin-bottom:24px;}
+  #crearProductora .cp-step{display:flex;align-items:center;gap:8px;}
+  #crearProductora .cp-num{width:26px;height:26px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;background:var(--bg-surface);border:1px solid var(--rule-strong);color:var(--ink-muted);}
+  #crearProductora .cp-txt{font-size:12px;color:var(--ink-muted);white-space:nowrap;}
+  #crearProductora .cp-step.active .cp-num{background:var(--accent);border-color:var(--accent);color:var(--ink-onAccent);}
+  #crearProductora .cp-step.active .cp-txt{color:var(--ink-primary);font-weight:500;}
+  #crearProductora .cp-step.done .cp-num{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--ink-primary);}
+  #crearProductora .cp-sep{flex:1;height:1px;min-width:10px;background:var(--rule);}
+  #crearProductora .cp-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:30px 28px;box-shadow:var(--shadow-sm);}
+  #crearProductora .cp-h{margin:0 0 6px;font-size:20px;font-weight:600;}
+  #crearProductora .cp-ph{margin:0 0 24px;font-size:13px;color:var(--ink-faint);line-height:1.6;}
+  #crearProductora .cp-acts{display:flex;align-items:center;gap:12px;}
+  @media (max-width:600px){#crearProductora .cp-top{padding:12px 16px;}#crearProductora .cp-wrap{padding:24px 16px 60px;}#crearProductora .cp-txt{display:none;}}
+`;
+
+/* Abre el overlay del flujo de creación. Se llama desde resolverEspacioYArrancar
+   cuando la URL trae ?plan=. Reabrir reinicia el flujo (no duplica el overlay). */
+function abrirFlujoCrearProductora(planId) {
+  _cpEstado = _cpEstadoInicial(planId);
+  try { _bootCoverHide(); } catch (e) {}
+  var prev = document.getElementById('crearProductora'); if (prev) prev.remove();
+  var ov = document.createElement('div');
+  ov.id = 'crearProductora';
+  ov.innerHTML = '<style>' + _CP_CSS + '</style>'
+    + '<div class="cp-top">'
+    +   '<div class="cp-brand"><div class="cp-mark">T</div><span>Crear productora</span></div>'
+    +   '<div id="cpPlanChip"></div>'
+    + '</div>'
+    + '<div class="cp-wrap">'
+    +   '<div id="cpStepper" class="cp-stepper"></div>'
+    +   '<div id="cpBody" class="cp-card"></div>'
+    + '</div>';
+  document.body.appendChild(ov);
+  _cpRender();
+}
+
+/* Pinta el paso actual: chip del plan, stepper y cuerpo (placeholder en A1). */
+function _cpRender() {
+  if (!_cpEstado) return;
+  var pasos = _cpPasos();
+  var i = Math.max(0, Math.min(_cpEstado.paso, pasos.length - 1));
+  _cpEstado.paso = i;
+  var paso = pasos[i];
+
+  var planNom = (_cpEstado.plan && _CP_PLANES[_cpEstado.plan]) ? _CP_PLANES[_cpEstado.plan].nombre : null;
+  var chip = document.getElementById('cpPlanChip');
+  if (chip) chip.innerHTML = planNom ? ('<span class="cp-plan">Plan <b>' + planNom + '</b></span>') : '';
+
+  var stp = document.getElementById('cpStepper');
+  if (stp) stp.innerHTML = pasos.map(function (p, idx) {
+    var cls = idx < i ? 'done' : (idx === i ? 'active' : '');
+    var marca = idx < i ? '✓' : (idx + 1);
+    return '<div class="cp-step ' + cls + '"><span class="cp-num">' + marca + '</span><span class="cp-txt">' + p.titulo + '</span></div>';
+  }).join('<span class="cp-sep"></span>');
+
+  var primero = (i === 0);
+  var ultimo = (paso.id === 'creada');
+  var body = document.getElementById('cpBody');
+  if (body) body.innerHTML =
+      '<h3 class="cp-h">' + paso.titulo + '</h3>'
+    + '<p class="cp-ph">Este paso aún no tiene contenido — se construye en el Paso ' + paso.construye + '.</p>'
+    + '<div class="cp-acts">'
+    +   '<button class="btn" onclick="' + (primero ? '_cpCerrar()' : '_cpAtras()') + '">' + (primero ? 'Cancelar' : '← Atrás') + '</button>'
+    +   '<div style="flex:1"></div>'
+    +   '<button class="btn btn-primary" onclick="' + (ultimo ? '_cpCerrar()' : '_cpSiguiente()') + '">' + (ultimo ? 'Cerrar' : 'Siguiente →') + '</button>'
+    + '</div>';
+}
+
+function _cpSiguiente() { if (!_cpEstado) return; _cpEstado.paso++; _cpRender(); try { var o = document.getElementById('crearProductora'); if (o) o.scrollTo(0, 0); } catch (e) {} }
+function _cpAtras() { if (!_cpEstado) return; if (_cpEstado.paso > 0) _cpEstado.paso--; _cpRender(); }
+/* Cierra el flujo y vuelve al Panel Personal (sin crear nada: A1 no toca la base). */
+function _cpCerrar() {
+  var o = document.getElementById('crearProductora'); if (o) o.remove();
+  _cpEstado = null;
+  try { resolverEspacioYArrancar(); } catch (e) {}
+}
+
 /* V11.4.0 · cortina de arranque: tapa el microsegundo de Control Room vacío
    antes del login y los ~2 s de carga de proyectos después de loguear. */
 function _bootVeil(msg) {
@@ -23009,6 +23166,22 @@ async function resolverEspacioYArrancar(){
   const forzar = /[?&]espacio=1\b/.test(window.location.search);
   const demo   = /[?&]espacio=demo\b/.test(window.location.search);
   if (demo) { try { renderEspacioUsuario(ESPACIO_DEMO); return; } catch(e){ arrancarTakeOS(); return; } }
+  /* FRENTE A · A1 · disparador del flujo de creación de productora:
+     ?plan=<gratis|rodaje|produccion>. El plan llega ya elegido desde la landing.
+     Se limpia de la URL para que cerrar/cancelar el flujo no lo vuelva a disparar.
+     (La organización nace 'free' igual; el plan es para la experiencia y A6.) */
+  try {
+    const _pm = /[?&]plan=(gratis|rodaje|produccion)\b/.exec(window.location.search);
+    if (_pm) {
+      const _plan = _pm[1];
+      try {
+        const _qs = window.location.search.replace(/[?&]plan=[^&]*/, '').replace(/^&/, '?');
+        history.replaceState(null, '', window.location.pathname + (_qs === '?' ? '' : _qs));
+      } catch (e) {}
+      abrirFlujoCrearProductora(_plan);
+      return;
+    }
+  } catch (e) {}
   try {
     const client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
     if (!client) { _renderEspacioSeguro(''); return; }
