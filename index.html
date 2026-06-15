@@ -6577,12 +6577,18 @@ function navigateToProject(projectId) {
   // V5.1.1: vaciar container de BD global para evitar IDs duplicados
   const bm = document.getElementById('bdGlobalMain'); if (bm) bm.innerHTML = '';
 
+  /* V11.15.0 · FRENTE F: un externo no tiene Control Room. El breadcrumb
+     apunta a "Mis proyectos" (Panel Personal) en lugar de "Control Room". */
+  const _esExterno = typeof TAKEOS_PERFIL !== 'undefined' && TAKEOS_PERFIL && TAKEOS_PERFIL.tipo === 'externo';
+
   // Breadcrumb
-  document.getElementById('breadcrumb').innerHTML = `
-    <span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span>
-    <span class="breadcrumb-sep">›</span>
-    <span class="breadcrumb-current">${project.client} · ${project.name}</span>
-  `;
+  document.getElementById('breadcrumb').innerHTML = _esExterno
+    ? `<span class="breadcrumb-link" onclick="irAlPanelPersonal()">Mis proyectos</span>
+       <span class="breadcrumb-sep">›</span>
+       <span class="breadcrumb-current">${project.client} · ${project.name}</span>`
+    : `<span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span>
+       <span class="breadcrumb-sep">›</span>
+       <span class="breadcrumb-current">${project.client} · ${project.name}</span>`;
 
   // Sidebar project card
   document.getElementById('sidebarProject').innerHTML = `
@@ -6600,6 +6606,7 @@ function navigateToProject(projectId) {
         Exportar este proyecto
       </button>
     </div>
+    ${_esExterno ? `<div style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--bg-surface-soft,rgba(120,113,108,.08));border:1px solid var(--rule);font-size:11px;color:var(--ink-faint);line-height:1.5;">Colaboras como externo · solo ves este proyecto.</div>` : ''}
   `;
 
   /* V11.8.4 · al entrar a un proyecto, abrir Info Proyecto solo si el perfil
