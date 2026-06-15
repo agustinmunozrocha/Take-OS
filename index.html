@@ -22778,8 +22778,13 @@ async function invAceptar(token, orgId) {
     const m = raw.match(/TAKEOS_REQUISITOS:\s*([a-z,\s]+)/i);
     if (m) {
       const faltan = m[1].split(',').map(x => x.trim()).filter(Boolean);
+      /* V11.15.0 · cuerpo del aviso por tokens: datos personales / fecha de nacimiento / datos bancarios. */
+      const _txt = [
+        faltan.indexOf('perfil') >= 0 ? 'tus datos personales' : (faltan.indexOf('edad') >= 0 ? 'tu fecha de nacimiento' : null),
+        faltan.indexOf('banca') >= 0 ? 'tus datos bancarios' : null
+      ].filter(Boolean).join(' y ');
       _invCerrarOverlay();
-      showToast({ kind: 'warning', title: 'Completa tu perfil para aceptar', body: 'Aún faltan datos obligatorios para colaborar en el proyecto.', duration: 8000 });
+      showToast({ kind: 'warning', title: 'Completa tu perfil para aceptar', body: 'Para colaborar, completa ' + (_txt || 'algunos datos obligatorios') + '.', duration: 8000 });
       invCompletarPerfil(token, faltan.indexOf('banca') >= 0, faltan, null);
       return;
     }
@@ -23347,7 +23352,24 @@ async function _cpCrearProductora() {
   } catch (err) {
     e._creando = false;
     if (btn) { btn.disabled = false; btn.textContent = lblPrev; }
-    var msg = (err && err.message) ? String(err.message).replace(/^[a-z_]+:\s*/i, '') : 'No se pudo crear la productora.';
+    var raw = (err && err.message) ? String(err.message) : '';
+    /* V11.15.0 · Plan G: requisitos del titular para crear productora. Igual que al
+       aceptar una invitación, abrimos el perfil en modo gate (asteriscos + campos
+       obligatorios por contexto) y reintentamos la creación al guardar. El overlay
+       de crear-productora queda DEBAJO (mismo z-index) con su estado intacto, así
+       no se pierde el nombre ni el plan ya ingresados. */
+    var mReq = raw.match(/TAKEOS_REQUISITOS:\s*([a-z,\s]+)/i);
+    if (mReq) {
+      var faltan = mReq[1].split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      try { showToast({ kind: 'warning', title: 'Completa tu perfil para crear tu productora', body: 'Faltan algunos datos obligatorios.', duration: 8000 }); } catch (e2) {}
+      abrirPerfilUsuario(true, function (guardado) { if (guardado) { _cpCrearProductora(); } }, faltan.indexOf('banca') >= 0, faltan, { intro: 'Para crear tu productora', volver: 'volverás a crear tu productora' });
+      return;
+    }
+    if (/TAKEOS_MENOR_EDAD/i.test(raw)) {
+      try { showToast({ kind: 'error', title: 'No puedes crear una productora', body: 'Para crear una productora debes ser mayor de 18 años.', duration: 9000 }); } catch (e2) {}
+      return;   // sin reintento: la edad mínima es un bloqueo, no un dato por completar
+    }
+    var msg = raw ? raw.replace(/^[a-z_]+:\s*/i, '') : 'No se pudo crear la productora.';
     try { showToast({ kind: 'error', title: 'No se pudo crear la productora', body: msg, duration: 9000 }); } catch (e2) {}
   }
 }
@@ -24239,7 +24261,7 @@ async function _pdConsentCargar() {
     _pdConsents = consents.map(function (c) { return { id: c.id, accepted_at: c.accepted_at, revoked_at: c.revoked_at, nombre: nombres[c.organization_id] || 'Una productora' }; });
     box = document.getElementById('pdConsentList'); if (!box) return;
     box.innerHTML = _pdConsents.map(_pdConsentRow).join('');
-  } catch (e) { try { var b2 = document.getElementById('pdConsentList'); if (b2) b2.innerHTML = '<div class="pd-empty">No se pudieron cargar tus consentimientos. Reintenta.</div>'; } catch (x) {} }
+  } catch (e) { console.warn('[privacidad] consentimientos no cargados', e); try { var b2 = document.getElementById('pdConsentList'); if (b2) b2.innerHTML = '<div class="pd-empty">No pudimos cargar esto ahora. Vuelve a entrar en un momento.</div>'; } catch (x) {} }
 }
 function _pdConsentRow(c) {
   var nom = c.nombre || 'Una productora';
@@ -24725,10 +24747,14 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
        extranjero por una diferencia de capitalización. */
     try { var _rc = _regionCanonica(prof.region); if (_rc) prof.region = _rc; } catch (e) {}
     var EXTRANJERO = _perfilEsExtranjero(prof);
-    /* V11.15.0 · asteriscos condicionales: solo Nombre y Apellidos en modo normal;
-       todos los campos relevantes en modo invitación (soloReqs). */
-    var esInvitacion = !!(_PERFIL_CTX && _PERFIL_CTX.soloReqs && _PERFIL_CTX.soloReqs.length);
-    var ast = esInvitacion ? ' <span style="color:var(--negative,#c0392b);">*</span>' : '';
+    /* V11.15.0 · asteriscos por REQUISITO separado (deben coincidir con lo que
+       realmente se exige en _perfilToggleGuardar): fuera del gate, solo Nombre y
+       Apellidos. En el gate, 'perfil' marca identidad/contacto/dirección y 'edad'
+       marca solo la fecha de nacimiento — son requisitos distintos del servidor. */
+    var _reqs = (_PERFIL_CTX && _PERFIL_CTX.soloReqs) || [];
+    var _astTag = ' <span style="color:var(--negative,#c0392b);">*</span>';
+    var astPerfil = (_reqs.indexOf('perfil') >= 0) ? _astTag : '';
+    var astEdad = (_reqs.indexOf('edad') >= 0) ? _astTag : '';
     var bancoNombre = ext ? '' : (typeof _dalBancoNombre === 'function' ? _dalBancoNombre(cuenta.bank_codigo_sbif) : '');
     var bancoSel = (typeof bancoSelectHTML === 'function')
       ? bancoSelectHTML(bancoNombre, { id: 'perfilBanco' })
@@ -24798,11 +24824,11 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
         <div class="pf-sec" data-secgroup="perfil">
           <p class="pf-sec-t">Identidad privada y contacto ${privChip}</p>
           <div class="pf-grid">
-            <div class="pf-f" id="pf_rutWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>RUT${ast}</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9" inputmode="text"><span id="pf_rutErr" style="display:none;font-size:11px;color:var(--negative,#c0392b);">RUT inválido: revisa el dígito verificador.</span></div>
+            <div class="pf-f" id="pf_rutWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>RUT${astPerfil}</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9" inputmode="text"><span id="pf_rutErr" style="display:none;font-size:11px;color:var(--negative,#c0392b);">RUT inválido: revisa el dígito verificador.</span></div>
             <div class="pf-f" id="pf_docWrap" style="${EXTRANJERO ? '' : 'display:none;'}"><label>Documento de identidad / pasaporte</label><input class="input" id="pf_doc" value="" disabled placeholder="Pasaporte u otro documento"><span style="font-size:11px;color:var(--ink-faint);">Se habilita con la próxima extensión de la base.</span></div>
-            <div class="pf-f"><label>Correo${ast}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
-            <div class="pf-f"><label>Celular${ast}</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
-            <div class="pf-f"><label>Fecha de nacimiento</label><input class="input" id="pf_fnac" type="date" value="${v(prof.fecha_nacimiento)}"></div>
+            <div class="pf-f"><label>Correo${astPerfil}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
+            <div class="pf-f"><label>Celular${astPerfil}</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
+            <div class="pf-f"><label>Fecha de nacimiento${astEdad}</label><input class="input" id="pf_fnac" type="date" value="${v(prof.fecha_nacimiento)}"></div>
           </div>
         </div>
 
@@ -24810,11 +24836,11 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <p class="pf-sec-t">Dirección ${privChip}</p>
           <p style="font-size:12px;color:var(--ink-faint);margin:-4px 0 12px;line-height:1.5;">La usamos para logística de producción y generación de contratos. Nadie puede ver esta información sin tu consentimiento explícito.</p>
           <div class="pf-grid">
-            <div class="pf-f full"><label>Calle y número${ast}</label><input class="input" id="pf_direccion" value="${v(prof.direccion)}"></div>
+            <div class="pf-f full"><label>Calle y número${astPerfil}</label><input class="input" id="pf_direccion" value="${v(prof.direccion)}"></div>
             <div class="pf-f full"><label>Departamento, oficina, etc. (opcional)</label><input class="input" id="pf_dir2" value="${v(prof.direccion_linea2)}"></div>
-            <div class="pf-f" id="pf_comunaWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>Comuna${ast}</label><input class="input" id="pf_comuna" value="${v(prof.comuna)}"></div>
-            <div class="pf-f"><label>Ciudad${ast}</label><input class="input" id="pf_ciudad" value="${v(prof.ciudad)}"></div>
-            <div class="pf-f full" id="pf_regionWrap"><label id="pf_regionLabel">${EXTRANJERO ? 'País' : 'Región'}${ast}</label>${EXTRANJERO ? `<input class="input" id="pf_region" value="${v(prof.region)}" placeholder="Ej: Argentina, España…">` : regionSelectHTML(prof.region, { id: 'pf_region' })}</div>
+            <div class="pf-f" id="pf_comunaWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>Comuna${astPerfil}</label><input class="input" id="pf_comuna" value="${v(prof.comuna)}"></div>
+            <div class="pf-f"><label>Ciudad${astPerfil}</label><input class="input" id="pf_ciudad" value="${v(prof.ciudad)}"></div>
+            <div class="pf-f full" id="pf_regionWrap"><label id="pf_regionLabel">${EXTRANJERO ? 'País' : 'Región'}${astPerfil}</label>${EXTRANJERO ? `<input class="input" id="pf_region" value="${v(prof.region)}" placeholder="Ej: Argentina, España…">` : regionSelectHTML(prof.region, { id: 'pf_region' })}</div>
           </div>
         </div>
 
@@ -24865,7 +24891,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
    evaluado desde strings y el navegador los rechaza; addEventListener no). */
 function _perfilBind() {
   var ext = document.getElementById('pf_ext');
-  if (ext) ext.addEventListener('change', _perfilToggleExt);
+  if (ext) { ext.addEventListener('change', _perfilToggleExt); ext.addEventListener('change', _perfilToggleGuardar); }
   var bo = document.getElementById('pf_btnOmitir');
   if (bo) bo.addEventListener('click', _perfilOmitir);
   var bg = document.getElementById('pf_btnGuardar');
@@ -24873,10 +24899,14 @@ function _perfilBind() {
   /* V11.3.1 · Guardar apagado hasta completar los obligatorios (nombre,
      apellido, RUT) — misma regla cosmética que el Aceptar de la invitación.
      V11.15.0 · "Completar después" también reactivo a nombre + apellidos. */
-  ['pf_nombre', 'pf_apellido', 'pf_rut'].forEach(function (id) {
+  /* V11.15.0 · el botón Guardar es reactivo a TODOS los campos que pueden ser
+     obligatorios según el contexto (gate), no solo al RUT. */
+  ['pf_nombre', 'pf_apellido', 'pf_rut', 'pf_email', 'pf_telefono', 'pf_direccion', 'pf_comuna', 'pf_ciudad', 'pf_fnac', 'pf_ncuenta', 'pf_extra'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.addEventListener('input', _perfilToggleGuardar);
   });
+  var _rg = document.getElementById('pf_region');   // región: select (chileno) o input (extranjero)
+  if (_rg) { _rg.addEventListener('change', _perfilToggleGuardar); _rg.addEventListener('input', _perfilToggleGuardar); }
   ['pf_nombre', 'pf_apellido'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) el.addEventListener('input', _perfilToggleOmitir);
@@ -24909,18 +24939,26 @@ function _perfilAplicarSoloFaltantes() {
   try {
     var reqs = _PERFIL_CTX && _PERFIL_CTX.soloReqs;
     if (!reqs || !reqs.length) return;
-    var wantPerfil = reqs.indexOf('perfil') >= 0;
+    var wantEdad = reqs.indexOf('edad') >= 0;
+    var wantPerfil = reqs.indexOf('perfil') >= 0 || wantEdad;   // 'edad' (fecha nac.) vive en la sección perfil
     var wantBanca = reqs.indexOf('banca') >= 0;
     var ov = document.getElementById('perfilUsuario'); if (!ov) return;
     var secs = ov.querySelectorAll('.pf-sec');
+    var algunaVisible = false;
     Array.prototype.forEach.call(secs, function (sec) {
       var grp = sec.getAttribute('data-secgroup') || '';
       var show = (grp === 'perfil' && wantPerfil) || (grp === 'banca' && wantBanca);
-      if (!show) sec.style.display = 'none';
+      if (!show) sec.style.display = 'none'; else algunaVisible = true;
     });
+    /* Anti-callejón-sin-salida: si ninguna sección con campos quedó visible
+       (p. ej. un req inesperado), no ocultamos nada — mejor de más que un gate vacío. */
+    if (!algunaVisible) { Array.prototype.forEach.call(secs, function (sec) { sec.style.display = ''; }); }
     var wrap = ov.querySelector('.pf-wrap'); if (!wrap) return;
     var b = _PERFIL_CTX.invBanner || {};
-    var faltanTxt = [wantPerfil ? 'tus datos personales' : null, wantBanca ? 'tus datos bancarios' : null].filter(Boolean).join(' y ');
+    var faltanTxt = [
+      (reqs.indexOf('perfil') >= 0) ? 'tus datos personales' : (wantEdad ? 'tu fecha de nacimiento' : null),
+      wantBanca ? 'tus datos bancarios' : null
+    ].filter(Boolean).join(' y ');
     var ctxLinea = '';
     if (b.proyecto || b.persona || b.cargo) {
       ctxLinea = '<div style="font-size:12.5px;color:var(--ink-secondary);margin-top:6px;line-height:1.5;">'
@@ -24931,9 +24969,13 @@ function _perfilAplicarSoloFaltantes() {
     var banner = document.createElement('div');
     banner.id = 'pf_invBanner';
     banner.style.cssText = 'max-width:none;margin:0 0 22px;border:1px solid var(--accent);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;background:var(--accent-bg, rgba(176,58,47,.08));';
-    banner.innerHTML = '<div style="font-weight:700;font-size:16px;color:var(--ink-primary);">Para colaborar' + (b.proyecto ? ' en ' + escapeHtml(b.proyecto) : '') + ', completa ' + (faltanTxt || 'estos datos') + '.</div>'
+    /* V11.15.0 · intro/volver configurables: el mismo modo "solo lo que falta"
+       sirve para aceptar invitación (default) y para crear productora (b.intro/b.volver). */
+    var _intro = b.intro || ('Para colaborar' + (b.proyecto ? ' en ' + escapeHtml(b.proyecto) : ''));
+    var _volver = b.volver || 'volverás a la invitación para aceptar';
+    banner.innerHTML = '<div style="font-weight:700;font-size:16px;color:var(--ink-primary);">' + _intro + ', completa ' + (faltanTxt || 'estos datos') + '.</div>'
       + ctxLinea
-      + '<div style="font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.5;">Solo te mostramos lo que falta. Apenas lo completes y guardes, volverás a la invitación para aceptar.</div>';
+      + '<div style="font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.5;">Solo te mostramos lo que falta. Apenas lo completes y guardes, ' + _volver + '.</div>';
     var firstSec = wrap.querySelector('.pf-sec');
     if (firstSec) wrap.insertBefore(banner, firstSec); else wrap.appendChild(banner);
   } catch (e) { console.warn('[perfil] solo-faltantes', e); }
@@ -24943,7 +24985,7 @@ function _perfilToggleNoCl() {
   var show = function (id, s) { var el = document.getElementById(id); if (el) el.style.display = s ? '' : 'none'; };
   show('pf_rutWrap', !on); show('pf_docWrap', on); show('pf_comunaWrap', !on);
   var lbl = document.getElementById('pf_regionLabel');
-  var _astNoCl = (_PERFIL_CTX && _PERFIL_CTX.soloReqs && _PERFIL_CTX.soloReqs.length) ? ' <span style="color:var(--negative,#c0392b);">*</span>' : '';
+  var _astNoCl = (_PERFIL_CTX && _PERFIL_CTX.soloReqs && _PERFIL_CTX.soloReqs.indexOf('perfil') >= 0) ? ' <span style="color:var(--negative,#c0392b);">*</span>' : '';
   if (lbl) lbl.innerHTML = (on ? 'País' : 'Región') + _astNoCl;
   /* Región: dropdown chileno ↔ texto libre (país). Se reemplaza el control. */
   var wrap = document.getElementById('pf_regionWrap');
@@ -24953,15 +24995,47 @@ function _perfilToggleNoCl() {
     if (on) { wrap.insertAdjacentHTML('beforeend', '<input class="input" id="pf_region" value="' + String(cur).replace(/"/g, '&quot;') + '" placeholder="Ej: Argentina, España…">'); }
     else { wrap.insertAdjacentHTML('beforeend', regionSelectHTML(REGIONES_CHILE.indexOf(cur) >= 0 ? cur : '', { id: 'pf_region' })); }
   }
+  /* V11.15.0 · el control de región se recreó: re-enganchar su reactividad al botón Guardar. */
+  var _r = document.getElementById('pf_region');
+  if (_r) { _r.addEventListener('change', _perfilToggleGuardar); _r.addEventListener('input', _perfilToggleGuardar); }
   _perfilToggleGuardar();
 }
+/* V11.15.0 · Guardar sensible al CONTEXTO (auditoría obligatoriedad).
+   - Fuera del gate (onboarding/edición): basta nombre+apellido. El RUT es OPCIONAL
+     (se puede borrar), pero si se escribe debe ser válido.
+   - En el gate (soloReqs: aceptar invitación / crear productora): se exigen todos
+     los campos obligatorios del contexto (perfil/edad/banca), excepto la línea 2
+     de dirección. Así no se guarda incompleto y el servidor no rebota en loop. */
 function _perfilToggleGuardar() {
   var g = function (id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
   var noCl = !!(document.getElementById('pf_noCl') || {}).checked;
-  var rutOk = noCl ? true : (!!g('pf_rut') && _rutValido(g('pf_rut')));
-  var ok = !!(g('pf_nombre') && g('pf_apellido') && rutOk);
+  var reqs = (_PERFIL_CTX && _PERFIL_CTX.soloReqs) || [];
+  var rutEscritoOk = !g('pf_rut') || _rutValido(g('pf_rut'));                   // validez: si hay RUT, debe ser válido
+  /* presencia de RUT: exigida SOLO bajo el requisito 'perfil' y para chilenos.
+     Se condiciona a 'perfil' (NO a 'edad') para coincidir EXACTAMENTE con el
+     asterisco (astPerfil): un gate solo-'edad' no exige ni marca el RUT. */
+  var rutPresenteOk = (reqs.indexOf('perfil') >= 0 && !noCl) ? !!g('pf_rut') : true;
+  var ok = !!(g('pf_nombre') && g('pf_apellido')) && rutEscritoOk && rutPresenteOk;
+  if (reqs.length) {
+    if (reqs.indexOf('perfil') >= 0) {
+      ok = ok && !!(g('pf_email') && g('pf_telefono') && g('pf_direccion') && g('pf_ciudad') && g('pf_region'));
+      if (!noCl) ok = ok && !!g('pf_comuna');
+    }
+    if (reqs.indexOf('edad') >= 0) ok = ok && !!g('pf_fnac');   // presencia; la mayoría de edad la reimpone el servidor
+    if (reqs.indexOf('banca') >= 0) {
+      var ext = !!(document.getElementById('pf_ext') || {}).checked;
+      ok = ok && (ext ? !!g('pf_extra') : !!g('pf_ncuenta'));
+    }
+  }
   var bg = document.getElementById('pf_btnGuardar');
-  if (bg) { bg.disabled = !ok; bg.title = ok ? '' : (noCl ? 'Completa nombre y apellidos para guardar.' : 'Completa nombre, apellidos y un RUT válido para guardar.'); }
+  if (bg) {
+    bg.disabled = !ok;
+    bg.title = ok ? '' : (
+      !(g('pf_nombre') && g('pf_apellido')) ? 'Completa nombre y apellidos para guardar.'
+      : !rutEscritoOk ? 'El RUT ingresado no es válido: revisa el dígito verificador.'
+      : 'Completa los datos obligatorios para continuar.'
+    );
+  }
 }
 /* V11.15.0 · "Completar después" solo disponible una vez que el usuario llenó
    nombre + apellidos (los mínimos que identifican a la persona). Solo aplica en
@@ -24978,6 +25052,7 @@ function _perfilToggleOmitir() {
 function _perfilMsg(texto, esError) {
   var el = document.getElementById('pf_msg');
   if (el) { el.textContent = texto; el.style.color = esError ? 'var(--negative, #c0392b)' : 'var(--positive, #2e7d32)'; el.style.fontWeight = '600'; }
+  else if (esError) { try { showToast({ kind: 'error', title: 'Revisa los datos', body: texto, duration: 7000 }); } catch (e) {} }   // V11.15.0 · feedback en el formulario de respaldo (sin pf_msg)
 }
 
 /* V11.0.0 · Formulario de respaldo del perfil personal. Construido SOLO con
@@ -25115,6 +25190,10 @@ async function _perfilGuardar() {
        identidad + contacto + dirección. Para no-chilenos no se exige RUT
        (documento extranjero pendiente de columna en BD) ni comuna. */
     var noCl = !!(document.getElementById('pf_noCl') || {}).checked;
+    /* V11.15.0 · defensa real (no solo el botón): nunca persistir un RUT mal
+       formado. Vacío es válido (el RUT es opcional fuera del gate). Cubre también
+       el formulario de respaldo, que conecta Guardar directo a _perfilGuardar. */
+    if (!noCl && prof.rut && !_rutValido(prof.rut)) { _perfilMsg('RUT inválido: revisa el dígito verificador.', true); return; }
     var completo = prof.nombre && prof.apellido && prof.email && prof.telefono && prof.direccion && prof.ciudad && prof.region
       && (noCl ? true : (prof.rut && _rutValido(prof.rut) && prof.comuna));
     if (completo) prof.completado_at = new Date().toISOString();
