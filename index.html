@@ -21294,13 +21294,16 @@ async function dalResolveIdentidad() {
    bloquear los RPCs de escritura para perfiles sin nivel 'E'. La seguridad
    REAL de escritura la cerrará el BD Expert dentro de los RPCs (Gate C).
 
-   FAIL-OPEN: si la membresía/matriz no carga (sin sesión, sin membresía,
-   error de red/RLS), TAKEOS_ACCESO queda null y todo se trata como 'E'
-   (comportamiento previo). Así un fallo de carga NUNCA deja a nadie afuera;
-   el RLS sigue protegiendo los datos. El acceso solo se restringe cuando la
-   matriz dice explícitamente 'L' o 'none'. */
+   FAIL-CLOSED (V11.15.0): la VISIBILIDAD/LECTURA niega por defecto. Si la
+   membresía/matriz no carga (sin sesión, sin membresía, error de red/RLS) o si
+   un módulo no aparece en la matriz, authNivel/authNivelModulo devuelven 'none'
+   y el módulo se esconde. La matriz se siembra densa: una fila ausente es
+   anomalía, no un permiso legítimo => se niega por seguridad.
+   Excepción deliberada: los GUARD de ESCRITURA (authPuedeGuardar*) siguen
+   fail-open cuando TAKEOS_ACCESO es null, porque la seguridad real de escritura
+   la cierra el RPC SECURITY DEFINER (Gate C); esa guarda de cliente es solo UX. */
 let TAKEOS_PERFIL = null;      // { codigo, nombre, tipo, profileId, contactId }
-let TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (fail-open)
+let TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (no cargado => lectura fail-closed)
 
 /* Mapa: clave de módulo en la app -> código de módulo en profile_permissions */
 const MODULE_PERM_CODE = {
@@ -21330,9 +21333,14 @@ function authNivel(modCode) {
   const n = TAKEOS_ACCESO[modCode];
   return n || 'none';
 }
+/* V11.15.0 · Gate B (fail-closed): si la appKey no está mapeada a un código de
+   módulo, se NIEGA por defecto ('none'), no se concede acceso total. Una appKey
+   sin mapear es una anomalía (módulo nuevo sin registrar en MODULE_PERM_CODE),
+   no un permiso legítimo => se esconde por seguridad. Todas las claves vivas del
+   registro MODULES y del sidebar están en MODULE_PERM_CODE. */
 function authNivelModulo(appKey) {
   const code = MODULE_PERM_CODE[appKey];
-  if (!code) return 'E';
+  if (!code) return 'none';
   return authNivel(code);
 }
 function authPuedeVer(appKey) { return authNivelModulo(appKey) !== 'none'; }
