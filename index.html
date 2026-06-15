@@ -23780,6 +23780,8 @@ function _espPerfil(){ try{ abrirPerfilUsuario(false); }catch(e){} }
    decisiones de Agustín). En B1 cada flujo es un placeholder. */
 var _pdVista = 'hub';
 var _pdExportEstado = 'idle';   // B2: idle | solicitada
+var _pdConsents = [];           // B3: consentimientos cargados de data_consents
+var _pdRevocarId = null;
 var _PD_CSS = `
   #privacidadDatos{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
   #privacidadDatos *{box-sizing:border-box;}
@@ -23814,6 +23816,15 @@ var _PD_CSS = `
   #privacidadDatos .pd-list li{font-size:13px;color:var(--ink-secondary);display:flex;gap:9px;align-items:flex-start;}
   #privacidadDatos .pd-list li::before{content:"\\203A";color:var(--accent-deep);font-weight:700;}
   #privacidadDatos .pd-acts{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
+  #privacidadDatos .pd-consent{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--rule);border-radius:var(--radius-md);background:var(--bg-surface-soft);margin-bottom:11px;}
+  #privacidadDatos .pd-consent.rev{opacity:.7;}
+  #privacidadDatos .pd-c-ico{width:38px;height:38px;border-radius:var(--radius-sm);background:var(--bg-elevated);display:grid;place-items:center;font-size:16px;flex:none;}
+  #privacidadDatos .pd-c-meta{flex:1;min-width:0;}
+  #privacidadDatos .pd-c-meta b{font-size:14px;font-weight:600;display:block;}
+  #privacidadDatos .pd-c-meta span{font-size:12px;color:var(--ink-muted);}
+  #privacidadDatos .pd-badge{font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--rule-strong);color:var(--ink-muted);}
+  #privacidadDatos .pd-badge.rev{color:var(--accent-deep);border-color:var(--accent-soft);}
+  #privacidadDatos .pd-empty{font-size:13px;color:var(--ink-faint);padding:16px;border:1px dashed var(--rule-strong);border-radius:var(--radius-md);text-align:center;}
   @media (max-width:640px){#privacidadDatos .pd-rights{grid-template-columns:1fr;}#privacidadDatos .pd-wrap{padding:24px 16px 60px;}}
 `;
 /* Lee el nombre/correo de la cuenta desde el Panel Personal ya renderizado. */
@@ -23842,6 +23853,9 @@ function _pdRender() {
   var w = document.getElementById('pdWrap'); if (!w) return;
   if (_pdVista === 'hub') { w.innerHTML = _pdHubHTML(); return; }
   if (_pdVista === 'export') { w.innerHTML = _pdExportHTML(); return; }
+  if (_pdVista === 'consentimientos') { w.innerHTML = _pdConsentShell(); _pdConsentCargar(); return; }
+  if (_pdVista === 'revocar') { w.innerHTML = _pdRevocarHTML(); return; }
+  if (_pdVista === 'revocado') { w.innerHTML = _pdRevocadoHTML(); return; }
   var flows = {
     export:         ['Descargar mis datos', 'B2'],
     consentimientos:['Productoras con acceso a tus datos', 'B3'],
@@ -23920,6 +23934,90 @@ function _pdExportSolicitar() {
   _pdRender();
 }
 function _pdExportReset() { _pdExportEstado = 'idle'; _pdRender(); }
+
+/* ── B3 · Productoras con acceso a tus datos + revocar consentimiento ───────
+   Lista los consentimientos del titular desde data_consents (RLS: el usuario lee
+   los suyos). Revocar es SERVER-SIDE y el RPC aún NO existe (espeja
+   consentir_invitacion) → handoff BD Expert. ADR-020: data_consents es
+   append-only; revocar marca revoked_at, NO borra. La UI dice la consecuencia. */
+function _pdFecha(ts) { if (!ts) return '—'; try { return new Date(ts).toLocaleDateString('es-CL'); } catch (e) { return '—'; } }
+function _pdConsentShell() {
+  return '<button class="pd-back" onclick="_pdIr(\'hub\')" style="margin-bottom:18px;">← Privacidad y datos</button>'
+    + '<div class="pd-flow">'
+    +   '<h3>Productoras con acceso a tus datos</h3>'
+    +   '<p class="pd-sub">Estas productoras tienen una copia de tus datos porque diste tu consentimiento al incorporarte. Puedes revocarlo cuando quieras.</p>'
+    +   '<div id="pdConsentList"><div class="pd-ph">Cargando…</div></div>'
+    + '</div>';
+}
+async function _pdConsentCargar() {
+  var box = document.getElementById('pdConsentList'); if (!box) return;
+  var vacio = '<div class="pd-empty">No hay productoras con tus datos.</div>';
+  try {
+    if (typeof sb === 'undefined' || !sb) { box.innerHTML = vacio; return; }
+    var ures = await sb.auth.getUser();
+    var uid = (ures && ures.data && ures.data.user) ? ures.data.user.id : null;
+    if (!uid) { box.innerHTML = vacio; return; }
+    /* Sin embed de organizations: data_consents tiene FK a organizations Y a
+       memberships (que también apunta a organizations), así que el embed de
+       PostgREST es ambiguo y falla. Traemos los nombres aparte. */
+    var r = await sb.from('data_consents').select('id, organization_id, accepted_at, revoked_at').eq('user_id', uid).order('accepted_at', { ascending: false });
+    if (r.error) throw r.error;
+    var consents = r.data || [];
+    box = document.getElementById('pdConsentList'); if (!box) return;
+    if (!consents.length) { box.innerHTML = vacio; return; }
+    var nombres = {};
+    try {
+      var ids = consents.map(function (c) { return c.organization_id; });
+      var ro = await sb.from('organizations').select('id, nombre').in('id', ids);
+      if (!ro.error && ro.data) ro.data.forEach(function (o) { nombres[o.id] = o.nombre; });
+    } catch (e) {}
+    _pdConsents = consents.map(function (c) { return { id: c.id, accepted_at: c.accepted_at, revoked_at: c.revoked_at, nombre: nombres[c.organization_id] || 'Una productora' }; });
+    box = document.getElementById('pdConsentList'); if (!box) return;
+    box.innerHTML = _pdConsents.map(_pdConsentRow).join('');
+  } catch (e) { try { var b2 = document.getElementById('pdConsentList'); if (b2) b2.innerHTML = '<div class="pd-empty">No se pudieron cargar tus consentimientos. Reintenta.</div>'; } catch (x) {} }
+}
+function _pdConsentRow(c) {
+  var nom = c.nombre || 'Una productora';
+  if (c.revoked_at) {
+    return '<div class="pd-consent rev"><div class="pd-c-ico">🏢</div>'
+      + '<div class="pd-c-meta"><b>' + escapeHtml(nom) + '</b><span>Consentimiento revocado el ' + _pdFecha(c.revoked_at) + '</span></div>'
+      + '<span class="pd-badge rev">Revocado</span></div>';
+  }
+  return '<div class="pd-consent"><div class="pd-c-ico">🏢</div>'
+    + '<div class="pd-c-meta"><b>' + escapeHtml(nom) + '</b><span>Tiene una copia de tus datos · desde el ' + _pdFecha(c.accepted_at) + '</span></div>'
+    + '<button class="btn" onclick="_pdRevocarConfirm(\'' + c.id + '\')">Revocar</button></div>';
+}
+function _pdRevocarConfirm(id) { _pdRevocarId = id; _pdIr('revocar'); }
+function _pdRevocarHTML() {
+  var c = _pdConsents.filter(function (x) { return x.id === _pdRevocarId; })[0];
+  var nom = (c && c.nombre) || 'esta productora';
+  return '<button class="pd-back" onclick="_pdIr(\'consentimientos\')" style="margin-bottom:18px;">← Volver</button>'
+    + '<div class="pd-flow">'
+    +   '<h3>Revocar consentimiento en ' + escapeHtml(nom) + '</h3>'
+    +   '<p class="pd-sub">Antes de continuar, ten en cuenta lo que pasa:</p>'
+    +   '<ul class="pd-list">'
+    +     '<li>' + escapeHtml(nom) + ' dejará de tener acceso a tus datos.</li>'
+    +     '<li>Si participas en un proyecto activo con ellos, perderás ese acceso.</li>'
+    +     '<li>Queda registrado como revocado, con la fecha. La copia que ya tienen se conserva de forma datada como evidencia legal hasta que la productora la suprima.</li>'
+    +   '</ul>'
+    +   '<div class="pd-acts"><button class="btn" onclick="_pdIr(\'consentimientos\')">Cancelar</button><button class="btn btn-danger" onclick="_pdRevocarConfirmar()">Revocar consentimiento</button></div>'
+    + '</div>';
+}
+function _pdRevocarConfirmar() {
+  /* SEAM · BD Expert: acá va el RPC de revocación (espeja consentir_invitacion):
+     marca revoked_at en data_consents (append-only, NO borra), pasa la membresía
+     a 'inactivo' y corta el acceso; queda en audit_log. El RPC aún no existe. */
+  _pdIr('revocado');
+}
+function _pdRevocadoHTML() {
+  return '<button class="pd-back" onclick="_pdIr(\'consentimientos\')" style="margin-bottom:18px;">← Privacidad y datos</button>'
+    + '<div class="pd-flow">'
+    +   '<h3>Revocación pendiente de backend</h3>'
+    +   '<p class="pd-sub">La revocación se procesa en el servidor y se conecta cuando el RPC esté disponible.</p>'
+    +   '<div class="pd-legal">Pendiente de backend (BD Expert): el RPC marca revoked_at en data_consents (append-only, no se borra), pasa tu membresía a inactivo y corta el acceso; queda en audit_log. Tu registro de consentimiento se conserva como evidencia.</div>'
+    +   '<div class="pd-acts"><button class="btn" onclick="_pdIr(\'consentimientos\')">Volver</button></div>'
+    + '</div>';
+}
 
 function renderEspacioUsuario(data){
   try{
