@@ -23779,6 +23779,7 @@ function _espPerfil(){ try{ abrirPerfilUsuario(false); }catch(e){} }
    B2…B6 (algunos son UI-contra-contrato del BD Expert; eliminar y edad tienen
    decisiones de Agustín). En B1 cada flujo es un placeholder. */
 var _pdVista = 'hub';
+var _pdExportEstado = 'idle';   // B2: idle | solicitada
 var _PD_CSS = `
   #privacidadDatos{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
   #privacidadDatos *{box-sizing:border-box;}
@@ -23807,6 +23808,12 @@ var _PD_CSS = `
   #privacidadDatos .pd-flow{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:30px 28px;}
   #privacidadDatos .pd-flow h3{margin:0 0 6px;font-size:20px;font-weight:600;}
   #privacidadDatos .pd-flow .pd-ph{font-size:13px;color:var(--ink-faint);line-height:1.6;}
+  #privacidadDatos .pd-flow .pd-sub{color:var(--ink-muted);font-size:13px;margin:0 0 14px;}
+  #privacidadDatos .pd-eyebrow2{font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+  #privacidadDatos .pd-list{display:flex;flex-direction:column;gap:9px;margin:0 0 14px;padding:0;list-style:none;}
+  #privacidadDatos .pd-list li{font-size:13px;color:var(--ink-secondary);display:flex;gap:9px;align-items:flex-start;}
+  #privacidadDatos .pd-list li::before{content:"\\203A";color:var(--accent-deep);font-weight:700;}
+  #privacidadDatos .pd-acts{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
   @media (max-width:640px){#privacidadDatos .pd-rights{grid-template-columns:1fr;}#privacidadDatos .pd-wrap{padding:24px 16px 60px;}}
 `;
 /* Lee el nombre/correo de la cuenta desde el Panel Personal ya renderizado. */
@@ -23821,6 +23828,7 @@ function _pdUserInfo() {
 }
 function abrirPrivacidadDatos() {
   _pdVista = 'hub';
+  _pdExportEstado = 'idle';
   var prev = document.getElementById('privacidadDatos'); if (prev) prev.remove();
   var ov = document.createElement('div'); ov.id = 'privacidadDatos';
   ov.innerHTML = '<style>' + _PD_CSS + '</style>'
@@ -23833,6 +23841,7 @@ function abrirPrivacidadDatos() {
 function _pdRender() {
   var w = document.getElementById('pdWrap'); if (!w) return;
   if (_pdVista === 'hub') { w.innerHTML = _pdHubHTML(); return; }
+  if (_pdVista === 'export') { w.innerHTML = _pdExportHTML(); return; }
   var flows = {
     export:         ['Descargar mis datos', 'B2'],
     consentimientos:['Productoras con acceso a tus datos', 'B3'],
@@ -23869,6 +23878,48 @@ function _pdHubHTML() {
 function _pdIr(v) { _pdVista = v; _pdRender(); var o = document.getElementById('privacidadDatos'); if (o && o.scrollTo) { try { o.scrollTo(0, 0); } catch (e) {} } }
 /* Cierra el centro de privacidad y vuelve al Panel Personal (queda debajo). */
 function _pdCerrar() { var o = document.getElementById('privacidadDatos'); if (o) o.remove(); }
+
+/* ── B2 · Descargar mis datos (export / portabilidad) ───────────────────────
+   Derecho de acceso + portabilidad (Ley 21.719). La generación del archivo es
+   SERVER-SIDE (no se arma en el cliente): el backend reúne los datos del titular,
+   entrega un archivo firmado (JSON/CSV) y registra la solicitud en audit_log.
+   El endpoint aún NO existe → handoff al BD Expert. Acá queda la UI y el punto
+   de integración marcado (_pdExportSolicitar). */
+function _pdExportHTML() {
+  if (_pdExportEstado === 'solicitada') {
+    return '<button class="pd-back" onclick="_pdIr(\'hub\')" style="margin-bottom:18px;">← Privacidad y datos</button>'
+      + '<div class="pd-flow">'
+      +   '<h3>Solicitud registrada</h3>'
+      +   '<p class="pd-sub">Tu copia se prepara en el servidor (no en tu navegador) por seguridad. El botón de descarga se activará cuando esté lista.</p>'
+      +   '<div class="pd-legal">Pendiente de backend: el endpoint de exportación lo entrega el equipo de base de datos. La solicitud queda registrada en el historial (audit_log).</div>'
+      +   '<div class="pd-acts"><button class="btn" onclick="_pdExportReset()">Volver a empezar</button></div>'
+      + '</div>';
+  }
+  return '<button class="pd-back" onclick="_pdIr(\'hub\')" style="margin-bottom:18px;">← Privacidad y datos</button>'
+    + '<div class="pd-flow">'
+    +   '<h3>Descargar mis datos</h3>'
+    +   '<p class="pd-sub">Pide una copia completa de tus datos personales. Es tu derecho de acceso y portabilidad.</p>'
+    +   '<div class="pd-eyebrow2">Tu copia incluye</div>'
+    +   '<ul class="pd-list">'
+    +     '<li>Tu perfil personal y datos de contacto</li>'
+    +     '<li>Tus datos bancarios registrados</li>'
+    +     '<li>Las productoras donde participas y tu rol en cada una</li>'
+    +     '<li>Los consentimientos que has otorgado, con su fecha</li>'
+    +     '<li>Un resumen de tu actividad en el sistema</li>'
+    +   '</ul>'
+    +   '<p style="font-size:12px;color:var(--ink-muted);">Se entrega en un formato legible y portable (JSON y CSV).</p>'
+    +   '<div class="pd-acts"><button class="btn btn-primary" onclick="_pdExportSolicitar()">Solicitar mi copia</button></div>'
+    + '</div>';
+}
+function _pdExportSolicitar() {
+  /* SEAM · BD Expert: acá va la llamada al RPC de exportación, que genera el
+     archivo server-side y registra la solicitud en audit_log. El endpoint aún
+     no existe; por ahora solo se refleja el estado. NO armar el export en el
+     cliente (doctrina: lógica sensible y datos completos = server-side). */
+  _pdExportEstado = 'solicitada';
+  _pdRender();
+}
+function _pdExportReset() { _pdExportEstado = 'idle'; _pdRender(); }
 
 function renderEspacioUsuario(data){
   try{
