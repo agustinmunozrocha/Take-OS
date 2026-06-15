@@ -6511,6 +6511,27 @@ function renderProjectCard(p) {
 /* ════════════════════════════════════════════════════════════════════
    NAVEGACIÓN
    ════════════════════════════════════════════════════════════════════ */
+
+/* V11.15.0 · FRENTE B · "dejar al usuario donde estaba" tras recargar (F5).
+   Snapshot de la vista actual en sessionStorage (sobrevive a la recarga del
+   mismo tab; se borra al cerrar el tab, como takeos_ir_proyecto). Guarda la
+   org activa para validar la restauración contra las membresías reales y no
+   cruzar cuentas. La restauración (lectura) vive en el arranque (B2). */
+const _LV_KEY = 'takeos_last_view';
+function _lastViewSave() {
+  try {
+    sessionStorage.setItem(_LV_KEY, JSON.stringify({
+      org: ORG_ID,
+      view: STATE.currentView,                                   // 'control-room' | 'project' | 'bd-global'
+      projectId: (STATE.currentProject && STATE.currentProject.id) || null,
+      module: STATE.currentModule || null
+    }));
+  } catch (e) {}
+}
+function _lastViewLeer() {
+  try { return JSON.parse(sessionStorage.getItem(_LV_KEY) || 'null'); } catch (e) { return null; }
+}
+
 function navigateToControlRoom() {
   /* V11.9.7 · un externo no tiene Control Room: su casa es el Panel Personal. */
   /* V11.13.0 · refuerzo de la invariante: sin empresa confirmada (o externo), jamás Control Room. */
@@ -6529,6 +6550,7 @@ function navigateToControlRoom() {
   // V6.2 (Nota 1): re-renderizar para reflejar cambios hechos dentro del proyecto
   // (nombre, cliente, monto) en las tarjetas y métricas del Control Room.
   try { renderMetrics(); renderKanban(); } catch (e) {}
+  _lastViewSave();   // V11.15.0 · FRENTE B
   window.scrollTo(0, 0);
 }
 
@@ -6610,6 +6632,7 @@ function navigateToModule(moduleKey) {
   // Render module
   renderModule(moduleKey);
   try { refreshSidebarTaskCounters(); } catch (e) {}   // V9.6.16
+  _lastViewSave();   // V11.15.0 · FRENTE B (proyecto + pestaña)
   document.querySelector('.module-main').scrollTop = 0;
 }
 
@@ -19079,6 +19102,7 @@ function openGlobalBDPersonas() {
   `;
 
   renderModule('bd-personas');
+  _lastViewSave();   // V11.15.0 · FRENTE B
   window.scrollTo(0, 0);
 }
 
