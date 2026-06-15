@@ -23770,6 +23770,106 @@ async function _espCargarProyectosExternos(externas){
 }
 function _espPerfil(){ try{ abrirPerfilUsuario(false); }catch(e){} }
 
+/* ════════════════════════════════════════════════════════════════════
+   FRENTE B · B1 · CENTRO DE PRIVACIDAD Y DATOS (hub + ruteo)
+   ─────────────────────────────────────────────────────────────────────
+   Estos derechos son de IDENTIDAD GLOBAL por usuario (Ley 21.719), por eso
+   viven en el Panel Personal, no dentro de una productora. B1 arma el hub con
+   las 5 tarjetas y el ruteo a cada flujo; el contenido de cada flujo llega en
+   B2…B6 (algunos son UI-contra-contrato del BD Expert; eliminar y edad tienen
+   decisiones de Agustín). En B1 cada flujo es un placeholder. */
+var _pdVista = 'hub';
+var _PD_CSS = `
+  #privacidadDatos{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
+  #privacidadDatos *{box-sizing:border-box;}
+  #privacidadDatos .pd-top{position:sticky;top:0;display:flex;align-items:center;gap:14px;padding:13px 24px;background:var(--bg-surface);border-bottom:1px solid var(--rule);}
+  #privacidadDatos .pd-back{background:transparent;border:1px solid var(--rule);border-radius:var(--radius-sm);padding:7px 13px;font-size:12px;color:var(--ink-secondary);cursor:pointer;font-family:inherit;}
+  #privacidadDatos .pd-back:hover{background:var(--bg-card);}
+  #privacidadDatos .pd-brand{font-weight:700;font-size:15px;}
+  #privacidadDatos .pd-wrap{max-width:760px;margin:0 auto;padding:30px 24px 80px;}
+  #privacidadDatos .pd-acct{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+  #privacidadDatos .pd-av{width:40px;height:40px;border-radius:50%;background:var(--accent-soft);color:var(--ink-primary);display:grid;place-items:center;font-size:15px;font-weight:600;text-transform:uppercase;}
+  #privacidadDatos .pd-acct .who b{font-size:15px;font-weight:600;display:block;}
+  #privacidadDatos .pd-acct .who span{font-size:12px;color:var(--ink-muted);}
+  #privacidadDatos .pd-title{margin:0 0 4px;font-size:24px;font-weight:700;letter-spacing:-.01em;}
+  #privacidadDatos .pd-sub{color:var(--ink-muted);font-size:14px;margin:0 0 20px;}
+  #privacidadDatos .pd-legal{font-size:12px;color:var(--state-sale);background:var(--accent-bg);border:1px dashed var(--accent-soft);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:24px;}
+  #privacidadDatos .pd-rights{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  #privacidadDatos .pd-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-md);padding:22px;cursor:pointer;transition:border-color .12s,transform .12s;display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;font-family:inherit;color:inherit;}
+  #privacidadDatos .pd-card:hover{border-color:var(--rule-strong);transform:translateY(-2px);}
+  #privacidadDatos .pd-ico{font-size:22px;}
+  #privacidadDatos .pd-rt{font-size:15px;font-weight:600;}
+  #privacidadDatos .pd-rd{font-size:12px;color:var(--ink-muted);flex:1;}
+  #privacidadDatos .pd-tag{align-self:flex-start;font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-secondary);border:1px solid var(--rule-strong);border-radius:999px;padding:3px 9px;}
+  #privacidadDatos .pd-tag.warn{color:var(--state-sale);border-color:#5a4a2a;}
+  #privacidadDatos .pd-tag.danger{color:var(--accent-deep);border-color:var(--accent-soft);}
+  #privacidadDatos .pd-card.full{grid-column:1/-1;}
+  #privacidadDatos .pd-flow{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:30px 28px;}
+  #privacidadDatos .pd-flow h3{margin:0 0 6px;font-size:20px;font-weight:600;}
+  #privacidadDatos .pd-flow .pd-ph{font-size:13px;color:var(--ink-faint);line-height:1.6;}
+  @media (max-width:640px){#privacidadDatos .pd-rights{grid-template-columns:1fr;}#privacidadDatos .pd-wrap{padding:24px 16px 60px;}}
+`;
+/* Lee el nombre/correo de la cuenta desde el Panel Personal ya renderizado. */
+function _pdUserInfo() {
+  var info = { nombre: 'Tu cuenta', email: '', iniciales: 'U' };
+  try {
+    var b = document.querySelector('#espacioUsuario .esp-acct .who b'); if (b && b.textContent) info.nombre = b.textContent;
+    var s = document.querySelector('#espacioUsuario .esp-acct .who span'); if (s) info.email = s.textContent;
+    var av = document.querySelector('#espacioUsuario .esp-av'); if (av && av.textContent) info.iniciales = av.textContent;
+  } catch (e) {}
+  return info;
+}
+function abrirPrivacidadDatos() {
+  _pdVista = 'hub';
+  var prev = document.getElementById('privacidadDatos'); if (prev) prev.remove();
+  var ov = document.createElement('div'); ov.id = 'privacidadDatos';
+  ov.innerHTML = '<style>' + _PD_CSS + '</style>'
+    + '<div class="pd-top"><button class="pd-back" onclick="_pdCerrar()">← Volver</button><span class="pd-brand">TakeOS · Privacidad y datos</span></div>'
+    + '<div class="pd-wrap" id="pdWrap"></div>';
+  document.body.appendChild(ov);
+  _pdRender();
+}
+/* Hub (5 tarjetas) o el placeholder del flujo elegido (B2…B6 llegan después). */
+function _pdRender() {
+  var w = document.getElementById('pdWrap'); if (!w) return;
+  if (_pdVista === 'hub') { w.innerHTML = _pdHubHTML(); return; }
+  var flows = {
+    export:         ['Descargar mis datos', 'B2'],
+    consentimientos:['Productoras con acceso a tus datos', 'B3'],
+    edad:           ['Verificación de edad', 'B5'],
+    cookies:        ['Cookies y analítica', 'B6'],
+    eliminar:       ['Eliminar mi cuenta', 'B4']
+  };
+  var f = flows[_pdVista] || ['', ''];
+  w.innerHTML = '<button class="pd-back" onclick="_pdIr(\'hub\')" style="margin-bottom:18px;">← Privacidad y datos</button>'
+    + '<div class="pd-flow"><h3>' + f[0] + '</h3><p class="pd-ph">Esta sección se construye próximamente (' + f[1] + ').</p></div>';
+}
+function _pdHubHTML() {
+  var u = _pdUserInfo();
+  function card(extra, ico, titulo, desc, tag, tagcls, vista) {
+    return '<button class="pd-card' + extra + '" onclick="_pdIr(\'' + vista + '\')">'
+      + '<div class="pd-ico">' + ico + '</div>'
+      + '<div class="pd-rt">' + titulo + '</div>'
+      + '<div class="pd-rd">' + desc + '</div>'
+      + '<span class="pd-tag' + tagcls + '">' + tag + '</span></button>';
+  }
+  return ''
+    + '<div class="pd-acct"><div class="pd-av">' + escapeHtml(u.iniciales) + '</div><div class="who"><b>' + escapeHtml(u.nombre) + '</b><span>' + escapeHtml(u.email) + '</span></div></div>'
+    + '<h1 class="pd-title">Privacidad y datos</h1>'
+    + '<p class="pd-sub">Tus derechos sobre tus datos personales, según la Ley 21.719 de protección de datos.</p>'
+    + '<div class="pd-legal">Los textos legales de esta sección son provisionales y solo demuestran el flujo. El área legal define la versión definitiva antes de salir en vivo.</div>'
+    + '<div class="pd-rights">'
+    +   card('', '⬇️', 'Descargar mis datos', 'Pide una copia de todos tus datos personales en un formato portable.', 'Acceso · Portabilidad', '', 'export')
+    +   card('', '🏢', 'Productoras con acceso a tus datos', 'Revisa quién tiene tus datos y revoca tu consentimiento cuando quieras.', 'Revocación', '', 'consentimientos')
+    +   card('', '🪪', 'Verificación de edad', 'Declara tu mayoría de edad, por si algún flujo lo requiere.', 'Si aplica', ' warn', 'edad')
+    +   card('', '🍪', 'Cookies y analítica', 'Decide qué datos de navegación permites recolectar.', 'Consentimiento', '', 'cookies')
+    +   card(' full', '🗑️', 'Eliminar mi cuenta', 'Elimina tu cuenta de TakeOS y suprime tus datos personales. Esta acción es irreversible.', 'Supresión', ' danger', 'eliminar')
+    + '</div>';
+}
+function _pdIr(v) { _pdVista = v; _pdRender(); var o = document.getElementById('privacidadDatos'); if (o && o.scrollTo) { try { o.scrollTo(0, 0); } catch (e) {} } }
+/* Cierra el centro de privacidad y vuelve al Panel Personal (queda debajo). */
+function _pdCerrar() { var o = document.getElementById('privacidadDatos'); if (o) o.remove(); }
+
 function renderEspacioUsuario(data){
   try{
     _bootCoverHide();
@@ -23804,6 +23904,9 @@ function renderEspacioUsuario(data){
       #espacioUsuario .esp-acct .who{text-align:right;line-height:1.25;}
       #espacioUsuario .esp-acct .who b{font-weight:600;font-size:14px;}
       #espacioUsuario .esp-acct .who span{display:block;font-size:12px;color:var(--ink-faint);}
+      #espacioUsuario .esp-right{display:flex;align-items:center;gap:12px;}
+      #espacioUsuario .esp-logout{display:inline-flex;align-items:center;gap:7px;background:transparent;border:1px solid var(--rule);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--ink-secondary);cursor:pointer;font-family:inherit;}
+      #espacioUsuario .esp-logout:hover{background:var(--bg-card);border-color:var(--ink-faint);color:var(--ink-primary);}
       #espacioUsuario .esp-av{width:36px;height:36px;border-radius:50%;background:var(--bg-elevated);color:var(--ink-primary);display:grid;place-items:center;font-weight:600;font-size:14px;border:1px solid var(--rule-strong);text-transform:uppercase;}
       #espacioUsuario .esp-wrap{max-width:920px;margin:0 auto;padding:34px 28px 70px;}
       #espacioUsuario .esp-eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:8px;}
@@ -23858,7 +23961,10 @@ function renderEspacioUsuario(data){
     </style>
       <div class="esp-top"><div class="esp-top-in">
         <div class="esp-brand"><div class="esp-mark">T</div><span class="esp-bname">TakeOS</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
-        <div class="esp-acct" onclick="_espPerfil()"><div class="who"><b>${u.nombre||'tu cuenta'}</b><span>${u.email||''}</span></div><div class="esp-av">${u.iniciales||'U'}</div></div>
+        <div class="esp-right">
+          <div class="esp-acct" onclick="_espPerfil()"><div class="who"><b>${u.nombre||'tu cuenta'}</b><span>${u.email||''}</span></div><div class="esp-av">${u.iniciales||'U'}</div></div>
+          <button class="esp-logout" onclick="confirmLogout()" title="Cerrar sesión en TakeOS"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Salir</button>
+        </div>
       </div></div>
       <div class="esp-wrap">
         <div class="esp-eyebrow">Tu espacio</div>
@@ -23866,6 +23972,7 @@ function renderEspacioUsuario(data){
         ${internas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot i"></span>Tus productoras</div></div>${intHTML}</div>`:''}
         ${externas.length?`<div class="esp-sec"><div class="esp-sec-h"><div class="esp-eyebrow"><span class="esp-dot e"></span>Proyectos donde colaboras</div></div>${extHTML}</div>`:''}
         ${(!internas.length && !externas.length)?`<div class="esp-grp"><div class="esp-empty" style="padding:30px 20px;text-align:center;line-height:1.7;">Aún no perteneces a ninguna productora.<br><span style="color:var(--ink-faint);font-size:12.5px;">Cuando una productora te invite a colaborar, sus proyectos van a aparecer aquí.</span></div></div>`:''}
+        <div class="esp-foot"><a onclick="abrirPrivacidadDatos()" style="color:var(--accent-deep);cursor:pointer;font-weight:600;text-decoration:none;">Privacidad y datos</a> · tus derechos sobre tus datos personales (Ley 21.719).</div>
       </div>`;
     document.body.appendChild(ov);
     try{ if(!demo){ _espCargarConteos(internas); _espCargarProyectosExternos(externas); _espOnboarding(internas.length>0, externas.length>0); } }catch(e){}
