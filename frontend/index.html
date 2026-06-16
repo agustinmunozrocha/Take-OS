@@ -2,6 +2,37 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
+<!--
+  ════════════════════════════════════════════════════════════════════
+  SEGURIDAD · Content-Security-Policy (CSP) — Prioridad #2, §6 ítem 5
+  ════════════════════════════════════════════════════════════════════
+  Política ACOTADA (camino 1): conserva 'unsafe-inline' en script/style
+  porque este monolito usa manejadores inline (onclick="..."), un <script>
+  inline gigante y style="..." por todos lados; una CSP estricta sin
+  'unsafe-inline' rompería la app entera. Aun así cierra los demás vectores:
+  bloquea plugins/objetos (object-src 'none'), fija el origen base
+  (base-uri 'self') y restringe DESDE QUÉ ORÍGENES se cargan scripts,
+  estilos, fuentes, imágenes y datos.
+
+  Orígenes que la app realmente usa (verificados en el código, jun-2026):
+    · scripts:  cdn.jsdelivr.net (supabase-js + xlsx, <script src>) y
+                cdnjs.cloudflare.com (xlsx/exceljs cargados bajo demanda).
+    · estilos:  fonts.googleapis.com (CSS de Google Fonts).
+    · fuentes:  fonts.gstatic.com (woff2).
+    · datos:    *.supabase.co — REST (https) + realtime (wss).
+    · imágenes: 'self', data:, blob: y https: (URLs firmadas de Storage).
+    · iframes:  preview de cotización (srcdoc) e impresión (about:blank),
+                ambos same-origin; PDFs/descargas se abren vía blob:.
+
+  NOTA: 'frame-ancestors' (anti-clickjacking) NO aplica vía <meta> — el
+  navegador la ignora aquí. Debe ir como header de hosting:
+    Content-Security-Policy: frame-ancestors 'self';
+  (o el equivalente clásico  X-Frame-Options: SAMEORIGIN).
+
+  Meta post-modularización (camino 2): pasar handlers inline a
+  addEventListener y usar nonce/hash para retirar 'unsafe-inline'.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>TakeOS</title>
 
