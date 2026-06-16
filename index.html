@@ -21121,6 +21121,49 @@ async function dalBootContactos() {
   return true;
 }
 
+/* V11.16.0 · Plan G §4 · Lente de personas para externos.
+   Un externo NO puede leer la tabla contacts (RLS exige 'bd' E|L, que no tiene),
+   así que BD_CONTACTOS llega vacío y las vistas del proyecto no mostrarían a
+   nadie. Esta función trae, vía el RPC personas_de_mis_proyectos(), SOLO las
+   personas de SUS proyectos con los 4 datos visibles (nombre, cargo, correo,
+   celular) —sin RUT, dirección ni nada más— y las inyecta en BD_CONTACTOS para
+   que el proyecto las muestre. Gateada estrictamente a tipo 'externo': no toca a
+   los internos (que sí leen contacts por RLS). Apoya el Frente F. */
+async function dalBootPersonasExternos() {
+  try {
+    if (!sb) return;
+    if (typeof TAKEOS_PERFIL === 'undefined' || !TAKEOS_PERFIL || TAKEOS_PERFIL.tipo !== 'externo') return;
+    var r = await sb.rpc('personas_de_mis_proyectos');
+    if (r.error) throw r.error;
+    var filas = Array.isArray(r.data) ? r.data : [];
+    if (!filas.length) return;
+    var vistos = {};
+    Object.keys(BD_CONTACTOS).forEach(function (id) { var c = BD_CONTACTOS[id]; if (c) vistos[((c.nombre || '') + '|' + (c.email || '')).toLowerCase()] = true; });
+    var nuevos = 0;
+    filas.forEach(function (p) {
+      var nombre = (p && p.nombre) ? String(p.nombre).trim() : '';
+      if (!nombre) return;
+      var clave = (nombre + '|' + (p.email || '')).toLowerCase();   // una persona puede venir en varios proyectos
+      if (vistos[clave]) return;
+      vistos[clave] = true;
+      var id = 'lens_' + nuevos;
+      BD_CONTACTOS[id] = {
+        id: id, nombre: nombre, rut: '', email: (p.email || ''), telefono: (p.telefono || ''),
+        roles: ['Crew'], rolHabitual: (p.cargo || ''),
+        empresaId: '', relacionEmpresa: '',
+        direccion: '', direccionLinea2: '', comuna: '', ciudad: '',
+        restriccion: '', fechaNacimiento: '', notas: '',
+        perfilPago: null, perfilTalento: null, _lente: true
+      };
+      nuevos++;
+    });
+    if (nuevos) {
+      try { syncLegacyFromContactos(); } catch (e) {}
+      try { if (STATE.currentModule === 'bd-personas') renderBDPersonas(); } catch (e) {}
+    }
+  } catch (e) { console.warn('[lente externos] personas_de_mis_proyectos no cargó', e); }
+}
+
 /* \u00bfLa escritura de la BD esta congelada? (porque ya leemos de Supabase pero
    la escritura no llegó a Supabase, y se perderia al recargar). La usan los
    editores de la Base de Datos para avisar y no guardar. */
@@ -23897,7 +23940,7 @@ function arrancarTakeOS() {
      jamás se entra al Control Room (se re-deriva la vista correcta). */
   var _pend = false; try { _pend = !!sessionStorage.getItem('takeos_ir_proyecto'); } catch (e) {}
   if (!_TIENE_EMPRESA && !_pend) { resolverEspacioYArrancar(); return; }
-  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ return dalBootProyectos(); }).then(function(){ try { notifInit(); } catch (e) {} }).then(function(){ try { _cpTourInicialQuizas(); } catch (e) {} }).then(function(){ try { setTimeout(_pdCookiesBootCheck, 1200); } catch (e) {} });
+  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootPersonasExternos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ return dalBootProyectos(); }).then(function(){ try { notifInit(); } catch (e) {} }).then(function(){ try { _cpTourInicialQuizas(); } catch (e) {} }).then(function(){ try { setTimeout(_pdCookiesBootCheck, 1200); } catch (e) {} });
 }
 
 function _espIniciales(txt){
