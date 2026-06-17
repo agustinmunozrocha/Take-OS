@@ -1,5 +1,37 @@
 # Changelog — TakeOS
 
+## Seguridad basal del beta (§6) — 16 de junio de 2026
+### CSP acotada vía `<meta>` (ítem 5) + cierre confirmado del XSS de `<img src>` (ítem 3)
+
+Cierre de los dos ítems de seguridad del frontend de la lista corta del beta
+(rama `seguridad-csp`). No cambia comportamiento de la app; es endurecimiento.
+
+**Ítem 5 · Content-Security-Policy (camino 1)**
+- Se agregó una **CSP acotada** en el `<head>` de `frontend/index.html`, vía
+  `<meta http-equiv="Content-Security-Policy">`.
+- Conserva `'unsafe-inline'` en script/style (el monolito usa manejadores
+  inline, un `<script>` inline gigante y `style="..."` por todos lados; una
+  CSP estricta sin `'unsafe-inline'` rompería la app), pero cierra el resto de
+  vectores: `object-src 'none'`, `base-uri 'self'` y orígenes restringidos.
+- Orígenes permitidos según el uso **real** del código: scripts de
+  `cdn.jsdelivr.net` (supabase-js + xlsx) y `cdnjs.cloudflare.com`
+  (xlsx/exceljs bajo demanda); estilos de Google Fonts; datos a `*.supabase.co`
+  (REST + realtime `wss`); imágenes `data:`/`blob:`/`https:` (URLs firmadas de
+  Storage); `frame-src 'self' blob:` para el preview de cotización (`srcdoc`),
+  la impresión (`about:blank`) y los PDF/descargas.
+- `frame-ancestors` (anti-clickjacking) **no aplica vía `<meta>`**: queda
+  documentado en el código para ir como header de hosting
+  (`Content-Security-Policy: frame-ancestors 'self'` o `X-Frame-Options: SAMEORIGIN`).
+
+**Ítem 3 · XSS en `<img src>`**
+- Verificado **ya cerrado**: `safeUrl()` valida el esquema (solo `http`/`https`/
+  `blob`/`data:image`; bloquea `javascript:` y `data:text/html`) y escapa el
+  resultado; se usa en todos los `<img src>` construidos por template. Sin
+  cambios de código.
+
+**Pendiente (post-beta):** CSP estricta con nonce/hash (retirar `'unsafe-inline'`)
+durante/después de la modularización; `frame-ancestors` por header de hosting.
+
 ## V11.14.0 — 15 de junio de 2026
 ### Flujo de creación de productora + Centro de privacidad y datos
 
