@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TakeOS · Postproducción (mockup v7)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-page:#1a1a19; --bg-surface:#222221; --bg-soft:#1e1e1d; --bg-card:#262624; --bg-elev:#2e2e2b;
+  --ink:#FDFEED; --ink-2:#d3d6cb; --ink-mut:#a0a399; --ink-faint:#71736a;
+  --accent:#B03A2F; --accent-br:#d05a4d; --rule:#34342f;
+  --proj-prod:#6fa3b5;
+  --st-done:#8fae6a; --st-prog:#6fa3b5; --st-sent:#c79a5e; --st-act:#d05a4d; --st-rev:#7d93a0; --st-idle:#5c5e55; --st-rej:#a8443a;
+  --radius:10px; --radius-sm:7px;
+  --shadow:0 1px 0 rgba(255,255,255,.02), 0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{background:var(--bg-page);color:var(--ink);font-family:'Poppins',system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent-br);outline-offset:2px;border-radius:4px}
+.muted{color:var(--ink-mut)}.faint{color:var(--ink-faint)}.mono{font-variant-numeric:tabular-nums}
+.app{max-width:1240px;margin:0 auto;padding:0 22px 60px}
+.topbar{display:flex;align-items:center;gap:16px;padding:16px 0 14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}.brand .logo{font-weight:700;letter-spacing:.5px;font-size:15px}.brand .mod{color:var(--ink-mut);font-size:13px;font-weight:500}
+.proj{display:flex;align-items:center;gap:10px;margin-left:6px}.proj .pname{font-weight:600}.proj .pclient{color:var(--ink-faint);font-size:12.5px}
+.state-chip{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--bg-card);border:1px solid var(--rule)}.state-chip .dot{width:7px;height:7px;border-radius:50%}
+.spacer{flex:1}
+.ctl{display:flex;align-items:center;gap:8px}.ctl-label{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.6px}
+.seg{display:inline-flex;background:var(--bg-soft);border:1px solid var(--rule);border-radius:999px;padding:3px}
+.seg button{background:transparent;border:0;color:var(--ink-mut);font-size:12.5px;font-weight:500;padding:5px 12px;border-radius:999px;transition:.12s}
+.seg button[aria-pressed="true"]{background:var(--bg-elev);color:var(--ink);box-shadow:var(--shadow)}
+select.rolesel{background:var(--bg-soft);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:500}
+.subnav{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-top:6px}
+.subnav button{background:transparent;border:0;color:var(--ink-mut);font-weight:500;font-size:13.5px;padding:11px 16px;position:relative;border-radius:8px 8px 0 0;transition:.12s}
+.subnav button:hover{color:var(--ink-2)}.subnav button[aria-selected="true"]{color:var(--ink)}
+.subnav button[aria-selected="true"]::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--accent-br);border-radius:2px}
+.subnav .stub-tag{font-size:9px;color:var(--ink-faint);border:1px solid var(--rule);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.rolebanner{display:flex;align-items:center;gap:10px;margin:16px 0 6px;font-size:12.5px;color:var(--ink-mut)}.rolebanner b{color:var(--ink-2);font-weight:600}.rolebanner .scope{margin-left:auto;font-size:11px}
+.view{margin-top:14px}
+.card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);box-shadow:var(--shadow)}
+.section-title{display:flex;align-items:center;gap:10px;margin:24px 2px 12px}.section-title h2{font-size:14px;font-weight:600;margin:0;letter-spacing:.2px}.section-title .hint{font-size:11.5px;color:var(--ink-faint);font-weight:400}.section-title .line{flex:1;height:1px;background:var(--rule)}
+.empty{border:1px dashed var(--rule);border-radius:var(--radius);padding:46px 28px;text-align:center;background:linear-gradient(180deg,var(--bg-soft),transparent)}
+.empty h3{margin:0 0 6px;font-size:16px;font-weight:600}.empty p{margin:0 auto 18px;max-width:460px;color:var(--ink-mut);font-size:13px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;font-weight:600;font-size:13px;padding:9px 16px;border:1px solid var(--rule);background:var(--bg-elev);color:var(--ink);transition:.12s}
+.btn:hover{border-color:var(--ink-faint)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-br)}
+.btn.sm{padding:6px 11px;font-size:12px}.btn.ghost{background:transparent}.btn.tiny{padding:4px 9px;font-size:11px;font-weight:500}
+.btn.ok{background:transparent;border-color:rgba(143,174,106,.5);color:var(--st-done)}.btn.ok:hover{background:rgba(143,174,106,.12)}
+.btn.danger{background:transparent;border-color:rgba(168,68,58,.5);color:var(--st-rej)}.btn.danger:hover{background:rgba(168,68,58,.12)}
+.work-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-mut);margin:2px 2px 14px}.legend span{display:inline-flex;align-items:center;gap:6px}.legend .sw{width:10px;height:10px;border-radius:3px}
+/* config columnas */
+.colcfg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg-soft);border:1px solid var(--rule);border-radius:9px;padding:10px 12px;margin:2px 2px 12px}
+.colcfg .cc-lbl{font-size:12px;color:var(--ink-mut);font-weight:500}.colcfg .cc-hint{font-size:11px;color:var(--ink-faint);width:100%;margin-top:2px}
+.colchip{font-size:12px;border-radius:7px;padding:5px 11px;border:1px solid var(--rule);background:var(--bg-card);color:var(--ink-2)}
+.colchip.on{border-color:var(--st-done);color:var(--ink);background:rgba(143,174,106,.12)}.colchip.off{color:var(--ink-faint);background:transparent;border-style:dashed}
+.colchip.locked{color:var(--ink-mut);background:var(--bg-card);display:inline-flex;align-items:center;gap:6px}.colchip.locked .lk{font-size:9px;color:var(--ink-faint);border:1px solid var(--rule);border-radius:4px;padding:0 4px}
+/* matrix */
+.matrix{width:100%;border-collapse:separate;border-spacing:0;background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.matrix th,.matrix td{padding:0;text-align:left;border-bottom:1px solid var(--rule)}
+.matrix thead th{background:var(--bg-soft);font-weight:600;font-size:12px;color:var(--ink-2);padding:10px 14px;border-right:1px solid var(--rule);vertical-align:top}
+.matrix thead th .cnt{display:block;font-size:10.5px;font-weight:500;color:var(--ink-faint);margin-top:2px}
+.matrix thead th .depinstr{margin-top:6px}.matrix thead th .depinstr button{font-size:10px;color:var(--ink-mut);background:transparent;border:1px solid var(--rule);border-radius:5px;padding:2px 7px}.matrix thead th .depinstr button:hover{color:var(--ink-2);border-color:var(--ink-faint)}
+.matrix thead th.piezacol{width:248px}.dep-off-tag{font-size:9px;border:1px solid var(--rule);border-radius:4px;padding:0 4px;color:var(--ink-faint);margin-left:6px;font-weight:500}
+.matrix tbody tr:last-child td{border-bottom:0}
+.matrix td.piezacell{padding:12px 14px;border-right:1px solid var(--rule);vertical-align:top}
+.pieza-name{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}.pieza-kind{font-size:10px;font-weight:600;color:var(--ink-faint);border:1px solid var(--rule);border-radius:4px;padding:1px 5px}
+.pieza-specs{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
+.spec-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ink-mut);background:var(--bg-elev);border:1px solid var(--rule);border-radius:5px;padding:2px 7px}
+.spec-chip.deliv{color:var(--ink-2);border-color:var(--accent-br);background:rgba(208,90,77,.10);font-weight:600}
+.spec-chip.bad{color:var(--st-act);border-color:rgba(208,90,77,.5);background:rgba(208,90,77,.10)}
+.spec-edit{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}.spec-edit button{font-size:11px;color:var(--ink-mut);background:transparent;border:1px dashed var(--rule);border-radius:6px;padding:3px 9px}.spec-edit button:hover{color:var(--ink-2);border-color:var(--ink-faint)}
+td.cell{padding:9px 12px;border-right:1px solid var(--rule);vertical-align:top;min-width:120px}td.cell:last-child{border-right:0}
+.cellbox{display:flex;flex-direction:column;gap:6px}
+.statebadge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;width:max-content;white-space:nowrap}.statebadge .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.cell-meta{font-size:10.5px;color:var(--ink-faint);display:flex;flex-direction:column;gap:1px}.cell-meta .ver{color:var(--ink-mut);font-weight:600}
+.cell-actions{display:flex;gap:5px;margin-top:3px;flex-wrap:wrap}
+.av{width:16px;height:16px;border-radius:50%;display:inline-grid;place-items:center;font-size:8.5px;font-weight:700;color:#11110f;flex:none}.av.big{width:22px;height:22px;font-size:10px}
+.linkpill{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--ink-2);background:var(--bg-elev);border:1px solid var(--rule);border-radius:5px;padding:2px 6px}
+.cell-na{font-size:10.5px;color:var(--ink-faint);font-style:italic;opacity:.7}
+/* comments */
+.composer{display:flex;gap:9px;align-items:flex-start;padding:12px 14px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.composer select{background:var(--bg-page);border:1px solid var(--rule);color:var(--ink-2);border-radius:7px;padding:7px 9px;font-size:12px}
+.composer input[type=text]{flex:1;min-width:200px;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:7px;padding:8px 11px;font-size:13px}.composer input[type=text]:focus{border-color:var(--accent-br);outline:none}
+.thread{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid var(--rule)}.thread:last-child{border-bottom:0}.thread .tbody{flex:1}
+.thread .tmeta{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:3px}.thread .tmeta .who{font-weight:600;font-size:12.5px;color:var(--ink)}
+.thread .ttext{font-size:13px;color:var(--ink-2)}.thread .tanchor{font-size:10.5px;color:var(--ink-faint);margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.routetag{font-size:10px;font-weight:600;padding:1px 7px;border-radius:5px}
+/* nodes */
+.nodes-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-mut);margin:0 2px 10px}.nodes-legend .ln{display:inline-flex;align-items:center;gap:8px}
+.nodes-legend .swl{width:26px;height:0;border-top:3px solid var(--st-idle);border-radius:2px}.nodes-legend .swl.act{border-top-color:var(--st-act)}.nodes-legend .swl.rev{border-top-color:var(--st-rev);border-top-style:dashed}
+.nodes-wrap{position:relative}
+.graph{position:relative;width:1120px;max-width:100%;height:600px;background:radial-gradient(circle at 1px 1px, rgba(255,255,255,.035) 1px, transparent 0) 0 0/22px 22px,var(--bg-soft);border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}
+.graph svg{position:absolute;inset:0;width:1120px;height:600px;pointer-events:none}
+.gline{fill:none;stroke:var(--st-idle);stroke-width:2.5;opacity:.55}.gline.rev{stroke:var(--st-rev);stroke-width:2.5;stroke-dasharray:7 6;opacity:.95}.gline.act{stroke:var(--st-act);stroke-width:3.5;opacity:1}
+@media (prefers-reduced-motion:no-preference){.gline.act{stroke-dasharray:10 8;animation:flow 1s linear infinite}}@keyframes flow{to{stroke-dashoffset:-18}}
+.node{position:absolute;width:158px;background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:10px 11px;cursor:pointer;transition:.12s}
+.node:hover{border-color:var(--ink-faint);transform:translateY(-1px)}.node.sel{border-color:var(--accent-br);box-shadow:0 0 0 1px var(--accent-br),var(--shadow)}.node.alert{border-color:rgba(208,90,77,.55)}.node.terminal{border-style:dashed}
+.node .nhead{display:flex;align-items:center;justify-content:space-between;gap:8px}.node .nname{font-weight:600;font-size:12.5px}
+.node .nbar{height:4px;border-radius:3px;background:var(--bg-elev);margin:8px 0 7px;overflow:hidden;display:flex}.node .nbar i{display:block;height:100%}
+.node .nstat{font-size:10px;color:var(--ink-mut);display:flex;align-items:center;gap:6px;flex-wrap:wrap}.node .ntag{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px}.node .nresp{font-size:10px;color:var(--ink-faint);margin-top:5px;display:flex;align-items:center;gap:5px}
+.node-explore{position:absolute;font-size:9.5px;color:var(--ink-faint);border:1px dashed var(--rule);border-radius:5px;padding:1px 6px;background:var(--bg-page)}
+.npanel{margin-top:14px}.npanel .ph{display:flex;align-items:center;gap:10px;margin-bottom:10px}.npanel .ph h3{margin:0;font-size:14px}.npanel .ph .phact{margin-left:auto}
+.npanel-grid{display:grid;grid-template-columns:1fr;gap:8px}.np-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:8px}.np-row .pn{font-weight:600;font-size:12.5px;min-width:120px}
+.instr-box{margin-top:6px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:9px;padding:12px 13px}.instr-box h4{margin:0 0 4px;font-size:12px;font-weight:600}.instr-box .sub{font-size:11px;color:var(--ink-faint);margin-bottom:8px}.instr-box .ibfoot{display:flex;justify-content:flex-end;margin-top:8px}
+/* queue (por entrega) */
+.queue-intro{color:var(--ink-mut);font-size:12.5px;margin:0 2px 12px}
+.qdeliv{border:1px solid var(--rule);border-radius:10px;margin-bottom:12px;background:var(--bg-card);box-shadow:var(--shadow);overflow:hidden}
+.qdeliv .qd-head{display:flex;align-items:center;gap:12px;padding:12px 15px;background:var(--bg-soft);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.qdeliv .qd-dep{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px}
+.qdeliv .qd-num{font-size:11px;font-weight:700;color:var(--ink-2);background:var(--bg-elev);border:1px solid var(--rule);border-radius:6px;padding:2px 8px}
+.qdeliv .qd-when{font-size:11px;color:var(--ink-faint)}
+.qdeliv .qd-tags{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.qd-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px}
+.qdeliv .qd-body{padding:12px 15px}
+.qd-nota{font-size:12.5px;color:var(--ink-2);font-style:italic;margin-bottom:10px}
+.qd-falta{font-size:11.5px;color:var(--st-sent);margin-bottom:10px}
+.qd-extra{font-size:11.5px;color:var(--ink-2);background:rgba(199,154,94,.10);border:1px solid rgba(199,154,94,.4);border-radius:8px;padding:8px 11px;margin-bottom:10px}
+.qd-extra b{color:var(--st-sent)}
+.qd-pieces{display:flex;flex-direction:column;gap:7px}
+.qd-piece{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:8px}
+.qd-piece .qp-n{font-weight:600;font-size:12.5px;min-width:130px}
+.qd-piece .qp-acts{margin-left:auto;display:flex;gap:6px}
+.qd-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}
+.cascade-note{margin:14px 2px 0;font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:8px}
+/* MI TRABAJO */
+.mt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 2px 14px;flex-wrap:wrap}
+.mt-title{display:flex;align-items:center;gap:11px}.mt-tt{font-weight:600;font-size:15px}
+.mt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mt-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.mt-card .mt-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}.mt-card .mt-h h3{margin:0;font-size:13.5px;font-weight:600}
+.mt-count{font-size:11px;font-weight:700;color:#11110f;background:var(--st-act);border-radius:999px;padding:1px 8px}
+.mt-pend{border-color:rgba(208,90,77,.45);background:linear-gradient(180deg,rgba(208,90,77,.06),transparent)}
+.mt-prow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--rule)}.mt-prow:first-of-type{border-top:0}
+.mt-prow .mt-pn{font-weight:600;font-size:13px;min-width:160px;display:flex;align-items:center;gap:8px}.mt-prow .mt-pmid{flex:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mt-clear{display:flex;align-items:center;gap:9px;color:var(--ink-mut);font-size:13px}.mt-clear .dot{width:8px;height:8px;border-radius:50%;background:var(--st-done)}
+.mt-state-list{display:flex;flex-wrap:wrap;gap:8px}
+.mt-spc{display:flex;align-items:center;gap:8px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:8px;padding:7px 11px;font-size:12px}
+.mt-spc .spn{font-weight:600}
+.mt-ctx{font-size:11px;color:var(--ink-faint);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}.mt-ctx-chip{opacity:.85}
+/* delivery cards (historial) */
+.dcard{border:1px solid var(--rule);border-radius:9px;padding:12px 13px;margin-bottom:9px;background:var(--bg-soft)}
+.dc-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}.dc-num{font-weight:700;font-size:12.5px}
+.dc-nota{font-size:12.5px;color:var(--ink-2);font-style:italic;margin-bottom:8px}
+.dc-pieces{display:flex;gap:6px;flex-wrap:wrap}
+.dcv-piece{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2);background:var(--bg-card);border:1px solid var(--rule);border-radius:6px;padding:3px 8px}.dcv-piece .dot{width:6px;height:6px;border-radius:50%}
+.dc-extra{margin-top:8px;font-size:11.5px;color:var(--ink-2);background:rgba(199,154,94,.10);border:1px solid rgba(199,154,94,.4);border-radius:7px;padding:7px 10px}.dc-extra-lbl{font-weight:600;color:var(--st-sent)}
+.dc-partial{margin-top:8px;font-size:11.5px;color:var(--st-sent)}.dc-partial b{color:var(--ink-2)}
+.dc-completa{margin-top:6px;font-size:11px;color:var(--ink-faint)}
+/* modals */
+.modal-bg{position:fixed;inset:0;background:rgba(8,8,7,.62);display:none;align-items:center;justify-content:center;z-index:40;padding:20px}.modal-bg.open{display:flex}
+.modal{width:min(580px,100%);max-height:90vh;overflow:auto;background:var(--bg-surface);border:1px solid var(--rule);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.5)}.modal.wide{width:min(680px,100%)}
+.modal .mh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 8px}.modal .mh h3{margin:0;font-size:16px}.modal .mh p{margin:3px 0 0;font-size:12px;color:var(--ink-mut)}
+.modal .mx{background:transparent;border:0;color:var(--ink-mut);font-size:20px;line-height:1;padding:2px 6px;border-radius:6px}.modal .mx:hover{color:var(--ink)}
+.mbody{padding:6px 20px 4px}
+.field{margin:14px 0}.field>label{display:block;font-size:12px;font-weight:600;margin-bottom:6px}.field .help{font-size:11px;color:var(--ink-faint);font-weight:400;margin-left:6px}
+.field input[type=text]{width:100%;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:14px}.field input[type=text]:focus{border-color:var(--accent-br);outline:none}
+.field input.bad{border-color:var(--st-act)}.field input.short{width:120px}
+.field textarea{width:100%;min-height:70px;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;resize:vertical}.field textarea:focus{border-color:var(--accent-br);outline:none}
+.field select{background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:8px;padding:9px 11px;font-size:13px}
+.dur-modes{display:flex;gap:7px;margin-bottom:10px}.dur-modes button{background:var(--bg-page);border:1px solid var(--rule);color:var(--ink-mut);border-radius:7px;padding:7px 12px;font-size:12px;font-weight:500}.dur-modes button[aria-pressed="true"]{background:rgba(111,163,181,.16);border-color:var(--st-prog);color:var(--ink)}
+.dur-inputs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ver-check{margin-top:8px;display:flex;align-items:center;gap:8px;font-size:12px;padding:9px 12px;border-radius:8px;background:var(--bg-card);border:1px solid var(--rule)}.ver-check.ok{color:var(--st-done)}.ver-check.bad{color:var(--st-act);background:rgba(208,90,77,.08);border-color:rgba(208,90,77,.4)}.ver-check.free{color:var(--ink-mut)}
+.axis{background:var(--bg-card);border:1px solid var(--rule);border-radius:9px;padding:11px 12px;margin-bottom:9px}.axis-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.axis-head .an{font-weight:600;font-size:12.5px}.axis-head .ax-del{background:transparent;border:0;color:var(--ink-faint);font-size:11px}.axis-head .ax-del:hover{color:var(--st-act)}
+.axval{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.axval .vchip{display:inline-flex;align-items:center;gap:7px;font-size:12px;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink-2);border-radius:7px;padding:6px 10px}.axval .vchip button{background:transparent;border:0;color:var(--ink-faint);font-size:13px;line-height:1;padding:0}.axval .vchip button:hover{color:var(--st-act)}
+.axval .addval{display:flex;align-items:center;gap:4px}.axval .addval input{width:84px;background:var(--bg-page);border:1px dashed var(--rule);color:var(--ink);border-radius:7px;padding:6px 8px;font-size:12px}.axval .addval button{background:transparent;border:1px dashed var(--rule);color:var(--ink-mut);border-radius:7px;padding:6px 9px;font-size:12px}
+.addaxis{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}.addaxis button{font-size:12px;color:var(--ink-mut);background:transparent;border:1px dashed var(--rule);border-radius:7px;padding:6px 11px}.addaxis button:hover{color:var(--ink-2);border-color:var(--ink-faint)}
+.deliv-summary{margin-top:14px;background:var(--bg-card);border:1px solid var(--accent-br);border-radius:9px;padding:12px 14px}.deliv-summary .dh{display:flex;align-items:center;justify-content:space-between;gap:8px}.deliv-summary .dh .big{font-size:18px;font-weight:700}.deliv-summary .dh .lbl{font-size:11.5px;color:var(--ink-mut)}
+.deliv-grid{display:flex;flex-direction:column;gap:5px;margin-top:10px;max-height:200px;overflow:auto}.deliv-item{display:flex;align-items:center;gap:9px;font-size:12px;padding:6px 9px;background:var(--bg-page);border:1px solid var(--rule);border-radius:7px}.deliv-item.cut{opacity:.4;text-decoration:line-through}.deliv-item .di-toggle{margin-left:auto;font-size:10.5px;color:var(--ink-mut);background:transparent;border:1px solid var(--rule);border-radius:5px;padding:2px 8px}.deliv-item .di-tags{display:flex;gap:5px;flex-wrap:wrap}.deliv-item .di-tag{font-size:10.5px;color:var(--ink-2);background:var(--bg-elev);border:1px solid var(--rule);border-radius:5px;padding:1px 7px}
+.friction-note{margin:12px 0 2px;font-size:11.5px;color:var(--ink-faint);background:var(--bg-card);border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+.mfoot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px 20px}
+.kindpick{display:flex;gap:7px}.kindpick button{background:var(--bg-page);border:1px solid var(--rule);color:var(--ink-mut);border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:500}.kindpick button[aria-pressed="true"]{background:rgba(176,58,47,.18);border-color:var(--accent-br);color:var(--ink)}
+/* delivery modal specifics */
+.dpiece-list{display:flex;flex-direction:column;gap:6px}
+.dpiece{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg-page);border:1px solid var(--rule);border-radius:8px;cursor:pointer}
+.dpiece .dpck{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--rule);display:grid;place-items:center;font-size:11px;color:#11110f;flex:none}
+.dpiece.on .dpck{background:var(--st-done);border-color:var(--st-done)}
+.dpiece .dpn{font-weight:600;font-size:12.5px}
+.coverage{margin-top:8px;font-size:11.5px;padding:8px 11px;border-radius:8px}
+.coverage.ok{color:var(--st-done);background:rgba(143,174,106,.08);border:1px solid rgba(143,174,106,.35)}
+.coverage.warn{color:var(--st-sent);background:rgba(199,154,94,.08);border:1px solid rgba(199,154,94,.4)}
+.extra-list{display:flex;flex-direction:column;gap:7px}.extra-item{display:flex;gap:8px;align-items:center}.extra-item input{flex:1}.extra-item button{background:transparent;border:1px solid var(--rule);color:var(--ink-mut);border-radius:6px;padding:7px 9px;font-size:12px}
+.addextra{font-size:12px;color:var(--ink-mut);background:transparent;border:1px dashed var(--rule);border-radius:7px;padding:7px 11px;width:max-content}
+.toggle-row{display:flex;align-items:center;gap:10px}
+.switch{width:38px;height:22px;border-radius:999px;background:var(--bg-elev);border:1px solid var(--rule);position:relative;transition:.15s;flex:none}.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ink-mut);transition:.15s}.switch[aria-pressed="true"]{background:rgba(143,174,106,.4);border-color:var(--st-done)}.switch[aria-pressed="true"]::after{left:18px;background:var(--st-done)}
+/* productora stub */
+.stub{padding:40px 28px;text-align:center;border:1px dashed var(--rule);border-radius:var(--radius);background:linear-gradient(180deg,var(--bg-soft),transparent)}
+.stub h3{margin:0 0 8px;font-size:16px}.stub p{max-width:520px;margin:0 auto 18px;color:var(--ink-mut);font-size:13px}
+.stub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:720px;margin:0 auto;text-align:left}.stub-card{background:var(--bg-card);border:1px solid var(--rule);border-radius:9px;padding:14px}.stub-card .sc-proj{font-weight:600;font-size:13px;margin-bottom:8px}.stub-card .sc-line{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-mut);padding:3px 0}
+/* client version bar */
+.client-bar{display:flex;align-items:center;gap:16px;background:linear-gradient(90deg,rgba(176,58,47,.10),var(--bg-card) 60%);border:1px solid var(--rule);border-left:3px solid var(--accent-br);border-radius:var(--radius);padding:12px 18px;margin:8px 0 2px;box-shadow:var(--shadow)}
+.client-bar .cb-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.client-bar .cb-icon{font-size:20px;flex:none}
+.client-bar .cb-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-mut);font-weight:700}
+.client-bar .cb-status{font-size:12.5px;font-weight:500;margin-top:2px}
+.client-bar .cb-mid{display:flex;flex-direction:column;align-items:center;gap:1px;padding:2px 20px;border-left:1px solid var(--rule);border-right:1px solid var(--rule);flex:none}
+.client-bar .cb-vlabel{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-faint)}
+.client-bar .cb-v{font-size:27px;font-weight:700;line-height:1;color:var(--ink)}
+.client-bar .cb-right{display:flex;flex:none}
+@media(max-width:680px){.client-bar{flex-wrap:wrap}.client-bar .cb-mid{border:0;padding:6px 0 0}}
+/* replies */
+.thread-block .trow{display:flex;gap:11px}
+.replies{margin:8px 0 2px 38px;display:flex;flex-direction:column;gap:8px;border-left:2px solid var(--rule);padding-left:12px}
+.reply{display:flex;gap:9px}.reply .tbody{flex:1}
+.reply-composer{display:flex;gap:8px;margin:9px 0 0 38px}
+.reply-composer input{flex:1;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:7px;padding:7px 11px;font-size:12.5px}.reply-composer input:focus{border-color:var(--accent-br);outline:none}
+/* clickable pieces in queue */
+.qp-clickable{cursor:pointer;text-decoration:underline;text-decoration-color:var(--ink-faint);text-underline-offset:2px}.qp-clickable:hover{color:var(--accent-br);text-decoration-color:var(--accent-br)}
+.qp-rej{width:100%;font-size:11px;color:var(--st-rej);margin-top:4px}
+.linkbtn{cursor:pointer;font-family:inherit}.linkbtn:hover{border-color:var(--accent-br);color:var(--accent-br)}
+/* corrections modal items */
+.corr-item{display:flex;gap:7px;align-items:center;margin-bottom:7px;flex-wrap:wrap}
+.corr-item select{background:var(--bg-page);border:1px solid var(--rule);color:var(--ink-2);border-radius:7px;padding:7px 9px;font-size:12px}
+.corr-item input{flex:1;min-width:150px;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:7px;padding:7px 10px;font-size:12.5px}.corr-item input:focus{border-color:var(--accent-br);outline:none}
+.corr-item button{background:transparent;border:1px solid var(--rule);color:var(--ink-faint);border-radius:6px;padding:6px 10px;line-height:1}.corr-item button:hover{color:var(--st-rej);border-color:var(--st-rej)}
+/* comentarios estilo IG */
+.ig-thread .ig-main{display:flex;gap:11px}
+.ig-actions{margin-top:6px}
+.ig-action{background:transparent;border:0;color:var(--ink-mut);font-size:11.5px;font-weight:600;padding:0;cursor:pointer}.ig-action:hover{color:var(--ink)}
+.ig-toggle{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:var(--ink-mut);font-size:11.5px;font-weight:600;padding:9px 0 3px;cursor:pointer}.ig-toggle:hover{color:var(--ink-2)}.ig-line{width:24px;height:1px;background:var(--ink-faint);display:inline-block;flex:none}
+.ig-replies{margin:9px 0 2px;display:flex;flex-direction:column;gap:11px;padding-left:30px}
+.ig-reply{display:flex;gap:9px}.ig-reply .tbody{flex:1}
+.ig-composer{display:flex;gap:8px;margin:10px 0 2px;padding-left:30px;flex-wrap:wrap}
+.ig-composer input{flex:1;min-width:200px;background:var(--bg-page);border:1px solid var(--rule);color:var(--ink);border-radius:7px;padding:8px 11px;font-size:12.5px}.ig-composer input:focus{border-color:var(--accent-br);outline:none}
+/* acceso directo a la entrega desde la celda */
+.entrega-link{background:transparent;border:0;color:var(--ink-mut);font-weight:600;font-size:11px;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:2px}.entrega-link:hover{color:var(--accent-br);text-decoration-color:var(--accent-br)}
+/* sección para revisar (aviso suave) */
+.mt-rev{border-color:rgba(125,147,160,.4);background:linear-gradient(180deg,rgba(125,147,160,.06),transparent)}
+.mt-count-soft{font-size:11px;font-weight:700;color:#11110f;background:var(--st-rev);border-radius:999px;padding:1px 8px}
+.mt-rev-acts{display:flex;gap:7px;margin-left:auto;flex-wrap:wrap}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-elev);border:1px solid var(--rule);color:var(--ink);padding:11px 18px;border-radius:10px;font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.2s;z-index:60;display:flex;align-items:center;gap:9px}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast .dot{width:8px;height:8px;border-radius:50%;background:var(--st-done)}
+.footnote{margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);font-size:11px;color:var(--ink-faint);line-height:1.6}
+@media(max-width:760px){.graph,.graph svg{width:1120px}.nodes-wrap{overflow-x:auto}.stub-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><span class="logo">TakeOS</span><span class="mod">· Postproducción</span></div>
+    <div class="proj"><span class="pname">Mordor Tours — “Anillo Único”</span><span class="pclient">· Sauron S.A. / Ag. Palantír</span><span class="state-chip"><span class="dot" style="background:var(--proj-prod)"></span>Producción</span></div>
+    <div class="spacer"></div>
+    <div class="ctl"><span class="ctl-label">Estado</span><div class="seg" id="segData" role="group" aria-label="Estado del mockup"><button data-ds="vacio" aria-pressed="false">Vacío</button><button data-ds="relleno" aria-pressed="true">Con carga</button></div></div>
+    <div class="ctl"><span class="ctl-label">Ver como</span><select class="rolesel" id="roleSel" aria-label="Ver como rol"></select></div>
+  </header>
+  <nav class="subnav" id="subnav" role="tablist" aria-label="Vistas de postproducción"></nav>
+  <div class="rolebanner" id="roleBanner"></div>
+  <div id="clientBar"></div>
+  <main>
+    <section class="view" id="view-mitrabajo" hidden></section>
+    <section class="view" id="view-trabajo"></section>
+    <section class="view" id="view-nodos" hidden></section>
+    <section class="view" id="view-validaciones" hidden></section>
+    <section class="view" id="view-productora" hidden></section>
+  </main>
+  <div class="footnote">Mockup aislado · no conectado a Supabase ni a TakeOS · mundo de ejemplo: El Señor de los Anillos · v7. Modelo basado en Entregas: un link cubre varias piezas; el estado de cada celda se deriva de la última entrega que la cubre. El subresponsable sube entregas (chequeo de piezas, extras no pedidos, parcial + qué falta, completa una entrega anterior, comentario); el postproductor valida por entrega (con argumento al rechazar) y controla la versión hacia cliente. La cascada automática solo avisa 'revisar' (el 'actuar' siempre lo decide el postproductor); los comentarios son estilo Instagram (respuestas anidadas y colapsables).</div>
+</div>
+
+<!-- DELIVERY MODAL -->
+<div class="modal-bg" id="delivModal" role="dialog" aria-modal="true" aria-labelledby="delivTitle">
+  <div class="modal wide">
+    <div class="mh"><div><h3 id="delivTitle">Subir entrega</h3><p>Un solo link con todo lo que entregas. Marca qué piezas van adentro.</p></div><button class="mx" id="delivClose" aria-label="Cerrar">×</button></div>
+    <div class="mbody" id="delivBody"></div>
+    <div class="mfoot"><span class="faint" style="font-size:11.5px">Queda en tu historial de entregas y se manda a validación.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="delivCancel">Cancelar</button><button class="btn primary sm" id="delivCreate">Subir entrega</button></div></div>
+  </div>
+</div>
+
+<!-- SPECS MODAL -->
+<div class="modal-bg" id="specsModal" role="dialog" aria-modal="true" aria-labelledby="specsTitle">
+  <div class="modal wide">
+    <div class="mh"><div><h3 id="specsTitle">Specs de entrega</h3><p>Solo lo estructural: cuánto dura y qué ejes multiplican los entregables.</p></div><button class="mx" id="specsClose" aria-label="Cerrar">×</button></div>
+    <div class="mbody" id="specsBody"></div>
+    <div class="mfoot"><span class="faint" style="font-size:11.5px">Lo creativo vive en cada departamento, no acá.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="specsCancel">Cancelar</button><button class="btn primary sm" id="specsSave">Guardar specs</button></div></div>
+  </div>
+</div>
+
+<!-- NEW PIECE MODAL -->
+<div class="modal-bg" id="pieceModal" role="dialog" aria-modal="true" aria-labelledby="pieceTitle">
+  <div class="modal">
+    <div class="mh"><div><h3 id="pieceTitle">Nueva pieza</h3><p>Dale un nombre y una duración. Las variaciones las afinas después.</p></div><button class="mx" id="pieceClose" aria-label="Cerrar">×</button></div>
+    <div class="mbody" id="pieceBody"></div>
+    <div class="mfoot"><span class="faint" style="font-size:11.5px">Empieza simple; siempre puedes agregar ejes.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="pieceCancel">Cancelar</button><button class="btn primary sm" id="pieceCreate">Crear pieza</button></div></div>
+  </div>
+</div>
+
+<!-- DEPT INSTRUCTIONS MODAL -->
+<div class="modal-bg" id="instrModal" role="dialog" aria-modal="true" aria-labelledby="instrTitle">
+  <div class="modal">
+    <div class="mh"><div><h3 id="instrTitle">Instrucciones madre</h3><p id="instrSub">Guía base del postproductor para este departamento.</p></div><button class="mx" id="instrClose" aria-label="Cerrar">×</button></div>
+    <div class="mbody" id="instrBody"></div>
+    <div class="mfoot"><span class="faint" style="font-size:11.5px">Queda como referencia para el responsable.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="instrCancel">Cerrar</button><button class="btn primary sm" id="instrSave">Guardar</button></div></div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-bg" id="rejModal" role="dialog" aria-modal="true" aria-labelledby="rejTitle">
+  <div class="modal"><div class="mh"><div><h3 id="rejTitle">Rechazar</h3><p>No hay rechazo sin argumento. Explica qué corregir.</p></div><button class="mx" id="rejClose" aria-label="Cerrar">×</button></div><div class="mbody" id="rejBody"></div><div class="mfoot"><span class="faint" style="font-size:11.5px">Vuelve al responsable como comentario.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="rejCancel">Cancelar</button><button class="btn danger sm" id="rejConfirm">Rechazar con argumento</button></div></div></div>
+</div>
+
+<!-- CLIENT CORRECTIONS MODAL -->
+<div class="modal-bg" id="corrModal" role="dialog" aria-modal="true" aria-labelledby="corrTitle">
+  <div class="modal wide"><div class="mh"><div><h3 id="corrTitle">Correcciones de cliente</h3><p>Ingresa lo que pidió el cliente y marca qué departamento corrige.</p></div><button class="mx" id="corrClose" aria-label="Cerrar">×</button></div><div class="mbody" id="corrBody"></div><div class="mfoot"><span class="faint" style="font-size:11.5px">Crea la siguiente versión hacia cliente.</span><div style="display:flex;gap:8px"><button class="btn ghost sm" id="corrCancel">Cancelar</button><button class="btn primary sm" id="corrConfirm">Crear nueva versión</button></div></div></div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<script>
+"use strict";
+/* ===== DATOS ===== */
+const PEOPLE={gandalf:{name:"Gandalf el Gris",short:"GG",color:"#c79a5e"},frodo:{name:"Frodo Bolsón",short:"FB",color:"#6fa3b5"},galadriel:{name:"Galadriel",short:"GA",color:"#9aab74"},sam:{name:"Samsagaz Gamyi",short:"SG",color:"#d05a4d"},radagast:{name:"Radagast",short:"RA",color:"#8fae6a"},pippin:{name:"Peregrin Tuk",short:"PT",color:"#c79a5e"},elrond:{name:"Elrond",short:"EL",color:"#7d93a0"},aragorn:{name:"Aragorn",short:"AR",color:"#b88a4a"},boromir:{name:"Boromir",short:"BO",color:"#a0a399"}};
+function av(pid,cls){const p=PEOPLE[pid];if(!p)return"";return `<span class="av ${cls||''}" style="background:${p.color}" title="${p.name}">${p.short}</span>`;}
+const VIEW_ROLES=[{id:"gandalf",label:"Gandalf · Postproductor",kind:"post"},{id:"galadriel",label:"Galadriel · Color",kind:"dep",dep:"color"},{id:"sam",label:"Samsagaz · Sonido",kind:"dep",dep:"sonido"},{id:"aragorn",label:"Aragorn · Director (lectura)",kind:"lector"}];
+const ROLE_VIEWS={post:[["trabajo","Trabajo"],["nodos","Nodos"],["validaciones","Validaciones"],["productora","Productora",true]],lector:[["trabajo","Trabajo"],["nodos","Nodos"]],dep:[["mitrabajo","Mi trabajo"]]};
+const MACROS=[{id:"montaje",name:"Montaje",resp:"frodo",on:true,always:true},{id:"color",name:"Color",resp:"galadriel",on:true,always:true},{id:"sonido",name:"Sonido",resp:"sam",on:true,always:true,subs:["Música","Diseño sonoro","Voz en off"]},{id:"vfx",name:"VFX",resp:"radagast",on:true,always:false},{id:"mograph",name:"Motion Graphics",resp:"pippin",on:true,always:false}];
+const ST={idle:{label:"Sin entrega",c:"--st-idle"},prog:{label:"En progreso",c:"--st-prog"},sent:{label:"En validación",c:"--st-sent"},done:{label:"Validado",c:"--st-done"},act:{label:"Requiere acción",c:"--st-act"},rev:{label:"Por revisar",c:"--st-rev"},rej:{label:"Rechazado",c:"--st-rej"}};
+const AXIS_PRESETS=[{name:"Relación de aspecto",values:["16:9","9:16"],presetVals:["16:9","9:16","1:1","4:5"]},{name:"Idioma / Subtítulos",values:["ES","EN"]},{name:"Logo",values:["Logo A","Logo B"]},{name:"Resolución",values:["4K","HD"]}];
+
+function buildRelleno(){
+  return {
+    deptInstr:{mograph:"Créditos finales: “Mordor Tours presenta — Anillo Único”. Aparece a 0:54, sale a 0:59. Cierre con anillo.cl centrado. Animación de entrada suave.",color:"LUT base de proyecto. Mantener consistencia con lo presentado (no sobrecontrastar). Cápsula 2: recuperar azul Michelin.",montaje:"Hero a 1:00 exacto. Cápsulas a 0:20. Respetar el dolly zoom y el dip to black.",sonido:"",vfx:"",conform:"Masters por formato: 16:9 y 9:16. Apple ProRes. Sin recorte 4:3."},
+    piezas:[
+      {id:"hero",name:"Hero",kind:"PIEZA MADRE",dur:{mode:"exact",a:"1:00",b:""},axes:[{name:"Relación de aspecto",values:["16:9","9:16"]},{name:"Idioma / Subtítulos",values:["ES","EN"]},{name:"Logo",values:["Logo A","Logo B"]}],excluded:[],deptos:["montaje","color","sonido","vfx","mograph"]},
+      {id:"cap1",name:"Cápsula 1",kind:"CÁPSULA",dur:{mode:"exact",a:"0:20",b:""},axes:[{name:"Relación de aspecto",values:["16:9","9:16"]}],excluded:[],deptos:["montaje","color","sonido"]},
+      {id:"cap2",name:"Cápsula 2",kind:"CÁPSULA",dur:{mode:"exact",a:"0:20",b:""},axes:[{name:"Relación de aspecto",values:["16:9"]}],excluded:[],deptos:["montaje","color","sonido"]},
+      {id:"cap3",name:"Cápsula 3",kind:"CÁPSULA",dur:{mode:"range",a:"0:18",b:"0:22"},axes:[{name:"Relación de aspecto",values:["16:9"]}],excluded:[],deptos:["montaje","color","sonido"]},
+      {id:"cap4",name:"Cápsula 4",kind:"CÁPSULA",dur:{mode:"exact",a:"0:20",b:""},axes:[{name:"Relación de aspecto",values:["16:9"]}],excluded:[],deptos:["montaje","color","sonido"]},
+    ],
+    vCliente:1,clienteEstado:"preparando",cascadeOrigin:"Hero · Montaje",
+    overrides:{"hero:color":{st:"rev",reason:"montaje cambió → revisa si afecta el grade"},"hero:sonido":{st:"rev",reason:"montaje cambió → revisa la mezcla"},"hero:vfx":{st:"rev",reason:"montaje cambió → revisa los planos"},"hero:mograph":{st:"rev",reason:"montaje cambió → revisa los gráficos"}},
+    deliveries:{
+      montaje:[
+        {id:"mont-1",ronda:1,link:"f.io/mont-r1",who:"frodo",when:"ayer",comentario:"Primer armado. Hero ajustado a 1:00 exacto.",parcial:true,falta:"Cápsula 4 — la subo apenas la termine.",completaDe:null,extras:[],pieces:[{piezaId:"hero",st:"done"},{piezaId:"cap1",st:"done"},{piezaId:"cap2",st:"done"},{piezaId:"cap3",st:"done"}]},
+        {id:"mont-2",ronda:2,link:"f.io/mont-r2",who:"frodo",when:"hace 4 min",comentario:"Acá va la Cápsula 4 que faltaba.",parcial:false,falta:"",completaDe:"mont-1",extras:[],pieces:[{piezaId:"cap4",st:"sent"}]},
+      ],
+      color:[
+        {id:"color-1",ronda:1,link:"we.tl/color-r1",who:"galadriel",when:"hace 30 min",comentario:"Primer pase de cápsulas. Importante: revisen el plano 14 del Hero, dejé una alternativa.",parcial:true,falta:"Hero (espero el corte final de montaje) y Cápsula 3 (todavía coloreándola).",completaDe:null,extras:["Hero · plano 14 — alternativa de color (la nota de bajar saturación lo dejaba muy plano, propongo más densidad)"],pieces:[{piezaId:"cap1",st:"sent",specBad:true},{piezaId:"cap2",st:"sent"}]},
+      ],
+      sonido:[
+        {id:"sonido-1",ronda:1,link:"f.io/sonido-r1",who:"sam",when:"hace 25 min",comentario:"Primer mix de la Cápsula 1.",parcial:true,falta:"El resto de las piezas.",completaDe:null,extras:[],pieces:[{piezaId:"cap1",st:"sent"}]},
+      ],
+      vfx:[],mograph:[],
+    },
+    threads:[
+      {id:"t1",who:"boromir",role:"PE / recoge agencia",when:"hace 22 min",piece:"Hero",route:"sonido",text:"La música de la primera escena está muy alta, se come el pinchazo. Bajarla y sumar colchón de calle.",replies:[{who:"sam",role:"Sonido",when:"hace 20 min",text:"La bajo, pero ojo: si la bajo mucho se pierde el gancho del inicio. Te subo una opción intermedia."},{who:"boromir",role:"PE / recoge agencia",when:"hace 18 min",text:"Dale, probemos la intermedia. Si no convence, vemos."},{who:"sam",role:"Sonido",when:"hace 16 min",text:"Lista, va en la próxima entrega con el colchón de calle sumado."}]},
+      {id:"t2",who:"aragorn",role:"Director",when:"hace 18 min",piece:"Cápsula 2",route:"color",text:"La cápsula quedó muy contrastada respecto a lo presentado. Bajemos contraste.",replies:[{who:"galadriel",role:"Color",when:"hace 15 min",text:"Ok, lo bajo y subo de nuevo. Ojo que el azul Michelin queda más apagado, lo compenso aparte."}]},
+      {id:"t3",who:"boromir",role:"PE / recoge agencia",when:"hace 12 min",piece:"Hero",route:"montaje",text:"Cropear la toma donde el personaje dice otra frase; perder esa parte de la cara.",replies:[]},
+    ],
+  };
+}
+function emptyData(){return {deptInstr:{},piezas:[],overrides:{},deliveries:{},threads:[],vCliente:1,clienteEstado:"preparando"};}
+const DATA={relleno:buildRelleno(),vacio:emptyData()};
+let STATE={ds:"relleno",role:"gandalf",view:"trabajo",selNode:"montaje",miContext:false,showColCfg:false,expandedThreads:new Set(),replyingTo:null};
+
+/* ===== HELPERS ===== */
+function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function hexA(hex,a){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(x=>x+x).join('');const r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);return `rgba(${r},${g},${b},${a})`;}
+function badge(k){const s=ST[k]||ST.idle;return `<span class="statebadge" style="color:${cssv(s.c)};background:${hexA(cssv(s.c),.12)};border:1px solid ${hexA(cssv(s.c),.35)}"><span class="dot" style="background:${cssv(s.c)}"></span>${s.label}</span>`;}
+function depName(id){return (MACROS.find(m=>m.id===id)||{}).name||id;}
+function curData(){return DATA[STATE.ds];}
+function activeMacros(){return MACROS.filter(m=>m.on);}
+function pieceName(id){const p=curData().piezas.find(x=>x.id===id);return p?p.name:id;}
+function rondaOf(dep,delId){const list=(curData().deliveries[dep]||[]);const del=list.find(x=>x.id===delId);return del?del.ronda:'?';}
+function toast(m){const t=document.getElementById("toast");document.getElementById("toastMsg").textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2300);}
+function combos(p){const axes=(p.axes||[]).filter(a=>a.values&&a.values.length);if(!axes.length)return[["—"]];let acc=[[]];axes.forEach(a=>{const n=[];acc.forEach(c=>a.values.forEach(v=>n.push(c.concat(v))));acc=n;});return acc;}
+function comboKey(a){return a.join("|");}
+function delivCount(p){const all=combos(p);const ex=new Set(p.excluded||[]);return all.filter(c=>!ex.has(comboKey(c))).length;}
+function durLabel(d){if(!d)return"—";if(d.mode==="free")return"libre";if(d.mode==="range")return `${d.a}–${d.b}`;return d.a;}
+function parseDur(v){if(!v)return -1;v=String(v).trim();const parts=v.split(':').map(x=>parseInt(x,10));if(parts.some(isNaN))return -2;let s=0;if(parts.length===2)s=parts[0]*60+parts[1];else if(parts.length===3)s=parts[0]*60+parts[1]+parts[2]/100;else s=parts[0];return Math.round(s*100);}
+
+// estado de una pieza en un departamento = cascada (override) o última entrega que la cubre
+function pieceStateInDep(piezaId,depId){
+  const d=curData();const p=d.piezas.find(x=>x.id===piezaId);
+  if(!p||!(p.deptos||[]).includes(depId))return {st:"na"};
+  const ov=(d.overrides||{})[piezaId+":"+depId];
+  if(ov)return {st:ov.st,reason:ov.reason};
+  const dels=(d.deliveries[depId]||[]).slice().sort((a,b)=>b.ronda-a.ronda);
+  for(const del of dels){const pe=del.pieces.find(x=>x.piezaId===piezaId);if(pe)return {st:pe.st,ronda:del.ronda,link:del.link,specBad:pe.specBad,deliveryId:del.id,rejReason:pe.rejReason};}
+  return {st:"idle"};
+}
+function cascadeDeps(){const o=curData().overrides||{};const act=new Set(),rev=new Set();Object.keys(o).forEach(k=>{const dep=k.split(":")[1];if(o[k].st==="act")act.add(dep);else if(o[k].st==="rev")rev.add(dep);});return {actuar:[...act],revisar:[...rev]};}
+function listEs(a){if(!a.length)return"";if(a.length===1)return a[0];return a.slice(0,-1).join(", ")+" y "+a[a.length-1];}
+function pendingDeliveries(){
+  const d=curData();const out=[];
+  Object.keys(d.deliveries||{}).forEach(dep=>{(d.deliveries[dep]||[]).forEach(del=>{if(del.pieces.some(pe=>pe.st==="sent"))out.push({dep,del});});});
+  return out;
+}
+function tierFor(){return "full";}
+
+/* ===== TRABAJO (matriz, postproductor) ===== */
+function renderTrabajo(){
+  const el=document.getElementById("view-trabajo");const d=curData();
+  if(!d||!d.piezas.length){el.innerHTML=`<div class="empty"><h3>Aún no hay piezas en postproducción</h3><p>Crea la primera pieza para empezar a coordinar. Cada pieza define su duración y ejes de variación; los departamentos entregan por link y el estado se llena solo.</p><button class="btn primary" id="emptyCta">＋ Nueva pieza</button></div>`;return;}
+  const macros=activeMacros();
+  function counts(dep){let done=0,tot=0;d.piezas.forEach(p=>{if(!(p.deptos||[]).includes(dep))return;tot++;if(pieceStateInDep(p.id,dep).st==="done")done++;});return {done,tot};}
+  const head=macros.map(m=>{const c=counts(m.id);const cnt=c.tot?`${c.done}/${c.tot} validados`:"no aplica aún";return `<th>${m.name}${m.always?'':'<span class="dep-off-tag">opcional</span>'}<span class="cnt mono">${cnt}</span><span class="depinstr"><button data-instr="${m.id}">✎ Instrucciones madre</button></span></th>`;}).join("");
+  const rows=d.piezas.map(p=>{const cells=macros.map(m=>`<td class="cell">${cellBox(p.id,m.id)}</td>`).join("");return `<tr><td class="piezacell">${piezaCell(p)}</td>${cells}</tr>`;}).join("");
+  el.innerHTML=`
+    <div class="work-head" style="margin-top:6px">
+      <div class="section-title" style="margin:0 2px 0;flex:1"><h2>Piezas y departamentos</h2><span class="hint">vista panorámica del postproductor · cada celda se deriva de la última entrega que cubre esa pieza</span></div>
+      <button class="btn sm ghost" data-colcfg="1">⚙ Columnas</button>
+      <button class="btn sm" id="addPieceBtn">＋ Nueva pieza</button>
+    </div>
+    ${STATE.showColCfg?colCfgPanel():''}
+    ${legendHTML()}
+    <table class="matrix"><thead><tr><th class="piezacol">Pieza</th>${head}</tr></thead><tbody>${rows}</tbody></table>
+    ${threadsHTML(d)}`;
+}
+function colCfgPanel(){const chips=MACROS.map(m=>m.always?`<span class="colchip locked">${m.name} <span class="lk">siempre</span></span>`:`<button class="colchip ${m.on?'on':'off'}" data-coltoggle="${m.id}">${m.on?'✓':'＋'} ${m.name}</button>`).join("");return `<div class="colcfg"><span class="cc-lbl">Departamentos de este proyecto:</span>${chips}<span class="cc-hint">apaga los que no uses y desaparecen de la tabla, los nodos y los homes de los subresponsables</span></div>`;}
+function legendHTML(){const o=["done","sent","prog","act","rev","idle"];return `<div class="legend">${o.map(k=>`<span><span class="sw" style="background:${cssv(ST[k].c)}"></span>${ST[k].label}</span>`).join("")}</div>`;}
+function piezaCell(p){const n=delivCount(p);const axesTxt=(p.axes||[]).map(a=>a.values.join("/")).join(" · ")||"sin ejes";const bad=Object.keys(curData().deliveries||{}).some(dep=>(curData().deliveries[dep]||[]).some(del=>del.pieces.some(pe=>pe.piezaId===p.id&&pe.specBad)));const chips=[`<span class="spec-chip">⏱ ${durLabel(p.dur)}</span>`,`<span class="spec-chip deliv">▣ ${n} entregable${n>1?'s':''}</span>`,`<span class="spec-chip" title="${axesTxt}">⋈ ${axesTxt}</span>`].join("");return `<div class="pieza-name">${p.name}<span class="pieza-kind">${p.kind}</span></div><div class="pieza-specs">${chips}</div><div class="spec-edit"><button data-specs="${p.id}">Editar specs y variaciones</button></div>${bad?'<div class="pieza-specs" style="margin-top:6px"><span class="spec-chip bad">⚠ una versión no cumple las specs</span></div>':''}`;}
+function cellBox(piezaId,depId){
+  const s=pieceStateInDep(piezaId,depId);
+  if(s.st==="na")return `<span class="cell-na">no aplica</span>`;
+  if(s.st==="idle")return `<div class="cellbox"><span class="statebadge" style="color:var(--ink-faint);background:transparent;border:1px solid var(--rule)"><span class="dot" style="background:var(--st-idle)"></span>Sin entrega</span></div>`;
+  if((s.st==="act"||s.st==="rev")&&!s.deliveryId)return `<div class="cellbox">${badge(s.st)}${s.reason?`<div class="cell-meta"><span>${s.reason}</span></div>`:''}</div>`;
+  const ent=s.ronda?`<button class="entrega-link mono" data-openlink="${s.link||''}" title="Abrir la entrega que define este estado">Entrega #${s.ronda} ▸</button>`:'';
+  const bad=s.specBad?`<span class="linkpill" style="color:var(--st-act);border-color:rgba(208,90,77,.5)">⚠ 1:01</span>`:'';
+  return `<div class="cellbox">${badge(s.st)}<div class="cell-actions">${ent}${bad}</div></div>`;
+}
+function threadBlock(t,allowReply){
+  const rc=cssv(ST.prog.c);
+  const nReplies=(t.replies||[]).length;
+  const expanded=STATE.expandedThreads.has(t.id);
+  const replying=STATE.replyingTo===t.id;
+  let repliesHTML="";
+  if(nReplies){
+    if(!expanded){
+      repliesHTML=`<button class="ig-toggle" data-expand="${t.id}"><span class="ig-line"></span>Ver respuestas (${nReplies})</button>`;
+    }else{
+      const list=(t.replies||[]).map(r=>`<div class="ig-reply"><div class="tav">${av(r.who)}</div><div class="tbody"><div class="tmeta"><span class="who">${PEOPLE[r.who]?PEOPLE[r.who].name:r.who}</span><span class="faint">${r.role} · ${r.when}</span></div><div class="ttext">${r.text}</div></div></div>`).join("");
+      repliesHTML=`<div class="ig-replies">${list}</div><button class="ig-toggle" data-collapse="${t.id}"><span class="ig-line"></span>Ocultar respuestas</button>`;
+    }
+  }
+  const composer=replying?`<div class="ig-composer"><input type="text" data-replyinput="${t.id}" placeholder="Escribe tu respuesta… ej: “Ok, lo hago” o “No se puede sin perder la flauta que pidió el cliente”"><button class="btn sm" data-replysend="${t.id}">Responder</button><button class="btn ghost sm" data-replycancel="1">Cancelar</button></div>`:'';
+  const replyBtn=allowReply&&!replying?`<button class="ig-action" data-reply="${t.id}">Responder</button>`:'';
+  return `<div class="thread ig-thread"><div class="ig-main"><div class="tav">${av(t.who)}</div><div class="tbody"><div class="tmeta"><span class="who">${PEOPLE[t.who]?PEOPLE[t.who].name:t.who}</span><span class="faint">${t.role} · ${t.when}</span></div><div class="ttext">${t.text}</div><div class="tanchor">anclado a <b style="color:var(--ink-2)">${t.piece}</b> · ruteado a <span class="routetag" style="color:${rc};background:${hexA(rc,.14)}">${depName(t.route)}</span></div>${replyBtn?`<div class="ig-actions">${replyBtn}</div>`:''}${repliesHTML}${composer}</div></div></div>`;
+}
+function threadsHTML(d){
+  const allow=VIEW_ROLES.find(x=>x.id===STATE.role).kind==="post";
+  const items=(d.threads||[]).map(t=>threadBlock(t,allow)).join("");
+  const pieceOpts=d.piezas.map(p=>`<option value="${p.name}">${p.name}</option>`).join("");
+  const depOpts=activeMacros().map(m=>`<option value="${m.id}">${m.name}</option>`).join("");
+  return `<div class="section-title"><h2>Comentarios</h2><span class="hint">cada comentario cuelga de su pieza, se rutea al departamento y se puede responder antes de aplicar el cambio</span><span class="line"></span></div><div class="card"><div class="composer"><select id="cmPiece">${pieceOpts}</select><select id="cmDep">${depOpts}</select><input type="text" id="cmText" placeholder="Escribe un comentario y rutéalo al departamento…"><button class="btn primary sm" id="cmSend">Comentar</button></div>${items||'<div class="thread"><div class="tbody muted" style="font-size:12.5px">Aún no hay comentarios.</div></div>'}</div>`;
+}
+
+/* ===== NODOS ===== */
+let NODEPOS={montaje:{x:36,y:250},color:{x:392,y:54},vfx:{x:392,y:184},mograph:{x:392,y:314},sonido:{x:392,y:444},conform:{x:740,y:250},output:{x:946,y:250}};
+const NODE_W=158,NODE_H=92;
+function layoutNodes(){const mids=["color","vfx","mograph","sonido"].filter(id=>(MACROS.find(m=>m.id===id)||{}).on);const N=mids.length,sp=130,startY=250-(N-1)*sp/2;mids.forEach((id,i)=>{NODEPOS[id]={x:392,y:Math.round(startY+i*sp)};});return mids;}
+function anchorR(id){const p=NODEPOS[id];return {x:p.x+NODE_W,y:p.y+NODE_H/2};}
+function anchorL(id){const p=NODEPOS[id];return {x:p.x,y:p.y+NODE_H/2};}
+function curve(a,b){const mx=(a.x+b.x)/2;return `M ${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;}
+function renderNodos(){
+  const el=document.getElementById("view-nodos");const d=curData();const cd=cascadeDeps();const deps=layoutNodes();
+  let lines="";deps.forEach(dep=>{let cls="gline";if(cd.actuar.includes(dep))cls+=" act";else if(cd.revisar.includes(dep))cls+=" rev";lines+=`<path class="${cls}" d="${curve(anchorR('montaje'),anchorL(dep))}"></path>`;});
+  deps.forEach(dep=>{lines+=`<path class="gline" d="${curve(anchorR(dep),anchorL('conform'))}"></path>`;});lines+=`<path class="gline" d="${curve(anchorR('conform'),anchorL('output'))}"></path>`;
+  const order=["montaje",...deps,"conform","output"];if(!order.includes(STATE.selNode))STATE.selNode="montaje";
+  const nodesHTML=order.map(id=>nodeCard(id,d,cd)).join("");
+  const mont=cd.actuar.includes("montaje");const ba=cd.actuar.filter(x=>x!=="montaje"),br=cd.revisar.filter(x=>x!=="montaje");
+  const down=(ba.length?`<span style="color:var(--st-act)">${listEs(ba.map(depName))} ${ba.length>1?'deben':'debe'} actuar</span>`:'')+(ba.length&&br.length?', ':'')+(br.length?`${listEs(br.map(depName))} ${br.length>1?'revisan':'revisa'}`:'');
+  const cascText=(mont||ba.length||br.length)?(mont?`<b style="color:var(--ink-2)">Montaje</b> tiene una corrección${down?` → aguas abajo, ${down}`:''}.`:`Hay correcciones aguas abajo de <b style="color:var(--ink-2)">${d.cascadeOrigin||'Montaje'}</b>: ${down}.`):`Sin cambios viajando por las dependencias.`;
+  el.innerHTML=`<div class="nodes-legend"><span class="ln"><span class="swl act"></span> actuar</span><span class="ln"><span class="swl rev"></span> revisar</span><span class="ln"><span class="swl"></span> en reposo</span><span class="ln faint">· click en un nodo para ver detalle e instrucciones</span></div><div class="cascade-note" style="margin:0 2px 12px">↳ ${cascText}</div><div class="nodes-wrap"><div class="graph"><svg viewBox="0 0 1120 600" preserveAspectRatio="xMinYMin meet">${lines}</svg>${nodesHTML}<div class="node-explore" style="left:712px;top:222px">exploración</div></div></div>${nodePanel(STATE.selNode,d)}`;
+}
+function nodeCard(id,d,cd){
+  const pos=NODEPOS[id];const sel=STATE.selNode===id?"sel":"";let inner,alertCls="",extraCls="";
+  if(id==="output"){const tot=d?d.piezas.reduce((s,p)=>s+delivCount(p),0):0;inner=`<div class="nhead"><span class="nname">Output · Entrega</span></div><div class="nstat" style="margin-top:8px">${d&&d.piezas.length?`${tot} entregables a producir`:'Puente a Entregables'}</div><div class="nresp faint">lo aprobado cruza acá</div>`;extraCls="terminal";}
+  else if(id==="conform"){inner=`<div class="nhead"><span class="nname">Conformado / Online</span></div><div class="nstat" style="margin-top:8px">Resp. ${PEOPLE.elrond.name.split(' ')[0]}</div><div class="nresp">${av('elrond')} convergen todos</div>`;extraCls="terminal";}
+  else{const m=MACROS.find(x=>x.id===id);const stt=d&&d.piezas.length?depRollup(id,d):null;if(cd&&cd.actuar.includes(id))alertCls="alert";const bar=d&&d.piezas.length?progressBar(id,d):'';const statHTML=stt?`<div class="nstat">${stt.txt}</div>`:`<div class="nstat faint">sin carga</div>`;inner=`<div class="nhead"><span class="nname">${m.name}</span>${stt&&stt.flag?`<span class="ntag" style="color:${stt.flagc};background:${hexA(stt.flagc,.16)}">${stt.flag}</span>`:''}</div>${bar}${statHTML}<div class="nresp">${av(m.resp)} ${PEOPLE[m.resp].name.split(' ')[0]}${m.always?'':' · opcional'}</div>`;}
+  return `<div class="node ${sel} ${alertCls} ${extraCls}" data-node="${id}" tabindex="0" role="button" style="left:${pos.x}px;top:${pos.y}px">${inner}</div>`;
+}
+function depCounts(id,d){let c={idle:0,prog:0,sent:0,done:0,act:0,rev:0,rej:0},tot=0;d.piezas.forEach(p=>{if(!(p.deptos||[]).includes(id))return;const s=pieceStateInDep(p.id,id).st;c[s]=(c[s]||0)+1;tot++;});return {c,tot};}
+function depRollup(id,d){const {c,tot}=depCounts(id,d);let flag=null,flagc=null;if(c.act){flag="actuar";flagc=cssv("--st-act");}else if(c.sent){flag="revisar";flagc=cssv("--st-sent");}else if(c.rev){flag="revisar";flagc=cssv("--st-rev");}const txt=tot?`${c.done}/${tot} validados`+(c.sent?` · ${c.sent} en validación`:''):"no aplica";return {txt,flag,flagc};}
+function progressBar(id,d){const {c,tot}=depCounts(id,d);if(!tot)return `<div class="nbar"><i style="width:100%;background:var(--bg-elev)"></i></div>`;const seg=(k,v)=>c[k]?`<i style="width:${(c[k]/tot*100).toFixed(1)}%;background:${cssv(v)}"></i>`:'';return `<div class="nbar">${seg('done','--st-done')}${seg('prog','--st-prog')}${seg('sent','--st-sent')}${seg('act','--st-act')}${seg('rev','--st-rev')}${seg('idle','--st-idle')}</div>`;}
+function nodePanel(id,d){
+  if(!d||!d.piezas.length)return `<div class="npanel card" style="padding:16px"><span class="muted">Entra a un proyecto con carga para ver el detalle del nodo.</span></div>`;
+  if(id==="output")return `<div class="npanel card" style="padding:16px"><div class="ph"><h3>Output · Entrega</h3><span class="faint">terminal</span></div><div class="muted" style="font-size:12.5px">Lo aprobado cruza a <b style="color:var(--ink-2)">Entregables</b>. Este proyecto suma <b style="color:var(--ink-2)">${d.piezas.reduce((s,p)=>s+delivCount(p),0)} entregables</b>.</div></div>`;
+  if(id==="conform")return `<div class="npanel card" style="padding:16px"><div class="ph">${av('elrond')}<h3>Conformado / Online</h3><span class="faint">exploración</span><span class="phact"><button class="btn tiny" data-instr="conform">✎ Instrucciones</button></span></div><div class="muted" style="font-size:12.5px">Converge corte (XML), color, VFX, motion y mezcla → master por formato.</div></div>`;
+  const m=MACROS.find(x=>x.id===id);if(!m)return"";
+  const rows=d.piezas.filter(p=>(p.deptos||[]).includes(id)).map(p=>{const s=pieceStateInDep(p.id,id);return `<div class="np-row"><span class="pn">${p.name}</span>${s.st==="na"?'<span class="cell-na">no aplica</span>':badge(s.st)}${s.ronda?`<button class="entrega-link mono" data-openlink="${s.link||''}">Entrega #${s.ronda} ▸</button>`:''}${s.reason?`<span class="faint" style="font-size:11.5px">${s.reason}</span>`:''}<span style="flex:1"></span></div>`;}).join("");
+  const subs=m.subs?`<div class="muted" style="font-size:11.5px;margin-bottom:8px">Sub-departamentos sugeridos: ${m.subs.join(' · ')}</div>`:'';
+  const instr=(d.deptInstr&&d.deptInstr[id])||"";
+  const ib=instr?`<div class="instr-box"><h4>Instrucciones madre</h4><div class="ttext" style="font-size:12.5px;white-space:pre-wrap">${instr}</div><div class="ibfoot"><button class="btn tiny" data-instr="${id}">Editar</button></div></div>`:`<div class="instr-box"><h4>Instrucciones madre</h4><div class="sub">Aún sin instrucciones.</div><div class="ibfoot"><button class="btn tiny" data-instr="${id}">＋ Dejar instrucciones</button></div></div>`;
+  return `<div class="npanel card" style="padding:16px"><div class="ph">${av(m.resp)}<h3>${m.name}</h3><span class="faint">resp. ${PEOPLE[m.resp].name}</span></div>${subs}<div class="npanel-grid">${rows}</div>${ib}</div>`;
+}
+
+/* ===== VALIDACIONES (por entrega) ===== */
+function renderValidaciones(){
+  const el=document.getElementById("view-validaciones");const d=curData();
+  const r=VIEW_ROLES.find(x=>x.id===STATE.role);
+  if(r&&r.kind!=="post"){el.innerHTML=`<div class="empty"><h3>Esta cola es del postproductor</h3><p>La opera ${PEOPLE.gandalf.name}. Tú recibes el aviso cuando un cambio validado afecta tu área.</p></div>`;return;}
+  const pend=pendingDeliveries();
+  if(!pend.length){el.innerHTML=`<div class="empty"><h3>No hay entregas esperando tu validación</h3><p>Cuando un responsable suba una entrega, aparece acá como una tarjeta con todas las piezas que cubre. Validas pieza por pieza o la entrega completa.</p></div>`;return;}
+  const cards=pend.map(({dep,del})=>deliveryQueueCard(dep,del)).join("");
+  el.innerHTML=`<p class="queue-intro">Cola privada del postproductor (${PEOPLE.gandalf.name}). Cada tarjeta es <b>una entrega</b> (un link, varias piezas). Validar gatilla la cascada aguas abajo.</p>${cards}<div class="cascade-note">↳ Validar una pieza la marca lista; ver el flujo completo en <b style="color:var(--ink-2)">Nodos</b>.</div>`;
+}
+function deliveryQueueCard(dep,del){
+  const tags=[];if(del.parcial)tags.push(`<span class="qd-tag" style="color:var(--st-sent);background:${hexA(cssv('--st-sent'),.14)}">parcial</span>`);if(del.completaDe)tags.push(`<span class="qd-tag" style="color:var(--st-prog);background:${hexA(cssv('--st-prog'),.14)}">completa #${rondaOf(dep,del.completaDe)}</span>`);if(del.extras&&del.extras.length)tags.push(`<span class="qd-tag" style="color:var(--st-sent);background:${hexA(cssv('--st-sent'),.14)}">＋extra</span>`);
+  const nota=del.comentario?`<div class="qd-nota">“${del.comentario}”</div>`:'';
+  const falta=del.parcial&&del.falta?`<div class="qd-falta">El que sube avisa que falta: ${del.falta}</div>`:'';
+  const extra=del.extras&&del.extras.length?`<div class="qd-extra"><b>＋ subió algo extra no pedido:</b><br>${del.extras.map(x=>`· ${x}`).join("<br>")}</div>`:'';
+  const sentPieces=del.pieces.filter(pe=>pe.st==="sent");
+  const piecesHTML=del.pieces.map(pe=>{const s=ST[pe.st]||ST.idle;const acts=pe.st==="sent"?`<button class="btn ghost tiny" data-openlink="${del.link}">▶ Ver</button><button class="btn ok tiny" data-valpiece="${dep}|${del.id}|${pe.piezaId}">✓ Validar</button><button class="btn danger tiny" data-rejpiece="${dep}|${del.id}|${pe.piezaId}">✗ Rechazar</button>`:`<span class="faint" style="font-size:11px">${pe.st==="done"?"validada":"rechazada"}</span>`;const rej=pe.st==="rej"&&pe.rejReason?`<div class="qp-rej">Rechazada: ${pe.rejReason}</div>`:'';return `<div class="qd-piece"><span class="qp-n qp-clickable" data-openlink="${del.link}" title="Abrir el material">${pieceName(pe.piezaId)}</span>${badge(pe.st)}${pe.specBad?'<span class="linkpill" style="color:var(--st-act);border-color:rgba(208,90,77,.5)">⚠ declara 1:01</span>':''}<span class="qp-acts">${acts}</span>${rej}</div>`;}).join("");
+  const foot=sentPieces.length?`<div class="qd-foot"><button class="btn danger sm" data-rejall="${dep}|${del.id}">Rechazar entrega</button><button class="btn primary sm" data-valall="${dep}|${del.id}">Validar todas (${sentPieces.length})</button></div>`:'';
+  return `<div class="qdeliv"><div class="qd-head"><span class="qd-dep">${av(del.who)} ${depName(dep)}</span><span class="qd-num">Entrega #${del.ronda}</span><button class="linkpill linkbtn" data-openlink="${del.link}">▶ ${del.link}</button><span class="qd-when">${PEOPLE[del.who]?PEOPLE[del.who].name.split(' ')[0]:''} · ${del.when}</span><span class="qd-tags">${tags.join("")}</span></div><div class="qd-body">${nota}${falta}${extra}<div class="qd-pieces">${piecesHTML}</div>${foot}</div></div>`;
+}
+
+/* ===== PRODUCTORA (stub) ===== */
+function renderProductora(){document.getElementById("view-productora").innerHTML=`<div class="stub"><h3>Postproducción de toda la productora</h3><p>Vista transversal a todos los proyectos, como Finanzas del CFO. Acceso: administrador y postproductor interno. <b>Stub ligero</b> — versión completa en la segunda pasada.</p><div class="stub-grid"><div class="stub-card"><div class="sc-proj">Mordor Tours · Anillo Único</div><div class="sc-line"><span>Color</span><span style="color:var(--st-act)">requiere acción</span></div><div class="sc-line"><span>Entregas por validar</span><span class="mono">3</span></div><div class="sc-line"><span>Ronda Color</span><span class="mono">1</span></div></div><div class="stub-card"><div class="sc-proj">Rivendel · Té de los Elfos</div><div class="sc-line"><span>Montaje</span><span style="color:var(--st-sent)">en validación</span></div><div class="sc-line"><span>Corrección cliente</span><span style="color:var(--st-rev)">pendiente</span></div><div class="sc-line"><span>Ronda</span><span class="mono">2 de 3</span></div></div><div class="stub-card"><div class="sc-proj">Comarca · Cerveza Verde</div><div class="sc-line"><span>Estado</span><span style="color:var(--st-done)">al día</span></div><div class="sc-line"><span>Listo para entrega</span><span class="mono">1</span></div><div class="sc-line"><span>Pendientes</span><span class="mono">0</span></div></div></div></div>`;}
+
+/* ===== MI TRABAJO (subresponsable) ===== */
+function renderMiTrabajo(){
+  const el=document.getElementById("view-mitrabajo");const r=VIEW_ROLES.find(x=>x.id===STATE.role);const depId=r.dep;const m=MACROS.find(x=>x.id===depId);const d=curData();
+  if(!d||!d.piezas.length){el.innerHTML=`<div class="empty"><h3>Aún no hay piezas para ${depName(depId)}</h3><p>Cuando el postproductor cargue piezas que pasen por ${depName(depId)}, las verás acá.</p></div>`;return;}
+  const mine=d.piezas.filter(p=>(p.deptos||[]).includes(depId));
+  if(!mine.length){el.innerHTML=`<div class="empty"><h3>Ninguna pieza pasa por ${depName(depId)} todavía</h3><p>Este proyecto aún no tiene piezas asignadas a tu departamento.</p></div>`;return;}
+  const pend=mine.filter(p=>{const s=pieceStateInDep(p.id,depId).st;return s==="act"||s==="rej";});
+  const revs=mine.filter(p=>pieceStateInDep(p.id,depId).st==="rev");
+  const pendHTML=pend.length?`<div class="mt-card mt-pend"><div class="mt-h"><h3>Requiere tu acción</h3><span class="mt-count mono">${pend.length}</span><span class="faint" style="font-size:11px">el postproductor te pidió un cambio</span></div>${pend.map(p=>{const s=pieceStateInDep(p.id,depId);return `<div class="mt-prow"><div class="mt-pn">${p.name}<span class="pieza-kind">${p.kind}</span></div><div class="mt-pmid">${badge(s.st)}${s.reason?`<span class="faint" style="font-size:12px">${s.reason}</span>`:''}${s.st==="rej"&&s.rejReason?`<span class="faint" style="font-size:12px">— ${s.rejReason}</span>`:''}</div></div>`;}).join("")}<div style="margin-top:10px"><button class="btn primary sm" data-deliv="${depId}">Subir entrega con lo corregido</button></div></div>`:'';
+  const revHTML=revs.length?`<div class="mt-card mt-rev"><div class="mt-h"><h3>Para revisar</h3><span class="mt-count-soft mono">${revs.length}</span><span class="faint" style="font-size:11px">algo cambió aguas arriba · revisa si te afecta (no es obligatorio)</span></div>${revs.map(p=>{const s=pieceStateInDep(p.id,depId);return `<div class="mt-prow"><div class="mt-pn">${p.name}<span class="pieza-kind">${p.kind}</span></div><div class="mt-pmid">${badge(s.st)}${s.reason?`<span class="faint" style="font-size:12px">${s.reason}</span>`:''}</div><div class="mt-rev-acts"><button class="btn sm ghost" data-reviewed="${p.id}:${depId}">Revisé, sin cambios</button><button class="btn sm" data-deliv="${depId}">Subir entrega</button></div></div>`;}).join("")}</div>`:'';
+  const clearHTML=(!pend.length&&!revs.length)?`<div class="mt-card mt-clear"><span class="dot"></span> Nada pendiente por ahora. Tu trabajo está al día.</div>`:'';
+  // estado por pieza
+  const stateList=mine.map(p=>{const s=pieceStateInDep(p.id,depId);return `<div class="mt-spc">${badge(s.st)}<span class="spn">${p.name}</span>${s.ronda?`<span class="mono faint" style="font-size:11px">Entrega #${s.ronda}</span>`:''}${s.specBad?'<span class="linkpill" style="color:var(--st-act);border-color:rgba(208,90,77,.5)">⚠ 1:01</span>':''}${STATE.miContext?mtCtx(p,depId):''}</div>`;}).join("");
+  // historial de entregas
+  const dels=(d.deliveries[depId]||[]).slice().sort((a,b)=>b.ronda-a.ronda);
+  const histHTML=dels.length?dels.map(del=>deliveryHistoryCard(depId,del)).join(""):`<div class="muted" style="font-size:12.5px">Todavía no has subido ninguna entrega.</div>`;
+  const instr=(d.deptInstr&&d.deptInstr[depId])||"";
+  const instrHTML=instr?`<div class="mt-card"><div class="mt-h"><h3>Instrucciones del postproductor</h3></div><div class="ttext" style="font-size:12.5px;white-space:pre-wrap;color:var(--ink-2)">${instr}</div></div>`:'';
+  const myThreads=(d.threads||[]).filter(t=>t.route===depId);
+  const thHTML=myThreads.length?`<div class="mt-card"><div class="mt-h"><h3>Comentarios para ti</h3><span class="faint" style="font-size:11px">puedes responder antes de aplicar el cambio</span></div>${myThreads.map(t=>threadBlock(t,true)).join("")}</div>`:'';
+  el.innerHTML=`<div class="mt-head"><div class="mt-title">${av(m.resp,'big')}<div><div class="mt-tt">Mi trabajo · ${depName(depId)}</div><div class="faint" style="font-size:12px">${mine.length} pieza${mine.length>1?'s':''} pasan por tu departamento</div></div></div><div class="mt-actions"><button class="btn sm ${STATE.miContext?'':'ghost'}" data-mictx="1">${STATE.miContext?'Ocultar el resto':'Ver el resto (lectura)'}</button><button class="btn primary sm" data-deliv="${depId}">＋ Subir entrega</button></div></div>
+    ${pendHTML}${revHTML}${clearHTML}
+    <div class="section-title"><h2>Estado de mis piezas</h2><span class="hint">qué cubriste y qué falta — solo ${depName(depId)}</span><span class="line"></span></div>
+    <div class="mt-card"><div class="mt-state-list">${stateList}</div></div>
+    <div class="section-title"><h2>Mis entregas</h2><span class="hint">cada link que subes queda acá como historial de rondas</span><span class="line"></span></div>
+    ${histHTML}
+    ${instrHTML}${thHTML}`;
+}
+function mtCtx(p,depId){const others=activeMacros().filter(mm=>mm.id!==depId&&(p.deptos||[]).includes(mm.id));const chips=others.map(mm=>{const s=pieceStateInDep(p.id,mm.id);const st=ST[s.st]||ST.idle;return `<span class="mt-ctx-chip" style="color:${cssv(st.c)}">${mm.name}: ${st.label}</span>`;}).join("");return `<div class="mt-ctx" style="width:100%">resto: ${chips||'—'}</div>`;}
+function deliveryHistoryCard(dep,del){
+  const piezasHTML=del.pieces.map(pe=>{const s=ST[pe.st]||ST.idle;return `<span class="dcv-piece" style="border-color:${hexA(cssv(s.c),.4)}"><span class="dot" style="background:${cssv(s.c)}"></span>${pieceName(pe.piezaId)}${pe.specBad?' ⚠':''} · ${s.label.toLowerCase()}</span>`;}).join("");
+  const extra=del.extras&&del.extras.length?`<div class="dc-extra"><span class="dc-extra-lbl">＋ extra no pedido:</span> ${del.extras.join(" · ")}</div>`:'';
+  const partial=del.parcial?`<div class="dc-partial">entrega parcial · falta: <b>${del.falta||'—'}</b></div>`:'';
+  const completa=del.completaDe?`<div class="dc-completa">↳ completa la Entrega #${rondaOf(dep,del.completaDe)}</div>`:'';
+  const nota=del.comentario?`<div class="dc-nota">“${del.comentario}”</div>`:'';
+  return `<div class="dcard"><div class="dc-head"><span class="dc-num">Entrega #${del.ronda}</span><span class="linkpill">▶ ${del.link}</span><span class="faint" style="font-size:11px;margin-left:auto">${PEOPLE[del.who]?PEOPLE[del.who].name.split(' ')[0]:''} · ${del.when}</span></div>${nota}<div class="dc-pieces">${piezasHTML}</div>${extra}${partial}${completa}</div>`;
+}
+
+/* ===== DELIVERY MODAL ===== */
+let delivCtx=null;
+function openDelivery(depId){
+  const d=curData();const applicable=d.piezas.filter(p=>(p.deptos||[]).includes(depId));
+  delivCtx={depId,link:"",pieces:applicable.map(p=>({piezaId:p.id,name:p.name,checked:true})),extras:[],parcial:false,falta:"",completaDe:"",comentario:""};
+  document.getElementById("delivTitle").textContent=`Subir entrega — ${depName(depId)}`;
+  renderDeliveryBody();document.getElementById("delivModal").classList.add("open");
+}
+function renderDeliveryBody(){
+  const c=delivCtx;const d=curData();const prev=(d.deliveries[c.depId]||[]).slice().sort((a,b)=>a.ronda-b.ronda);
+  const total=c.pieces.length;const checked=c.pieces.filter(p=>p.checked).length;
+  const cov = checked===total?`<div class="coverage ok">✓ Cubres las ${total} piezas del proyecto en este departamento.</div>`:`<div class="coverage warn">⚠ Esta entrega cubre ${checked} de ${total} piezas. ${total-checked>0?'Faltarían: '+c.pieces.filter(p=>!p.checked).map(p=>p.name).join(", ")+'.':''} Si es a propósito, márcala como parcial abajo.</div>`;
+  const piezas=c.pieces.map((p,i)=>`<div class="dpiece ${p.checked?'on':''}" data-dpiece="${i}"><span class="dpck">${p.checked?'✓':''}</span><span class="dpn">${p.name}</span></div>`).join("");
+  const extras=c.extras.map((x,i)=>`<div class="extra-item"><input type="text" data-extra="${i}" value="${x.replace(/"/g,'&quot;')}" placeholder="Ej: Hero plano 14 — alternativa de color"><button data-extradel="${i}">Quitar</button></div>`).join("");
+  const prevOpts=`<option value="">— ninguna (entrega nueva)</option>`+prev.map(p=>`<option value="${p.id}" ${c.completaDe===p.id?'selected':''}>Entrega #${p.ronda} (${p.link})</option>`).join("");
+  document.getElementById("delivBody").innerHTML=`
+    <div class="field"><label>Link de la entrega <span class="help">WeTransfer, Frame.io, Drive… un solo link con todo</span></label><input type="text" id="dvLink" value="${c.link.replace(/"/g,'&quot;')}" placeholder="we.tl/… o f.io/…"></div>
+    <div class="field"><label>¿Qué piezas van adentro? <span class="help">chequea lo que realmente subiste — esto evita que falte una sin que nadie lo note</span></label><div class="dpiece-list">${piezas}</div>${cov}</div>
+    <div class="field"><label>¿Subiste algo extra no pedido? <span class="help">ej. una alternativa de un plano que la instrucción dejaba mal</span></label><div class="extra-list">${extras}</div><div style="margin-top:8px"><button type="button" class="addextra" id="dvAddExtra">＋ Agregar extra</button></div></div>
+    <div class="field"><div class="toggle-row"><button type="button" class="switch" id="dvParcial" aria-pressed="${c.parcial}"></button><label style="margin:0">Es una entrega incompleta (parcial)</label></div>${c.parcial?`<div style="margin-top:10px"><textarea id="dvFalta" placeholder="¿Qué falta? Ej: Hero (espero corte final) y Cápsula 3 (coloreando)">${c.falta.replace(/</g,'&lt;')}</textarea></div>`:''}</div>
+    ${prev.length?`<div class="field"><label>¿Completa una entrega anterior? <span class="help">si estás subiendo lo que faltaba</span></label><select id="dvCompleta">${prevOpts}</select></div>`:''}
+    <div class="field"><label>Comentario de la entrega <span class="help">una nota para el postproductor</span></label><textarea id="dvNota" placeholder="Ej: Primer pase de cápsulas. Revisen el plano 14 del Hero.">${c.comentario.replace(/</g,'&lt;')}</textarea></div>
+    <div class="friction-note">Un solo link para todas las piezas de esta entrega. La próxima vez que subas algo, queda como una entrega nueva en tu historial (otra ronda).</div>`;
+  wireDelivery();
+}
+function wireDelivery(){
+  const c=delivCtx;
+  const link=document.getElementById('dvLink');if(link)link.addEventListener('input',()=>c.link=link.value);
+  document.querySelectorAll('[data-dpiece]').forEach(el=>el.addEventListener('click',()=>{const i=+el.dataset.dpiece;c.pieces[i].checked=!c.pieces[i].checked;renderDeliveryBody();}));
+  document.querySelectorAll('[data-extra]').forEach(inp=>inp.addEventListener('input',()=>{c.extras[+inp.dataset.extra]=inp.value;}));
+  document.querySelectorAll('[data-extradel]').forEach(b=>b.addEventListener('click',()=>{c.extras.splice(+b.dataset.extradel,1);renderDeliveryBody();}));
+  const ae=document.getElementById('dvAddExtra');if(ae)ae.addEventListener('click',()=>{c.extras.push("");renderDeliveryBody();});
+  const par=document.getElementById('dvParcial');if(par)par.addEventListener('click',()=>{c.parcial=!c.parcial;renderDeliveryBody();});
+  const falta=document.getElementById('dvFalta');if(falta)falta.addEventListener('input',()=>c.falta=falta.value);
+  const comp=document.getElementById('dvCompleta');if(comp)comp.addEventListener('change',()=>c.completaDe=comp.value);
+  const nota=document.getElementById('dvNota');if(nota)nota.addEventListener('input',()=>c.comentario=nota.value);
+}
+function closeDelivery(){document.getElementById("delivModal").classList.remove("open");delivCtx=null;}
+function createDelivery(){
+  const c=delivCtx;const d=curData();const dep=c.depId;
+  if(!c.link.trim()){toast("Pega el link de la entrega");return;}
+  const covered=c.pieces.filter(p=>p.checked);
+  if(!covered.length&&!c.extras.filter(x=>x.trim()).length){toast("Marca al menos una pieza o agrega un extra");return;}
+  if(!d.deliveries[dep])d.deliveries[dep]=[];
+  const ronda=d.deliveries[dep].length+1;const id=dep+"-d"+Date.now();
+  d.deliveries[dep].push({id,ronda,link:c.link.trim(),who:VIEW_ROLES.find(x=>x.id===STATE.role).id,when:"recién",comentario:c.comentario.trim(),parcial:c.parcial,falta:c.parcial?c.falta.trim():"",completaDe:c.completaDe||null,extras:c.extras.filter(x=>x.trim()),pieces:covered.map(p=>({piezaId:p.piezaId,st:"sent"}))});
+  if(d.overrides)covered.forEach(p=>{delete d.overrides[p.piezaId+":"+dep];});
+  if(dep==="montaje"&&d.overrides){covered.forEach(p=>{["color","sonido","vfx","mograph"].forEach(dd=>{const pz=d.piezas.find(x=>x.id===p.piezaId);if(pz&&(pz.deptos||[]).includes(dd)&&pieceStateInDep(p.piezaId,dd).st==="done")d.overrides[p.piezaId+":"+dd]={st:"rev",reason:"montaje re-entregó → revisa si afecta"};});});}
+  closeDelivery();render();toast(`Entrega #${ronda} subida y enviada a validación`);
+}
+
+/* ===== SPECS MODAL ===== */
+let specsCtx=null;
+function openSpecs(piezaId){const d=DATA.relleno;const p=d.piezas.find(x=>x.id===piezaId);if(!p)return;specsCtx={piezaId,draft:JSON.parse(JSON.stringify({dur:p.dur,axes:p.axes,excluded:p.excluded||[]}))};document.getElementById("specsTitle").textContent=`Specs de entrega — ${p.name}`;renderSpecsBody();document.getElementById("specsModal").classList.add("open");}
+function renderSpecsBody(){const s=specsCtx.draft;document.getElementById("specsBody").innerHTML=`${durField(s.dur)}<div class="field"><label>Ejes de variación <span class="help">cada eje multiplica los entregables</span></label><div id="axisList">${(s.axes||[]).map((a,i)=>axisHTML(a,i)).join("")||'<div class="muted" style="font-size:12px;margin-bottom:8px">Sin ejes: 1 entregable único.</div>'}</div><div class="addaxis" id="addAxis">${AXIS_PRESETS.map((ap,i)=>`<button data-addaxis="${i}">＋ ${ap.name}</button>`).join("")}<button data-addaxis="custom">＋ Eje personalizado</button></div></div>${delivSummary(s)}<div class="friction-note">Solo duración y ejes. Lo creativo (textos, color, sonido) vive en cada departamento.</div>`;wireSpecs();}
+function durField(dur){const mode=dur.mode||"exact";let inputs="";if(mode==="exact")inputs=`<input type="text" id="durA" class="short" value="${dur.a||''}" placeholder="0:30"><span class="faint" style="font-size:12px">mm:ss</span>`;else if(mode==="range")inputs=`<input type="text" id="durA" class="short" value="${dur.a||''}" placeholder="0:30"><span class="faint">a</span><input type="text" id="durB" class="short" value="${dur.b||''}" placeholder="0:40">`;else inputs=`<span class="faint" style="font-size:12.5px">Sin duración cerrada.</span>`;return `<div class="field"><label>Duración objetivo</label><div class="dur-modes" id="durModes"><button data-durmode="exact" aria-pressed="${mode==='exact'}">Exacta</button><button data-durmode="range" aria-pressed="${mode==='range'}">Rango</button><button data-durmode="free" aria-pressed="${mode==='free'}">Libre</button></div><div class="dur-inputs">${inputs}</div><div class="ver-check ${mode==='free'?'free':'ok'}" id="durCheck"></div></div>`;}
+function axisHTML(a,i){const vals=a.values.map((v,vi)=>`<span class="vchip">${v}<button data-delval="${i}:${vi}">×</button></span>`).join("");const preset=AXIS_PRESETS.find(ap=>ap.name===a.name);const presetChips=preset?(preset.presetVals||preset.values):[];const quick=presetChips.filter(v=>!a.values.includes(v)).map(v=>`<button data-quickval="${i}:${v}" style="font-size:11px;color:var(--ink-mut);background:transparent;border:1px dashed var(--rule);border-radius:6px;padding:5px 9px">+ ${v}</button>`).join("");return `<div class="axis"><div class="axis-head"><span class="an">${a.name}</span><button class="ax-del" data-delaxis="${i}">quitar eje</button></div><div class="axval">${vals}<span class="addval"><input type="text" data-newval="${i}" placeholder="valor"><button data-addval="${i}">＋</button></span></div>${quick?`<div class="axval" style="margin-top:7px">${quick}</div>`:''}</div>`;}
+function delivSummary(s){const all=combos({axes:s.axes});const ex=new Set(s.excluded||[]);const n=all.filter(c=>!ex.has(comboKey(c))).length;const items=all.map(c=>{const k=comboKey(c);const cut=ex.has(k);return `<div class="deliv-item ${cut?'cut':''}"><div class="di-tags">${c.map(v=>`<span class="di-tag">${v}</span>`).join("")}</div><button class="di-toggle" data-cut="${k}">${cut?'incluir':'quitar'}</button></div>`;}).join("");return `<div class="deliv-summary"><div class="dh"><div><span class="big mono">${n}</span> <span class="lbl">entregable${n!==1?'s':''} que generará esta pieza</span></div></div><div class="deliv-grid">${items}</div><div class="lbl" style="margin-top:8px;font-size:11px;color:var(--ink-faint)">Quita las combinaciones que no se cruzan.</div></div>`;}
+function wireSpecs(){const s=specsCtx.draft;document.querySelectorAll('#durModes button').forEach(b=>b.addEventListener('click',()=>{s.dur.mode=b.dataset.durmode;renderSpecsBody();}));const durA=document.getElementById('durA'),durB=document.getElementById('durB');function chk(){const c=document.getElementById('durCheck');const decl="1:00";if(s.dur.mode==='free'){c.className="ver-check free";c.innerHTML="No se valida duración (libre).";return;}if(durA)s.dur.a=durA.value;if(durB)s.dur.b=durB.value;const dv=parseDur(decl);let ok=false,txt="";if(s.dur.mode==='exact'){ok=dv===parseDur(s.dur.a);txt=ok?`El export declara <b class="mono">&nbsp;${decl}&nbsp;</b> → cumple`:`El export declara <b class="mono">&nbsp;${decl}&nbsp;</b> → no cumple <b class="mono">&nbsp;${s.dur.a||'—'}&nbsp;</b>`;}else{const a=parseDur(s.dur.a),b=parseDur(s.dur.b);ok=dv>=a&&dv<=b;txt=ok?`El export declara <b class="mono">&nbsp;${decl}&nbsp;</b> → dentro de ${s.dur.a}–${s.dur.b}`:`El export declara <b class="mono">&nbsp;${decl}&nbsp;</b> → fuera de ${s.dur.a}–${s.dur.b}`;}c.className="ver-check "+(ok?"ok":"bad");c.innerHTML=txt;if(durA)durA.classList.toggle('bad',!ok&&s.dur.mode==='exact');}if(durA)durA.addEventListener('input',chk);if(durB)durB.addEventListener('input',chk);chk();
+  document.querySelectorAll('[data-delval]').forEach(b=>b.addEventListener('click',()=>{const[i,vi]=b.dataset.delval.split(':').map(Number);s.axes[i].values.splice(vi,1);renderSpecsBody();}));
+  document.querySelectorAll('[data-addval]').forEach(b=>b.addEventListener('click',()=>{const i=+b.dataset.addval;const inp=document.querySelector(`[data-newval="${i}"]`);const v=inp.value.trim();if(v)s.axes[i].values.push(v);renderSpecsBody();}));
+  document.querySelectorAll('[data-newval]').forEach(inp=>inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const i=+inp.dataset.newval;const v=inp.value.trim();if(v){s.axes[i].values.push(v);renderSpecsBody();}}}));
+  document.querySelectorAll('[data-quickval]').forEach(b=>b.addEventListener('click',()=>{const raw=b.dataset.quickval;const idx=raw.indexOf(':');const i=+raw.slice(0,idx);const v=raw.slice(idx+1);if(!s.axes[i].values.includes(v))s.axes[i].values.push(v);renderSpecsBody();}));
+  document.querySelectorAll('[data-delaxis]').forEach(b=>b.addEventListener('click',()=>{s.axes.splice(+b.dataset.delaxis,1);s.excluded=[];renderSpecsBody();}));
+  document.querySelectorAll('[data-addaxis]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.addaxis;if(v==='custom'){const name=prompt("Nombre del eje (ej. Soporte, Plataforma):");if(name&&name.trim())s.axes.push({name:name.trim(),values:[]});}else{const ap=AXIS_PRESETS[+v];if(!s.axes.find(a=>a.name===ap.name))s.axes.push({name:ap.name,values:ap.values.slice()});}s.excluded=[];renderSpecsBody();}));
+  document.querySelectorAll('[data-cut]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.cut;const i=s.excluded.indexOf(k);if(i>=0)s.excluded.splice(i,1);else s.excluded.push(k);renderSpecsBody();}));
+}
+function closeSpecs(){document.getElementById("specsModal").classList.remove("open");specsCtx=null;}
+function saveSpecs(){if(!specsCtx)return;const p=DATA.relleno.piezas.find(x=>x.id===specsCtx.piezaId);p.dur=specsCtx.draft.dur;p.axes=specsCtx.draft.axes;p.excluded=specsCtx.draft.excluded;closeSpecs();render();toast("Specs guardadas");}
+
+/* ===== NEW PIECE ===== */
+let pieceCtx=null;
+function openPiece(){pieceCtx={name:"",kind:"CÁPSULA",durMode:"exact",durA:"0:20",durB:""};renderPieceBody();document.getElementById("pieceModal").classList.add("open");setTimeout(()=>{const n=document.getElementById("npName");if(n)n.focus();},50);}
+function renderPieceBody(){const c=pieceCtx;document.getElementById("pieceBody").innerHTML=`<div class="field"><label>Nombre de la pieza</label><input type="text" id="npName" value="${c.name}" placeholder="Ej: Cápsula 5, Teaser"></div><div class="field"><label>Tipo</label><div class="kindpick" id="npKind"><button data-kind="PIEZA MADRE" aria-pressed="${c.kind==='PIEZA MADRE'}">Pieza madre</button><button data-kind="CÁPSULA" aria-pressed="${c.kind==='CÁPSULA'}">Cápsula</button><button data-kind="OTRO" aria-pressed="${c.kind==='OTRO'}">Otro</button></div></div><div class="field"><label>Duración objetivo</label><div class="dur-modes" id="npDurModes"><button data-npdur="exact" aria-pressed="${c.durMode==='exact'}">Exacta</button><button data-npdur="range" aria-pressed="${c.durMode==='range'}">Rango</button><button data-npdur="free" aria-pressed="${c.durMode==='free'}">Libre</button></div><div class="dur-inputs">${c.durMode==='free'?'<span class="faint" style="font-size:12.5px">Sin duración cerrada.</span>':(c.durMode==='range'?`<input type="text" id="npDurA" class="short" value="${c.durA}" placeholder="0:30"><span class="faint">a</span><input type="text" id="npDurB" class="short" value="${c.durB}" placeholder="0:40">`:`<input type="text" id="npDurA" class="short" value="${c.durA}" placeholder="0:30">`)}</div></div><div class="friction-note">Arranca con relación de aspecto 16:9; después agregas más ejes en “Editar specs”.</div>`;document.querySelectorAll('#npKind button').forEach(b=>b.addEventListener('click',()=>{c.kind=b.dataset.kind;renderPieceBody();}));document.querySelectorAll('#npDurModes button').forEach(b=>b.addEventListener('click',()=>{c.durMode=b.dataset.npdur;renderPieceBody();}));const a=document.getElementById('npDurA'),b=document.getElementById('npDurB'),n=document.getElementById('npName');if(a)a.addEventListener('input',()=>c.durA=a.value);if(b)b.addEventListener('input',()=>c.durB=b.value);if(n)n.addEventListener('input',()=>c.name=n.value);}
+function closePiece(){document.getElementById("pieceModal").classList.remove("open");pieceCtx=null;}
+function createPiece(){const c=pieceCtx;const name=(c.name||"").trim();if(!name){toast("Ponle un nombre a la pieza");return;}const id="p"+Date.now();curData().piezas.push({id,name,kind:c.kind,dur:{mode:c.durMode,a:c.durA,b:c.durB},axes:[{name:"Relación de aspecto",values:["16:9"]}],excluded:[],deptos:["montaje","color","sonido"]});closePiece();render();toast(`Pieza “${name}” creada`);}
+
+/* ===== DEPT INSTRUCTIONS ===== */
+let instrCtx=null;
+function openInstr(depId){const d=curData();if(!d.deptInstr)d.deptInstr={};const name=depId==="conform"?"Conformado / Online":depName(depId);instrCtx={depId,text:d.deptInstr[depId]||""};document.getElementById("instrTitle").textContent=`Instrucciones madre — ${name}`;const hints={mograph:"Textos en pantalla, segundo o rango donde aparecen, estilo, animación, referencias.",color:"LUT base, look, consistencia.",montaje:"Estructura, duración, momentos clave.",sonido:"Mezcla, música, referencias.",vfx:"Planos a intervenir, limpieza.",conform:"Formatos de master, codecs."};document.getElementById("instrSub").textContent="Guía base del postproductor para este departamento.";document.getElementById("instrBody").innerHTML=`<div class="field"><label>Instrucciones <span class="help">${hints[depId]||""}</span></label><textarea id="instrText" style="min-height:150px">${instrCtx.text.replace(/</g,'&lt;')}</textarea></div>${depId==='mograph'?'<div class="friction-note">Aquí viven los textos en pantalla y sus tiempos — sacados de los specs, que ahora solo guardan lo estructural.</div>':''}`;const ta=document.getElementById('instrText');ta.addEventListener('input',()=>instrCtx.text=ta.value);document.getElementById("instrModal").classList.add("open");setTimeout(()=>ta.focus(),50);}
+function closeInstr(){document.getElementById("instrModal").classList.remove("open");instrCtx=null;}
+function saveInstr(){if(!instrCtx)return;const d=curData();if(!d.deptInstr)d.deptInstr={};d.deptInstr[instrCtx.depId]=instrCtx.text;closeInstr();render();toast("Instrucciones guardadas");}
+
+/* ===== COMMENTS ===== */
+function sendComment(){const d=curData();const piece=document.getElementById('cmPiece').value;const dep=document.getElementById('cmDep').value;const text=document.getElementById('cmText').value.trim();if(!text){toast("Escribe un comentario");return;}if(!d.threads)d.threads=[];d.threads.unshift({who:STATE.role,role:roleLabelShort(),when:"recién",piece,route:dep,text});render();toast("Comentario ruteado a "+depName(dep));}
+function roleLabelShort(){const r=VIEW_ROLES.find(x=>x.id===STATE.role);if(!r)return"";if(r.kind==="post")return"Postproductor";if(r.kind==="lector")return"Director";return depName(r.dep);}
+
+/* ===== VERSIÓN HACIA CLIENTE ===== */
+function renderClientBar(){
+  const d=curData();const el=document.getElementById("clientBar");
+  if(!d||!d.piezas.length){el.innerHTML="";return;}
+  const v=d.vCliente||1;const est=d.clienteEstado||"preparando";const isPost=VIEW_ROLES.find(x=>x.id===STATE.role).kind==="post";
+  let statusTxt,statusColor,action="";
+  if(est==="preparando"){const pend=pendingDeliveries().length;statusTxt=`en preparación interna${pend?` · ${pend} entrega${pend>1?'s':''} por validar`:' · todo validado, lista para enviar'}`;statusColor="var(--st-prog)";if(isPost)action=`<button class="btn primary sm" id="sendClientBtn">Enviar v${v} a cliente</button>`;}
+  else{statusTxt="enviada al cliente · esperando sus correcciones";statusColor="var(--st-sent)";if(isPost)action=`<button class="btn primary sm" id="ingestCorrBtn">Ingresar correcciones de cliente</button>`;}
+  el.innerHTML=`<div class="client-bar"><div class="cb-left"><span class="cb-icon">📤</span><div><div class="cb-label">Entrega hacia cliente</div><div class="cb-status" style="color:${statusColor}">${statusTxt}</div></div></div><div class="cb-mid"><span class="cb-vlabel">versión cliente</span><span class="cb-v mono">v${v}</span></div><div class="cb-right">${action}</div></div>`;
+}
+function sendToClient(){const d=curData();d.clienteEstado="enviada";render();toast("Entrega v"+(d.vCliente||1)+" enviada al cliente");}
+let corrCtx=null;
+function openCorrections(){corrCtx={items:[]};renderCorrBody();document.getElementById("corrModal").classList.add("open");}
+function renderCorrBody(){const d=curData();const c=corrCtx;const items=c.items.map((it,i)=>`<div class="corr-item"><select data-corrdep="${i}">${activeMacros().map(m=>`<option value="${m.id}" ${it.depId===m.id?'selected':''}>${m.name}</option>`).join("")}</select><select data-corrpiece="${i}">${d.piezas.map(p=>`<option value="${p.id}" ${it.piezaId===p.id?'selected':''}>${p.name}</option>`).join("")}</select><input type="text" data-corrtext="${i}" value="${(it.text||'').replace(/"/g,'&quot;')}" placeholder="Qué pidió cambiar el cliente"><button data-corrdel="${i}">×</button></div>`).join("");document.getElementById("corrBody").innerHTML=`<p class="muted" style="font-size:12.5px;margin:4px 0 12px">El cliente revisó la <b style="color:var(--ink-2)">v${d.vCliente}</b>. Ingresa sus correcciones y marca qué departamento corrige cada una. Esto crea la <b style="color:var(--ink-2)">v${d.vCliente+1}</b>: solo los departamentos marcados se reactivan, el resto queda como estaba. Una corrección de <b>Montaje</b> dispara la cascada (Color, Sonido, VFX revisan).</p><div class="corr-list">${items||'<div class="muted" style="font-size:12px;margin-bottom:10px">Sin correcciones aún. Agrega la primera.</div>'}</div><button type="button" class="addextra" id="corrAdd">＋ Agregar corrección</button>`;wireCorr();}
+function wireCorr(){const c=corrCtx;document.querySelectorAll('[data-corrdep]').forEach(s=>s.addEventListener('change',()=>{c.items[+s.dataset.corrdep].depId=s.value;}));document.querySelectorAll('[data-corrpiece]').forEach(s=>s.addEventListener('change',()=>{c.items[+s.dataset.corrpiece].piezaId=s.value;}));document.querySelectorAll('[data-corrtext]').forEach(inp=>inp.addEventListener('input',()=>{c.items[+inp.dataset.corrtext].text=inp.value;}));document.querySelectorAll('[data-corrdel]').forEach(b=>b.addEventListener('click',()=>{c.items.splice(+b.dataset.corrdel,1);renderCorrBody();}));const add=document.getElementById('corrAdd');if(add)add.addEventListener('click',()=>{const d=curData();c.items.push({depId:activeMacros()[0].id,piezaId:d.piezas[0].id,text:""});renderCorrBody();});}
+function closeCorrections(){document.getElementById("corrModal").classList.remove("open");corrCtx=null;}
+function applyCorrections(){const d=curData();const c=corrCtx;const valid=c.items.filter(it=>it.text.trim());if(!valid.length){toast("Agrega al menos una corrección con texto");return;}d.vCliente=(d.vCliente||1)+1;d.clienteEstado="preparando";d.cascadeOrigin="correcciones de cliente (v"+d.vCliente+")";if(!d.overrides)d.overrides={};if(!d.threads)d.threads=[];valid.forEach(it=>{d.overrides[it.piezaId+":"+it.depId]={st:"act",reason:"corrección de cliente: "+it.text.trim()};d.threads.unshift({id:"t"+Date.now()+Math.floor(Math.random()*1e4),who:"boromir",role:"PE / cliente",when:"recién",piece:pieceName(it.piezaId),route:it.depId,text:"Corrección de cliente (v"+d.vCliente+"): "+it.text.trim(),replies:[]});if(it.depId==="montaje"){const p=d.piezas.find(x=>x.id===it.piezaId);["color","sonido","vfx","mograph"].forEach(dep=>{if((p.deptos||[]).includes(dep)&&!d.overrides[it.piezaId+":"+dep])d.overrides[it.piezaId+":"+dep]={st:"rev",reason:"montaje cambió por cliente → revisar"};});}});closeCorrections();render();toast("Correcciones ingresadas · ahora preparamos la v"+d.vCliente);}
+
+/* ===== RECHAZO ARGUMENTADO ===== */
+let rejCtx=null;
+function openReject(kind,dep,delId,pid){rejCtx={kind,dep,delId,pid,text:""};const label=kind==="piece"?pieceName(pid):"entrega #"+rondaOf(dep,delId);document.getElementById("rejTitle").textContent="Rechazar "+label;document.getElementById("rejBody").innerHTML=`<div class="field"><label>Motivo del rechazo <span class="help">obligatorio — no hay rechazo sin argumento</span></label><textarea id="rejText" style="min-height:110px" placeholder="Explica qué está mal y qué esperas. Ej: el azul del logo se ve apagado, recupera el azul Michelin de la referencia."></textarea></div><div class="friction-note">Esto vuelve a ${PEOPLE[findDelivery(dep,delId)?findDelivery(dep,delId).who:'']?PEOPLE[findDelivery(dep,delId).who].name.split(' ')[0]:'el responsable'} como comentario ruteado a ${depName(dep)}, para que sepa exactamente qué corregir — y pueda responder si no se puede.</div>`;const ta=document.getElementById('rejText');ta.addEventListener('input',()=>rejCtx.text=ta.value);document.getElementById("rejModal").classList.add("open");setTimeout(()=>ta.focus(),50);}
+function closeReject(){document.getElementById("rejModal").classList.remove("open");rejCtx=null;}
+function applyReject(){const c=rejCtx;if(!c||!c.text.trim()){toast("Escribe el motivo del rechazo");return;}const d=curData();const del=findDelivery(c.dep,c.delId);if(!del){closeReject();return;}const targets=c.kind==="piece"?[c.pid]:del.pieces.filter(pe=>pe.st==="sent").map(pe=>pe.piezaId);targets.forEach(pid=>{const pe=del.pieces.find(x=>x.piezaId===pid);if(pe){pe.st="rej";pe.rejReason=c.text.trim();}});if(!d.threads)d.threads=[];targets.forEach(pid=>{d.threads.unshift({id:"t"+Date.now()+pid,who:STATE.role,role:roleLabelShort(),when:"recién",piece:pieceName(pid),route:c.dep,text:"Rechazo: "+c.text.trim(),replies:[]});});closeReject();render();toast("Rechazo enviado con tu argumento");}
+
+/* ===== RESPUESTAS A COMENTARIOS ===== */
+function sendReply(tid){const inp=document.querySelector(`[data-replyinput="${tid}"]`);if(!inp)return;const text=inp.value.trim();if(!text){toast("Escribe tu respuesta");return;}const d=curData();const t=(d.threads||[]).find(x=>x.id===tid);if(!t)return;if(!t.replies)t.replies=[];t.replies.push({who:STATE.role,role:roleLabelShort(),when:"recién",text});STATE.replyingTo=null;STATE.expandedThreads.add(tid);render();toast("Respuesta enviada");}
+
+/* ===== RENDER MASTER ===== */
+function rolesForView(){return ROLE_VIEWS[VIEW_ROLES.find(x=>x.id===STATE.role).kind]||[];}
+function ensureValidView(){const vs=rolesForView().map(v=>v[0]);if(!vs.includes(STATE.view))STATE.view=vs[0];}
+function renderSubnav(){document.getElementById("subnav").innerHTML=rolesForView().map(([id,label,stub])=>`<button role="tab" data-view="${id}" aria-selected="${STATE.view===id}">${label}${stub?'<span class="stub-tag">stub</span>':''}</button>`).join("");}
+function render(){
+  ensureValidView();const r=VIEW_ROLES.find(x=>x.id===STATE.role);const rb=document.getElementById("roleBanner");
+  let scope;if(r.kind==="post")scope="Ve todo el módulo · valida entregas · asigna sub-responsables";else if(r.kind==="lector")scope="Lectura + comentarios de todo el proyecto · no edita ni sube";else scope=`Su home es <b>Mi trabajo</b> · ve solo ${depName(r.dep)} · puede asomarse al resto en lectura`;
+  rb.innerHTML=`${av(r.id,'big')}<span>Viendo como <b>${PEOPLE[r.id].name}</b></span><span class="scope faint">${scope}</span>`;
+  renderSubnav();renderClientBar();
+  ["trabajo","mitrabajo","nodos","validaciones","productora"].forEach(v=>document.getElementById("view-"+v).hidden=(STATE.view!==v));
+  if(STATE.view==="trabajo")renderTrabajo();if(STATE.view==="mitrabajo")renderMiTrabajo();if(STATE.view==="nodos")renderNodos();if(STATE.view==="validaciones")renderValidaciones();if(STATE.view==="productora")renderProductora();
+  document.querySelectorAll("#segData button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ds===STATE.ds));
+}
+
+/* ===== EVENTS ===== */
+function initRoleSelect(){const sel=document.getElementById("roleSel");sel.innerHTML=VIEW_ROLES.map(r=>`<option value="${r.id}">${r.label}</option>`).join("");sel.value=STATE.role;sel.addEventListener("change",()=>{STATE.role=sel.value;ensureValidView();render();});}
+document.getElementById("segData").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;STATE.ds=b.dataset.ds;render();});
+document.getElementById("subnav").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;STATE.view=b.dataset.view;render();});
+document.body.addEventListener("click",e=>{
+  const node=e.target.closest("[data-node]");if(node){STATE.selNode=node.dataset.node;renderNodos();return;}
+  const instr=e.target.closest("[data-instr]");if(instr){openInstr(instr.dataset.instr);return;}
+  const sp=e.target.closest("[data-specs]");if(sp){openSpecs(sp.dataset.specs);return;}
+  const dv=e.target.closest("[data-deliv]");if(dv){openDelivery(dv.dataset.deliv);return;}
+  if(e.target.id==="addPieceBtn"||e.target.id==="emptyCta"){openPiece();return;}
+  const cc=e.target.closest("[data-colcfg]");if(cc){STATE.showColCfg=!STATE.showColCfg;render();return;}
+  const ct=e.target.closest("[data-coltoggle]");if(ct){const m=MACROS.find(x=>x.id===ct.dataset.coltoggle);if(m&&!m.always)m.on=!m.on;render();return;}
+  if(e.target.id==="cmSend"){sendComment();return;}
+  const mc=e.target.closest("[data-mictx]");if(mc){STATE.miContext=!STATE.miContext;render();return;}
+  const ol=e.target.closest("[data-openlink]");if(ol){toast("Abriendo el material en "+(ol.dataset.openlink||"el enlace")+" (Frame.io/WeTransfer)");return;}
+  const exp=e.target.closest("[data-expand]");if(exp){STATE.expandedThreads.add(exp.dataset.expand);render();return;}
+  const col=e.target.closest("[data-collapse]");if(col){STATE.expandedThreads.delete(col.dataset.collapse);render();return;}
+  const rep=e.target.closest("[data-reply]");if(rep){STATE.replyingTo=rep.dataset.reply;STATE.expandedThreads.add(rep.dataset.reply);render();const inp=document.querySelector(`[data-replyinput="${rep.dataset.reply}"]`);if(inp)inp.focus();return;}
+  const rpc=e.target.closest("[data-replycancel]");if(rpc){STATE.replyingTo=null;render();return;}
+  const rv=e.target.closest("[data-reviewed]");if(rv){const[pid,dp]=rv.dataset.reviewed.split(":");if(curData().overrides)delete curData().overrides[pid+":"+dp];render();toast("Marcado como revisado · sin cambios");return;}
+  const rs=e.target.closest("[data-replysend]");if(rs){sendReply(rs.dataset.replysend);return;}
+  if(e.target.id==="sendClientBtn"){sendToClient();return;}
+  if(e.target.id==="ingestCorrBtn"){openCorrections();return;}
+  // validación por entrega
+  const vp=e.target.closest("[data-valpiece]");if(vp){const[dep,delId,pid]=vp.dataset.valpiece.split("|");setPieceStatus(dep,delId,pid,"done");render();toast("Pieza validada");return;}
+  const rp=e.target.closest("[data-rejpiece]");if(rp){const[dep,delId,pid]=rp.dataset.rejpiece.split("|");openReject("piece",dep,delId,pid);return;}
+  const va=e.target.closest("[data-valall]");if(va){const[dep,delId]=va.dataset.valall.split("|");setDeliveryStatus(dep,delId,"done");render();toast("Entrega validada · cascada disparada");return;}
+  const ra=e.target.closest("[data-rejall]");if(ra){const[dep,delId]=ra.dataset.rejall.split("|");openReject("delivery",dep,delId,null);return;}
+});
+function findDelivery(dep,delId){return (curData().deliveries[dep]||[]).find(x=>x.id===delId);}
+function setPieceStatus(dep,delId,pid,st){const del=findDelivery(dep,delId);if(!del)return;const pe=del.pieces.find(x=>x.piezaId===pid);if(pe)pe.st=st;}
+function setDeliveryStatus(dep,delId,st){const del=findDelivery(dep,delId);if(!del)return;del.pieces.forEach(pe=>{if(pe.st==="sent")pe.st=st;});}
+document.body.addEventListener("keydown",e=>{const node=e.target.closest("[data-node]");if(node&&(e.key==="Enter"||e.key===" ")){e.preventDefault();STATE.selNode=node.dataset.node;renderNodos();}});
+function wireModal(closeBtn,cancelBtn,saveBtn,bgId,closeFn,saveFn){if(closeBtn)document.getElementById(closeBtn).addEventListener("click",closeFn);if(cancelBtn)document.getElementById(cancelBtn).addEventListener("click",closeFn);if(saveBtn)document.getElementById(saveBtn).addEventListener("click",saveFn);document.getElementById(bgId).addEventListener("click",e=>{if(e.target.id===bgId)closeFn();});}
+wireModal("delivClose","delivCancel","delivCreate","delivModal",closeDelivery,createDelivery);
+wireModal("specsClose","specsCancel","specsSave","specsModal",closeSpecs,saveSpecs);
+wireModal("pieceClose","pieceCancel","pieceCreate","pieceModal",closePiece,createPiece);
+wireModal("instrClose","instrCancel","instrSave","instrModal",closeInstr,saveInstr);
+wireModal("rejClose","rejCancel","rejConfirm","rejModal",closeReject,applyReject);
+wireModal("corrClose","corrCancel","corrConfirm","corrModal",closeCorrections,applyCorrections);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeDelivery();closeSpecs();closePiece();closeInstr();closeReject();closeCorrections();}});
+
+initRoleSelect();render();
+</script>
+</body>
+</html>
