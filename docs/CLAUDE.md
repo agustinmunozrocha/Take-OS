@@ -14,7 +14,7 @@ Lo construye **Agustín Muñoz Rocha** (Primate Films / La Hectárea SpA), funda
 
 ## 2. Stack técnico
 
-- **Frontend:** un solo archivo HTML grande (~25.000 líneas) con **JavaScript puro** (sin framework).
+- **Frontend:** un solo archivo HTML grande (~25.000 líneas) con **JavaScript puro** (sin framework). El archivo canónico vive en la **raíz del repo (`/index.html`)** — GitHub Pages publica desde la raíz, por eso vive ahí y no en `frontend/`. La carpeta `frontend/` queda con un `.gitkeep` (vacía por ahora). *Cuando arranque la modularización con Vite, `frontend/` se reestructura y esta regla cambia — actualizar entonces.*
 - **Backend:** **Supabase** — PostgreSQL (base), Supabase Auth (identidad), Supabase Storage (archivos), RLS + GRANT (acceso) y **RPCs / Edge Functions para la lógica crítica**.
 - **Multi-tenant:** `organization_id` en toda tabla de negocio.
 
