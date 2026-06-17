@@ -22,11 +22,13 @@ Lo construye **Agustín Muñoz Rocha** (Primate Films / La Hectárea SpA), funda
 
 La verdad del proyecto vive en tres documentos. **Léelos antes de proponer cambios de fondo.** Si un cambio contradice uno de ellos, **levanta la contradicción, no la resuelvas en silencio.**
 
-- **PRD** (`TakeOS_PRD_V3_4.md`) — qué es TakeOS y por qué. **Manda en producto y dominio.**
-- **ADR** (`TakeOS_ADR_Backend_v1_6.md`) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
-- **Roadmap** (`TakeOS_Roadmap_Operativo_v1_5.md`) — en qué orden, cuándo y quién. **Manda en ejecución.**
+- **PRD** (`TakeOS_PRD_V3_5.md`) — qué es TakeOS y por qué. **Manda en producto y dominio.**
+- **ADR** (`TakeOS_ADR_Backend_v1_7.md`) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
+- **Roadmap** (`TakeOS_Roadmap_Operativo_v1_6.md`) — en qué orden, cuándo y quién. **Manda en ejecución.**
 
 Ante choque: PRD en producto → ADR en técnica → **Agustín arbitra.**
+
+> **Documento relacionado (no es del trío de autoridad):** `TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_3.md` — registra la **infraestructura** (BD en código, entornos producción/staging) y el **flujo de trabajo de equipo** (Git, ramas, Pull Requests, quién hace qué). Consúltalo para *cómo* se construye y se publica; no manda sobre producto/técnica/ejecución (eso sigue siendo PRD/ADR/Roadmap).
 
 ---
 

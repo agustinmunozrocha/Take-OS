@@ -1,12 +1,24 @@
 # TakeOS — Roadmap Operativo y Modelo de Trabajo entre Chats
 
-**Versión:** 1.5
+**Versión:** 1.6
 **Fecha:** Junio 2026
 **Autor:** Agustín Ignacio Muñoz Rocha · La Hectárea SpA / Primate Films
 **Asesoría:** arquitectura de backend
 **Estado:** Borrador para revisión.
 
-> **Documento canónico.** Versiónalo y consolídalo como el PRD y el ADR (ver §4). Esta es la v1.5.
+> **Documento canónico.** Versiónalo y consolídalo como el PRD y el ADR (ver §4). Esta es la v1.6.
+
+---
+
+## Changelog — v1.5 → v1.6
+
+- **§2 Fase B — Prioridad #1 y #2 cerradas.** La base quedó **"en código"** (5 migraciones, reproducible) y el **entorno de prueba** está levantado como **branch de Supabase** (`staging`); la **seguridad basal del beta** se cerró. Correcciones de estado: el **motor de organización activa ya está construido** (V10.9.0, no era bloqueador pendiente), el **XSS ya estaba cerrado** (no requería parche) y el **toggle de registro está cerrado**. Lo que queda para Gate B es el **RLS real por organización y rol** + validación multi-org (QA).
+- **§2 Fase C — Backlog de endurecimiento + `frame-ancestors`** sumados como requisito antes del beta externo (ADR-024); pen-test externo ya desbloqueado del todo.
+- **§2 Fase D — Beta sin fecha fija; duración aprox. ~4 meses** (antes 6). Las fechas quedan **en definición**; el **One-Pager de Planes** (fuente viva) reconcilia precio y duración. Early Bird ~3 meses (sin cambio).
+- **§5.1 Conector de Supabase — protocolo reescrito.** Ya no se escriben cambios por el SQL Editor con checkpoints: **todo cambio de BD va por migración** (flujo en código, ADR-023); **nunca** un cambio directo a producción por el conector MCP (solo lectura/inspección y pruebas en transacción revertida).
+- **§4 — Juan de la Cuadra entra como CTO** y cambia el flujo de trabajo del frontend: **ya no se reescribe el `index.html` entero en un chat**, se trabaja en **Code** (Git + ramas + PR). Awareness del nuevo chat **Flujo de Trabajo y Metodología** (Juan + Agustín).
+- **§4.6 — Mundo de ejemplo: corregido a *ambos*** (El Señor de los Anillos **y** Game of Thrones); la base de prueba usa nombres de ambos mundos.
+- **§7 — Nota de horizonte técnico:** posible **MCP server de solo lectura** para un Reporte de Cierre analítico (sin compromiso de fecha ni de pricing).
 
 ---
 
@@ -95,8 +107,9 @@ Implementar el sistema de perfiles del handoff de permisos: `memberships`, `perm
 - [ ] El front oculta lo que el perfil no puede ver (UX), pero el backend lo niega (seguridad) — probado intentando saltarse la UI.
 - [ ] Cada tabla nueva con su GRANT (gotcha del handoff).
 
-> **Estado a junio 2026 (handoff BD Expert).** La **arquitectura multi-tenant está 100% lista en la base de datos**. El **único bloqueador real** para operar con varias organizaciones es el **motor de organización activa en el cliente** (dev, en desarrollo desde la V10.7.0+): reemplazar el `ORG_ID` fijo por la organización que se deriva de la membresía activa del usuario. En la base ya están listas las funciones de aprovisionamiento (`seed_permisos_organizacion` y `provisionar_organizacion`) y queda pendiente `consentir_invitacion`, que espera la aprobación legal del Instrumento 2 (ver Fase C). Detalle técnico en el ADR.
-> **Pen-test interno: cerrado desde la base de datos.** Todos los hallazgos de BD remediados y verificados. Pendiente del dev: el parche de XSS (#6, ya en la V10.7.1). Pendiente de Agustín: confirmar el toggle de registro cerrado en el panel de Auth.
+> **Estado a junio 2026 (handoffs BD Expert + Code).** El **motor de organización activa en el cliente ya está construido** (`_setOrgActiva`, desde la V10.9.0): deriva la organización de la membresía activa del usuario y reemplaza el `ORG_ID` fijo, con una bandera que impide mostrar el Control Room a un usuario sin empresa. Lo que **queda para cerrar el Gate B** es el **RLS real por organización y por rol** (reemplazar las `mvp_`) y la **validación del aislamiento con varias organizaciones** (QA). En la base ya están las funciones de aprovisionamiento (ahora **autocontenidas**, ADR-022) y queda pendiente `consentir_invitacion`, que espera la aprobación legal del Instrumento 2 (ver Fase C). Detalle técnico en el ADR.
+> **Infraestructura endurecida (Prioridad #1 y #2, cerradas).** La base quedó **"en código"** (5 migraciones, reproducible) y el **entorno de prueba** está levantado como **branch de Supabase** (`staging`); la **seguridad basal del beta** se cerró (contraseñas filtradas, toggle de registro, OAuth External, CSP, revocación de funciones internas, auditoría dirigida). El detalle vive en el documento de **Arquitectura y Flujo de Trabajo v1.3**.
+> **Pen-test interno: cerrado.** Todos los hallazgos de BD remediados y verificados. El **XSS ya estaba cerrado** (la función `safeUrl` es robusta; no requería parche) y el **toggle de registro está cerrado** (hecho por Agustín).
 > **Hallazgos de testing a corregir (pulido de MVP).** Probando el software aparecieron dos cosas que arreglar, ninguna grave pero ambas visibles para el usuario:
 > 1. **La página siempre vuelve al panel personal al refrescar.** Probado con varios usuarios y de varias maneras: al recargar, a un usuario externo lo lleva a su panel personal y a un interno de Primate al Control Room, sin importar dónde estaba. Lo deseable es que el refresco **te deje donde estabas** (si estabas dentro de un proyecto, en Documentos, que vuelvas ahí). Trabajo del dev (frontend).
 > 2. **La cuenta bancaria acepta cualquier número.** En una prueba, un invitado se creó el perfil y puso números al azar en la cuenta bancaria, y el sistema lo dejó guardar. Falta **validación / estándares de cuentas bancarias** en la base de datos, para que no se pueda guardar cualquier cosa. (Caso concreto del ítem transversal "validación de contenido a nivel de campo"; ver ADR.)
@@ -110,16 +123,17 @@ Implementar el sistema de perfiles del handoff de permisos: `memberships`, `perm
 - [ ] **Decisión de acceso del fundador (ADR-A)** tomada: modelo de no-abuso (break-glass + audit + reputación + legal) y, idealmente, **separación societaria** de TakeOS + términos de servicio y consentimiento claros para las productoras beta.
 - [ ] **Aprobación legal de los dos instrumentos.** Existen en borrador (`terminos-cuenta-2026-06-09-v0.1-borrador` y `consentimiento-incorporacion-2026-06-09-v0.1-borrador`) y **no son aptos para producción ni venta** hasta que un abogado habilitado los apruebe.
 - [ ] **Cinco flujos de derechos del titular construidos** (Ley 21.719): (1) borrado/supresión de cuenta, (2) exportación/portabilidad, (3) revocar el consentimiento de incorporación a una productora, (4) verificación de edad (si aplica) y (5) aviso de cookies/analytics. *Prometer un derecho que la UI no entrega es, en sí mismo, un riesgo legal.*
+- [ ] **Backlog de endurecimiento cerrado** (antes del beta externo): revocar a `anon` el `EXECUTE` en las RPC de escritura como capa externa, fijar `search_path` en ~11 funciones utilitarias, decidir la policy de `app_config`, y resolver el header **`frame-ancestors`** (anti-clickjacking) del hosting. Sin hallazgos críticos; es endurecimiento. Detalle en ADR-024 y Arquitectura §6.
 
-**🚪 Gate C — "Listo para datos de terceros":** los seis puntos de arriba, cumplidos y probados. Sin este gate, el beta pone en riesgo lo más caro de todo el plan: la confianza y el cumplimiento legal.
+**🚪 Gate C — "Listo para datos de terceros":** los siete puntos de arriba, cumplidos y probados. Sin este gate, el beta pone en riesgo lo más caro de todo el plan: la confianza y el cumplimiento legal.
 
 > **Estado a junio 2026.** El audit log ya es inmutable desde el cliente y el aislamiento por organización está construido en la base (ver ADR); falta endurecerlo con tests de cruce de tenant que deban fallar. La **infraestructura técnica de cumplimiento** (consentimiento versionado + copia exacta del texto, auditoría inmutable) está lista; lo que bloquea es la **aprobación legal de los textos** y la **construcción de los cinco flujos de derechos**. **Deadline Ley 21.719: 1 de diciembre de 2026 (inamovible).**
-> **Pen-test externo: desbloqueado.** Puede arrancar en cuanto el dev publique el parche XSS y Agustín confirme el registro cerrado en Auth; no necesita esperar a que multi-tenant esté completo.
+> **Pen-test externo: desbloqueado** (el XSS ya estaba cerrado y el registro está cerrado en Auth). Puede arrancar sin esperar a que multi-tenant esté completo.
 
-### Fase D — Beta de feedback con productoras (6 meses)
+### Fase D — Beta de feedback con productoras (~4 meses, en definición)
 Onboarding de un grupo acotado de **productoras amigas**, para feedback y enganche. Inicia el ciclo de evolución circular (§3). **Solo después del Gate C.**
 
-**No es gratuito (corrección desde Marketing/GTM):** el beta cuesta **$1.000/mes durante 6 meses** —precio simbólico aplicado a mano por admin, sin UI pública—. A cambio, condiciones formales: (1) una **reunión cada ~2 meses** (online o presencial, ~30 min) con personas que **efectivamente usan** el software, no solo el dueño; y (2) si se quedan tras el período, un **testimonio** en formato entrevista por videollamada sobre los usos y el cambio operativo. Empieza ~1–2 semanas antes del lanzamiento público y sirve para endurecer el servicio y el sistema de pago.
+**No es gratuito (corrección desde Marketing/GTM):** el beta cuesta **$1.000/mes** durante **~4 meses** (duración aproximada, **aún en definición**) —precio simbólico aplicado a mano por admin, sin UI pública—. A cambio, condiciones formales: (1) una **reunión cada ~2 meses** (online o presencial, ~30 min) con personas que **efectivamente usan** el software, no solo el dueño; y (2) si se quedan tras el período, un **testimonio** en formato entrevista por videollamada sobre los usos y el cambio operativo. Empieza ~1–2 semanas antes del lanzamiento público y sirve para endurecer el servicio y el sistema de pago. **Las fechas y la duración exacta están en definición; el One-Pager de Planes (fuente viva) reconcilia el número final.**
 
 > **Alternativa para empezar antes:** si quieres arrancar el beta sin esperar todo el Gate C, hazlo con **alcance reducido** (productoras no competidoras directas, o sin cargar aún los módulos financieros sensibles) hasta cerrar el gate completo. La regla innegociable: no entran datos bancarios ni márgenes de terceros sin aislamiento probado + audit log.
 
@@ -179,7 +193,7 @@ Y vuelve a empezar.
 **Por qué conviene tener chats aislados (no uno solo que lo haga todo):**
 1. **Especialización.** Cada chat se concentra y se vuelve experto en un solo dominio, en vez de dispersarse en todo.
 2. **Ausencia de sesgo.** Como algunos chats no ven la información de otros, pueden mirar un problema con ojos frescos en lugar de arrastrar el sesgo de una conversación previa.
-3. **Paralelismo.** Se avanza en varias tareas a la vez sin cola: el Dev puede estar en la siguiente versión del HTML mientras el Experto de BD ajusta Supabase y otro chat trabaja en lo suyo. Con un solo chat haciendo todo, habría cuello de botella.
+3. **Paralelismo.** Se avanza en varias tareas a la vez sin cola: el trabajo de un módulo avanza en Code mientras el Experto de BD ajusta Supabase y otro chat trabaja en lo suyo. Con un solo chat haciendo todo, habría cuello de botella.
 
 ### 4.2 Los roles (chats)
 Cada chat es un rol con un alcance definido. No todos están activos siempre; se levanta uno cuando hay trabajo sostenido para él (levantar un chat tiene costo de coordinación).
@@ -187,7 +201,7 @@ Cada chat es un rol con un alcance definido. No todos están activos siempre; se
 | Chat / rol | Alcance | Documento que alimenta |
 |---|---|---|
 | **Asesor / arquitecto** | Decisiones de arquitectura, calibración, supervisión, formación | ADR + Roadmap |
-| **Dev (integración)** | Construir e integrar al OS; recablear datos | Changelog de software + handoffs de vuelta |
+| **Dev (integración)** | Construir e integrar al OS; recablear datos. **Hoy se trabaja en Code** (no reescribiendo el HTML entero en un chat). | Changelog de software + handoffs de vuelta |
 | **Experto de BD** | Esquema, tablas, relaciones, migraciones | Handoff de BD + ADR-005 |
 | **Experto de auth / permisos** | Autenticación, RLS, perfiles | Handoff de permisos + ADR-003/004 |
 | **Asesor legal** | Ley 21.719, contratos, términos, consentimiento | Sección de cumplimiento del PRD + ADR-012/A |
@@ -198,6 +212,10 @@ Cada chat es un rol con un alcance definido. No todos están activos siempre; se
 | **Coworker** | Operar dentro del ordenador de Agustín para tareas concretas. Funciona de dos formas: (1) ejecuta **handoffs** que le entregan otros chats con instrucciones claras de cómo operar; (2) ejecuta lo que **Agustín** le pide en sus propias palabras. | Resultados de ejecución de vuelta a Agustín (no edita documentos canónicos) |
 | **Redactor** | Consolidar los documentos canónicos: cruzar handoffs contra lo vigente, redactar **solo lo que cambia**, versionar y registrar el changelog. No decide producto ni arquitectura; las contradicciones las sube a Agustín. | PRD + ADR + Roadmap (los **versiona**; no los arbitra) |
 | **Orquestador (Agustín)** | Routear, **arbitrar** (decidir ante contradicciones) y dirigir. La consolidación mecánica la delega en el Redactor. | Todos (es quien los gobierna) |
+| **CTO (Juan de la Cuadra)** | Responde por **todo el código**: arquitectura, frontend, backend, BD, integración, entorno de prueba y seguridad (incluye las funciones de **Test Master** y **Pentester**, que dirige). Trabaja en Code con Git + PR. | Estructura de código, staging, PRs revisados (ver Arquitectura y Flujo de Trabajo) |
+| **Flujo de Trabajo y Metodología** | Chat de Juan + Agustín para evaluar el **método de trabajo** del equipo (prácticas DevSecOps, historias de usuario sin ceremonia). | Ajustes al modelo de trabajo (este Roadmap + Arquitectura) |
+
+> **Cambio de método (junio 2026).** Con la entrada de **Juan como CTO** y el trabajo en Git + Code, **el frontend ya no se construye reescribiendo el `index.html` entero en un chat**: se trabaja en **Code**, en ramas cortas con Pull Request revisado, sobre el repositorio. El detalle del flujo de equipo (quién hace qué, ciclo de PR, entornos) vive en **Arquitectura y Flujo de Trabajo v1.3**.
 
 ### 4.3 El protocolo de handoff (cómo entra y sale el trabajo de un chat)
 Cada vez que se activa un chat experto:
@@ -236,7 +254,7 @@ Esta subsección reemplaza a la antigua *Guía de Comunicación con Agustín*, q
 - ❌ `Vamos a crear un RPC con security definer que bypasea el RLS.`
 - ✅ `Vamos a crear una función especial en la base de datos, con privilegios de administrador, para poder escribir datos de forma segura.`
 
-**2. Explica con analogías.** Cuando algo sea abstracto, aterrízalo con una analogía concreta. Importa que la idea llegue, no de qué mundo venga la comparación. *(Si se usa un mundo de ejemplo recurrente para explicar el sistema, el acordado es **El Señor de los Anillos**.)*
+**2. Explica con analogías.** Cuando algo sea abstracto, aterrízalo con una analogía concreta. Importa que la idea llegue, no de qué mundo venga la comparación. *(Si se usa un mundo de ejemplo recurrente para explicar el sistema, los acordados son **ambos: El Señor de los Anillos y Game of Thrones**; la base de datos de prueba usa nombres de los dos mundos.)*
 
 **3. En lo técnico (backend / BD): decide tú, no lo pongas a elegir.** Agustín se declara ignorante en backend y base de datos; darle opciones técnicas lo desorienta porque no tiene base para comparar. El patrón es: (1) **decide** la mejor ruta con tu criterio técnico, (2) **explícale** qué vas a hacer y por qué importa, en simple, (3) **espera su luz verde** antes de proceder.
 - ❌ `¿Prefieres un RPC de verificación o un script de comparación lado cliente?`
@@ -284,20 +302,18 @@ Si el Camino B existe y es más rápido, se toma y se dice explícitamente: *"Ha
 
 Los chats y agentes que construyen TakeOS operan sobre **conectores**: puentes hacia servicios externos. Hoy hay dos —**Supabase** (la base de datos) y **Google Drive** (archivos)— y es probable que aparezcan más. Esta sección fija las reglas de uso. (No confundir con las **integraciones del producto** —correo, Google Calendar, WhatsApp—, que son features para el usuario final y se priorizan en §2.)
 
-### 5.1 Conector de Supabase — protocolo de seguridad (innegociable)
+### 5.1 Conector de Supabase — protocolo (innegociable)
 
-Mensaje para **todos los chats que usan Supabase directamente**:
+Mensaje para **todos los chats y agentes que usan Supabase directamente**. Con la base ya **"en código"** (ADR-023), el protocolo cambió de raíz:
 
-- **Leer:** sin restricción. Se puede consultar con normalidad.
-- **Escribir en el SQL Editor:** permitido, **pero bajo el protocolo de checkpoints** (abajo).
-- **Eliminar o modificar algo grave: jamás.** Bajo ninguna circunstancia un agente borra o altera datos fundamentales —**organizaciones**, estructuras core, configuración crítica—. Se permiten correcciones de datos accidentales o no críticos (p. ej. datos de personas), siempre dentro del protocolo.
+- **Leer / inspeccionar:** sin restricción. Se puede consultar con normalidad.
+- **Cambios de esquema o datos a producción por el conector MCP: jamás.** Ningún agente aplica un cambio directo a la base de producción por el conector. Eso desincronizaría la base respecto del código versionado. **Todo cambio de base de datos va por migración** (archivo versionado → revisión → `db reset` local → merge → `db push`).
+- **Pruebas:** lo que un agente necesite probar contra datos, lo hace en la **branch `staging`** o en una **transacción que se revierte** (`BEGIN … ROLLBACK`), nunca con escritura persistente a producción.
+- **Eliminar o modificar algo grave: jamás.** Bajo ninguna circunstancia un agente borra o altera datos fundamentales —**organizaciones**, estructuras core, configuración crítica—.
 
-**Protocolo de checkpoints.** Cuando una tarea implique escritura, el agente **no ejecuta todo de una pasada**, sobre todo si el objetivo es largo (decenas de pasos):
-1. Dosifica el trabajo en pasos.
-2. Tras cada paso (o bloque), le reporta a Agustín **qué hizo en la pasada** y **qué hará en la siguiente**.
-3. **Espera su luz verde** antes de continuar.
+**Por qué cambió.** El protocolo anterior permitía escribir en el SQL Editor bajo checkpoints. Eso servía cuando la base vivía solo en el servidor; ahora que la base es código reproducible, cualquier escritura fuera de una migración rompe la única fuente de verdad. La regla nueva es más simple y más segura: **el conector es para mirar, no para tocar producción.**
 
-La idea es mantener a Agustín como árbitro y guardián: los agentes son ejecutores **con guardarriel**, no autónomos. *(Coherente con la máquina de estados de membresía y la inmutabilidad del audit log descritas en el ADR.)*
+La idea de fondo se mantiene: Agustín como árbitro y guardián, y los agentes como ejecutores **con guardarriel**, no autónomos. *(Coherente con ADR-023 y con la inmutabilidad del audit log descrita en el ADR.)*
 
 ### 5.2 Conector de Google Drive
 
@@ -320,8 +336,10 @@ Usado para mover y organizar archivos (ver el patrón del Coworker en §4.7). Re
 
 ## 7. El norte, en una frase
 
-Terminar la migración con red (Gate A) → permisos reales para Primate (Gate B) → endurecer para que entren terceros con seguridad y dentro de la ley (Gate C) → beta gratuito que alimenta un ciclo de mejora disciplinado → comercialización. Todo sostenido por un bus de documentos canónicos que los chats leen y alimentan, y que Agustín consolida y versiona.
+Terminar la migración con red (Gate A) → permisos reales para Primate (Gate B) → endurecer para que entren terceros con seguridad y dentro de la ley (Gate C) → beta de pago simbólico que alimenta un ciclo de mejora disciplinado → comercialización. Todo sostenido por un bus de documentos canónicos que los chats leen y alimentan, y que Agustín consolida y versiona.
+
+> **Nota de horizonte técnico (sin compromiso).** Se evalúa, para más adelante, exponer un **MCP server de solo lectura** (una Edge Function acotada) que permita consultar un **Reporte de Cierre analítico** desde herramientas externas. Es solo una posibilidad de horizonte: **no se promete como feature ni entra en pricing**, y es distinto del conector MCP de Supabase (§5.1). Nada de esto se documenta aún en el ADR.
 
 ---
 
-*Documento canónico · v1.5 · Junio 2026 · Primate Films / La Hectárea SpA. Versiónalo y consolídalo como el PRD y el ADR.*
+*Documento canónico · v1.6 · Junio 2026 · Primate Films / La Hectárea SpA. Versiónalo y consolídalo como el PRD y el ADR.*

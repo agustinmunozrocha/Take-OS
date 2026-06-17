@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Versión** | V3.4 |
+| **Versión** | V3.5 |
 | **Fecha** | Junio 2026 |
-| **Estado** | Borrador para aprobación · V3.4 abre la sección **§24 Horizonte** (módulos Post-producción y Home/Vista de pájaro, herramienta gratuita viral, servicio de generadores, fotos de perfil) y registra arreglos de testing · reemplaza V2.0 |
+| **Estado** | Borrador para aprobación · V3.5 sincroniza con la infraestructura ya en código (Prioridad #1 y #2 cerradas): provisión autocontenida, distinción modelo de dominio vs. conteo vivo del esquema, y suma una idea de horizonte (MCP server de solo lectura) · reemplaza V2.0 |
 | **Autor** | Agustín Ignacio Muñoz Rocha |
 | **Razón social** | La Hectárea SpA |
 | **Marca comercial** | Primate Films |
@@ -39,6 +39,8 @@ Este documento es estrictamente confidencial. Su acceso está restringido al equ
 ---
 
 ## 00.B — Changelog · V2.0 → V3.0
+
+> **Actualización V3.5 · junio 2026.** Sincroniza el PRD con la **infraestructura ya en código** (cierre de Prioridad #1 y #2; ver Arquitectura y Flujo de Trabajo v1.3 y ADR v1.7): la **provisión de una organización nueva es autocontenida** (lee de catálogos globales, ya no clona desde Primate — ADR-022), se aclara en §19 la distinción entre el **modelo de dominio (≈24 tablas)** y el **conteo vivo de la base (77 tablas)**, y se suma a **§24 Horizonte** una idea no comprometida: un **MCP server de solo lectura** para un Reporte de Cierre analítico. No cambian el modelo de negocio ni los planes. El resto se mantiene igual al V3.4.
 
 > **Actualización V3.4 · 10 de junio de 2026.** Abre **§24 — Horizonte de producto** (sección nueva; el changelog permanente pasa a §25 y el glosario a §26) y recoge una tanda grande de ideas y hallazgos: dos **módulos nuevos de horizonte** —**Post-producción** (coordinación de los departamentos de post: montaje, sonido, color, VFX, con validación del post-productor) y **Home / Vista de pájaro** del proyecto (nodos + dashboard)—, el refinamiento de **Entregables** (entregas en proceso por enlace externo; entregable final nativo en Supabase), la **herramienta gratuita viral** y el **plan persona natural**, el **servicio de generadores de documentos a pedido**, las **fotos de perfil** y la **app móvil con notificaciones configurables**. Además, dos arreglos detectados en testing (el refresco devuelve siempre al panel personal; la cuenta bancaria acepta cualquier número → validación) y notas de comunicación de los chats (foco en lo que falla; mundo de ejemplo pasa a *El Señor de los Anillos*). Todo lo de §24 está marcado como **idea, no compromiso**. El resto se mantiene igual al V3.3.
 
@@ -697,7 +699,7 @@ El V2 difería casi todo al desarrollador. Eso cambió: la asesoría de backend 
 | **Lógica y validación en backend** | «Nunca confiar en el cliente». Valores derivados se recalculan en servidor; entradas inválidas se rechazan. La validación de front es solo UX. | 002 |
 | **Auth vía Google (OAuth)** | Estándar del rubro. Token verificado en cada request (stateless). Google dice quién eres, no qué puedes. | 003 |
 | **Autorización por rol y estado** | RBAC (rol fijo) + ABAC (depende del estado del recurso). En backend, en cada request. El front solo refleja. | 004 |
-| **Modelo relacional en PostgreSQL** | ≈24 tablas. Relaciones por referencia, no por copia (fuente única de verdad). Soft delete y campos de auditoría. | 005 |
+| **Modelo relacional en PostgreSQL** | ≈24 tablas de **dominio** (la base viva suma **77 en total** con infraestructura, permisos, catálogos y auditoría — ver ADR-005). Relaciones por referencia, no por copia (fuente única de verdad). Soft delete y campos de auditoría. | 005 |
 | **Concurrencia optimista** | Sello de versión por registro. Si dos guardan, el segundo se rechaza y rehace. Nunca pérdida silenciosa. | 006 |
 | **Atomicidad** | Operaciones multi-paso son transacciones (todo o nada). Invariante: **no existe proyecto Cerrado sin Reporte de Cierre.** | 007 |
 | **Versionado** | Con cada exportación acompañada de modificación. Excepción en cotización (manual). Corrige §16/§20. | 008 |
@@ -922,6 +924,12 @@ Que los usuarios tengan **foto de perfil**. Humaniza los equipos y aporta al nor
 ### 24.7 — App móvil con notificaciones configurables *(idea de horizonte)*
 
 Cuando exista la **app de teléfono**, el usuario podrá **personalizar la urgencia** de ciertas notificaciones. Porque estas personas, además del proyecto, tienen otros proyectos y una vida (se van a almorzar, a un café); pero en días de **online / entrega final** no hay tiempo que perder, y una persona que no actúa frena a muchas otras de la cadena. Para esos casos, notificaciones **"gritonas"** (sonidos y vibraciones fuertes y constantes, tipo emergencia), **configurables por el usuario** —nadie puede imponerle a otro una notificación fuerte—. También por **mail** y, cuando esté conectada la **API de WhatsApp**, por WhatsApp.
+
+### 24.8 — MCP server de solo lectura para reportería analítica *(idea de horizonte, sin compromiso)*
+
+Una posibilidad para más adelante: exponer un **MCP server de solo lectura** —una Edge Function acotada— que permita consultar de forma analítica el **Reporte de Cierre** (y quizá otros agregados) desde herramientas externas, sin acceso de escritura a nada. Sería, en la práctica, una "ventana" segura para analizar datos del cierre con asistentes o herramientas de BI.
+
+**Marco explícito:** es **idea de horizonte, no un compromiso**. No se promete como feature ni entra en ningún plan o pricing, y **no se documenta en el ADR** hasta que madure. Es **distinto del conector MCP de Supabase** que usan los chats internos (ese es una herramienta de trabajo del equipo; esto sería una capacidad de producto). Habilitaría análisis sin exponer la base; cualquier diseño concreto se conversa antes de escribir código.
 
 ---
 

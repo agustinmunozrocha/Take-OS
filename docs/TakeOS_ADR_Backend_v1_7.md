@@ -1,14 +1,25 @@
 # TakeOS — ADR de Backend (Architecture Decision Record)
 
-**Versión:** 1.6
+**Versión:** 1.7
 **Fecha:** Junio 2026
 **Autor de las decisiones:** Agustín Ignacio Muñoz Rocha · Primate Films / La Hectárea SpA
 **Asesoría técnica:** sesión de arquitectura de backend
-**Estado del documento:** Borrador alineado al **PRD V3.4** (autoritativo), al **Roadmap Operativo v1.5** y a los **handoffs de BD Expert (V10.7.0–V10.8.0) y Legal**.
+**Estado del documento:** Borrador alineado al **PRD V3.5** (autoritativo), al **Roadmap Operativo v1.6**, al **Arquitectura y Flujo de Trabajo v1.3** y a los **handoffs de BD Expert (cierre de Prioridad #1 y #2) y Code**.
 
-> **Autoridad documental.** Donde el PRD y este ADR hablen del mismo tema, **el PRD manda en lo conceptual y de producto; el ADR manda en lo técnico**. El PRD V3.4 es la fuente de verdad de las decisiones; este documento detalla el *cómo* y el *porqué* técnico. El **Roadmap Operativo v1.5** es el tercer documento canónico: define la secuencia de ejecución y el modelo de trabajo entre chats.
+> **Autoridad documental.** Donde el PRD y este ADR hablen del mismo tema, **el PRD manda en lo conceptual y de producto; el ADR manda en lo técnico**. El PRD V3.5 es la fuente de verdad de las decisiones; este documento detalla el *cómo* y el *porqué* técnico. El **Roadmap Operativo v1.6** define la secuencia de ejecución y el modelo de trabajo entre chats; el **Arquitectura y Flujo de Trabajo v1.3** documenta la infraestructura (BD en código, entornos) y el flujo de equipo.
 
 ---
+
+## Changelog — v1.6 → v1.7
+
+Consolida el cierre de **Prioridad #1 y #2** (handoffs de BD Expert y Code): la base quedó "en código", el entorno de prueba levantado y la seguridad basal del beta cerrada. Alineado a **PRD V3.5**, **Roadmap Operativo v1.6** y **Arquitectura y Flujo de Trabajo v1.3**.
+- **ADR-023 (nuevo) — Base de datos en código.** 5 migraciones versionadas; flujo permanente migración → reset → merge → push; **nunca** cambio directo a producción por el conector MCP.
+- **ADR-024 (nuevo) — Endurecimiento de permisos de ejecución.** Las funciones internas nacen con `REVOKE` (20 revocadas); backlog de advisors (anon EXECUTE en RPC de escritura, `search_path` en ~11 utilitarias, policy de `app_config`) a cerrar antes del beta externo.
+- **ADR-025 (nuevo) — Inmutabilidad financiera al cierre y reporte de cierre.** `frozen` no es inmutable (deuda → futura RPC `cerrar_proyecto`); el `reporte_cierre` debe recalcular desde las líneas y leer el IVA de `tax_rates`, nunca confiar en `frozen` ni en los snapshots.
+- **ADR-022 (reescrito) — Provisión autocontenida.** Las funciones de provisión leen de **5 catálogos globales `default_*`** (144 filas semilla), no de Primate como plantilla; `p_template_org` quedó opcional e ignorado. Un entorno limpio puede crear su primera productora sin depender de Primate.
+- **ADR-015 (actualizado):** staging = **branch de Supabase** (efímera, paga por horas), no un proyecto aparte.
+- **ADR-005 (actualizado):** cifras vivas del esquema (77 tablas / 77 con RLS / 147 políticas / 71 funciones / 31 triggers / 6 extensiones), distinguidas del modelo de dominio conceptual (≈24 tablas).
+- **ADR-004 (actualizado):** enforcement de planes cableado (helper `auth_plan_permite` + guardas en `guardar_proyecto`, `invitar_a_organizacion`, `guardar_pagos_cliente`; `reporte_cierre`/`notificaciones` pendientes).
 
 ## Changelog — v1.5 → v1.6
 
@@ -201,6 +212,8 @@ La autorización se aplica **server-side y vía RLS, en cada request**. El front
 
 **Consecuencias.** Ver PRD §07 para la matriz completa de módulo × perfil. La limitación "BD todo-o-nada" expone datos bancarios a perfiles que no los necesitan — aceptado para MVP de un tenant, debe cerrarse antes del multi-tenant.
 
+**Actualización v1.7 — enforcement de planes cableado.** Además del control de acceso por perfil, el sistema ahora aplica el **plan** de la organización (`organizations.plan`). Existe el helper **`auth_plan_permite`** y guardas en las RPC de escritura: hoy el plan se exige en `guardar_proyecto`, `invitar_a_organizacion` y `guardar_pagos_cliente`. **Pendiente:** cablearlo en `reporte_cierre` y `notificaciones` cuando esas funciones existan. El mapeo "qué capacidad entra en qué plan" es decisión de Marketing + producto (PRD §22).
+
 ---
 
 ## ADR-005 — Modelo de datos relacional en PostgreSQL (esquema de 24 tablas)
@@ -218,6 +231,8 @@ La autorización se aplica **server-side y vía RLS, en cada request**. El front
 - **IDs:** TEXT con prefijo (`ctk_`, `emp_`, `LOC-NN`), UUID para infraestructura (`organizations`). *Deuda:* generación de IDs a server-side (ver ADR-002).
 
 **Actualización v1.5 — el esquema creció más allá de las 24 tablas.** Se incorporaron las tablas de **identidad global** (`user_profiles`, `user_bank_accounts` — ADR-019), **consentimiento** (`data_consents` — ADR-020) y **notificaciones** (`notification_templates`, `notification_sends`, `notification_send_recipients` — ADR-021).
+
+**Actualización v1.7 — cifras vivas del esquema.** Conviene distinguir dos cosas: el **modelo de dominio conceptual** (las ≈24 tablas de negocio que estructuran este ADR) y el **conteo vivo de la base**, que incluye además las tablas de infraestructura, permisos, catálogos globales, auditoría y soporte. Verificado contra producción el 16 jun 2026: **77 tablas / 77 con RLS / 147 políticas / 71 funciones / 31 triggers / 6 extensiones**, y **5 migraciones** registradas (ADR-023). El número grande no contradice el modelo de ≈24: son las mismas entidades de negocio más todo lo que las rodea.
 
 **Hallazgos del build a registrar:**
 - `organizations` tiene `slug` (NOT NULL) y `plan` (default `'free'`), previendo la distinción de plan desde el esquema (ver PRD §22 y ADR-022).
@@ -335,6 +350,8 @@ La autorización se aplica **server-side y vía RLS, en cada request**. El front
 
 **Consecuencias.** El aislamiento depende de que el filtrado por `organization_id` sea correcto siempre: un bug es una fuga entre productoras; testear con rigor antes del SaaS.
 
+**Actualización v1.7 — el motor de organización activa (cliente) ya está construido.** En el frontend existe `_setOrgActiva` (desde la V10.9.0): al entrar, deriva la organización desde la **membresía activa** del usuario y reemplaza el `ORG_ID` que antes era fijo, con una bandera `_TIENE_EMPRESA` que impide mostrar el Control Room a un usuario sin empresa confirmada. **Lo que aún falta (Gate B):** el **RLS real por organización y por rol** (hoy el filtrado se apoya sobre todo en las RPC; el endurecimiento por RLS efectivo es trabajo de Gate B) y la **validación del aislamiento con varias organizaciones** (QA). El dato ya estaba etiquetado por `organization_id`; lo que se completó es la **selección de tenant en el cliente**.
+
 ---
 
 ## ADR-014 — Archivos pesados: object storage, referencia en la BD
@@ -355,15 +372,15 @@ La autorización se aplica **server-side y vía RLS, en cada request**. El front
 ---
 
 ## ADR-015 — Deployment, entornos y observabilidad
-**Estado:** Aceptada · **Etapa:** Ambas
+**Estado:** Aceptada · entorno de prueba **resuelto** (branch de Supabase) · **Etapa:** Ambas
 
 **Contexto.** El backend corre 24/7 en la nube (Supabase + host del frontend, región cercana). "Producción" no es un evento único: es el acto recurrente y riesgoso de publicar versiones.
 
-**Decisión.** Deployment seguro: **entorno de staging** (copia de producción) para probar antes de publicar, y **rollback** si una versión sale mala. **Observabilidad** (logs, métricas, alertas) para enterarse de fallas antes que el cliente.
+**Decisión.** Deployment seguro: **entorno de staging para probar antes de publicar** y **rollback** si una versión sale mala. **Observabilidad** (logs, métricas, alertas) para enterarse de fallas antes que el cliente.
 
-**Pendiente (handoff):** definir la **estrategia de entorno de pruebas en Supabase** (¿un proyecto Supabase aparte?) **antes** de que pruebas escriba sobre producción. Servir el HTML desde un dominio real (no `file://`) para no romper auth/persistencia.
+**Entorno de prueba — resuelto (v1.7).** El staging es una **branch de Supabase** llamada `staging` (ref `jovroabtwysliryppthh`), **no un proyecto aparte**: un entorno efímero que se paga por horas activas y nace de las mismas migraciones que producción (ADR-023). El frontend se sirve desde un dominio real (GitHub Pages, repo `takeos-staging`), no `file://`, para no romper auth/persistencia. Detalle de repos, carpetas, URLs y claves publicables en **Arquitectura y Flujo de Trabajo §5**. *Deuda:* la sincronización producción ↔ staging del `index.html` es manual hoy (frágil); la observabilidad (logs/métricas/alertas) sigue pendiente.
 
-**Consecuencias.** Misma lógica que probar migraciones en copia (ADR-009): nunca se prueba sobre producción.
+**Consecuencias.** Misma lógica que probar migraciones en copia (ADR-009): nunca se prueba sobre producción. La branch, al nacer de las migraciones, es fiel al esquema real.
 
 ---
 
@@ -458,18 +475,66 @@ LIMIT 1;
 
 ---
 
-## ADR-022 — Aprovisionamiento de organización *(NUEVO)*
-**Estado:** Aceptada · `seed_permisos_organizacion` y `provisionar_organizacion` **completos** (junio 2026) · **Etapa:** MVP / multi-tenant
+## ADR-022 — Provisión autocontenida de organización *(REESCRITO en v1.7)*
+**Estado:** Aceptada · provisión **autocontenida** vía catálogos globales (junio 2026) · **Etapa:** MVP / multi-tenant
 
-**Contexto.** Crear una productora nueva exige sembrarle los perfiles de permiso y los datos operativos base de forma consistente y repetible.
+**Contexto.** Crear una productora nueva exige sembrarle los perfiles de permiso y los datos operativos base de forma consistente y repetible. La versión anterior de este ADR copiaba esos datos **desde una organización template** (en la práctica, Primate). Eso tenía un problema de fondo para un SaaS multi-tenant: **un entorno limpio, sin Primate, no podía crear su primera productora** —no había de dónde copiar— y la provisión quedaba acoplada a que existiera y estuviera bien poblada una organización específica.
+
+**Decisión.** La provisión pasa a ser **autocontenida**: los valores canónicos de arranque viven en **cinco catálogos globales** (no pertenecen a ninguna organización), y las funciones de provisión leen de ahí.
+
+- **Catálogos globales (`default_*`), 144 filas semilla:** `default_permission_profiles` (8 perfiles), `default_permissions` (104 permisos / la matriz), `default_departments` (8 departamentos), `default_functions` (16 funciones/cargos) y `default_cancellation_reasons` (8 motivos). Se cargan por migración (`seed_permisos_autocontenido`), una sola vez, globalmente.
+- **Las funciones de provisión (`seed_permisos_organizacion`, `provisionar_organizacion`) leen de los catálogos globales**, no de otra organización. El parámetro `p_template_org` quedó **opcional y se ignora** (se conserva en la firma solo por compatibilidad). Siguen siendo **SECURITY DEFINER e idempotentes**, probadas en rollback (8 perfiles, 104 filas de matriz, sin residuos).
+
+**Esto resuelve las dos preguntas de producto** que el ADR dejaba abiertas: (1) con qué datos operativos arranca una organización nueva → con los catálogos globales `default_*`; (2) el gate de plan para crear una productora → `organizations.plan` (ver ADR-004 / enforcement de planes).
+
+**Consecuencias.** El alta de una organización es un proceso de primera clase (coherente con ADR-009) y **no depende de Primate ni de ninguna organización existente**: un entorno recién levantado puede crear su primera productora. Para cambiar los valores de arranque (agregar un perfil, un departamento) se edita el catálogo global por migración, en un solo lugar. Junto con el **motor de organización activa en el cliente** (ADR-013, ya construido), habilita operar con múltiples organizaciones.
+
+---
+
+## ADR-023 — Base de datos en código: migraciones versionadas *(NUEVO en v1.7)*
+**Estado:** Aceptada · base capturada y reproducible (junio 2026) · **Etapa:** Ambas
+
+**Contexto.** Hasta junio 2026, toda la base (las 77 tablas, RLS, RPCs, triggers) existía **solo en el servidor vivo de Supabase**, construida a mano en el editor web, con **cero migraciones**. No había forma de recrearla si se corrompía, ni historia de cambios, ni revisión previa, ni un entorno de prueba que se mantuviera fiel en el tiempo. Era el mayor riesgo silencioso del proyecto (ver Arquitectura y Flujo de Trabajo §2.2).
+
+**Decisión.** La base pasa a estar **"en código"**: el esquema se captura como migración base y, de ahí en adelante, **cada cambio de base de datos es un archivo de migración versionado** en el repositorio, aplicado con la Supabase CLI. Quedaron **5 migraciones** registradas:
+
+| Migración | Qué hace |
+|---|---|
+| `…150834_remote_schema` | Esquema completo capturado de producción (tablas, RLS, RPCs, vistas). |
+| `…150835_triggers` | Los 31 triggers (auditoría, mantenimiento). |
+| `…150836_cron_eliminaciones` | El job de cron de eliminaciones programadas. |
+| `…160154_revoke_funciones_internas` | `REVOKE EXECUTE` sobre 20 funciones internas (ver ADR-024). |
+| `…170000_seed_permisos_autocontenido` | Los 5 catálogos globales `default_*`, 144 filas (ver ADR-022). |
+
+**Flujo permanente (regla, no excepción):** todo cambio de BD se hace por **archivo de migración → revisión → `db reset` local (verifica que reproduce) → merge a `main` → `db push` a producción**. **Nunca** se aplica un cambio directo a producción por el conector MCP de Supabase: eso desincronizaría la base respecto del código. El conector MCP queda para **inspección de solo lectura** y pruebas **en transacción revertida** (probar y deshacer), nunca para escribir el esquema de producción.
+
+**Consecuencias.** La base es **reproducible** (se reconstruye desde cero), tiene **historia** y **revisión**, y el entorno de prueba (branch `staging`, ADR-015) nace de las mismas migraciones. El costo es disciplina: ningún atajo por el editor web ni por el MCP. Es la fundación sobre la que se apoyan el staging, la seguridad basal y la modularización (Arquitectura §7, Prioridad #1).
+
+---
+
+## ADR-024 — Endurecimiento de permisos de ejecución de funciones *(NUEVO en v1.7)*
+**Estado:** Parcial · revocación de funciones internas **hecha**; backlog de advisors **pendiente** antes del beta externo · **Etapa:** Seguridad basal
+
+**Contexto.** En PostgreSQL/Supabase una función puede ser ejecutable por `anon` (público) o `authenticated`. Varias funciones **internas** (de trigger y utilitarias con prefijo `_`) quedaban invocables desde internet sin necesidad, y el linter de seguridad de Supabase levantó un conjunto de avisos (ninguno crítico, pero a cerrar antes de exponer el producto a terceros).
 
 **Decisión.**
-- `seed_permisos_organizacion(p_org_id, p_template_org)`: RPC **SECURITY DEFINER e idempotente**. Copia los **8 perfiles fijos** + la **matriz de 104 permisos** desde una organización template. Probado en rollback: 8 perfiles, 104 filas de matriz, sin residuos.
-- `provisionar_organizacion`: RPC **completo** que ensambla el aprovisionamiento de una organización nueva.
+- **Funciones internas sin acceso público (hecho).** La migración `revoke_funciones_internas` revoca `EXECUTE` a `public`/`anon`/`authenticated` sobre **20 funciones internas** (14 de trigger + 6 con prefijo `_`). **Convención hacia adelante:** toda función interna nace ya revocada (la migración la crea sin GRANT público).
+- **Backlog de endurecimiento (pendiente, antes del beta externo).** (a) Revocar a `anon` el `EXECUTE` en las RPC de **escritura** como capa externa —cada función ya valida `auth.uid()` por dentro, así que no es una puerta abierta; **cuidar que los flujos de invitación sigan anon-ejecutables**—; (b) fijar `search_path` explícito en ~11 funciones utilitarias que no lo tienen; (c) decidir la **policy de `app_config`** (hoy con RLS activo pero sin policy: confirmar si el frontend la lee directo o solo se usa server-side). Todo se aplica **como migración**, por el flujo del ADR-023.
 
-**Decisiones de producto (resueltas en la construcción).** El handoff dejó dos preguntas abiertas, hoy zanjadas al completar el RPC: (1) con qué datos operativos arranca una organización nueva (departamentos, funciones, motivos de cancelación), y (2) el gate de plan para crear una productora (`organizations.plan`, default `'free'`). *El detalle exacto de lo decidido debe confirmarlo Agustín para registrarlo aquí con precisión.*
+**Consecuencias.** La superficie de ataque de las funciones se reduce a lo necesario. El control de acceso de datos ya estaba cubierto por RLS + RPC; esto es endurecimiento de la capa de ejecución, no un hueco abierto. Se cierra antes de abrir el beta a productoras externas.
 
-**Consecuencias.** El alta de una organización es un proceso de primera clase (coherente con ADR-009), no una secuencia manual de inserts. Junto con el **motor de organización activa en el cliente** (ADR-013, en desarrollo), habilita operar con múltiples organizaciones.
+---
+
+## ADR-025 — Inmutabilidad financiera al cierre y reporte de cierre *(NUEVO en v1.7)*
+**Estado:** Decisión registrada · deuda de la fase de reportería (no bloquea hoy) · **Etapa:** Reportería / cierre
+
+**Contexto.** La auditoría dirigida de lógica financiera (Arquitectura §6) confirmó que **hoy el backend no produce números financieros autoritativos**: es una capa de persistencia fiel que guarda verbatim lo que el usuario declara (lo correcto para una herramienta de gestión). Pero detectó dos puntos a resolver cuando se construya la reportería de cierre.
+
+**Decisión.**
+- **`project_financials.frozen` no es inmutable.** Hoy se reescribe en cada `guardar_proyecto`, y la regla "congelar al cerrar el proyecto" vive solo en el frontend. **Decisión:** crear una RPC **`cerrar_proyecto`** que marque el cierre, **congele los totales del lado servidor** y **bloquee escrituras** posteriores sobre el proyecto cerrado (coherente con ADR-002 / no confiar en el cliente, y con la inmutabilidad de proyecto al cierre del Roadmap).
+- **El futuro `reporte_cierre` recalcula, no confía.** Debe **recalcular desde las líneas** (presupuesto, comisiones, riesgos, extras, costo real) y leer el **IVA desde `tax_rates`** (ADR-018: el impuesto nunca se hardcodea). **Nunca** debe confiar en `frozen` ni en los snapshots de cotización como fuente del número final.
+
+**Consecuencias.** El número de cierre será auditable y reproducible desde los datos base, no un valor que pudo quedar obsoleto. Es deuda registrada: no bloquea el beta inicial, pero es requisito de la fase de reportería. El enforcement de plan para `reporte_cierre` queda pendiente junto con la función (ADR-004).
 
 ---
 
