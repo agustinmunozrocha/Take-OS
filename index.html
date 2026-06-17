@@ -14492,6 +14492,7 @@ async function dalGuardarCargos(project) {
     return true;
   } catch (e) {
     console.error('[dal] guardar cargos', e);
+    if (manejarErrorPlan(e)) return false;   // V11.16.0 · Frente D: tope de colaboradores POR PROYECTO → momento de venta
     try { showToast({ kind: 'warning', title: 'Cargos sin sincronizar', body: (e && e.message) ? String(e.message) : 'Reintenta el guardado.', duration: 7000 }); } catch (x) {}
     return false;
   }
@@ -22971,7 +22972,7 @@ function manejarErrorPlan(err) {
   if (mLim) {
     var rec = mLim[1].toLowerCase(), max = mLim[2], uno = (max === '1');
     if (rec === 'proyectos') _planModalVenta('Tope de proyectos de tu plan', 'Tu plan permite ' + max + (uno ? ' proyecto activo' : ' proyectos activos') + '. Cierra un proyecto para liberar el cupo, o cambia de plan para tenerlos ilimitados.');
-    else if (rec === 'colaboradores') _planModalVenta('Tope de colaboradores de tu plan', 'Tu plan permite hasta ' + max + ' colaboradores, contando las invitaciones pendientes. Para sumar más, cambia de plan.');
+    else if (rec === 'colaboradores') _planModalVenta('Tope de colaboradores de tu plan', 'Tu plan permite hasta ' + max + ' personas en la pestaña Cargos de un proyecto. Quita a alguien de Cargos para liberar un cupo, o cambia de plan para subir el tope.');
     else _planModalVenta('Tope de tu plan', 'Alcanzaste un límite de tu plan actual. Para ampliarlo, cambia de plan.');
     return true;
   }
