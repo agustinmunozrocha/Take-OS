@@ -14361,24 +14361,7 @@ function renderPersonSelect(field, currentValue) {
 
 /* ─── TOAST SYSTEM ─────────────────────────────────────────────────── */
 
-let _toastId = 0;
-function showToast({ kind = 'info', title, body, duration = 5000 }) {
-  const cont = document.getElementById('toastContainer');
-  if (!cont) return;
-  const id = 'toast-' + (++_toastId);
-  const el = document.createElement('div');
-  el.className = 'toast ' + kind;
-  el.id = id;
-  el.innerHTML = `
-    ${title ? `<div class="toast-title">${title}</div>` : ''}
-    ${body ? `<div class="toast-body">${body}</div>` : ''}
-  `;
-  cont.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('fading');
-    setTimeout(() => el.remove(), 300);
-  }, duration);
-}
+/* showToast + _toastId -> movidos a src/lib/helpers.js (Etapa 1); showToast expuesto en window vía src/main.js */
 
 /* ─── MODAL SYSTEM ─────────────────────────────────────────────────── */
 
