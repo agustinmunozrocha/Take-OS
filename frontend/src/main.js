@@ -11,6 +11,7 @@ import { escapeHtml, safeUrl, showToast } from './lib/helpers.js';
 import { supabaseInit } from './lib/supabase.js';
 import { dalBootTaxRates } from './lib/rates.js'; // su import ya setea las tasas default en window
 import { STATE } from './lib/state.js';
+import './lib/auth.js'; // auto-puentea authNivel, authPuedeVer/Editar, authEsAdmin... a window
 
 window.escapeHtml = escapeHtml;
 window.safeUrl = safeUrl;
@@ -20,5 +21,5 @@ window.dalBootTaxRates = dalBootTaxRates;
 window.STATE = STATE; // mismo objeto compartido (estado global)
 
 console.info('[etapa1] puente listo · en window:',
-  ['escapeHtml', 'safeUrl', 'showToast', 'supabaseInit', 'dalBootTaxRates'].every((n) => typeof window[n] === 'function')
+  ['escapeHtml', 'safeUrl', 'showToast', 'supabaseInit', 'dalBootTaxRates', 'authNivel', 'authPuedeVer'].every((n) => typeof window[n] === 'function')
   && !!window.STATE);
