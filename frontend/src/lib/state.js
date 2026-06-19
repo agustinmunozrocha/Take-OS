@@ -32,3 +32,13 @@ export const STATE = {
   prSelFila: null         // Plan de Rodaje: fila seleccionada (inserción contextual)
   }
 };
+
+// Scalars de estado (mutables). Viven en window: el codigo clasico (no-estricto)
+// los LEE y los ESCRIBE como globales sin cambios; aqui solo se fijan sus
+// defaults al cargar el modulo. (Si en el futuro un modulo los escribe, debe
+// hacerlo via window.X por el modo estricto.)
+window.ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // organización activa (default: Primate Films)
+window.USER_NOMBRE = '';
+window.USER_APELLIDO = '';
+window.TAKEOS_PERFIL = null;      // { codigo, nombre, tipo, profileId, contactId }
+window.TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (no cargado => lectura fail-closed)

@@ -17674,7 +17674,7 @@ window.confirmLogout = function () {
    (todos internos de Primate, una sola membresía) resuelve siempre a Primate,
    de modo que su comportamiento no cambia. Toda la app sigue consumiendo ORG_ID
    igual que antes: lo único que cambió es de dónde sale su valor. */
-let ORG_ID = '640ab1e0-011c-43fe-a5aa-5a636005f56f';   // organización activa (default: Primate Films)
+/* ORG_ID -> a src/lib/state.js (Etapa 1); en window */
 const _ORG_LS_KEY = 'takeos_org_activa';
 const _ORG_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function _setOrgActiva(orgId){
@@ -18030,8 +18030,7 @@ async function dalBootLegal(opts) {
    El nombre de la organización sale del perfil de empresa cargado (EMPRESA_PERFIL),
    nunca cableado; el del usuario, del perfil personal. Todo con null-checks para
    que un DOM incompleto jamás rompa el arranque. */
-var USER_NOMBRE = '';
-var USER_APELLIDO = '';
+/* USER_NOMBRE / USER_APELLIDO -> a src/lib/state.js (Etapa 1); en window */
 function orgNombre() {
   var e = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL) ? EMPRESA_PERFIL : {};
   return String(e.nombreFicticio || e.razonSocial || '').trim();
@@ -18177,8 +18176,7 @@ async function dalResolveIdentidad() {
    Excepción deliberada: los GUARD de ESCRITURA (authPuedeGuardar*) siguen
    fail-open cuando TAKEOS_ACCESO es null, porque la seguridad real de escritura
    la cierra el RPC SECURITY DEFINER (Gate C); esa guarda de cliente es solo UX. */
-let TAKEOS_PERFIL = null;      // { codigo, nombre, tipo, profileId, contactId }
-let TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (no cargado => lectura fail-closed)
+/* TAKEOS_PERFIL / TAKEOS_ACCESO -> a src/lib/state.js (Etapa 1); en window */
 
 /* Mapa: clave de módulo en la app -> código de módulo en profile_permissions */
 const MODULE_PERM_CODE = {
