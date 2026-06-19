@@ -2927,7 +2927,7 @@ function normalizeTime24(raw) {
    cambiar desde el Control Room. Cuando exista login real, currentUser()
    pasará a leer la sesión y todo lo demás funciona igual.
    ════════════════════════════════════════════════════════════════════ */
-let USUARIO_ACTUAL = '';
+/* USUARIO_ACTUAL -> a src/lib/state.js (Etapa 1); en window */
 function currentUser() {
   if (USUARIO_ACTUAL && String(USUARIO_ACTUAL).trim()) return USUARIO_ACTUAL;
   const ep = (typeof EMPRESA_PERFIL !== 'undefined') ? EMPRESA_PERFIL : {};
@@ -18156,8 +18156,8 @@ async function dalBootPerfil(opts) {
    ════════════════════════════════════════════════════════════════════ */
 
 /* --- Identidad de la sesión --- */
-let DAL_SESSION_UID = null;
-let DAL_SESSION_EMAIL = '';
+/* DAL_SESSION_UID -> a src/lib/state.js (Etapa 1); en window */
+/* DAL_SESSION_EMAIL -> a src/lib/state.js (Etapa 1); en window */
 async function dalResolveIdentidad() {
   if (!sb) return;
   try {

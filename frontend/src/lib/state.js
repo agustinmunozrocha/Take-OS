@@ -42,3 +42,12 @@ window.USER_NOMBRE = '';
 window.USER_APELLIDO = '';
 window.TAKEOS_PERFIL = null;      // { codigo, nombre, tipo, profileId, contactId }
 window.TAKEOS_ACCESO = null;      // { modulo: 'E'|'L'|'none' } o null (no cargado => lectura fail-closed)
+
+// Identidad/sesion activa (scalars). Los escriben los cargadores
+// (dalResolveIdentidad / dalLoadPermisos) y setCurrentUser desde el monolito
+// (no-estricto -> escritura implicita a window). Aqui solo sus defaults.
+// Las FUNCIONES cargadoras siguen en el monolito (acopladas a contactos/UI);
+// se extraeran limpio en Etapa 2. Aqui dejamos el ESTADO coherente en state.js.
+window.DAL_SESSION_UID = null;
+window.DAL_SESSION_EMAIL = '';
+window.USUARIO_ACTUAL = '';
