@@ -2643,12 +2643,7 @@ const STATE = {
    sobreescribe con la fila vigente de la tabla tax_rates en Supabase. Si el
    IVA o una retención cambia, el fix es un dato en la BD, no un deploy. Si
    Supabase no responde, la app sigue con estos defaults (nunca se rompe). */
-let IMPUESTO_HONORARIOS = 0.1525;          // concepto 'honorarios' (BHE)
-let IMPUESTO_BTE = 0.1525;                 // concepto 'retencion_bte' (BTE); default = BHE hasta tener dato
-let IVA = 0.19;                            // concepto 'iva'
-let FACTOR_BOLETA = 1 - IMPUESTO_HONORARIOS;
-let FACTOR_BTE = 1 - IMPUESTO_BTE;
-let TAX_RATES_SOURCE = 'default';          // pasa a 'supabase' si se cargaron las tasas
+/* Tasas (IVA, IMPUESTO_HONORARIOS, FACTOR_BOLETA, ...) -> movidas a src/lib/rates.js (Etapa 1); viven en window */
 
 const DTE_OPTIONS = [
   { value: 'boleta',           label: 'Boleta de honorarios' },
@@ -17880,36 +17875,7 @@ function dalApplyTanda1(data) {
    FAIL-SAFE: ante cualquier error o ausencia de datos, conserva los defaults
    (la app nunca se rompe por esto). Normaliza la tasa: si viene > 1 se asume
    porcentaje (19) y se divide por 100. */
-async function dalBootTaxRates() {
-  if (!sb) return false;
-  try {
-    const { data, error } = await sb.from('tax_rates').select('concepto,tasa,vigente_desde,vigente_hasta');
-    if (error || !data || !data.length) return false;
-    const hoy = new Date().toISOString().slice(0, 10);
-    const vigente = {};
-    data.forEach(r => {
-      const desde = r.vigente_desde || '0000-01-01';
-      const hasta = r.vigente_hasta || null;
-      if (desde <= hoy && (!hasta || hasta > hoy)) {
-        const key = String(r.concepto || '').toLowerCase().trim();   // V10: case-insensitive (el concepto del IVA viene 'IVA')
-        const prev = vigente[key];
-        if (!prev || desde > prev._desde) vigente[key] = { tasa: r.tasa, _desde: desde };
-      }
-    });
-    const norm = (v) => { let n = Number(v); if (!isFinite(n)) return null; if (n > 1) n = n / 100; return n; };
-    const iva = vigente['iva'] ? norm(vigente['iva'].tasa) : null;
-    const hon = vigente['honorarios'] ? norm(vigente['honorarios'].tasa) : null;
-    const bte = vigente['retencion_bte'] ? norm(vigente['retencion_bte'].tasa) : null;
-    if (iva != null) IVA = iva;
-    if (hon != null) { IMPUESTO_HONORARIOS = hon; FACTOR_BOLETA = 1 - hon; }
-    if (bte != null) { IMPUESTO_BTE = bte; FACTOR_BTE = 1 - bte; }
-    TAX_RATES_SOURCE = 'supabase';
-    return true;
-  } catch (e) {
-    console.warn('[dal] tax_rates no disponible; se usan tasas por defecto', e);
-    return false;
-  }
-}
+/* dalBootTaxRates -> movida a src/lib/rates.js (Etapa 1); expuesta en window via src/main.js */
 
 /* Orquestador de arranque: intenta leer de Supabase; si lo logra, reemplaza
    los contactos/empresas ya cargados y refresca la pantalla.
