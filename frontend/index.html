@@ -11259,8 +11259,33 @@ async function dalGuardarCargos(project) {
     return true;
   } catch (e) {
     console.error('[dal] guardar cargos', e);
+    if (manejarErrorPlan(e)) return false;   // tope de colaboradores por proyecto -> cartel "sube de plan"
     try { showToast({ kind: 'warning', title: 'Cargos sin sincronizar', body: (e && e.message) ? String(e.message) : 'Reintenta el guardado.', duration: 7000 }); } catch (x) {}
     return false;
+  }
+}
+
+// Tope de colaboradores por proyecto (handoff PR #2). Lee el max del plan de la
+// org activa desde la base; cache por org. null = desconocido -> no bloquea
+// proactivamente (el server-side en guardar_cargos sigue siendo la red de seguridad).
+let _TOPE_COLAB = null;
+let _TOPE_COLAB_ORG = null;
+async function dalCargarTopeColaboradores() {
+  if (!sb || PROJECTS_SOURCE !== 'supabase') return null;
+  if (_TOPE_COLAB != null && _TOPE_COLAB_ORG === ORG_ID) return _TOPE_COLAB;
+  try {
+    const { data: org, error: e1 } = await sb.from('organizations').select('plan').eq('id', ORG_ID).single();
+    if (e1) throw e1;
+    const plan = (org && org.plan) ? org.plan : null;
+    if (!plan) return null;
+    const { data: pc, error: e2 } = await sb.from('plan_catalog').select('max_colaboradores').eq('codigo', plan).single();
+    if (e2) throw e2;
+    _TOPE_COLAB = (pc && pc.max_colaboradores != null) ? pc.max_colaboradores : null;
+    _TOPE_COLAB_ORG = ORG_ID;
+    return _TOPE_COLAB;
+  } catch (e) {
+    console.warn('[plan] no se pudo leer el tope de colaboradores', e);
+    return null;
   }
 }
 /* V11.4.0 · espejo RECI: los cargos PE / Director / JP alimentan los campos
@@ -11309,6 +11334,16 @@ function renderCargos() {
   }
   const cargos = ensureCargos(project);
   const puede = _puedeAsignarCargos();
+  // tope de colaboradores por proyecto (carga diferida + cache) — handoff PR #2
+  if (_TOPE_COLAB == null || _TOPE_COLAB_ORG !== ORG_ID) {
+    dalCargarTopeColaboradores().then(function (t) { if (t != null && STATE.currentModule === 'cargos') renderCargos(); });
+  }
+  const _topeColab = (_TOPE_COLAB != null && _TOPE_COLAB_ORG === ORG_ID) ? _TOPE_COLAB : null;
+  const _nColab = cargos.length;
+  const _enTope = (_topeColab != null && _nColab >= _topeColab);
+  const _contadorColab = _topeColab != null
+    ? '<span style="font-size:12px;font-weight:600;color:' + (_enTope ? '#A71E26' : 'var(--ink-faint)') + ';" title="Colaboradores de este proyecto (las personas en Cargos) contra el tope de tu plan.">' + _nColab + ' / ' + _topeColab + ' colaboradores</span>'
+    : '<span style="font-size:12px;color:var(--ink-faint);">' + _nColab + (_nColab === 1 ? ' colaborador' : ' colaboradores') + '</span>';
   const th = (t) => '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);color:var(--ink-faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;">' + t + '</th>';
   const td = (h) => '<td style="padding:9px 10px;border-bottom:1px solid var(--rule);font-size:13px;">' + h + '</td>';
   let rows = '';
@@ -11333,7 +11368,7 @@ function renderCargos() {
   });
   content.innerHTML = ''
     + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;">'
-    +   '<div style="display:flex;gap:8px;align-items:center;">' + _cargoPill('● interno', 'int') + ' ' + _cargoPill('● externo', 'ext') + '</div>'
+    +   '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' + _cargoPill('● interno', 'int') + ' ' + _cargoPill('● externo', 'ext') + ' ' + _contadorColab + '</div>'
     +   (puede ? '<button class="btn btn-primary btn-sm" onclick="cargoAbrirModal()">+ Asignar un cargo</button>' : '<span style="font-size:12px;color:var(--ink-faint);">Asignar cargos es facultad de Administrador y Ejecutivo.</span>')
     + '</div>'
     + '<div style="border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--bg-card);">'
@@ -11387,6 +11422,11 @@ function cargoAbrirModal(editId) {
   if (!_puedeAsignarCargos()) { showToast({ kind: 'warning', title: 'Sin permiso', body: 'Asignar cargos es facultad de Administrador y Ejecutivo.' }); return; }
   const cargos = ensureCargos(project);
   const edit = editId ? cargos.find(function (c) { return c.id === editId; }) : null;
+  // bloqueo proactivo del tope por proyecto (solo al AGREGAR, no al editar) — handoff PR #2
+  if (!edit && _TOPE_COLAB != null && _TOPE_COLAB_ORG === ORG_ID && cargos.length >= _TOPE_COLAB) {
+    _planModalVenta('Tope de colaboradores de tu plan', 'Este proyecto ya tiene ' + cargos.length + ' personas en Cargos, el máximo de tu plan. Quita a alguien de Cargos para liberar un cupo, o cambia de plan para subir el tope.');
+    return;
+  }
   _CARGO_EDIT = edit ? edit.id : null;
   const esPreset = edit && CARGOS_PRESETS.indexOf(edit.cargo) >= 0;
   const selCargoVal = edit ? (esPreset ? edit.cargo : '__otro') : '';
@@ -19682,7 +19722,7 @@ function manejarErrorPlan(err) {
   if (mLim) {
     var rec = mLim[1].toLowerCase(), max = mLim[2], uno = (max === '1');
     if (rec === 'proyectos') _planModalVenta('Tope de proyectos de tu plan', 'Tu plan permite ' + max + (uno ? ' proyecto activo' : ' proyectos activos') + '. Cierra un proyecto para liberar el cupo, o cambia de plan para tenerlos ilimitados.');
-    else if (rec === 'colaboradores') _planModalVenta('Tope de colaboradores de tu plan', 'Tu plan permite hasta ' + max + ' colaboradores, contando las invitaciones pendientes. Para sumar más, cambia de plan.');
+    else if (rec === 'colaboradores') _planModalVenta('Tope de colaboradores de tu plan', 'Tu plan permite hasta ' + max + ' personas en la pestaña Cargos de un proyecto. Quita a alguien de Cargos para liberar un cupo, o cambia de plan para subir el tope.');
     else _planModalVenta('Tope de tu plan', 'Alcanzaste un límite de tu plan actual. Para ampliarlo, cambia de plan.');
     return true;
   }
