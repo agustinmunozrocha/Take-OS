@@ -1,10 +1,10 @@
 # TakeOS — Línea Base de Seguridad: OWASP Top 10:2025
 
-**Versión:** 1.1
+**Versión:** 1.3
 **Fecha:** Junio 2026
 **Autor de las decisiones:** Agustín Ignacio Muñoz Rocha · Primate Films / La Hectárea SpA
 **Responsable técnico de seguridad:** Juan de la Cuadra (CTO) — el pentest ofensivo es su actividad (sobre base consolidada); lo defensivo lo define **Cib,Seg**.
-**Estado del documento:** Canónico · *hub* transversal de seguridad · alineado al **PRD V3.6** (autoritativo), al **ADR de Backend v1.8**, al **Roadmap Operativo v1.7** y al **Arquitectura y Flujo de Trabajo v1.4**.
+**Estado del documento:** Canónico · *hub* transversal de seguridad · alineado al **PRD V3.6** (autoritativo), al **ADR de Backend v1.9**, al **Roadmap Operativo v1.8** y al **Arquitectura y Flujo de Trabajo v1.5**.
 **Fuente externa:** OWASP Top 10:2025 — <https://owasp.org/Top10/2025/> · Licencia Creative Commons Attribution 3.0 (CC BY 3.0). Las descripciones de cada categoría están **parafraseadas y adaptadas** a TakeOS; no reproducen el texto original.
 
 > **Autoridad documental.** Este documento **no manda sobre el PRD ni sobre el ADR**: es la **referencia de seguridad** (el *hub*) que consumen el **Gate C** (endurecimiento antes del beta externo) y la **actividad de pentest** de Juan. Cuando este documento y el ADR de Backend hablen del mismo control técnico, **manda el ADR**; aquí solo se traduce ese control al lenguaje del estándar y se le pone veredicto. El estado real de cada gate vive en el Roadmap Operativo y en Arquitectura §6.
@@ -14,6 +14,20 @@
 ---
 
 ## Changelog
+
+### v1.3 — Junio 2026 (modularización Vite: efecto en A03 y A05)
+- **A03 (Cadena de suministro) — ahora con lockfile y build tool real.** La modularización introdujo **Vite** y un **`package-lock.json`** (antes no había gestor de dependencias ni lockfile). Es un avance parcial de A03: ya existe la base para fijar/escanear dependencias. Las dependencias siguen siendo mínimas (Vite como dev-dependency) y los scripts externos (supabase-js, xlsx) se cargan por CDN (`cdn.jsdelivr.net`) **sin SRI** todavía → el escaneo de dependencias en CI y el SRI siguen pendientes.
+- **A05 / A02 — el `'unsafe-inline'` del CSP queda ligado a la modularización.** Hoy el CSP necesita `'unsafe-inline'` **porque** el monolito usa `onclick` y `<script>` inline. La modularización (Etapa 2) es lo que permitirá **quitar `'unsafe-inline'`** —el premio de seguridad real del refactor—. Se registra como objetivo, no como hecho: depende de terminar la Etapa 2 (ver Arquitectura §7).
+- **Nota de estado:** la modularización vive en **staging**; producción aún corre el monolito. Esto **no** cambia el veredicto de A01 (el bloqueante sigue siendo el RLS real + tests de cruce de tenant).
+- **Referencias de versión:** PRD V3.6, ADR v1.9, Roadmap v1.8, Arquitectura v1.5.
+
+### v1.2 — Junio 2026 (deltas de frontend + cierre del backlog de endurecimiento)
+- **A02 / A05 — backlog de endurecimiento ejecutado (migración `…144834`, 17-jun).** Entró como migración (flujo en código): REVOKE de `anon` en las RPC de escritura (los flujos de invitación quedaron anon-ejecutables), `search_path` fijado en ~11 utilitarias y decidida la policy de `app_config`. **Queda solo `frame-ancestors`** (header del hosting). A02 y A05 bajan de "basal cerrada / backlog pendiente" a "**cerradas salvo `frame-ancestors`**".
+- **A07 / A01 — el *auth gate* del cliente quedó fail-closed.** `cloudGate` valida la identidad con **`getUser()`** (cierra el fail-open) y `authNivelModulo` **falla cerrado** (devuelve `'none'` para módulos no mapeados) — ambos cerrados V11.15.0. El "punto a vigilar" de A07 (dónde se verifica la sesión) queda **resuelto** para el portero de lectura.
+- **A10 — `authNivelModulo` ya falla cerrado** (lo que estaba "a verificar"). **Excepción deliberada, registrada:** los guardas de **escritura** del cliente siguen **fail-open a propósito**, porque la seguridad real de escritura es el RPC `SECURITY DEFINER` (Gate C); no es un hueco, y no debe "arreglarse" por error. Lo que **sigue pendiente** de A10 es **centralizar** el manejo de errores con la modularización Vite.
+- **Nomenclatura:** se retira la etiqueta "(Frente D)" del handler `manejarErrorPlan` (recomendación de Dev: nombrar por función, no por letra).
+- **A01 sigue siendo el bloqueante real:** el RLS por organización y rol + sus tests de cruce de tenant **no** los cierra esta tanda (son Gate B/C). El cierre del backlog no mueve ese veredicto.
+- **Referencias de versión:** confirmadas — PRD V3.6, ADR v1.8, Roadmap v1.7, Arquitectura v1.4 (los documentos hermanos alcanzaron las versiones que este hub ya referenciaba).
 
 ### v1.1 — Junio 2026 (integración hub-and-spoke)
 - Integrado al **bus de documentos canónicos** como **hub** de seguridad (handoff de Cib,Seg). Se agrega la sección **"Carril y fronteras"** (§0.1) y se confirma que el **Track de Seguridad** es propiedad del **Roadmap** (Gate C), no de este documento: aquí vive el *qué* y el *veredicto*; el *cuándo* vive en el Roadmap.
@@ -72,15 +86,15 @@ El ciclo, en orden: **Cib,Seg define → BD Expert/Code implementa → Cib,Seg v
 | # | Categoría (2025) | Cambio vs 2021 | Riesgo para TakeOS | Estado hoy | Dónde se cierra |
 |---|------------------|----------------|--------------------|------------|-----------------|
 | **A01** | Broken Access Control | Sigue #1; absorbe SSRF y CSRF | **Alto** — es el corazón del multi-tenant | 🟡 Parcial: RPC sólidas, RLS aún `mvp_` | Gate B + Gate C |
-| **A02** | Security Misconfiguration | Sube de A05 | **Medio-alto** | 🟡 Basal cerrada; backlog + `frame-ancestors` pendientes | Gate C (ADR-024) |
-| **A03** | Software Supply Chain Failures | Sube de A06 y se amplía | **Medio** — equipo chico, npm/Vite/CDN | 🔴 Sin proceso formal | Gate C + horizonte |
+| **A02** | Security Misconfiguration | Sube de A05 | **Medio-alto** | 🟢 Backlog ejecutado (17-jun); solo `frame-ancestors` pendiente | Gate C (ADR-024) |
+| **A03** | Software Supply Chain Failures | Sube de A06 y se amplía | **Medio** — equipo chico, npm/Vite/CDN | 🟡 Lockfile + Vite ya; falta escaneo en CI + SRI | Gate C + horizonte |
 | **A04** | Cryptographic Failures | Baja de A02 | **Bajo-medio** — lo gestiona la plataforma | 🟢 Cubierto por Supabase + ADR-011 | Mantenimiento |
-| **A05** | Injection (incl. XSS) | Baja de A03 | **Bajo** — RPC parametrizadas, `safeUrl` | 🟢 XSS cerrado; `search_path` pendiente | Gate C (ADR-024) |
+| **A05** | Injection (incl. XSS) | Baja de A03 | **Bajo** — RPC parametrizadas, `safeUrl` | 🟢 XSS cerrado; `search_path` hecho (17-jun) | Gate C (ADR-024) |
 | **A06** | Insecure Design | Baja de A04 | **Bajo** — diseño explícitamente fuerte | 🟢 ADR como spec; contrato de estado completo | Mantenimiento |
 | **A07** | Authentication Failures | Renombrada (era "Identification and…") | **Medio** | 🟡 Supabase Auth; email+pass provisional, Google OAuth destino | Gate B/C |
 | **A08** | Software or Data Integrity Failures | Sin cambio de número | **Bajo-medio** | 🟢 Audit inmutable, base en código; SRI/firma pendiente | Gate C |
 | **A09** | Security Logging **and Alerting** Failures | Renombrada ("Monitoring"→"Alerting") | **Medio** | 🟡 Audit inmutable ✓; **alertas y observabilidad pendientes** | Gate C + horizonte |
-| **A10** | Mishandling of Exceptional Conditions | **NUEVA** | **Medio-alto** | 🟡 Disciplina fail-closed parcial; falta verificarla de punta a punta | Gate B/C |
+| **A10** | Mishandling of Exceptional Conditions | **NUEVA** | **Medio-alto** | 🟡 `authNivelModulo` fail-closed (hecho); falta centralizar errores | Gate B/C |
 
 Leyenda de estado: 🟢 cubierto / 🟡 parcial / 🔴 sin proceso formal todavía.
 
@@ -119,8 +133,8 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Cómo aparece en TakeOS.** En tres capas: (1) **Supabase** —qué función es ejecutable por `anon`, qué policy tiene cada tabla, qué hace el linter de seguridad—; (2) **el hosting** —GitHub Pages y los headers HTTP que podemos o no setear—; (3) **el cliente** —que no filtre llaves ni deje superficie de más.
 
-**Estado en TakeOS.** La **lista corta para el beta ya se cerró** (Arquitectura §6): contraseñas filtradas, toggle de registro, OAuth External, CSP, revocación de funciones internas, auditoría dirigida. Eso es real y cuenta. Lo que queda son **dos frentes documentados** en el ADR-024 y el Roadmap Fase C:
-- **Backlog de endurecimiento** (antes del beta externo): (a) revocar a `anon` el `EXECUTE` en las **RPC de escritura** como capa externa —cada una ya valida `auth.uid()` por dentro, así que no es una puerta abierta, pero hay que **cuidar que los flujos de invitación sigan anon-ejecutables**—; (b) fijar `search_path` explícito en **~11 funciones utilitarias** que no lo tienen (esto también toca A05); (c) decidir la **policy de `app_config`** (RLS activo pero sin policy: confirmar si el frontend la lee directo o es solo server-side).
+**Estado en TakeOS (actualizado v1.2).** La **lista corta para el beta ya se cerró** (Arquitectura §6): contraseñas filtradas, toggle de registro, OAuth External, CSP, revocación de funciones internas, auditoría dirigida. Y el **backlog de endurecimiento ya se ejecutó** (migración `…144834`, 17-jun, por el flujo en código). Queda **un solo frente**:
+- **Backlog de endurecimiento — HECHO (migración `…144834`).** ✅ (a) revocado a `anon` el `EXECUTE` en las **RPC de escritura** como capa externa —cada una valida `auth.uid()` por dentro; **los flujos de invitación quedaron anon-ejecutables**—; ✅ (b) `search_path` explícito fijado en **~11 funciones utilitarias** (esto también cierra el pendiente de A05); ✅ (c) decidida la **policy de `app_config`** (documentada vía COMMENT).
 - **Header `frame-ancestors`** (anti-clickjacking): pendiente. **Aquí hay una limitación de plataforma honesta**: GitHub Pages no te deja setear headers HTTP arbitrarios con comodidad. Esto conecta con la decisión de horizonte de mover el hosting a **Cloudflare Pages o Netlify** (per-PR previews + control de headers). El `frame-ancestors` por meta-tag de CSP es un sustituto parcial; el control real es el header.
 
 **Qué hacer.**
@@ -137,10 +151,10 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Cómo aparece en TakeOS.** Hoy el frontend es un `index.html` monolítico que carga el cliente de Supabase y otras librerías; con la **modularización vía Vite**, entra `npm` con su árbol de dependencias **transitivas**. Cada `npm install` es una superficie. Además: los **scripts de CDN** que cargue el `index.html` sin verificación de integridad, y el **propio repositorio + GitHub Pages** como parte de la cadena.
 
-**Estado en TakeOS.** **Sin proceso formal todavía.** No hay SBOM, no hay escaneo de dependencias automatizado, no hay `lockfile` auditado como práctica. **La buena noticia** es estructural y ya está decidida: con Juan como CTO, **el frontend se trabaja en Code con ramas cortas y Pull Request revisado**. Esto importa porque OWASP nombra exactamente este control: *ninguna persona debería poder escribir código y promoverlo a producción sin la supervisión de otro ser humano* (**separación de funciones**). El flujo de a dos con PR **es** ese control. Falta formalizar el resto.
+**Estado en TakeOS (actualizado v1.3).** **Proceso parcial, recién arrancando.** La modularización ya introdujo **Vite** y un **`package-lock.json`** (commiteado): existe la base para fijar/escanear dependencias, y por ahora el árbol es **mínimo** (Vite como `devDependency`; `package.json` con `type: module`). Lo que **sigue faltando**: el **escaneo automático** de dependencias (Dependabot / `npm audit` en CI) y el **SRI** en los scripts de CDN (`supabase-js` y `xlsx` se cargan desde `cdn.jsdelivr.net` **sin** `integrity`). No hay SBOM. **La buena noticia** es estructural y ya está decidida: con Juan como CTO, **el frontend se trabaja en Code con ramas cortas y Pull Request revisado**. Esto importa porque OWASP nombra exactamente este control: *ninguna persona debería poder escribir código y promoverlo a producción sin la supervisión de otro ser humano* (**separación de funciones**). El flujo de a dos con PR **es** ese control. Falta formalizar el resto.
 
 **Qué hacer.**
-- **Committear el `lockfile`** (`package-lock.json`) y tratarlo como código: las versiones se eligen, no se dejan flotar.
+- ~~Committear el `lockfile`~~ → **HECHO** (`package-lock.json` commiteado). Mantener la disciplina: las versiones se eligen, no se dejan flotar.
 - **Escaneo de dependencias** automático (Dependabot de GitHub, o `npm audit` en CI, o `retire.js`). Suscribirse a alertas de las librerías que se usan.
 - **SRI (Subresource Integrity)** en todo script cargado desde CDN: el atributo `integrity` hace que el navegador rechace el archivo si fue alterado. Mejor aún: **bundlear** las dependencias con Vite y dejar de depender de CDN para lo crítico.
 - **Endurecer la cadena**: MFA en GitHub, no commitear secretos, proteger la rama principal, mantener actualizadas las herramientas de desarrollo (incluido el propio Claude Code y las extensiones del IDE — son parte de la cadena según el estándar 2025).
@@ -173,12 +187,13 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Cómo aparece en TakeOS.** Dos focos: (1) **SQL** — las RPC reciben datos del cliente y arman operaciones; (2) **XSS** — el frontend vanilla JS pinta datos del usuario en el DOM (nombres de proyecto, datos de contactos, etc.) y maneja URLs.
 
-**Estado en TakeOS.** **Bueno.** El **XSS ya está cerrado**: la función **`safeUrl` es robusta** y, según Arquitectura §6 y el estado del Gate B, **no requería parche** — esto es importante anotarlo porque circuló como pendiente y **no lo es**. En SQL, las escrituras pasan por RPC; el patrón correcto (parámetros, no concatenar entrada cruda) es la norma del backend. **El pendiente conectado** es de configuración más que de inyección activa: fijar **`search_path` explícito en ~11 funciones utilitarias** (backlog ADR-024). Un `search_path` no fijado en una función `SECURITY DEFINER` es un vector clásico de escalamiento (alguien crea un objeto malicioso en un esquema que la función resuelve antes que el esperado). Ninguno es crítico hoy, pero es endurecimiento real.
+**Estado en TakeOS (actualizado v1.2).** **Bueno.** El **XSS ya está cerrado**: la función **`safeUrl` es robusta** y, según Arquitectura §6 y el estado del Gate B, **no requería parche** — esto es importante anotarlo porque circuló como pendiente y **no lo es**. En SQL, las escrituras pasan por RPC; el patrón correcto (parámetros, no concatenar entrada cruda) es la norma del backend. **El pendiente conectado** —de configuración más que de inyección activa— ya se **cerró**: el **`search_path` explícito** quedó fijado en las **~11 funciones utilitarias** (migración `…144834`, 17-jun; backlog ADR-024). Un `search_path` no fijado en una función `SECURITY DEFINER` es un vector clásico de escalamiento (alguien crea un objeto malicioso en un esquema que la función resuelve antes que el esperado); por eso era endurecimiento real, y ya está hecho.
 
 **Qué hacer.**
-- Cerrar `search_path` en las utilitarias como migración (es backlog de A02/A05 a la vez).
+- ~~Cerrar `search_path` en las utilitarias como migración~~ → **HECHO** (migración `…144834`, backlog de A02/A05 a la vez).
 - Mantener la disciplina de **parámetros, nunca concatenación** en toda RPC nueva.
 - Al pintar datos del usuario en el DOM en los módulos nuevos: seguir usando los helpers seguros (`safeUrl` y equivalentes), no `innerHTML` con datos crudos. La modularización Vite es buen momento para que esto sea una convención de `frontend/src/lib`, no una decisión caso a caso.
+- **Objetivo de fondo (v1.3): quitar `'unsafe-inline'` del CSP.** Hoy la CSP necesita `'unsafe-inline'` **porque** el monolito usa `onclick` y `<script>` inline; eso debilita la defensa contra XSS (un XSS que entrara podría ejecutar inline). Recién al terminar la **Etapa 2** de la modularización (cuando no queden handlers ni scripts inline) se podrá endurecer la CSP quitando `'unsafe-inline'` — es el **premio de seguridad real** del refactor, no un efecto de modularizar una función suelta (ver Arquitectura §7).
 
 ---
 
@@ -210,7 +225,7 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Cómo aparece en TakeOS.** Todo pasa por **Supabase Auth**. Hoy conviven **email+contraseña** (provisional) y **Google OAuth** (destino confirmado, ADR-003). El token **viaja y se verifica en cada request** (stateless) — ese es el principio correcto.
 
-**Estado en TakeOS.** **Razonable, con el destino claro.** Lo bueno: Supabase Auth gestiona el hashing y el flujo; el email es el **único criterio de identity linking** (ADR-003, no RUT ni teléfono); se cerró el tema de contraseñas filtradas y el toggle de registro (basal del beta). Google OAuth como destino es la decisión correcta para el rubro. **El punto a vigilar** —y aquí está el cruce con A10— es **dónde se verifica la sesión**: el principio del ADR es verificar el token **en el servidor en cada request**. Cualquier chequeo de autorización que confíe en una **caché de sesión del lado del cliente** en vez de validar contra el servidor es frágil: la fuente de verdad de "quién eres" tiene que ser el servidor (`getUser()` server-side), no un estado cacheado en el navegador que el usuario puede manipular. Esto se cruza con `authNivelModulo` y se trata como invariante en A10.
+**Estado en TakeOS.** **Razonable, con el destino claro.** Lo bueno: Supabase Auth gestiona el hashing y el flujo; el email es el **único criterio de identity linking** (ADR-003, no RUT ni teléfono); se cerró el tema de contraseñas filtradas y el toggle de registro (basal del beta). Google OAuth como destino es la decisión correcta para el rubro. **El punto a vigilar** —y aquí está el cruce con A10— era **dónde se verifica la sesión**: el principio del ADR es verificar el token **en el servidor en cada request**. **Actualización v1.2:** el portero de autorización del cliente (`cloudGate`) ya valida con **`getUser()`** (cierra el fail-open, V11.15.0), así que la fuente de verdad de "quién eres" es el servidor, no un estado cacheado que el usuario pueda manipular. **Excepción deliberada y registrada:** los guardas de **escritura** del cliente siguen **fail-open a propósito**, porque la seguridad real de escritura es el RPC `SECURITY DEFINER` (Gate C) —el portero del cliente es UX, no la cerradura—; no es un hueco y no debe "arreglarse" por error. Esto se cruza con `authNivelModulo`, que ya **falla cerrado** (ver A10).
 
 **Qué hacer.**
 - **Agregar Google como proveedor** en Supabase Auth (es configuración, no rearquitectura) y dejar email+contraseña como camino secundario o retirarlo según se decida.
@@ -267,13 +282,13 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Cómo aparece en TakeOS.** Tres focos: (1) los **gates de autorización del cliente** (¿qué hacen ante un error o una caché vacía? ¿niegan o conceden?); (2) las **transacciones de base de datos** (¿se revierten enteras ante un fallo a mitad de camino?); (3) los **mensajes de error** (¿filtran detalle del sistema al usuario? — cruza con A02).
 
-**Estado en TakeOS.** **Disciplina parcial, con un invariante a verificar de punta a punta.**
+**Estado en TakeOS (actualizado v1.2).** **El invariante de lectura ya falla cerrado; queda centralizar errores.**
 - **A favor**: el principio de **fail-closed ya es doctrina** en el storage —sin prefijo `{organization_id}/`, el archivo es inaccesible (ADR-014)—; y el **patrón de pruebas SQL en transacción revertida** (`RAISE` al final para hacer rollback) **es exactamente** el "fail closed / revierte todo" que pide el estándar.
-- **A verificar**: el invariante crítico es que **toda decisión de autorización falle cerrada**. El estándar pone nombre a la trampa (CWE-636): si `authNivelModulo` —o cualquier gate— por defecto **concede** el acceso cuando no resuelve el nivel, cuando la sesión cacheada no está, o cuando algo lanza error, eso es el anti-patrón textual de A10. Hay que confirmar que **el default sea denegar**, no permitir, en cada punto de control. Es el cruce directo con A07 (no confiar en la sesión cacheada del cliente).
-- **A centralizar**: con la modularización Vite, definir **un solo manejador de errores**. Esto ya tiene un precedente bueno en producto: el handler central `manejarErrorPlan(err)` para los límites de plan (Frente D). Esa idea —un punto único, tono sobrio— es la que A10 pide para **todos** los errores, no solo los de plan.
+- **Resuelto (V11.15.0)**: `authNivelModulo` **falla cerrado** — devuelve `'none'` para módulos no mapeados, en vez de conceder por defecto. Cierra el anti-patrón CWE-636 en el gate de **lectura** del cliente. **Excepción deliberada y registrada:** los gates de **escritura** del cliente siguen **fail-open a propósito**, porque la cerradura real de escritura es el RPC `SECURITY DEFINER` (Gate C). Es una decisión de diseño, no un descuido: el portero del cliente es UX; la seguridad vive en el servidor. **No "arreglar" esto** convirtiéndolo en fail-closed sin entender que rompería la UX sin agregar seguridad.
+- **A centralizar (pendiente)**: con la modularización Vite, definir **un solo manejador de errores**. Esto ya tiene un precedente bueno en producto: el handler central **`manejarErrorPlan(err)`** para los límites de plan (V11.16.0). Esa idea —un punto único, tono sobrio— es la que A10 pide para **todos** los errores, no solo los de plan.
 
 **Qué hacer.**
-- **Auditar cada gate de autorización** y confirmar que falla **cerrado**. Empezar por `authNivelModulo`. Si hoy concede por defecto en algún borde, eso es bloqueante de Gate B/C.
+- ~~Empezar por `authNivelModulo`~~ → **HECHO** (falla cerrado, V11.15.0). Queda **auditar el resto** de los gates de autorización y confirmar que fallan **cerrado** (recordando la excepción deliberada de los gates de escritura del cliente, cuya cerradura es el RPC).
 - **Confirmar rollback completo** en toda RPC multi-paso: ante error a mitad, se revierte todo. El patrón de testing ya lo encarna; verificar que el código de producción también.
 - **No filtrar errores crudos al cliente**: mensaje entendible al usuario, detalle al log (y, si aplica, a la alerta de A09). Un error de base con stack completo es reconocimiento para un atacante (escenario clásico de A10).
 - **Centralizar el manejo de errores** en `frontend/src/lib` durante la modularización: una sola forma, no una por módulo. Extender la lógica de `manejarErrorPlan` a un handler general.
@@ -290,8 +305,8 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 
 **Los riesgos que sí importan antes del beta externo**, en orden:
 1. **A01 — el aislamiento multi-tenant todavía no es real.** Hoy se sostiene sobre que hay un solo tenant. Las `mvp_` permiten todo a cualquier autenticado, y la *publishable key* es pública (segura solo si el RLS filtra de verdad). **Esto es lo único verdaderamente bloqueante.** Sin RLS real por organización/rol **y sin tests de cruce de tenant que deban fallar**, no se puede meter datos de una segunda productora. Y el beta es exactamente eso.
-2. **A10 — verificar que todo gate de autorización falle cerrado.** Empezando por `authNivelModulo`. El estándar 2025 le puso nombre y categoría propia a esta trampa por algo. Conceder por defecto ante un error es el error que hunde un multi-tenant.
-3. **A02 — cerrar el backlog de endurecimiento y `frame-ancestors`.** No es crítico, es disciplina. Pero "no crítico" no es "opcional antes de terceros".
+2. **A10 — `authNivelModulo` ya falla cerrado (hecho); queda auditar el resto y centralizar.** El gate de lectura del cliente ya niega por defecto (V11.15.0), con la excepción deliberada de los gates de escritura (su cerradura es el RPC). Falta auditar los demás gates y unificar el manejo de errores con la modularización. Bajó de "a verificar" a "encaminado".
+3. **A02 — backlog de endurecimiento cerrado (hecho); queda `frame-ancestors`.** El REVOKE de `anon`, el `search_path` y la policy de `app_config` ya entraron como migración (17-jun). Solo resta el header `frame-ancestors` del hosting. No es crítico, es disciplina; pero "no crítico" no es "opcional antes de terceros".
 4. **A03 — formalizar la cadena de suministro.** Equipo chico + npm/Vite + CDN en un año de gusanos de npm. El control humano (PR de a dos) ya existe; falta el control automatizado (lockfile, escaneo, SRI).
 
 **La frase que resume todo**: TakeOS tiene un **backend de buena arquitectura con la maquinaria multi-tenant a medio encender**. El diseño está; el aislamiento efectivo, no. Mientras el sistema lo use un solo tenant, el riesgo real es bajo. **El beta cambia esa premisa**, y por eso el Gate B (RLS real) y la parte de Gate C que sella A01 **no son negociables** antes de que cualquier productora meta datos reales.
@@ -314,15 +329,15 @@ Lo que **falta**, y es lo que importa: el **RLS real por organización y por rol
 | Categoría 2025 | ADR relevante | Gate | Acción principal pendiente |
 |---|---|---|---|
 | A01 Broken Access Control | ADR-001, 004, 005, 012, 014 | **B + C** | RLS real por org/rol + tests de cruce de tenant |
-| A02 Security Misconfiguration | ADR-024, 011 | **C** | Backlog de endurecimiento + `frame-ancestors` |
+| A02 Security Misconfiguration | ADR-024, 011 | **C** | Solo `frame-ancestors` (backlog de endurecimiento hecho 17-jun) |
 | A03 Supply Chain Failures | (nuevo frente) | **C + horizonte** | Lockfile, escaneo de deps, SRI, separación de funciones |
 | A04 Cryptographic Failures | ADR-011 | Mantenimiento | Revisar `md5`→`pgcrypto` según uso |
-| A05 Injection | ADR-024 (search_path) | **C** | `search_path` en ~11 utilitarias |
+| A05 Injection | ADR-024 (search_path) | **C** | `search_path` en ~11 utilitarias — **hecho (17-jun)**; sin pendiente activo |
 | A06 Insecure Design | ADR-018, 025 (y todo el ADR) | Mantenimiento | Threat modeling del flujo multi-tenant |
 | A07 Authentication Failures | ADR-003 | **B/C** | Google OAuth + no confiar en sesión cacheada |
 | A08 Data Integrity Failures | ADR-012, 020, 023, 014 | **C** | SRI + reducir fragilidad del deploy manual |
 | A09 Logging **and Alerting** | ADR-012, 014 (staging) | **C + horizonte** | Definir y conectar alertas; rate limiting |
-| A10 Mishandling of Exceptional Conditions | ADR-014 (fail-closed), 023 | **B/C** | Verificar gates fail-closed; centralizar errores |
+| A10 Mishandling of Exceptional Conditions | ADR-014 (fail-closed), 023 | **B/C** | `authNivelModulo` fail-closed **hecho**; auditar el resto + centralizar errores |
 
 ---
 
