@@ -1,13 +1,18 @@
 # TakeOS — Arquitectura Técnica y Flujo de Trabajo de Equipo
 
-**Versión:** 1.5
-**Fecha:** 19 de junio de 2026
+**Versión:** 1.6
+**Fecha:** 20 de junio de 2026
 **Autor:** Chat de Profesor/Asesor de Software (Claude), por encargo de Agustín Muñoz Rocha
 **Estado:** **Aprobada y en ejecución** — Prioridad #1 y #2 **cerradas**; Prioridad #3 (modularización con Vite) **en curso: Etapas 0 y 1 hechas en staging, Etapa 2 pendiente (el grueso)**.
 **Para quién es:** Agustín (product owner) y Juan de la Cuadra (CTO del proyecto)
-**Documentos relacionados:** PRD V3.6 · ADR de Backend v1.9 · Roadmap Operativo v1.8
+**Documentos relacionados:** PRD V3.6 · ADR de Backend v1.10 · Roadmap Operativo v1.8
 
-> **Cambios respecto a v1.4** (esta versión):
+> **Cambios respecto a v1.5** (esta versión — consolida el handoff de Code del 20-jun):
+> 1. **Estructura del repo (§3.4):** se agrega `supabase/queries/` como carpeta **hermana** de `supabase/migrations/` (queries reutilizables que el CLI **no** toca, separadas del historial de esquema). Ya commiteada en ambos repos.
+> 2. **Corrección de pie:** se arregla un número de versión viejo ("v1.4") que había quedado en la nota final.
+> *(El fix del IVA hardcodeado se corrigió en el ADR-018, v1.10 — no afecta este documento.)*
+>
+> **Cambios respecto a v1.4** (versión anterior):
 > 1. **Modularización — estado real, corte por corte (§3 y §7).** Con la bitácora de Juan + Code verificada contra el código vivo: **Etapa 0 hecha** (Vite + deploy automático + CSS extraído a `src/styles.css`), **Etapa 1 hecha y verificada en staging** (el *cimiento*: 12 funciones a `src/lib/` + el "puente" `main.js`), **Etapa 2 pendiente**. Se actualiza el árbol del repo (§3.4) a la estructura real con `src/`.
 > 2. **La magnitud, sin maquillaje (§7).** El cimiento es **<1% de las funciones** (12 de ~1.290); el monolito sigue con ~1.278 funciones / 23.369 líneas. **El 88% del trabajo es la Etapa 2** (módulos de negocio + pegamento de UI). Lo hecho es chico en volumen pero crítico: es lo que destraba el trabajo en paralelo.
 > 3. **Esto vive en staging; producción sigue siendo el monolito (§5).** El corte de producción a la build de Vite está **pendiente** (junto con el diagnóstico del "404 real"). El `base: './'` de Vite es el arreglo de fondo del 404; se matiza la nota previa sobre la ubicación del `index.html`.
@@ -253,7 +258,8 @@ takeos/
 │   ├── package.json
 │   └── vite.config.js
 ├── supabase/              # El backend, en código
-│   ├── migrations/        # SQL versionado: esquema, RLS, RPCs
+│   ├── migrations/        # SQL versionado: esquema, RLS, RPCs (lo aplica el CLI, secuencial, inmutable)
+│   ├── queries/           # Queries reutilizables (reportes, análisis, mantenimiento); el CLI NO la toca
 │   ├── functions/         # Edge Functions (Resend, validación bancaria)
 │   └── config.toml
 ├── tests/                 # Pruebas Playwright (E2E) + pruebas de seguridad
@@ -261,7 +267,9 @@ takeos/
 └── README.md              # Puerta de entrada para el equipo
 ```
 
-> **Estado real hoy (v1.5) vs. destino.** El árbol de arriba es el **destino** (post-modularización). **Hoy, en la rama de staging**, ya existe el esqueleto de Vite con esta forma real (Etapas 0 y 1):
+> **`migrations/` vs. `queries/` — no confundirlas (regla para todos los chats de BD).** El Supabase CLI trata **todo** lo que está en `supabase/migrations/` con nombre `<timestamp>_nombre.sql` como una **migración a aplicar en orden** (`db push` / Branching). Por eso **nunca** se ponen consultas ad-hoc ahí: se aplicarían como cambios de esquema. Para eso está `supabase/queries/` (hermana, no anidada), donde viven las **consultas reutilizables y editables** (reportes, análisis, mantenimiento) que el CLI **no** toca. Convención de `queries/`: nombres `snake_case` **sin** timestamp, y cada `.sql` encabezado con un comentario de qué hace y cómo se usa. Resumen: **migración = historial de esquema (inmutable, secuencial); query = consulta reutilizable (editable)**.
+
+> **Estado real hoy (v1.6) vs. destino.** El árbol de arriba es el **destino** (post-modularización). **Hoy, en la rama de staging**, ya existe el esqueleto de Vite con esta forma real (Etapas 0 y 1):
 >
 > ```
 > frontend/
@@ -614,8 +622,8 @@ Las prioridades #1 y #2 ya están cerradas, igual que los *quick wins* de un cli
 3. **Deuda de reportería** (cuando se construya el `reporte_cierre`): la RPC `cerrar_proyecto` que congele totales del lado servidor, y el recálculo del reporte desde las líneas (§6).
 4. En paralelo a todo, el **trabajo de producto y módulos de Agustín** (con los chats + Code) sigue corriendo.
 
-> **Nota:** este documento volverá a moverse pronto. Al introducir Vite y empezar a modularizar, es esperable que surjan decisiones nuevas que se registren en una v1.4.
+> **Nota:** este documento sigue en movimiento. Con la modularización Vite en curso (Etapa 2 pendiente) y el corte de producción por hacer, es esperable que surjan decisiones nuevas que se registren en versiones siguientes.
 
 ---
 
-*Documento canónico v1.5 — aprobado y en ejecución. Toda decisión registrada aquí se tomó contra la información viva (build de producción **V11.16.0** —el monolito— y base de datos Supabase `zplcgetquwxybkrpmcvl`: 77 tablas con RLS, 147 políticas, **7 migraciones**, base reproducible, producción que se actualiza por Branching al mergear, una organización real —Primate, plan producción—, enforcement de planes cableado). Modularización verificada contra la rama de staging: **Etapas 0 y 1 hechas** (CSS + cimiento de 12 funciones en `frontend/src/lib`; monolito en 23.369 líneas), **Etapa 2 pendiente**. Verificado 19 de junio de 2026.*
+*Documento canónico v1.6 — aprobado y en ejecución. Toda decisión registrada aquí se tomó contra la información viva (build de producción **V11.16.0** —el monolito— y base de datos Supabase `zplcgetquwxybkrpmcvl`: 77 tablas con RLS, 147 políticas, **7 migraciones**, base reproducible, producción que se actualiza por Branching al mergear, una organización real —Primate, plan producción—, enforcement de planes cableado). Modularización verificada contra la rama de staging: **Etapas 0 y 1 hechas** (CSS + cimiento de 12 funciones en `frontend/src/lib`; monolito en 23.369 líneas), **Etapa 2 pendiente**. Verificado 20 de junio de 2026.*
