@@ -1,14 +1,20 @@
 # TakeOS — ADR de Backend (Architecture Decision Record)
 
-**Versión:** 1.9
+**Versión:** 1.10
 **Fecha:** Junio 2026
 **Autor de las decisiones:** Agustín Ignacio Muñoz Rocha · Primate Films / La Hectárea SpA
 **Asesoría técnica:** sesión de arquitectura de backend
-**Estado del documento:** Borrador alineado al **PRD V3.6** (autoritativo), al **Roadmap Operativo v1.8**, al **Arquitectura y Flujo de Trabajo v1.5** y a los **handoffs de Flujo de Trabajo y Metodología (flujo BD en código), Dev (deltas de frontend), Code y la bitácora de modularización Vite (Juan + Code)**.
+**Estado del documento:** Borrador alineado al **PRD V3.6** (autoritativo), al **Roadmap Operativo v1.8**, al **Arquitectura y Flujo de Trabajo v1.6** y a los **handoffs de Flujo de Trabajo y Metodología (flujo BD en código), Dev (deltas de frontend), Code y la bitácora de modularización Vite (Juan + Code)**.
 
-> **Autoridad documental.** Donde el PRD y este ADR hablen del mismo tema, **el PRD manda en lo conceptual y de producto; el ADR manda en lo técnico**. El PRD V3.6 es la fuente de verdad de las decisiones; este documento detalla el *cómo* y el *porqué* técnico. El **Roadmap Operativo v1.8** define la secuencia de ejecución y el modelo de trabajo entre chats; el **Arquitectura y Flujo de Trabajo v1.5** documenta la infraestructura (BD en código, entornos, flujo de despliegue, modularización del frontend) y el flujo de equipo.
+> **Autoridad documental.** Donde el PRD y este ADR hablen del mismo tema, **el PRD manda en lo conceptual y de producto; el ADR manda en lo técnico**. El PRD V3.6 es la fuente de verdad de las decisiones; este documento detalla el *cómo* y el *porqué* técnico. El **Roadmap Operativo v1.8** define la secuencia de ejecución y el modelo de trabajo entre chats; el **Arquitectura y Flujo de Trabajo v1.6** documenta la infraestructura (BD en código, entornos, flujo de despliegue, modularización del frontend) y el flujo de equipo.
 
 ---
+
+## Changelog — v1.9 → v1.10
+
+Consolida el **handoff de Code (20-jun)**. Corrección menor + alineación con el código vivo.
+- **ADR-018 (corregido) — el fix del IVA ya está hecho.** Lo que figuraba como "fix puntual pendiente para el dev" (reemplazar `const IVA = 0.19` por la lectura de `tax_rates`) **ya se ejecutó** (V11.14.0; la tasa se lee de `tax_rates`, y con la modularización vive en `frontend/src/lib/rates.js`). Verificado contra el build vivo: ya **no** queda `const IVA = 0.19` en el monolito (queda solo un `0.19` como *default de respaldo* en `rates.js`, que `dalBootTaxRates` sobrescribe desde la tabla — eso cumple la doctrina). Se ajusta *Consecuencias* de ADR-018 a "resuelto" y se reconcilia con CLAUDE.md v0.2 §8.
+- *(La estructura `supabase/queries/` —hermana de `supabase/migrations/`— se documenta en Arquitectura §3.4; no requiere cambios en este ADR, ya que ADR-023 habla de migraciones sin detallar el árbol de carpetas.)*
 
 ## Changelog — v1.8 → v1.9
 
@@ -453,7 +459,7 @@ ORDER BY vigente_desde DESC
 LIMIT 1;
 ```
 
-**Consecuencias.** El cliente lee y cachea las tasas vigentes al arrancar. Cualquier hardcodeo tributario en el HTML es un **error arquitectónico de severidad alta**. Fix puntual pendiente para el dev: reemplazar `const IVA = 0.19` por la lectura de `tax_rates`.
+**Consecuencias.** El cliente lee y cachea las tasas vigentes al arrancar. Cualquier hardcodeo tributario en el HTML es un **error arquitectónico de severidad alta**. **Fix del IVA: resuelto (V11.14.0).** Se reemplazó `const IVA = 0.19` por la lectura de `tax_rates`; con la modularización, esa lógica vive en `frontend/src/lib/rates.js` (`dalBootTaxRates` carga las tasas al iniciar sesión). Verificado contra el build vivo: ya no queda `const IVA = 0.19` en el monolito. Persiste un `0.19` como **default de respaldo** en `rates.js` —fallback si `tax_rates` no estuviera disponible—, que se sobrescribe con el valor de la tabla; esto **cumple** la doctrina (la fuente de verdad es `tax_rates`), no la contradice. *(Reflejado también como resuelto en CLAUDE.md v0.2 §8.)*
 
 ---
 
