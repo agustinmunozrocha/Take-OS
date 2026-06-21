@@ -10499,6 +10499,9 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   const hePlana = !!(heCfg && heCfg.usaProyecto === false && heCfg.modo === 'plana');
   const heOverride = !!(heCfg && heCfg.usaProyecto === false);
   const heHoras = (heCfg && Number(heCfg.horas) > 0) ? heCfg.horas : '';
+  // Síntoma 1 (HE Tarifa Plana): hay config de HE pero el costo dio 0 (p.ej. unidad ≠ «Jornadas»,
+  // sin valor hora del cual calcular). Avisar y ofrecer el ⚙ en vez del «—» silencioso.
+  const heNeedsCfg = !!(heCfg && !item.horaExtra);
   const dteRealVal = (item.dteReal !== undefined && item.dteReal !== null) ? item.dteReal : (item.dte || '');
 
   return `
@@ -10589,7 +10592,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
                    value="${heHoras}" placeholder="0" ${hePlana ? 'disabled' : ''}
                    title="N° de horas extra. La HE se calcula con el valor hora (valor de la fila ÷ 10) y el recargo del proyecto. Usa el ⚙ para una tarifa plana o una fórmula propia."
                    onchange="setHeHoras(${ref}, this.value)">
-            <span class="he-cost ${item.horaExtra ? 'he-on' : 'zero'}" data-he-cell>${item.horaExtra ? fmtMoney(item.horaExtra) : '—'}</span>
+            <span class="he-cost ${item.horaExtra ? 'he-on' : (heNeedsCfg ? 'needs-cfg' : 'zero')}" data-he-cell${heNeedsCfg ? ` onclick="openHorasExtraCalc(${ref})" style="color:var(--warning);cursor:pointer;text-decoration:underline dotted;white-space:nowrap;" title="Ingresaste horas, pero esta fila no es «Jornadas»: no hay un valor hora del cual calcular la HE. Haz clic para fijar un valor hora propio o un monto plano."` : ''}>${item.horaExtra ? fmtMoney(item.horaExtra) : (heNeedsCfg ? '⚠ definir' : '—')}</span>
             <button type="button" class="he-cog ${heOverride ? 'is-override' : ''}" title="Ajustar las horas extra de esta fila (tarifa plana, fórmula propia, IVA)" onclick="openHorasExtraCalc(${ref})">⚙</button>
           </div>
         </td>
@@ -10901,8 +10904,19 @@ function afterRowChange(sectionKey, dept, idx) {
   }
   const heCostEl = rowEl.querySelector('[data-he-cell]');
   if (heCostEl) {
-    heCostEl.className = 'he-cost ' + (item.horaExtra ? 'he-on' : 'zero');
-    heCostEl.textContent = item.horaExtra ? fmtMoney(item.horaExtra) : '—';
+    const heNeedsCfg = !!(item.heConfig && !item.horaExtra);   // Síntoma 1: config de HE sin costo calculable -> aviso
+    heCostEl.className = 'he-cost ' + (item.horaExtra ? 'he-on' : (heNeedsCfg ? 'needs-cfg' : 'zero'));
+    heCostEl.textContent = item.horaExtra ? fmtMoney(item.horaExtra) : (heNeedsCfg ? '⚠ definir' : '—');
+    if (heNeedsCfg) {
+      const refHe = sectionKey === 'servicios' ? `'servicios','${escapeHtml(dept)}',${idx}` : `'${sectionKey}',null,${idx}`;
+      heCostEl.style.cssText = 'color:var(--warning);cursor:pointer;text-decoration:underline dotted;white-space:nowrap;';
+      heCostEl.setAttribute('onclick', `openHorasExtraCalc(${refHe})`);
+      heCostEl.setAttribute('title', 'Ingresaste horas, pero esta fila no es «Jornadas»: no hay un valor hora del cual calcular la HE. Haz clic para fijar un valor hora propio o un monto plano.');
+    } else {
+      heCostEl.style.cssText = '';
+      heCostEl.removeAttribute('onclick');
+      heCostEl.removeAttribute('title');
+    }
   }
 
   // Recalcular totales del subdepto / depto
@@ -11004,7 +11018,7 @@ function recalcSubdeptTotals(dept) {
   const project = STATE.currentProject;
   const items = project.data.servicios[dept];
   const showReal = STATES_WITH_REAL_COST.includes(project.state);
-  let totCot = 0, totReal = 0, hasReal = false;
+  let totCot = 0, totReal = 0, totHE = 0, hasReal = false;
   items.forEach(r => {
     const c = calcCostoEmpresa(r.valor, r.cantidad, r.dte, 'servicios');
     totCot += c.value || 0;
@@ -11013,6 +11027,7 @@ function recalcSubdeptTotals(dept) {
       totReal += real.value || 0;
       hasReal = true;
     }
+    totHE += Number(r.horaExtra) || 0;   // Síntoma 2: HE del departamento, se muestra aparte
   });
   const el = document.getElementById(`subdept-totals-${dept}`);
   if (!el) return;
@@ -11021,13 +11036,14 @@ function recalcSubdeptTotals(dept) {
     <span>Cot: <strong>${fmtMoney(totCot)}</strong></span>
     ${showReal && hasReal ? `<span>Real: <strong>${fmtMoney(totReal)}</strong></span>` : ''}
     ${showReal && hasReal && totCot > 0 ? `<span class="delta ${deltaClassCosto(delta)}">${fmtDelta(delta)}</span>` : ''}
+    ${showReal && totHE > 0 ? `<span style="color:var(--accent);white-space:nowrap;" title="Horas extra de este departamento (costo real adicional). No entra al subtotal; se suma al Costo de Producción real en el Resumen Financiero.">+ HE ${fmtMoney(totHE)}</span>` : ''}
   `;
 }
 
 function recalcDeptSummary(sectionKey) {
   const project = STATE.currentProject;
   const showReal = STATES_WITH_REAL_COST.includes(project.state);
-  let totCot = 0, totReal = 0, hasReal = false;
+  let totCot = 0, totReal = 0, totHE = 0, hasReal = false;
 
   if (sectionKey === 'servicios') {
     for (const dept in project.data.servicios) {
@@ -11038,6 +11054,7 @@ function recalcDeptSummary(sectionKey) {
           totReal += getCostoReal(r, 'servicios').value || 0;
           hasReal = true;
         }
+        totHE += Number(r.horaExtra) || 0;   // Síntoma 2: HE de la sección, se muestra aparte (no infla el subtotal)
       });
     }
   } else {
@@ -11048,6 +11065,7 @@ function recalcDeptSummary(sectionKey) {
         totReal += getCostoReal(r, sectionKey).value || 0;
         hasReal = true;
       }
+      totHE += Number(r.horaExtra) || 0;   // Síntoma 2: HE de la sección, se muestra aparte (no infla el subtotal)
     });
   }
 
@@ -11058,6 +11076,7 @@ function recalcDeptSummary(sectionKey) {
     <span>Cotizado: <strong>${fmtMoney(totCot)}</strong></span>
     ${showReal && hasReal ? `<span>Real: <strong>${fmtMoney(totReal)}</strong></span>` : ''}
     ${showReal && hasReal && totCot > 0 ? `<span class="delta ${deltaClassCosto(delta)}">${fmtDelta(delta)}</span>` : ''}
+    ${showReal && totHE > 0 ? `<span style="color:var(--accent);white-space:nowrap;" title="Horas extra de esta sección (costo real adicional, ya con conversión por DTE). No se incluye en el subtotal para no inflar gastos administrativos ni contingencias; se suma al Costo de Producción real en el Resumen Financiero.">+ HE ${fmtMoney(totHE)}</span>` : ''}
   `;
 }
 
