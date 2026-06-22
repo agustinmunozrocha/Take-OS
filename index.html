@@ -26031,6 +26031,7 @@ const GO_ESTADOS = { pendiente: 'Pendiente', por_revisar: 'Por revisar', validad
 
 const GO_STATE = { cfoTab: 'validacion' };
 let GO_DRAFT = {};
+let GO_EDIT_ID = null;   // V11.x · id del gasto en edición (null = se está creando uno nuevo)
 let GO_SEQ = 0;
 function goNewId(prefix) { GO_SEQ++; return prefix + Date.now().toString(36) + GO_SEQ.toString(36); }
 
@@ -26143,8 +26144,9 @@ function renderGastos() {
       <td class="go-num">${fmtMoney(x.monto)}</td>
       <td class="go-sub">${escapeHtml(x.tipo)}</td>
       <td>${comp}</td>
-      <td>${est}</td></tr>`;
-  }).join('') : '<tr><td colspan="9" class="go-faint" style="padding:18px;">Aún no hay gastos. Agrega el primero con “+ Agregar gasto”.</td></tr>';
+      <td>${est}</td>
+      <td><button class="go-mini" onclick="goOpenGasto('${x.id}')">editar</button></td></tr>`;
+  }).join('') : '<tr><td colspan="10" class="go-faint" style="padding:18px;">Aún no hay gastos. Agrega el primero con “+ Agregar gasto”.</td></tr>';
 
   cont.innerHTML = `
   <div class="go-wrap">
@@ -26170,7 +26172,7 @@ function renderGastos() {
             <button class="btn btn-primary btn-sm" onclick="goOpenGasto()">+ Agregar gasto</button>
           </div></div>
         <div class="go-card-b go-tablewrap">
-          <table class="go-tbl"><thead><tr><th>Fecha</th><th>Concepto</th><th>Presupuesto</th><th>Quién gastó</th><th>Medio</th><th class="go-num">Monto</th><th>Doc</th><th>Comp.</th><th>Estado</th></tr></thead>
+          <table class="go-tbl"><thead><tr><th>Fecha</th><th>Concepto</th><th>Presupuesto</th><th>Quién gastó</th><th>Medio</th><th class="go-num">Monto</th><th>Doc</th><th>Comp.</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>${filas}</tbody></table>
         </div>
       </div>
@@ -26298,46 +26300,57 @@ function goSavePresup() {
 }
 
 /* ---------- modal: agregar gasto ---------- */
-function goOpenGasto() {
-  const project = STATE.currentProject; GO_DRAFT = { fileName: null, fileUrl: null };
+function goOpenGasto(editId) {
+  const project = STATE.currentProject;
   const envs = goPresList(project); const contactos = goContactos(project);
   if (!envs.length) { showToast({ kind: 'warning', title: 'Primero crea un presupuesto', body: 'Cada gasto se carga a un presupuesto (sobre). Crea uno con “+ Crear presupuesto”.' }); return; }
-  goModal(`<div class="go-mc"><div class="go-mh"><h3>Agregar gasto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" onclick="closeModal()">×</button></div>
+  /* V11.x · si viene editId, precargamos el gasto para modificarlo; si no, se
+     crea uno nuevo (comportamiento de siempre). El comprobante existente se
+     conserva en GO_DRAFT salvo que se adjunte otro. */
+  const g = editId ? goMovs(project).find(x => x.id === editId) : null;
+  GO_EDIT_ID = g ? g.id : null;
+  GO_DRAFT = g ? { fileName: g.fileName || null, fileUrl: g.fileUrl || null } : { fileName: null, fileUrl: null };
+  const esEd = !!g;
+  const dp = (g && g.datosPago) ? g.datosPago : null;
+  const sel = (a, b) => (String(a) === String(b) ? ' selected' : '');
+  const compBox = (g && g.comp) ? '<div class="go-attached"><div class="go-thumb">📄</div><div style="flex:1;">' + escapeHtml(g.fileName || 'comprobante adjunto') + '<div class="go-sub">comprobante actual · adjunta otro para reemplazarlo</div></div></div>' : '';
+  goModal(`<div class="go-mc"><div class="go-mh"><h3>${esEd ? 'Editar' : 'Agregar'} gasto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb">
       <div class="go-frow">
-        <div class="go-field half"><label>Fecha</label><input class="go-inp" type="date" id="f_fecha" value="${goToday()}"></div>
-        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="f_monto" placeholder="0" inputmode="numeric"></div>
+        <div class="go-field half"><label>Fecha</label><input class="go-inp" type="date" id="f_fecha" value="${g ? escapeHtml(g.fecha) : goToday()}"></div>
+        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="f_monto" placeholder="0" inputmode="numeric" value="${g ? (g.monto || '') : ''}"></div>
       </div>
       <div class="go-field"><label>Presupuesto · a qué se carga</label>
-        <select class="go-inp" id="f_pres" onchange="goGastoHint()"><option value="">— elige un presupuesto —</option>${envs.map(e => '<option value="' + e.id + '">' + escapeHtml(e.nombre) + ' (→ ' + escapeHtml(e.linea) + ')</option>').join('')}</select>
+        <select class="go-inp" id="f_pres" onchange="goGastoHint()"><option value="">— elige un presupuesto —</option>${envs.map(e => '<option value="' + e.id + '"' + sel(e.id, g ? g.pres : '') + '>' + escapeHtml(e.nombre) + ' (→ ' + escapeHtml(e.linea) + ')</option>').join('')}</select>
         <div class="go-hintbox" id="goGastoHint"></div>
       </div>
       <div class="go-frow">
-        <div class="go-field half"><label>Concepto</label><input class="go-inp" id="f_concepto" placeholder="¿En qué se gastó?"></div>
-        <div class="go-field half"><label>Proveedor</label><input class="go-inp" id="f_prov" placeholder="¿A quién se le pagó?"></div>
+        <div class="go-field half"><label>Concepto</label><input class="go-inp" id="f_concepto" placeholder="¿En qué se gastó?" value="${g ? escapeHtml(g.concepto) : ''}"></div>
+        <div class="go-field half"><label>Proveedor</label><input class="go-inp" id="f_prov" placeholder="¿A quién se le pagó?" value="${g ? escapeHtml(g.prov) : ''}"></div>
       </div>
       <div class="go-frow">
-        <div class="go-field half"><label>Quién gastó</label><input class="go-inp" id="f_quien" list="go_dl_contactos" placeholder="nombre" oninput="goCheckPersona()"></div>
-        <div class="go-field half"><label>Quién registra</label><input class="go-inp" id="f_registra" list="go_dl_contactos" placeholder="nombre"></div>
+        <div class="go-field half"><label>Quién gastó</label><input class="go-inp" id="f_quien" list="go_dl_contactos" placeholder="nombre" oninput="goCheckPersona()" value="${g ? escapeHtml(g.quien === '—' ? '' : g.quien) : ''}"></div>
+        <div class="go-field half"><label>Quién registra</label><input class="go-inp" id="f_registra" list="go_dl_contactos" placeholder="nombre" value="${g ? escapeHtml(g.registra === '—' ? '' : g.registra) : ''}"></div>
       </div>
-      <div class="go-newperson" id="f_newperson"><div class="go-np-t">⚠ Esta persona no está en la base de datos · agrega sus datos de pago</div>
-        <div class="go-frow"><div class="go-field half"><label>RUT</label><input class="go-inp" id="np_rut" placeholder="12.345.678-9"></div><div class="go-field half"><label>Email</label><input class="go-inp" id="np_email" placeholder="correo@…"></div></div>
-        <div class="go-frow"><div class="go-field half"><label>Banco</label><input class="go-inp" id="np_banco" placeholder="Banco"></div><div class="go-field half"><label>Tipo de cuenta</label><input class="go-inp" id="np_tcuenta" placeholder="Cuenta corriente / vista"></div></div>
-        <div class="go-field"><label>N° de cuenta</label><input class="go-inp" id="np_ncuenta" placeholder="0-000-0000000-0"></div>
+      <div class="go-newperson${dp ? ' show' : ''}" id="f_newperson"><div class="go-np-t">⚠ Esta persona no está en la base de datos · agrega sus datos de pago</div>
+        <div class="go-frow"><div class="go-field half"><label>RUT</label><input class="go-inp" id="np_rut" placeholder="12.345.678-9" value="${dp ? escapeHtml(dp.rut || '') : ''}"></div><div class="go-field half"><label>Email</label><input class="go-inp" id="np_email" placeholder="correo@…" value="${dp ? escapeHtml(dp.email || '') : ''}"></div></div>
+        <div class="go-frow"><div class="go-field half"><label>Banco</label><input class="go-inp" id="np_banco" placeholder="Banco" value="${dp ? escapeHtml(dp.banco || '') : ''}"></div><div class="go-field half"><label>Tipo de cuenta</label><input class="go-inp" id="np_tcuenta" placeholder="Cuenta corriente / vista" value="${dp ? escapeHtml(dp.tipoCuenta || '') : ''}"></div></div>
+        <div class="go-field"><label>N° de cuenta</label><input class="go-inp" id="np_ncuenta" placeholder="0-000-0000000-0" value="${dp ? escapeHtml(dp.nCuenta || '') : ''}"></div>
       </div>
       <div class="go-frow">
-        <div class="go-field half"><label>Medio de pago</label><select class="go-inp" id="f_medio">${GO_MEDIOS.map(m => '<option>' + escapeHtml(m) + '</option>').join('')}</select></div>
-        <div class="go-field half"><label>Tipo de documento</label><select class="go-inp" id="f_tipo">${GO_TIPOS.map(t => '<option>' + escapeHtml(t) + '</option>').join('')}</select></div>
+        <div class="go-field half"><label>Medio de pago</label><select class="go-inp" id="f_medio">${GO_MEDIOS.map(m => '<option' + sel(m, g ? g.medio : '') + '>' + escapeHtml(m) + '</option>').join('')}</select></div>
+        <div class="go-field half"><label>Tipo de documento</label><select class="go-inp" id="f_tipo">${GO_TIPOS.map(t => '<option' + sel(t, g ? g.tipo : '') + '>' + escapeHtml(t) + '</option>').join('')}</select></div>
       </div>
       <div class="go-field"><label>Comprobante</label>
         <div class="go-dz" onclick="document.getElementById('f_file').click()"><span class="go-big">📎</span>Adjunta foto o PDF de la boleta/factura</div>
-        <input type="file" id="f_file" accept="image/*,application/pdf" style="display:none" onchange="goOnFile(this)"><div id="f_fileBox"></div>
+        <input type="file" id="f_file" accept="image/*,application/pdf" style="display:none" onchange="goOnFile(this)"><div id="f_fileBox">${compBox}</div>
       </div>
-      <div class="go-field"><label>Comentario (opcional)</label><textarea class="go-inp" id="f_coment" placeholder="Nota para el equipo o el CFO… (ej. falta la boleta, llega mañana)"></textarea></div>
+      <div class="go-field"><label>Comentario (opcional)</label><textarea class="go-inp" id="f_coment" placeholder="Nota para el equipo o el CFO… (ej. falta la boleta, llega mañana)">${g ? escapeHtml(g.coment || '') : ''}</textarea></div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
     <div class="go-mf"><span class="go-help" style="margin-right:auto;">Si falta info (comprobante, concepto…) queda <b>Pendiente</b> y no molesta al CFO.</span>
-      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSaveGasto()">Guardar gasto</button></div></div>`);
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSaveGasto()">${esEd ? 'Guardar cambios' : 'Guardar gasto'}</button></div></div>`);
+  if (esEd) { try { goGastoHint(); } catch (e) {} }
 }
 function goCheckPersona() {
   const v = (document.getElementById('f_quien').value || '').trim();
@@ -26371,21 +26384,36 @@ function goSaveGasto() {
   if (document.getElementById('f_newperson') && document.getElementById('f_newperson').classList.contains('show') && npRut) {
     datosPago = { rut: npRut, email: val('np_email'), banco: val('np_banco'), tipoCuenta: val('np_tcuenta'), nCuenta: val('np_ncuenta') };
   }
-  const m = {
-    id: goNewId('m'), pres: pres, fecha: val('f_fecha') || goToday(),
+  const campos = {
+    pres: pres, fecha: val('f_fecha') || goToday(),
     quien: (val('f_quien') || '').trim() || '—', registra: (val('f_registra') || '').trim() || '—',
     concepto: concepto || '(sin concepto)', prov: prov || '—', monto: monto,
     medio: val('f_medio'), tipo: val('f_tipo'), comp: !!GO_DRAFT.fileName,
     estado: completo ? 'por_revisar' : 'pendiente', coment: (val('f_coment') || '').trim(),
-    fechaPago: null, objetivo: null, fileName: GO_DRAFT.fileName, fileUrl: GO_DRAFT.fileUrl, datosPago: datosPago
+    fileName: GO_DRAFT.fileName, fileUrl: GO_DRAFT.fileUrl
   };
+  if (GO_EDIT_ID) {
+    /* V11.x · EDICIÓN de un gasto existente: se actualizan sus campos en su
+       lugar (mismo id). Como cambió, el estado se recalcula y vuelve a la cola
+       del CFO si está completo —una validación previa queda obsoleta—. Se
+       conservan fechaPago/objetivo y los datos de pago si no se reingresaron. */
+    const m = d.movimientos.find(x => x.id === GO_EDIT_ID);
+    if (!m) { GO_EDIT_ID = null; closeModal(); return; }
+    Object.assign(m, campos);
+    if (datosPago) m.datosPago = datosPago;
+    GO_EDIT_ID = null;
+    markDirty(); closeModal(); renderGastos();
+    showToast({ kind: 'success', title: 'Gasto actualizado', body: completo ? 'Como cambió, vuelve a la cola de validación del CFO.' : 'Quedó Pendiente: falta info por completar.' });
+    return;
+  }
+  const m = Object.assign({ id: goNewId('m') }, campos, { fechaPago: null, objetivo: null, datosPago: datosPago });
   d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
   showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola del CFO.' : 'Falta info: complétalo y marca “listo”.' });
 }
 
 /* ---------- modal: captura rápida ---------- */
 function goOpenQuick() {
-  const project = STATE.currentProject; GO_DRAFT = { fileName: null, fileUrl: null };
+  const project = STATE.currentProject; GO_DRAFT = { fileName: null, fileUrl: null }; GO_EDIT_ID = null;
   const envs = goPresList(project);
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>⚡ Captura rápida</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb"><div class="go-phone">

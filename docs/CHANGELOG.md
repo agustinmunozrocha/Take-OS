@@ -1,5 +1,23 @@
 # Changelog — TakeOS
 
+## V11.18.0 — 22 de junio de 2026
+### Gastos: editar un gasto ya registrado
+
+Rama `fix/gastos-editar-gasto`. El módulo de Gastos no permitía **modificar** un
+gasto ya hecho (solo crear, ver comprobante y cambiar estado), y equivocarse al
+rendir es habitual. Cambio acotado al **frontend** (monolito); los gastos viven
+en el JSON del proyecto (`project.data.gastosOp.movimientos`), no en la base.
+
+- **Botón "editar" por fila** (nueva columna "Acciones" en el Registro de gastos):
+  reabre el mismo modal **precargado** con todos los datos del gasto.
+- **`goSaveGasto()` actualiza el gasto en su lugar** (mismo id) en vez de crear
+  uno nuevo. "+ Agregar gasto" sigue creando como siempre.
+- **El comprobante actual se conserva** si no se adjunta otro; adjuntar uno lo
+  reemplaza. Los datos de pago de persona nueva se conservan si no se reingresan.
+- **Re-validación al editar.** Un gasto editado vuelve a "Por revisar" (si está
+  completo) o "Pendiente": una validación previa del CFO queda obsoleta cuando
+  cambian los datos. Se conservan fecha de pago y fecha objetivo.
+
 ## V11.17.0 — 22 de junio de 2026
 ### Panel de Equipo: cambiar interno/externo y quitar del equipo
 
