@@ -22775,7 +22775,7 @@ function renderGastos() {
   const filas = gs.length ? gs.map(x => {
     const e = goPresById(project, x.pres);
     const medioCorto = x.medio === 'Reembolso a colaborador' ? '<span class="go-tag reemb">Reembolso</span>' : escapeHtml(x.medio.replace('Tarjeta empresa ', 'Tarjeta '));
-    const comp = x.comp ? `<button class="go-cmp ok" onclick="goVerComprobante('${x.id}')">✓ ver</button>` : '<span class="go-cmp no">—</span>';
+    const comp = goCompCell(x, 'goVerComprobante', '—');
     const est = x.estado === 'pendiente'
       ? `<span class="go-est pendiente" title="el productor sabe que falta info">Pendiente</span> <button class="go-mini" onclick="goMarcarListo('${x.id}')">marcar listo</button>`
       : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado]}</span>`;
@@ -22857,16 +22857,70 @@ function goMarcarListo(id) {
   const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
   if (m) { m.estado = 'por_revisar'; markDirty(); renderGastos(); showToast({ kind: 'success', title: 'Gasto listo', body: 'Pasó a la cola de validación del CFO.' }); }
 }
-function goVerComprobante(id) {
-  const project = STATE.currentProject || goFindMov(id).project;
-  const x = goMovs(project).find(g => g.id === id) || (goFindMov(id) || {}).m;
+/* ── V11.x · comprobantes de gasto en Supabase Storage (bucket privado
+   `adjuntos-gastos`). Antes el cliente guardaba una blob: URL efímera que moría
+   al cerrar la pestaña (el archivo nunca se subía). Ahora se sube el File real y
+   se persiste el PATH; para ver/descargar se pide una URL firmada temporal.
+   Mismo patrón que documentos-proyecto / adjuntos-tareas. La RLS exige que el
+   primer segmento del path sea el ORG_ID. ── */
+function _gastoStoragePath(projId, name) {
+  const safe = String(name || 'comprobante').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
+  return ORG_ID + '/' + (projId || 'proyecto') + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '-' + safe;
+}
+async function _uploadGastoComprobante(projId, file) {
+  if (!sb || PROJECTS_SOURCE !== 'supabase' || !sb.storage || !file) return null;
+  try {
+    const path = _gastoStoragePath(projId, file.name);
+    const { error } = await sb.storage.from('adjuntos-gastos').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+    if (error) throw error;
+    return { path: path };
+  } catch (e) { console.warn('[storage] comprobante de gasto no disponible', e); return null; }
+}
+/* Estado del comprobante de un movimiento: 'ok' = subido a Storage (tiene
+   filePath) · 'roto' = marca de comprobante de una versión vieja (blob muerto,
+   nunca subido) · 'none' = sin comprobante. */
+function goCompEstado(m) {
+  if (m && m.filePath) return 'ok';
+  if (m && (m.comp || m.fileName || (m.fileUrl && String(m.fileUrl).indexOf('blob:') === 0))) return 'roto';
+  return 'none';
+}
+function goCompCell(x, onclickFn, faltaLabel) {
+  const st = goCompEstado(x);
+  if (st === 'ok') return '<button class="go-cmp ok" onclick="' + onclickFn + '(\'' + x.id + '\')">✓ ver</button>';
+  if (st === 'roto') return '<button class="go-cmp no" title="El archivo no llegó a guardarse (referencia de una versión anterior). Edita el gasto y vuelve a adjuntar el comprobante." onclick="' + onclickFn + '(\'' + x.id + '\')">⚠ re-subir</button>';
+  return '<span class="go-cmp no">' + (faltaLabel || '—') + '</span>';
+}
+async function goVerComprobante(id) {
+  const project = STATE.currentProject || (goFindMov(id) || {}).project;
+  const x = (project ? goMovs(project).find(g => g.id === id) : null) || (goFindMov(id) || {}).m;
   if (!x) return;
-  const body = x.fileUrl
-    ? `<img src="${safeUrl(x.fileUrl)}" style="max-width:100%;border-radius:8px;">`
-    : `<div class="go-receipt"><div class="rc-h">COMPROBANTE</div><div class="rc-row"><span>${escapeHtml(x.prov)}</span></div><div class="rc-row"><span>${escapeHtml(x.concepto)}</span></div><div class="rc-row"><span>${escapeHtml(x.fecha)}</span><span>${escapeHtml(x.tipo)}</span></div><div class="rc-row" style="font-weight:700;border-top:1px dashed #b9b2a3;margin-top:6px;padding-top:6px;"><span>TOTAL</span><span>${fmtMoney(x.monto)}</span></div></div><div class="go-help" style="text-align:center;margin-top:10px;">El archivo adjunto se ve mientras dura la sesión; el guardado real del archivo llega con object storage (backend).</div>`;
-  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(x.concepto)}</h3><button class="go-x" onclick="closeModal()">×</button></div>
-    <div class="go-mb">${body}</div>
-    <div class="go-mf">${x.fileUrl ? `<a class="btn btn-secondary btn-sm" href="${safeUrl(x.fileUrl)}" download="${escapeHtml(x.fileName || 'comprobante')}">⬇ Descargar</a>` : ''}<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
+  /* Legado roto: tenía comprobante pero nunca llegó a Storage (blob muerto). El
+     archivo no existe; hay que re-adjuntarlo desde el dispositivo original. */
+  if (!x.filePath) {
+    goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante no disponible</h3><button class="go-x" onclick="closeModal()">×</button></div>
+      <div class="go-mb"><div class="go-help" style="line-height:1.6;">El comprobante de <b>${escapeHtml(x.concepto || '')}</b> no quedó guardado en la nube: era una referencia temporal de una versión anterior y se perdió al cerrar la pestaña. No se puede recuperar desde acá.<br><br>Para arreglarlo, <b>edita este gasto</b> y vuelve a adjuntar el comprobante desde el dispositivo donde está la foto o el PDF original.</div></div>
+      <div class="go-mf"><button class="btn btn-primary btn-sm" onclick="closeModal();goOpenGasto('${x.id}')">Editar y re-adjuntar</button><button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
+    return;
+  }
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(x.concepto || '')}</h3><button class="go-x" onclick="closeModal()">×</button></div><div class="go-mb"><div class="go-help">Cargando comprobante…</div></div></div>`);
+  try {
+    const { data, error } = await sb.storage.from('adjuntos-gastos').createSignedUrl(x.filePath, 3600);
+    if (error || !data || !data.signedUrl) throw (error || new Error('sin url'));
+    const url = data.signedUrl;
+    const nombre = x.fileName || x.filePath.split('/').pop() || 'comprobante';
+    const esImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(nombre);
+    const body = esImg
+      ? `<img src="${safeUrl(url)}" style="max-width:100%;border-radius:8px;">`
+      : `<div class="go-help" style="line-height:1.6;">No hay vista previa para este archivo (<b>${escapeHtml(nombre)}</b>). Las fotos de iPhone (.HEIC) y los PDF no se previsualizan en el navegador, pero puedes <b>descargarlos</b>.</div>`;
+    goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(x.concepto || '')}</h3><button class="go-x" onclick="closeModal()">×</button></div>
+      <div class="go-mb">${body}</div>
+      <div class="go-mf"><a class="btn btn-secondary btn-sm" href="${safeUrl(url)}" target="_blank" rel="noopener" download="${escapeHtml(nombre)}">⬇ Descargar / abrir</a><button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
+  } catch (e) {
+    console.warn('[storage] no se pudo abrir el comprobante', e);
+    goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante</h3><button class="go-x" onclick="closeModal()">×</button></div>
+      <div class="go-mb"><div class="go-help">No se pudo abrir el comprobante (problema de red o permisos). Reinténtalo en un momento.</div></div>
+      <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>`);
+  }
 }
 
 /* ---------- modal: crear presupuesto (sobre) ---------- */
@@ -22953,11 +23007,13 @@ function goOpenGasto(editId) {
      conserva en GO_DRAFT salvo que se adjunte otro. */
   const g = editId ? goMovs(project).find(x => x.id === editId) : null;
   GO_EDIT_ID = g ? g.id : null;
-  GO_DRAFT = g ? { fileName: g.fileName || null, fileUrl: g.fileUrl || null } : { fileName: null, fileUrl: null };
+  GO_DRAFT = g ? { filePath: g.filePath || null, fileName: g.fileName || null, fileUrl: null } : { filePath: null, fileName: null, fileUrl: null };
   const esEd = !!g;
   const dp = (g && g.datosPago) ? g.datosPago : null;
   const sel = (a, b) => (String(a) === String(b) ? ' selected' : '');
-  const compBox = (g && g.comp) ? '<div class="go-attached"><div class="go-thumb">📄</div><div style="flex:1;">' + escapeHtml(g.fileName || 'comprobante adjunto') + '<div class="go-sub">comprobante actual · adjunta otro para reemplazarlo</div></div></div>' : '';
+  const compBox = (g && g.filePath)
+    ? '<div class="go-attached"><div class="go-thumb">📄</div><div style="flex:1;">' + escapeHtml(g.fileName || 'comprobante') + '<div class="go-sub">comprobante actual · adjunta otro para reemplazarlo</div></div></div>'
+    : ((g && (g.comp || g.fileName)) ? '<div class="go-sub" style="color:var(--accent-deep);">⚠ El comprobante anterior no quedó guardado (versión vieja). Adjúntalo de nuevo.</div>' : '');
   goModal(`<div class="go-mc"><div class="go-mh"><h3>${esEd ? 'Editar' : 'Agregar'} gasto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb">
       <div class="go-frow">
@@ -23010,11 +23066,20 @@ function goGastoHint() {
   box.classList.add('show');
   box.innerHTML = 'Sube el <b>gastado</b> de «' + escapeHtml(e.nombre) + '» (gastado ' + fmtMoney(gastado) + ' de ' + fmtMoney(e.asignado || 0) + ' → quedan <b>' + fmtMoney((e.asignado || 0) - gastado) + '</b>) y el <b>Real</b> de la línea <b>' + escapeHtml(e.linea) + '</b>. El cotizado no se toca.';
 }
-function goOnFile(inp) {
+async function goOnFile(inp) {
   const f = inp.files[0]; if (!f) return;
-  GO_DRAFT.fileName = f.name; GO_DRAFT.fileUrl = URL.createObjectURL(f);
+  const box = document.getElementById('f_fileBox');
+  if (box) box.innerHTML = '<div class="go-sub">Subiendo comprobante a la nube…</div>';
+  const up = await _uploadGastoComprobante(STATE.currentProject ? STATE.currentProject.id : '', f);
+  if (!up || !up.path) {
+    if (box) box.innerHTML = '<div class="go-sub" style="color:var(--accent-deep);">No se pudo subir el comprobante. Revisa tu conexión y reintenta.</div>';
+    showToast({ kind: 'error', title: 'No se subió el comprobante', body: 'No se pudo guardar el archivo en la nube. Reintenta.', duration: 7000 });
+    return;
+  }
+  GO_DRAFT.filePath = up.path; GO_DRAFT.fileName = f.name;
+  GO_DRAFT.fileUrl = URL.createObjectURL(f);   // solo preview en esta sesión; NO se persiste
   const isImg = (f.type || '').indexOf('image/') === 0;
-  document.getElementById('f_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb">${isImg ? '<img src="' + safeUrl(GO_DRAFT.fileUrl) + '">' : '📄'}</div><div style="flex:1;">${escapeHtml(f.name)}<div class="go-sub">${(f.size / 1024).toFixed(0)} KB</div></div><a href="${safeUrl(GO_DRAFT.fileUrl)}" download="${escapeHtml(f.name)}" class="go-mini">descargar</a></div>`;
+  if (box) box.innerHTML = `<div class="go-attached"><div class="go-thumb">${isImg ? '<img src="' + safeUrl(GO_DRAFT.fileUrl) + '">' : '📄'}</div><div style="flex:1;">${escapeHtml(f.name)}<div class="go-sub">${(f.size / 1024).toFixed(0)} KB · subido ✓</div></div></div>`;
 }
 function goSaveGasto() {
   const project = STATE.currentProject; const d = goData(project);
@@ -23022,7 +23087,7 @@ function goSaveGasto() {
   const monto = parseInt((val('f_monto') || '0').replace(/\D/g, '')) || 0;
   const pres = val('f_pres');
   const concepto = (val('f_concepto') || '').trim(); const prov = (val('f_prov') || '').trim();
-  const completo = monto > 0 && !!pres && !!concepto && !!prov && !!GO_DRAFT.fileName;
+  const completo = monto > 0 && !!pres && !!concepto && !!prov && !!GO_DRAFT.filePath;
   let datosPago = null;
   const npRut = val('np_rut');
   if (document.getElementById('f_newperson') && document.getElementById('f_newperson').classList.contains('show') && npRut) {
@@ -23032,9 +23097,9 @@ function goSaveGasto() {
     pres: pres, fecha: val('f_fecha') || goToday(),
     quien: (val('f_quien') || '').trim() || '—', registra: (val('f_registra') || '').trim() || '—',
     concepto: concepto || '(sin concepto)', prov: prov || '—', monto: monto,
-    medio: val('f_medio'), tipo: val('f_tipo'), comp: !!GO_DRAFT.fileName,
+    medio: val('f_medio'), tipo: val('f_tipo'), comp: !!GO_DRAFT.filePath,
     estado: completo ? 'por_revisar' : 'pendiente', coment: (val('f_coment') || '').trim(),
-    fileName: GO_DRAFT.fileName, fileUrl: GO_DRAFT.fileUrl
+    fileName: GO_DRAFT.fileName, filePath: GO_DRAFT.filePath || null, fileUrl: null
   };
   if (GO_EDIT_ID) {
     /* V11.x · EDICIÓN de un gasto existente: se actualizan sus campos en su
@@ -23043,8 +23108,11 @@ function goSaveGasto() {
        conservan fechaPago/objetivo y los datos de pago si no se reingresaron. */
     const m = d.movimientos.find(x => x.id === GO_EDIT_ID);
     if (!m) { GO_EDIT_ID = null; closeModal(); return; }
+    const oldFilePath = m.filePath || null;
     Object.assign(m, campos);
     if (datosPago) m.datosPago = datosPago;
+    /* si se reemplazó el comprobante, borra el objeto viejo de Storage */
+    if (oldFilePath && oldFilePath !== m.filePath && sb && sb.storage) { try { sb.storage.from('adjuntos-gastos').remove([oldFilePath]); } catch (e) {} }
     GO_EDIT_ID = null;
     markDirty(); closeModal(); renderGastos();
     showToast({ kind: 'success', title: 'Gasto actualizado', body: completo ? 'Como cambió, vuelve a la cola de validación del CFO.' : 'Quedó Pendiente: falta info por completar.' });
@@ -23057,7 +23125,7 @@ function goSaveGasto() {
 
 /* ---------- modal: captura rápida ---------- */
 function goOpenQuick() {
-  const project = STATE.currentProject; GO_DRAFT = { fileName: null, fileUrl: null }; GO_EDIT_ID = null;
+  const project = STATE.currentProject; GO_DRAFT = { filePath: null, fileName: null, fileUrl: null }; GO_EDIT_ID = null;
   const envs = goPresList(project);
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>⚡ Captura rápida</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb"><div class="go-phone">
@@ -23071,10 +23139,19 @@ function goOpenQuick() {
     </div></div>
     <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSaveQuick()">Guardar y completar después</button></div></div>`);
 }
-function goOnFileQ(inp) {
+async function goOnFileQ(inp) {
   const f = inp.files[0]; if (!f) return;
-  GO_DRAFT.fileName = f.name; GO_DRAFT.fileUrl = URL.createObjectURL(f);
-  document.getElementById('q_fileBox').innerHTML = `<div class="go-attached"><div class="go-thumb"><img src="${safeUrl(GO_DRAFT.fileUrl)}"></div><div style="flex:1;">${escapeHtml(f.name)}</div></div>`;
+  const box = document.getElementById('q_fileBox');
+  if (box) box.innerHTML = '<div class="go-sub">Subiendo…</div>';
+  const up = await _uploadGastoComprobante(STATE.currentProject ? STATE.currentProject.id : '', f);
+  if (!up || !up.path) {
+    if (box) box.innerHTML = '<div class="go-sub" style="color:var(--accent-deep);">No se pudo subir. Reintenta.</div>';
+    showToast({ kind: 'error', title: 'No se subió el comprobante', body: 'Revisa tu conexión y reintenta.' });
+    return;
+  }
+  GO_DRAFT.filePath = up.path; GO_DRAFT.fileName = f.name;
+  GO_DRAFT.fileUrl = URL.createObjectURL(f);
+  if (box) box.innerHTML = `<div class="go-attached"><div class="go-thumb"><img src="${safeUrl(GO_DRAFT.fileUrl)}"></div><div style="flex:1;">${escapeHtml(f.name)}<div class="go-sub">subido ✓</div></div></div>`;
 }
 function goSaveQuick() {
   const project = STATE.currentProject; const d = goData(project);
@@ -23083,8 +23160,8 @@ function goSaveQuick() {
   const m = {
     id: goNewId('m'), pres: pres, fecha: goToday(), quien: '—', registra: '—',
     concepto: '(completar)', prov: '—', monto: monto, medio: 'Tarjeta empresa (débito)', tipo: 'Boleta',
-    comp: !!GO_DRAFT.fileName, estado: 'pendiente', coment: '', fechaPago: null, objetivo: null,
-    fileName: GO_DRAFT.fileName, fileUrl: GO_DRAFT.fileUrl, datosPago: null
+    comp: !!GO_DRAFT.filePath, estado: 'pendiente', coment: '', fechaPago: null, objetivo: null,
+    fileName: GO_DRAFT.fileName, filePath: GO_DRAFT.filePath || null, datosPago: null
   };
   d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
   showToast({ kind: 'success', title: 'Capturado · queda Pendiente', body: 'Complétalo más tarde y márcalo listo.' });
@@ -23486,7 +23563,7 @@ function goCfoValidacion() {
   const pend = goAllMovs().filter(o => goNeedsAction(o.m));
   const rows = pend.length ? pend.map(o => {
     const x = o.m; const e = goPresById(o.project, x.pres);
-    const comp = x.comp ? `<button class="go-cmp ok" onclick="goCfoVer('${x.id}')">✓ ver</button>` : '<span class="go-cmp no">falta</span>';
+    const comp = goCompCell(x, 'goCfoVer', 'falta');
     return `<tr>
       <td class="go-sub">${escapeHtml(x.fecha.slice(5))}</td><td>${escapeHtml(goProjName(o.project))}</td>
       <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${x.coment ? '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>' : ''}</td>
