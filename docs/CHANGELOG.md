@@ -1,5 +1,27 @@
 # Changelog — TakeOS
 
+## V11.19.0 — 26 de junio de 2026
+### Gastos: los comprobantes se suben de verdad a Storage (fin del bug de la `blob:` URL)
+
+Rama `fix/gastos-comprobante-storage`. Bug de pérdida de datos silenciosa: al
+adjuntar un comprobante a un gasto, el cliente guardaba una `blob:` URL efímera
+del navegador (moría al cerrar la pestaña) en vez de subir el archivo. El bucket
+`adjuntos-gastos` y su RLS ya existían; faltaba cablear la subida. **Sin cambios
+de BD.**
+
+- **Subida real a Storage al adjuntar.** El archivo se sube al bucket privado
+  `adjuntos-gastos` (path `{org_id}/{project_id}/…`, exigido por la RLS) y en el
+  movimiento se persiste el `filePath`, no la `blob:` URL. Mismo patrón que
+  documentos-proyecto / adjuntos-tareas. Aplica a "Agregar gasto", edición y
+  captura rápida.
+- **Ver/descargar por URL firmada temporal** (bucket privado): imágenes con
+  preview inline; HEIC y PDF se descargan/abren (sin preview en el navegador).
+- **Adjuntos legados rotos** (las `blob:` muertas de Fair Trade y similares): se
+  muestran como "⚠ re-subir" con aviso de que el archivo no quedó guardado y hay
+  que re-adjuntarlo desde el origen; no se intenta abrir una URL muerta.
+- **Reemplazo limpio:** al cambiar el comprobante de un gasto se borra el objeto
+  viejo del bucket. Si la subida falla, no se persiste una referencia muerta.
+
 ## V11.18.0 — 22 de junio de 2026
 ### Gastos: editar un gasto ya registrado
 
