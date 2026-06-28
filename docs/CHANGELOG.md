@@ -1,5 +1,49 @@
 # Changelog — TakeOS
 
+## V11.22.0 — 28 de junio de 2026
+### Gastos ↔ Presupuesto: Costo Real alimentado por los gastos + revamp de la pestaña Gastos
+
+Rama `feat/pasada-4-gastos-presupuesto` (Pasada 4 del plan de cambios acumulados).
+Solo **frontend**, sobre tablas/RLS ya existentes.
+
+**Presupuesto · sección "Gastos" (antes "Gastos de producción")**
+- La sección se renombra a **"Gastos"** con la nota *«vinculado con la pestaña Gastos»*.
+- El **Costo Real** de cada línea de Gastos pasa a **derivarse de los gastos
+  registrados** (suma de los movimientos asociados a la línea vía su caja). Queda de
+  **solo lectura** y, al hacerle clic, lleva a la pestaña **Gastos**.
+- **Editable** cuando la línea **no** tiene una caja vinculada, o cuando la tiene
+  pero el real gastado es **$0** (un gasto puntual con un único proveedor no
+  necesita un presupuesto; si el real cae a $0, vuelve a ser editable).
+- El resumen financiero y los KPIs reflejan el real efectivo sin tipeo manual.
+
+**Gastos · crear caja "igualando" una línea**
+- Al asociar una caja a una línea del Presupuesto, el **Monto asignado** se
+  prellena con el **cotizado de esa línea** (editable). Evita retipear el número.
+
+**Gastos · Registro de gastos**
+- **Columnas redimensionables** a mano (misma maquinaria que el Presupuesto:
+  arrastrar el borde, doble clic restablece, se persiste).
+- **Buscador** por concepto, proveedor, quién gastó, medio, tipo, comentario y monto.
+- **Agrupado por presupuesto** (una subsección por caja, con su total) en vez de una
+  lista plana.
+- **Ordenar por Fecha y Monto** (asc/desc, con la flecha activa en rojo, igual que
+  Presupuesto).
+- Columna **"Medio de pago"** muestra el valor exacto del desplegable.
+- **Eliminar gasto** desde el modal de edición (con confirmación) y **"revertir a
+  pendiente"** para gastos "Por revisar".
+- **Quién gastó / Quién registra** usan el combobox de personas de la BD;
+  **Proveedor** usa el combobox de empresas de la BD.
+- **Tipos de documento**: Factura, Factura Exenta, Boleta, Invoice, Otro.
+
+**Gastos · Caja de producción**
+- La tarjeta del proyecto pasa a comparar el **gasto real contra el presupuesto de
+  Gastos** (no el total del proyecto).
+- Se reemplaza el ambiguo "editar" por **"Registrar ingreso"** y **"Registrar
+  devolución"** (con fecha, por defecto hoy) y un **"Historial"** de ingresos/egresos.
+- **Pendiente de BD (handoff):** persistencia de ingresos/devoluciones de caja (hoy
+  el ingreso usa la columna `caja_prod`; la devolución vive en memoria). El "marcar
+  empresa como Proveedor" + alta exprés de empresa por nombre va como **pasada 4.1**.
+
 ## V11.21.0 — 27 de junio de 2026
 ### Presupuesto: columnas de ancho ajustable (como Excel) · Equipo: internos/externos por proyecto
 
