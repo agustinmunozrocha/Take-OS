@@ -1,5 +1,25 @@
 # Changelog — TakeOS
 
+## V11.26.0 — 28 de junio de 2026
+### Gastos: la devolución de caja persiste y "Observar" pasa a ser un hilo de comentarios
+
+Rama `feat/gastos-caja-devolucion-hilo-observar`. **Frontend** que cablea el backend
+del PR8 (migraciones ya desplegadas): no cambia el esquema, solo lo usa.
+
+**Caja de producción**
+- La **devolución** de caja y la **libreta de movimientos** (ingresos/devoluciones)
+  ahora **se guardan** (antes vivían solo en pantalla y se perdían al recargar). El
+  ingreso ya persistía; ahora persiste toda la caja, vía `guardar_operaciones_4b`
+  (columnas `caja_devuelto` / `caja_movimientos`).
+
+**"Observar" un gasto**
+- El comentario de "Observar" deja de ser un campo único que se sobreescribía: pasa a
+  ser un **hilo de conversación** (mensajes en secuencia, con autor y fecha), de modo
+  que el aprobador (CFO) y el rendidor **ya no se pisan** el comentario.
+- La **nota del registro** del gasto se conserva aparte y se muestra como primer globo.
+- El CFO comenta desde **Observar**; el rendidor responde desde el botón **💬 responder**
+  en el registro de Gastos del proyecto. El hilo vive en la tabla `gasto_comments`.
+
 ## V11.25.0 — 28 de junio de 2026
 ### Hoja de Llamado: override de campos, filas movibles, previsualizador y columnas redimensionables
 
