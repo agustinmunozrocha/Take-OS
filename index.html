@@ -4437,6 +4437,12 @@ textarea.cot-input { resize: vertical; min-height: 64px; line-height: 1.5; }
 .go-tag{font-size:10px;border-radius:6px;padding:2px 7px;background:var(--bg-elevated);color:var(--ink-muted);white-space:nowrap;}
 .go-tag.reemb{background:var(--accent-bg);color:var(--accent-deep);}
 .go-coment{font-size:10.5px;color:var(--warning);}
+.go-coment-hilo{color:var(--accent-deep);font-weight:600;}
+.go-hilo{max-height:280px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:8px;background:var(--bg-surface-soft);display:flex;flex-direction:column;gap:8px;}
+.go-hilo-msg{background:var(--bg-surface);border:1px solid var(--rule);border-radius:8px;padding:7px 9px;}
+.go-hilo-nota{border-left:3px solid var(--warning);}
+.go-hilo-meta{font-size:10.5px;color:var(--ink-secondary);margin-bottom:2px;}
+.go-hilo-txt{font-size:12.5px;color:var(--ink-primary);white-space:pre-wrap;line-height:1.45;}
 .go-cmp{font-size:11px;background:none;border:none;padding:0;cursor:pointer;}
 .go-cmp.ok{color:var(--positive);text-decoration:underline;text-underline-offset:2px;}
 .go-cmp.no{color:var(--ink-faint);cursor:default;}
@@ -23074,7 +23080,7 @@ function _dalOperaciones4bPartes(p) {
   const resp   = p.project_section_responsibles || [];
   const ops    = _dal1to1(p.project_operations);
   const opBud  = p.project_op_budgets || [];
-  if (!locs.length && !crewX.length && !extC.length && !resp.length && !ops && !opBud.length) return null;
+  if (!locs.length && !crewX.length && !extC.length && !resp.length && !ops && !opBud.length && !(p.gasto_comments || []).length) return null;
 
   let locaciones = null;
   if (locs.length) {
@@ -23108,13 +23114,24 @@ function _dalOperaciones4bPartes(p) {
     });
     gastosOp = {
       cajaProd: ops && ops.caja_prod != null ? Number(ops.caja_prod) : 0,
+      cajaDevuelto: ops && ops.caja_devuelto != null ? Number(ops.caja_devuelto) : 0,
+      cajaMovs: ops && Array.isArray(ops.caja_movimientos) ? ops.caja_movimientos : [],
       presupuestos: presupuestos,
       movimientos: ops && ops.op_movimientos ? ops.op_movimientos : [],
       lineasExtra: ops && ops.op_lineas_extra ? ops.op_lineas_extra : []
     };
   }
+  // Hilo de "Observar" (gasto_comments): array plano por proyecto, con gastoId.
+  let gastoComments = null;
+  const gc = p.gasto_comments || [];
+  if (gc.length) {
+    gastoComments = gc.slice().sort(byPos).map(function(c){
+      return { id: c.id, gastoId: c.gasto_id || '', autor: c.autor || '', texto: c.texto || '', ts: c.ts || '' };
+    });
+  }
   return { locaciones: locaciones, crewExtra: crewExtra, crewExternos: crewExternos,
-           responsables: responsables, asistentes: asistentes, gastosOp: gastosOp };
+           responsables: responsables, asistentes: asistentes, gastosOp: gastosOp,
+           gastoComments: gastoComments };
 }
 
 /* Operaciones 4c (tareas + señales) desde Supabase. Las tareas traen sus
@@ -23266,6 +23283,7 @@ function _dalFusionarProyecto(target, partes) {
     if (ob.responsables) d.responsables = ob.responsables;
     if (ob.asistentes) d.asistentes = ob.asistentes;
     if (ob.gastosOp) d.gastosOp = ob.gastosOp;
+    if (ob.gastoComments) d.gastoComments = ob.gastoComments;
   }
   if (partes.operaciones4c) {                                       // V9.4.5: operaciones 4c desde Supabase
     const oc = partes.operaciones4c;
@@ -23304,11 +23322,12 @@ function _dalProyectoSelect() {
     + 'project_crew_extra(nombre,contact_id,medio_transporte),'
     + 'project_external_crew(tipo,nombre,rol,telefono,restriccion,direccion,comuna,posicion),'
     + 'project_section_responsibles(seccion,nombre,contact_id),'
-    + 'project_operations(asistentes_cliente,asistentes_agencia,asistentes_externo,caja_prod,op_movimientos,op_lineas_extra),'
+    + 'project_operations(asistentes_cliente,asistentes_agencia,asistentes_externo,caja_prod,caja_devuelto,caja_movimientos,op_movimientos,op_lineas_extra),'
     + 'project_op_budgets(id,nombre,linea,resp,asignado,posicion),'
     + 'project_tasks(id,seccion,texto,asignado_a,creado_por,estado,creada_ts,posicion,task_comments(id,autor,texto,ts,posicion),task_attachments(nombre_original,storage_path,posicion)),'
     + 'project_signals(id,tipo,seccion,descripcion,creada_ts,visto_por,meta,posicion),'
-    + 'project_documents(id,categoria,titulo,url,notas,archivo_nombre,archivo_path,archivo_size,ts,posicion)';
+    + 'project_documents(id,categoria,titulo,url,notas,archivo_nombre,archivo_path,archivo_size,ts,posicion),'
+    + 'gasto_comments(id,gasto_id,autor,texto,ts,posicion)';
 }
 
 async function dalLoadProyectos(soloBorrados) {
@@ -23768,14 +23787,25 @@ function _dalOperaciones4bPayload(project) {
   const g = d.gastosOp || {};
   const gastosOp = {
     cajaProd: (g.cajaProd != null ? g.cajaProd : 0),
+    cajaDevuelto: (g.cajaDevuelto != null ? g.cajaDevuelto : 0),
+    cajaMovs: (Array.isArray(g.cajaMovs) ? g.cajaMovs : []),
     presupuestos: (g.presupuestos || []).map(function(b){
       return { id: b.id || '', nombre: b.nombre || '', linea: b.linea || '', resp: b.resp || '', asignado: (b.asignado != null ? b.asignado : 0) };
     }),
     movimientos: g.movimientos || [],
     lineasExtra: g.lineasExtra || []
   };
-  return { id: project.id, locaciones: locaciones, crewExtra: crewExtra, crewExternos: crewExternos,
-           responsables: responsables, asistentes: asistentes, gastosOp: gastosOp };
+  const out = { id: project.id, locaciones: locaciones, crewExtra: crewExtra, crewExternos: crewExternos,
+                responsables: responsables, asistentes: asistentes, gastosOp: gastosOp };
+  // Hilo de "Observar" (gasto_comments): solo se manda si YA está cargado en
+  // memoria (array). Si nunca se cargó (undefined), se OMITE la clave para que la
+  // RPC preserve el hilo existente y no lo borre (ver migración 20260628130000).
+  if (Array.isArray(d.gastoComments)) {
+    out.gastoComments = d.gastoComments.map(function(c){
+      return { id: c.id || '', gastoId: c.gastoId || '', autor: c.autor || '', texto: c.texto || '', ts: c.ts || '' };
+    });
+  }
+  return out;
 }
 
 async function dalGuardarOperaciones4b(project) {
@@ -27008,21 +27038,20 @@ function goRegFilaHTML(project, x) {
       : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado] || escapeHtml(x.estado)}</span>`);
   return `<tr>
     <td class="go-sub">${escapeHtml((x.fecha || '').slice(5))}</td>
-    <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${x.coment ? '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>' : ''}</td>
+    <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${goComentCell(project, x)}</td>
     <td>${escapeHtml(x.quien)}</td>
     <td class="go-sub">${escapeHtml(x.medio || '')}</td>
     <td class="go-num">${fmtMoney(x.monto)}</td>
     <td class="go-sub">${escapeHtml(x.tipo)}</td>
     <td>${comp}</td>
     <td>${est}</td>
-    <td><button class="go-mini" onclick="goOpenGasto('${x.id}')">editar</button></td></tr>`;
+    <td>${(x.estado === 'en_observacion' || goHiloDe(project, x.id).length) ? `<button class="go-mini" onclick="goResponderHilo('${x.id}')">💬 responder</button> ` : ''}<button class="go-mini" onclick="goOpenGasto('${x.id}')">editar</button></td></tr>`;
 }
 /* ── Pasada 4 · Caja de producción: ingreso / devolución ──────────────────────
-   "Registrar ingreso" sube lo ENTREGADO (d.cajaProd, que SÍ persiste — columna
-   caja_prod). "Registrar devolución" baja el saldo a devolver (d.cajaDevuelto).
-   OJO BACKEND: hoy `cajaDevuelto` NO tiene columna y vive solo en memoria (se
-   pierde al recargar). En el handoff de BD va una tabla/columna de movimientos de
-   caja (ingresos/devoluciones) para que la devolución persista de verdad. */
+   "Registrar ingreso" sube lo ENTREGADO (d.cajaProd) y "Registrar devolución"
+   baja el saldo a devolver (d.cajaDevuelto). Ambos, más la libreta d.cajaMovs,
+   PERSISTEN vía guardar_operaciones_4b (columnas caja_devuelto / caja_movimientos,
+   PR8 · migración 20260628120000). Antes la devolución vivía solo en memoria. */
 function goCajaIngreso() {
   if (!STATE.currentProject) return;
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Registrar ingreso a Caja de producción</h3><button class="go-x" onclick="closeModal()">×</button></div>
@@ -27074,9 +27103,9 @@ function goCajaDevolucionSave() {
   showToast({ kind: 'success', title: 'Devolución registrada', body: 'Se descontaron ' + fmtMoney(monto) + ' (' + fecha + ') del saldo a devolver.' });
 }
 /* Pasada 4 (#1) · Historial de Caja de producción: ingresos (+), devoluciones (−)
-   y gastos pagados con caja (−), ordenados por fecha. Los gastos con medio "Caja
-   de producción" sí persisten; los ingresos/devoluciones de esta sesión aún no
-   (van en el handoff de BD). */
+   y gastos pagados con caja (−), ordenados por fecha. Todo persiste: los gastos
+   por sus movimientos, y los ingresos/devoluciones por caja_devuelto /
+   caja_movimientos (PR8). */
 function goCajaHistorial() {
   const project = STATE.currentProject; if (!project) return;
   const d = goData(project);
@@ -27930,7 +27959,7 @@ function goCfoValidacion() {
     const comp = goCompCell(x, 'goCfoVer', 'falta');
     return `<tr>
       <td class="go-sub">${escapeHtml(x.fecha.slice(5))}</td><td>${escapeHtml(goProjName(o.project))}</td>
-      <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${x.coment ? '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>' : ''}</td>
+      <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${goComentCell(o.project, x)}</td>
       <td><span class="go-tag">${escapeHtml(e ? e.nombre : '—')}</span></td><td>${escapeHtml(x.quien)}</td>
       <td class="go-num">${fmtMoney(x.monto)}</td><td>${comp}</td>
       <td><span class="go-est ${x.estado}">${GO_ESTADOS[x.estado]}</span></td>
@@ -28215,22 +28244,76 @@ function goCfoExportPanel() {
 
 /* ---------- acciones CFO ---------- */
 function goValidar(id) { const r = goFindMov(id); if (r) { r.m.estado = 'validado'; markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Gasto validado', body: 'Listo para exportar a Chipax.' }); } }
-function goObservar(id) {
-  const r = goFindMov(id); if (!r) return;
-  /* V11.x · antes usaba window.prompt, que el navegador suprime tras varios
-     diálogos (se veía como que "no hacía nada"). Ahora usa el modal propio. */
+/* ── Hilo de "Observar" un gasto (gasto_comments · PR8) ────────────────────────
+   Antes la observación era un único campo (m.coment) que rendidor y CFO se
+   pisaban por turnos. Ahora es un HILO: lista de mensajes {autor, texto, ts} por
+   gasto, en project.data.gastoComments (plano, con gastoId), espejo de la tabla
+   gasto_comments del backend. m.coment se conserva como "nota del registro"
+   (legado / nota del rendidor) y se muestra como primer globo del hilo. */
+function goComentarios(project) {
+  if (!project) return [];
+  if (!Array.isArray(project.data.gastoComments)) project.data.gastoComments = [];
+  return project.data.gastoComments;
+}
+function goHiloDe(project, gastoId) {
+  return goComentarios(project).filter(function(c){ return c.gastoId === gastoId; });
+}
+function goPushComentario(project, gastoId, texto) {
+  const t = (texto || '').trim(); if (!t || !project) return false;
+  goComentarios(project).push({ id: goNewId('gcm'), gastoId: gastoId, autor: currentUser(), texto: t, ts: new Date().toLocaleString('es-CL') });
+  return true;
+}
+/* Indicador para la celda del registro / cola CFO: nota del rendidor + nº de comentarios. */
+function goComentCell(project, x) {
+  let out = '';
+  if (x && x.coment) out += '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>';
+  const n = project ? goHiloDe(project, x.id).length : 0;
+  if (n) out += '<div class="go-coment go-coment-hilo">🧵 ' + n + (n === 1 ? ' comentario' : ' comentarios') + '</div>';
+  return out;
+}
+/* Globos del hilo para el modal (nota del rendidor primero, luego la conversación). */
+function _goHiloHTML(project, x) {
+  let html = '';
+  if (x && x.coment) {
+    html += '<div class="go-hilo-msg go-hilo-nota"><div class="go-hilo-meta">Nota del registro</div><div class="go-hilo-txt">' + escapeHtml(x.coment) + '</div></div>';
+  }
+  goHiloDe(project, x.id).forEach(function(c){
+    html += '<div class="go-hilo-msg"><div class="go-hilo-meta"><b>' + escapeHtml(c.autor || '—') + '</b> · ' + escapeHtml(c.ts || '') + '</div><div class="go-hilo-txt">' + escapeHtml(c.texto || '') + '</div></div>';
+  });
+  if (!html) html = '<div class="go-faint" style="padding:8px 2px;">Aún no hay comentarios. Escribe el primero abajo.</div>';
+  return '<div class="go-hilo">' + html + '</div>';
+}
+function _goAbrirHilo(project, m, esObservar) {
+  if (!project || !m) return;
   showModal({
-    title: 'Marcar gasto en observación',
-    body: '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-secondary);line-height:1.5;">Deja un comentario para el equipo: qué hay que revisar o corregir en este gasto.</p><textarea class="input" id="goObsNota" rows="3" placeholder="Ej. falta la boleta · el monto no cuadra · proveedor equivocado…">' + escapeHtml(r.m.coment || '') + '</textarea>',
-    confirmLabel: 'Marcar en observación',
-    cancelLabel: 'Cancelar',
+    title: esObservar ? 'Observar gasto · comentar' : 'Conversación del gasto',
+    body: _goHiloHTML(project, m)
+        + '<p style="margin:12px 0 6px;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;">'
+        + (esObservar ? 'Deja un comentario: qué hay que revisar o corregir.' : 'Responde al hilo.')
+        + '</p><textarea class="input" id="goObsNota" rows="3" placeholder="Escribe un comentario…"></textarea>',
+    confirmLabel: esObservar ? 'Comentar y observar' : 'Enviar',
+    cancelLabel: 'Cerrar',
     onConfirm: function () {
       var nota = ((document.getElementById('goObsNota') || {}).value || '').trim();
-      r.m.coment = nota; r.m.estado = 'en_observacion';
-      markDirty(); renderCFO();
-      showToast({ kind: 'warning', title: 'Marcado en observación', body: 'El equipo verá tu comentario.' });
+      var hubo = nota ? goPushComentario(project, m.id, nota) : false;
+      if (esObservar) m.estado = 'en_observacion';
+      if (!hubo && !esObservar) return;                         // responder vacío: nada que hacer
+      markDirty();
+      if (typeof dalTouchProyecto === 'function') dalTouchProyecto(project);   // persiste ESTE proyecto (el CFO es vista global)
+      if (STATE.currentModule === 'cfo') { try { renderCFO(); } catch (e) {} }
+      else { try { renderGastos(); } catch (e) {} }
+      if (esObservar) showToast({ kind: 'warning', title: 'Marcado en observación', body: hubo ? 'El equipo verá tu comentario.' : 'Gasto en observación.' });
+      else if (hubo) showToast({ kind: 'info', title: 'Comentario agregado', body: 'Tu respuesta quedó en el hilo.' });
     }
   });
+}
+function goObservar(id) {
+  const r = goFindMov(id); if (!r) return;
+  _goAbrirHilo(r.project, r.m, true);
+}
+function goResponderHilo(id) {
+  const r = goFindMov(id); if (!r) return;
+  _goAbrirHilo(r.project, r.m, false);
 }
 function goCfoVer(id) { const r = goFindMov(id); if (!r) return; const prev = STATE.currentProject; STATE.currentProject = r.project; goVerComprobante(id); STATE.currentProject = prev; }
 function goPagarReemb(id) { const r = goFindMov(id); if (!r) return; const inp = document.getElementById('rp_' + id); r.m.fechaPago = (inp && inp.value) || goToday(); markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Reembolso pagado', body: 'Pagado el ' + r.m.fechaPago + '.' }); }
