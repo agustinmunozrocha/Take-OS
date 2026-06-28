@@ -2575,6 +2575,12 @@ tr.row-drop-after > td { box-shadow: inset 0 -2px 0 var(--accent, #B03A2F); }
 .data-table thead th.sortable:hover { color: var(--ink-secondary); background: var(--bg-surface); }
 .data-table thead th .sort-ind { display: inline-block; width: 0.9em; margin-left: 3px; font-size: 9px; color: var(--ink-faint); }
 .data-table thead th .sort-ind.on { color: var(--accent); }
+/* Pasada 4 (#2) · el Registro de gastos (go-tbl) reusa el MISMO orden visual que
+   Presupuesto: cursor de manito y flecha activa en rojo (var(--accent)). */
+.go-tbl thead th.sortable { cursor: pointer; user-select: none; }
+.go-tbl thead th.sortable:hover { color: var(--ink-secondary); background: var(--bg-surface); }
+.go-tbl thead th .sort-ind { display: inline-block; width: 0.9em; margin-left: 3px; font-size: 9px; color: var(--ink-faint); }
+.go-tbl thead th .sort-ind.on { color: var(--accent); }
 .row-drag-handle.is-disabled { cursor: not-allowed; opacity: 0.32; }
 .budget-sort-bar { display: flex; align-items: center; gap: 8px; padding: 5px 12px 7px; font-size: 11px; color: var(--ink-muted); }
 .budget-sort-restore { cursor: pointer; border: 1px solid var(--rule); background: var(--bg-surface-soft); color: var(--ink-secondary); border-radius: 6px; padding: 3px 9px; font-size: 11px; font-weight: 600; }
@@ -4398,6 +4404,11 @@ textarea.cot-input { resize: vertical; min-height: 64px; line-height: 1.5; }
 .go-tbl td{padding:9px 8px;border-bottom:1px solid var(--rule-soft);font-size:12.5px;vertical-align:middle;}
 .go-tbl tr:hover td{background:var(--bg-surface-soft);}
 .go-tbl td.go-num,.go-tbl th.go-num{text-align:right;white-space:nowrap;}
+/* Pasada 4 · el Registro de gastos reusa table-layout:fixed de .budget-table; se
+   deja envolver el texto de las celdas (salvo números) para que no se corte raro. */
+.go-tbl.budget-table td{white-space:normal;}
+.go-tbl.budget-table td.go-num{white-space:nowrap;}
+.go-tbl.budget-table th{position:relative;}
 .go-cuenta{color:var(--info);}
 
 .go-est{font-size:10px;border-radius:20px;padding:2px 9px;font-weight:600;white-space:nowrap;}
@@ -5926,6 +5937,7 @@ function getCostoReal(item, sectionKey) {
 
 /* Totales completos del proyecto: usado para KPI bar, alerts, Info Proyecto */
 function calcProjectTotals(project) {
+  _syncGastosCostoReal(project);   // 4a · el real de Gastos sale de los movimientos, no de tipeo manual
   const d = project.data;
   let totalCot = 0, totalReal = 0;
   let hasReal = false;
@@ -10133,7 +10145,7 @@ function renderPresupuesto() {
     <!-- GASTOS -->
     <div class="dept ${isCollapsed('gastos') ? 'collapsed' : ''}" data-dept-key="gastos">
       <div class="dept-header" onclick="toggleDept('gastos')">
-        <div class="dept-title"><span class="dept-chevron">▾</span> Gastos de producción</div>
+        <div class="dept-title"><span class="dept-chevron">▾</span> Gastos <span style="font-style:italic;font-weight:400;color:var(--ink-faint);font-size:11.5px;letter-spacing:0;text-transform:none;">· vinculado con la pestaña Gastos</span></div>
         <div class="dept-summary" id="dept-summary-gastos"></div>
       </div>
       <div class="dept-body" id="dept-body-gastos"></div>
@@ -10384,6 +10396,7 @@ function openVisualizacionPanel() {
 
 function renderSimpleSection(sectionKey) {
   const project = STATE.currentProject;
+  if (sectionKey === 'gastos') _syncGastosCostoReal(project);   // 4a · Costo Real derivado de los gastos
   const items = project.data[sectionKey];
   const showReal = STATES_WITH_REAL_COST.includes(project.state);
 
@@ -10526,6 +10539,32 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   // sin valor hora del cual calcular). Avisar y ofrecer el ⚙ en vez del «—» silencioso.
   const heNeedsCfg = !!(heCfg && !item.horaExtra);
   const dteRealVal = (item.dteReal !== undefined && item.dteReal !== null) ? item.dteReal : (item.dte || '');
+  /* V11.22 (Pasada 4a) · en la sección "Gastos de producción" el Costo Real ya no
+     se tipea a mano: es la SUMA de los gastos registrados en el módulo Gastos
+     asociados a esta línea (vía _syncGastosCostoReal, que escribe item.costoReal).
+     La celda pasa a solo lectura; las demás secciones siguen editables. */
+  const _esGastosSec = sectionKey === 'gastos';
+  /* 4a/#7/#3 · en "Gastos" el Costo Real es DERIVADO (suma de los gastos del
+     módulo) y de solo lectura SOLO si la línea tiene una caja vinculada Y hay
+     gastos reales (> $0). Sin caja vinculada, o con caja pero $0 gastado, se edita
+     libremente (un gasto puntual con un único proveedor no necesita un presupuesto;
+     y si el real cae a $0 vuelve a ser editable). */
+  const _gastosDerivado = _esGastosSec && (typeof goLineaTieneCaja === 'function')
+    && goLineaTieneCaja(STATE.currentProject, item.item)
+    && goLineaRealGastado(STATE.currentProject, item.item) > 0;
+  const _crShow = (item.costoReal ? displayMoneyInputValue(item.costoReal) : '0');
+  const costoRealCell = _gastosDerivado
+    ? `<td class="num go-cr-derivado" onclick="navigateToModule('gastos')" title="Costo real = suma de los gastos registrados en el módulo Gastos asociados a esta línea («${escapeHtml(item.item || '')}»). Clic para ir a la pestaña Gastos. No se edita a mano." style="cursor:pointer;">
+          <span class="cr-money-wrap"><span class="cr-money-sign">$</span><span style="font-variant-numeric:tabular-nums;">${_crShow}</span></span>
+          <span class="delta-inline ${deltaInitClass}">${deltaInitText}</span>
+        </td>`
+    : `<td class="num" ondblclick="openCostoRealCalc(${ref})" title="Doble clic para calcular el costo real (costo empresa) con el DTE de la fila">
+          <span class="cr-money-wrap"><span class="cr-money-sign">$</span><input type="text" inputmode="numeric" class="cell-input num cr-money-input" data-costo-real
+                 value="${displayMoneyInputValue(item.costoReal)}"
+                 placeholder="—"
+                 onchange="onMoneyInput(this, ${ref}, 'costoReal'); afterRowChange(${ref});"></span>
+          <span class="delta-inline ${deltaInitClass}" data-delta-inline>${deltaInitText}</span>
+        </td>`;
 
   return `
     <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}" data-sec="${sectionKey}" data-dept="${sectionKey === 'servicios' ? escapeHtml(dept) : ''}" ondragstart="rowDragStart(event)" ondragover="rowDragOver(event)" ondrop="rowDrop(event)" ondragend="rowDragEnd(event)">
@@ -10593,13 +10632,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
         </span>
       </td>
       ${showReal ? `
-        <td class="num" ondblclick="openCostoRealCalc(${ref})" title="Doble clic para calcular el costo real (costo empresa) con el DTE de la fila">
-          <span class="cr-money-wrap"><span class="cr-money-sign">$</span><input type="text" inputmode="numeric" class="cell-input num cr-money-input" data-costo-real
-                 value="${displayMoneyInputValue(item.costoReal)}"
-                 placeholder="—"
-                 onchange="onMoneyInput(this, ${ref}, 'costoReal'); afterRowChange(${ref});"></span>
-          <span class="delta-inline ${deltaInitClass}" data-delta-inline>${deltaInitText}</span>
-        </td>
+        ${costoRealCell}
         <td>
           <select class="cell-select ${dteRealVal ? '' : 'is-empty'}"
                   onchange="updateRowField(${ref}, 'dteReal', this.value || null);">
@@ -10798,7 +10831,17 @@ var _BUDGET_COL_CFG = {
   valor:         { min: 110, def: 120, max: 150 },
   cantidad:      { min: 60,  def: 70,  max: 100 },
   unidad:        { min: 90,  def: 140, max: 170 },
-  conf:          { min: 60,  def: 60,  max: 300 }     // sin restricción específica → máx general 300
+  conf:          { min: 60,  def: 60,  max: 300 },    // sin restricción específica → máx general 300
+  /* Pasada 4 · columnas del Registro de gastos (pestaña Gastos), prefijo gr_. */
+  gr_fecha:      { min: 60,  def: 72,  max: 120 },
+  gr_concepto:   { min: 140, def: 240, max: 420 },
+  gr_quien:      { min: 90,  def: 130, max: 240 },
+  gr_medio:      { min: 90,  def: 150, max: 240 },
+  gr_monto:      { min: 90,  def: 110, max: 170 },
+  gr_doc:        { min: 70,  def: 95,  max: 150 },
+  gr_comp:       { min: 60,  def: 80,  max: 140 },
+  gr_estado:     { min: 100, def: 150, max: 260 },
+  gr_acc:        { min: 70,  def: 90,  max: 150 }
 };
 var BUDGET_MENU_W = 36;
 function _budgetColCfg(colId) { return _BUDGET_COL_CFG[colId] || { min: 60, def: 120, max: 300 }; }
@@ -10876,9 +10919,10 @@ function budgetColResizeReset(ev, sectionKey, colId) {
   var all = _budgetColWStore();
   if (all[sectionKey]) { delete all[sectionKey][colId]; try { localStorage.setItem('takeos_budget_colw', JSON.stringify(all)); } catch (e) {} }
   /* re-render SOLO de la sección afectada (no toda la página): renderServiciosBody /
-     renderSimpleSection ya preservan el scroll horizontal, así la columna vuelve a su
-     ancho por defecto sin que la vista salte a la izquierda. */
-  if (sectionKey === 'servicios') { if (typeof renderServiciosBody === 'function') renderServiciosBody(); }
+     renderSimpleSection / renderGastos preservan el scroll horizontal, así la columna
+     vuelve a su ancho por defecto sin que la vista salte a la izquierda. */
+  if (sectionKey === 'gastosReg') { if (typeof renderGastos === 'function') renderGastos(); }
+  else if (sectionKey === 'servicios') { if (typeof renderServiciosBody === 'function') renderServiciosBody(); }
   else if (typeof renderSimpleSection === 'function') renderSimpleSection(sectionKey);
 }
 /* ─── V11.22 · preservar el scroll horizontal de cada sección al re-renderizar ──
@@ -11244,6 +11288,7 @@ function recalcAllDeptSummaries() {
    ════════════════════════════════════════════════════════════════════ */
 
 function calcSummaryFin(project) {
+  _syncGastosCostoReal(project);   // 4a · el real de Gastos sale de los movimientos, no de tipeo manual
   const d = project.data;
   const fin = d.finanzas;
 
@@ -26254,7 +26299,7 @@ const CHIPAX_TIPODOC = {
 };
 const GO_LINEAS_BASE = ['Dirección', 'Producción', 'Arte', 'Cámara', 'Iluminación', 'Locaciones', 'Talento', 'Transporte', 'Catering', 'Postproducción', 'Caja de Producción', 'Otros'];
 const GO_MEDIOS = ['Tarjeta empresa (débito)', 'Tarjeta empresa (crédito)', 'Transferencia cuenta empresa', 'Caja de producción', 'Reembolso a colaborador', 'Otro'];
-const GO_TIPOS = ['Boleta', 'Factura', 'Factura exenta', 'Honorario', 'Otro'];
+const GO_TIPOS = ['Factura', 'Factura Exenta', 'Boleta', 'Invoice', 'Otro'];   // Pasada 4 (#6) · tipos de documento del gasto
 const GO_ESTADOS = { pendiente: 'Pendiente', por_revisar: 'Por revisar', validado: 'Validado', en_observacion: 'En observación' };
 
 const GO_STATE = { cfoTab: 'validacion' };
@@ -26274,6 +26319,8 @@ function goData(project) {
   if (!Array.isArray(d.movimientos)) d.movimientos = [];
   if (!Array.isArray(d.lineasExtra)) d.lineasExtra = [];
   if (typeof d.cajaProd !== 'number') d.cajaProd = 0;
+  if (typeof d.cajaDevuelto !== 'number') d.cajaDevuelto = 0;   // Pasada 4 · devoluciones de caja (no persiste aún; ver handoff BD)
+  if (!Array.isArray(d.cajaMovs)) d.cajaMovs = [];              // Pasada 4 · libreta de ingresos/devoluciones de caja (en memoria; persiste con el handoff BD)
   return d;
 }
 function goLineas(project) {
@@ -26326,19 +26373,25 @@ function goModal(html) { document.getElementById('modalRoot').innerHTML = '<div 
 /* ════════════════════════════════════════════════════════════════════
    ESPACIO: GASTOS DEL PROYECTO
    ════════════════════════════════════════════════════════════════════ */
+let GO_REG_FILTER = '';   // Pasada 4 · filtro del buscador del Registro de gastos (persiste entre re-renders)
+let GO_REG_SORT = null;   // Pasada 4 (#4) · orden del registro por 'fecha'/'monto' (asc/desc); null = orden natural
 function renderGastos() {
   const project = STATE.currentProject;
   const cont = document.getElementById('moduleContent');
   if (!cont) return;
   if (!project) { cont.innerHTML = '<div class="go-empty">Abre un proyecto para registrar sus gastos.</div>'; return; }
 
+  const _bScroll = (typeof _budgetCaptureScroll === 'function') ? _budgetCaptureScroll() : null;
+
   const d = goData(project);
   const envs = goPresList(project);
   const gs = goMovs(project);
   const cajaUsed = goCajaGastado(project);
-  const cajaSaldo = (d.cajaProd || 0) - cajaUsed;
-  const realTot = goRealTotal(project);
-  const cotTot = goCotizadoTotal(project);
+  const cajaEntregado = d.cajaProd || 0;
+  const cajaDev = d.cajaDevuelto || 0;
+  const cajaSaldo = cajaEntregado - cajaUsed - cajaDev;
+  const realTot = goRealTotal(project);                 // gastado real (todos los movimientos)
+  const gastosPresup = goGastosCotizadoTotal(project);  // total PRESUPUESTADO de la sección Gastos
 
   const presStrip = envs.map(e => {
     const gastado = goGastado(project, e.id);
@@ -26356,25 +26409,21 @@ function renderGastos() {
     </div>`;
   }).join('');
 
-  const filas = gs.length ? gs.map(x => {
-    const e = goPresById(project, x.pres);
-    const medioCorto = x.medio === 'Reembolso a colaborador' ? '<span class="go-tag reemb">Reembolso</span>' : escapeHtml(x.medio.replace('Tarjeta empresa ', 'Tarjeta '));
-    const comp = goCompCell(x, 'goVerComprobante', '—');
-    const est = x.estado === 'pendiente'
-      ? `<span class="go-est pendiente" title="el productor sabe que falta info">Pendiente</span> <button class="go-mini" onclick="goMarcarListo('${x.id}')">marcar listo</button>`
-      : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado]}</span>`;
-    return `<tr>
-      <td class="go-sub">${escapeHtml(x.fecha.slice(5))}</td>
-      <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${x.coment ? '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>' : ''}</td>
-      <td><span class="go-tag">${escapeHtml(e ? e.nombre : '—')}</span></td>
-      <td>${escapeHtml(x.quien)}</td>
-      <td class="go-sub">${medioCorto}</td>
-      <td class="go-num">${fmtMoney(x.monto)}</td>
-      <td class="go-sub">${escapeHtml(x.tipo)}</td>
-      <td>${comp}</td>
-      <td>${est}</td>
-      <td><button class="go-mini" onclick="goOpenGasto('${x.id}')">editar</button></td></tr>`;
-  }).join('') : '<tr><td colspan="10" class="go-faint" style="padding:18px;">Aún no hay gastos. Agrega el primero con “+ Agregar gasto”.</td></tr>';
+  // Pasada 4 · encabezados redimensionables (reusa la maquinaria del Presupuesto:
+  // la tabla lleva la clase budget-table + data-bsec-table='gastosReg').
+  const GR_COLIDS = ['gr_fecha', 'gr_concepto', 'gr_quien', 'gr_medio', 'gr_monto', 'gr_doc', 'gr_comp', 'gr_estado', 'gr_acc'];
+  let grW = 0; GR_COLIDS.forEach(id => { grW += _budgetColWGet('gastosReg', id); });
+  const grHead = [
+    goRegTh('gr_fecha', 'Fecha', 'fecha'),
+    goRegTh('gr_concepto', 'Concepto'),
+    goRegTh('gr_quien', 'Quién gastó'),
+    goRegTh('gr_medio', 'Medio de pago'),
+    goRegTh('gr_monto', 'Monto', 'monto', 'go-num'),
+    goRegTh('gr_doc', 'Doc'),
+    goRegTh('gr_comp', 'Comp.'),
+    goRegTh('gr_estado', 'Estado'),
+    goRegTh('gr_acc', 'Acciones')
+  ].join('');
 
   cont.innerHTML = `
   <div class="go-wrap">
@@ -26395,38 +26444,223 @@ function renderGastos() {
       <div class="go-card go-grow">
         <div class="go-card-h"><h3>Registro de gastos <span class="go-faint">· ${gs.length} gastos</span></h3>
           <div class="go-actions">
+            <input class="go-inp" id="goRegSearch" placeholder="Buscar: concepto, monto, quién, medio…" value="${escapeHtml(GO_REG_FILTER)}" oninput="goRegFilter(this.value)" style="max-width:230px;">
             ${_usaChipax() ? `<button class="btn btn-secondary btn-sm" onclick="goOpenExport('${project.id}')">⬇ Exportar a Chipax</button>` : ''}
             <button class="btn btn-secondary btn-sm" onclick="goOpenQuick()">⚡ Captura rápida</button>
             <button class="btn btn-primary btn-sm" onclick="goOpenGasto()">+ Agregar gasto</button>
           </div></div>
-        <div class="go-card-b go-tablewrap">
-          <table class="go-tbl"><thead><tr><th>Fecha</th><th>Concepto</th><th>Presupuesto</th><th>Quién gastó</th><th>Medio</th><th class="go-num">Monto</th><th>Doc</th><th>Comp.</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody>${filas}</tbody></table>
+        <div class="go-card-b go-tablewrap" data-budget-scroll="gastosReg">
+          <table class="go-tbl budget-table" data-bsec-table="gastosReg" style="width:${grW}px;">
+            <thead><tr>${grHead}</tr></thead>
+            <tbody id="goRegTbody">${goRegRows(project)}</tbody>
+          </table>
         </div>
       </div>
 
       <div class="go-side">
         <div class="go-card">
-          <div class="go-card-h"><h3 class="go-sm">Caja de producción</h3>
-            <button class="go-mini" onclick="goEditCaja()">editar</button></div>
+          <div class="go-card-h"><h3 class="go-sm">Caja de producción</h3><button class="go-mini" onclick="goCajaHistorial()" title="Ver el registro de ingresos y egresos de la caja chica.">Historial</button></div>
           <div class="go-card-b">
             <div class="go-kpi-l">Saldo a devolver</div>
             <div class="go-kpi-v ${cajaSaldo < 0 ? 'acc' : ''}">${fmtMoney(cajaSaldo)}</div>
-            <div class="go-kpi-s">Entregado ${fmtMoney(d.cajaProd || 0)} · gastado ${fmtMoney(cajaUsed)}</div>
+            <div class="go-kpi-s">Entregado ${fmtMoney(cajaEntregado)} · gastado ${fmtMoney(cajaUsed)}${cajaDev ? ' · devuelto ' + fmtMoney(cajaDev) : ''}</div>
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="goCajaIngreso()" title="Registrar dinero entregado a la caja chica de producción (sube lo entregado).">+ Registrar ingreso</button>
+              <button class="btn btn-secondary btn-sm" onclick="goCajaDevolucion()" title="Registrar dinero que producción devuelve (baja el saldo a devolver).">↩ Registrar devolución</button>
+            </div>
           </div>
         </div>
         <div class="go-card">
-          <div class="go-card-h"><h3 class="go-sm">Total del proyecto</h3></div>
+          <div class="go-card-h"><h3 class="go-sm">Gastos del proyecto</h3></div>
           <div class="go-card-b">
-            <div class="go-kpi-l">Real gastado</div>
+            <div class="go-kpi-l">Gastado (real)</div>
             <div class="go-kpi-v">${fmtMoney(realTot)}</div>
-            <div class="go-kpi-s">Cotizado (Presupuesto) ${fmtMoney(cotTot)}${cotTot ? ' · ' + (realTot <= cotTot ? '<span class="go-ok">dentro</span>' : '<span class="go-bad">se pasó ' + fmtMoney(realTot - cotTot) + '</span>') : ''}</div>
-            <div class="go-kpi-note">El reflejo del Real dentro de cada línea del Presupuesto llega con la integración profunda (backend).</div>
+            <div class="go-kpi-s">Presupuestado (Gastos) ${fmtMoney(gastosPresup)}${gastosPresup ? ' · ' + (realTot <= gastosPresup ? '<span class="go-ok">dentro</span>' : '<span class="go-bad">se pasó ' + fmtMoney(realTot - gastosPresup) + '</span>') : ''}</div>
+            <div class="go-kpi-note">Compara lo gastado contra el total presupuestado de la sección <b>Gastos</b> del Presupuesto (no el total del proyecto).</div>
           </div>
         </div>
       </div>
     </div>
   </div>`;
+
+  if (_bScroll && typeof _budgetRestoreScroll === 'function') _budgetRestoreScroll(_bScroll);
+}
+/* Pasada 4 · total PRESUPUESTADO (costo empresa cotizado) de la sección Gastos. */
+function goGastosCotizadoTotal(project) {
+  const gastos = (project && project.data && Array.isArray(project.data.gastos)) ? project.data.gastos : [];
+  let total = 0;
+  gastos.forEach(r => { const c = calcCostoEmpresa(r.valor, r.cantidad, r.dte, 'gastos'); total += c.value || 0; });
+  return Math.round(total);
+}
+/* Pasada 4 · buscador: re-pinta SOLO el cuerpo de la tabla (mantiene foco del
+   buscador y el scroll horizontal, que viven fuera del <tbody>). */
+function goRegFilter(v) {
+  GO_REG_FILTER = v || '';
+  const tb = document.getElementById('goRegTbody');
+  if (tb && STATE.currentProject) tb.innerHTML = goRegRows(STATE.currentProject);
+}
+/* Pasada 4 (#4) · ordenar el registro por fecha o monto (asc/desc), igual que en
+   Presupuesto. Re-pinta solo el cuerpo (mantiene el encabezado y el scroll). */
+function goRegSortBy(key) {
+  if (!GO_REG_SORT || GO_REG_SORT.col !== key) GO_REG_SORT = { col: key, dir: 'desc' };
+  else GO_REG_SORT = { col: key, dir: GO_REG_SORT.dir === 'desc' ? 'asc' : 'desc' };
+  if (STATE.currentProject) renderGastos();   // re-render: el encabezado refleja la flecha ▲/▼ y el cuerpo se reordena
+}
+/* Encabezado redimensionable del registro; con sortKey además es ordenable. */
+function goRegTh(colId, label, sortKey, cls) {
+  const w = _budgetColWGet('gastosReg', colId);
+  let ind = '', onclick = '', sortCls = '';
+  if (sortKey) {
+    const on = GO_REG_SORT && GO_REG_SORT.col === sortKey;
+    ind = on ? '<span class="sort-ind on">' + (GO_REG_SORT.dir === 'asc' ? '▲' : '▼') + '</span>' : '<span class="sort-ind"></span>';
+    onclick = ' onclick="goRegSortBy(\'' + sortKey + '\')"';
+    sortCls = ' sortable';
+  }
+  return '<th class="bcol-resizable' + sortCls + (cls ? ' ' + cls : '') + '" data-bsec="gastosReg" data-bcol="' + colId + '" style="width:' + w + 'px;"' + onclick + '>' + escapeHtml(label) + ind + _budgetColGrip('gastosReg', colId) + '</th>';
+}
+/* Pasada 4 · filas del registro AGRUPADAS por presupuesto (caja) y filtradas por
+   el buscador. Cada grupo es un presupuesto; al final, "Sin presupuesto". */
+function goRegRows(project) {
+  const COLS = 9;
+  const gs = goMovs(project);
+  const envs = goPresList(project);
+  if (!gs.length) return `<tr><td colspan="${COLS}" class="go-faint" style="padding:18px;">Aún no hay gastos. Agrega el primero con “+ Agregar gasto”.</td></tr>`;
+  const q = _normLinea(GO_REG_FILTER);
+  const match = (x) => {
+    if (!q) return true;
+    const hay = [x.concepto, x.prov, x.quien, x.registra, x.medio, x.tipo, x.coment, String(x.monto || ''), (GO_ESTADOS[x.estado] || x.estado || '')].join(' ').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  };
+  const visibles = gs.filter(match);
+  if (!visibles.length) return `<tr><td colspan="${COLS}" class="go-faint" style="padding:18px;">Ningún gasto coincide con “${escapeHtml(GO_REG_FILTER)}”.</td></tr>`;
+  const grupos = [];
+  envs.forEach(e => { const arr = visibles.filter(x => x.pres === e.id); if (arr.length) grupos.push({ env: e, arr: arr }); });
+  const sinPres = visibles.filter(x => !goPresById(project, x.pres));
+  if (sinPres.length) grupos.push({ env: null, arr: sinPres });
+  if (GO_REG_SORT) {
+    const dir = GO_REG_SORT.dir === 'asc' ? 1 : -1;
+    const cmp = GO_REG_SORT.col === 'monto'
+      ? (a, b) => ((a.monto || 0) - (b.monto || 0)) * dir
+      : (a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')) * dir;
+    grupos.forEach(g => g.arr.sort(cmp));
+  }
+  let html = '';
+  grupos.forEach(g => {
+    const e = g.env;
+    const tot = g.arr.reduce((s, m) => s + (m.monto || 0), 0);
+    const titulo = e
+      ? `${escapeHtml(e.nombre)} <span class="go-faint" style="font-weight:400;text-transform:none;letter-spacing:0;">· línea ${escapeHtml(e.linea)} · ${g.arr.length} gasto${g.arr.length === 1 ? '' : 's'}</span>`
+      : `<span class="go-faint" style="text-transform:none;letter-spacing:0;">Sin presupuesto asignado · ${g.arr.length}</span>`;
+    html += `<tr class="go-grp"><td colspan="${COLS}" style="background:var(--bg-surface-soft);font-weight:700;font-size:11.5px;padding:8px;border-bottom:1px solid var(--rule);white-space:normal;">📁 ${titulo}<span style="float:right;color:var(--ink-secondary);">${fmtMoney(tot)}</span></td></tr>`;
+    g.arr.forEach(x => { html += goRegFilaHTML(project, x); });
+  });
+  return html;
+}
+function goRegFilaHTML(project, x) {
+  const comp = goCompCell(x, 'goVerComprobante', '—');
+  const est = x.estado === 'pendiente'
+    ? `<span class="go-est pendiente" title="el productor sabe que falta info">Pendiente</span> <button class="go-mini" onclick="goMarcarListo('${x.id}')">marcar listo</button>`
+    : (x.estado === 'por_revisar'
+      ? `<span class="go-est por_revisar">${GO_ESTADOS.por_revisar}</span> <button class="go-mini" onclick="goRevertirPendiente('${x.id}')">revertir a pendiente</button>`
+      : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado] || escapeHtml(x.estado)}</span>`);
+  return `<tr>
+    <td class="go-sub">${escapeHtml((x.fecha || '').slice(5))}</td>
+    <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${x.coment ? '<div class="go-coment">💬 ' + escapeHtml(x.coment) + '</div>' : ''}</td>
+    <td>${escapeHtml(x.quien)}</td>
+    <td class="go-sub">${escapeHtml(x.medio || '')}</td>
+    <td class="go-num">${fmtMoney(x.monto)}</td>
+    <td class="go-sub">${escapeHtml(x.tipo)}</td>
+    <td>${comp}</td>
+    <td>${est}</td>
+    <td><button class="go-mini" onclick="goOpenGasto('${x.id}')">editar</button></td></tr>`;
+}
+/* ── Pasada 4 · Caja de producción: ingreso / devolución ──────────────────────
+   "Registrar ingreso" sube lo ENTREGADO (d.cajaProd, que SÍ persiste — columna
+   caja_prod). "Registrar devolución" baja el saldo a devolver (d.cajaDevuelto).
+   OJO BACKEND: hoy `cajaDevuelto` NO tiene columna y vive solo en memoria (se
+   pierde al recargar). En el handoff de BD va una tabla/columna de movimientos de
+   caja (ingresos/devoluciones) para que la devolución persista de verdad. */
+function goCajaIngreso() {
+  if (!STATE.currentProject) return;
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Registrar ingreso a Caja de producción</h3><button class="go-x" onclick="closeModal()">×</button></div>
+    <div class="go-mb">
+      <div class="go-help" style="margin-bottom:10px;line-height:1.55;">Dinero <b>entregado</b> a la caja chica con la que opera producción. Aumenta lo entregado y, por lo tanto, el saldo a devolver.</div>
+      <div class="go-frow">
+        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="ci_monto" placeholder="0" inputmode="numeric"></div>
+        <div class="go-field half"><label>Fecha de ingreso</label><input class="go-inp" type="date" id="ci_fecha" value="${goToday()}"></div>
+      </div>
+      <div class="go-field"><label>Nota (opcional)</label><input class="go-inp" id="ci_nota" placeholder="ej. adelanto al productor"></div>
+    </div>
+    <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goCajaIngresoSave()">Registrar ingreso</button></div></div>`);
+}
+function goCajaIngresoSave() {
+  const project = STATE.currentProject; const d = goData(project);
+  const monto = parseInt(((document.getElementById('ci_monto') || {}).value || '0').replace(/\D/g, '')) || 0;
+  if (monto <= 0) { showToast({ kind: 'warning', title: 'Monto inválido', body: 'Ingresa un monto mayor a 0.' }); return; }
+  const fecha = ((document.getElementById('ci_fecha') || {}).value) || goToday();
+  const nota = ((document.getElementById('ci_nota') || {}).value || '').trim();
+  d.cajaProd = (d.cajaProd || 0) + monto;
+  if (!Array.isArray(d.cajaMovs)) d.cajaMovs = [];
+  d.cajaMovs.push({ id: goNewId('c'), tipo: 'ingreso', monto: monto, fecha: fecha, nota: nota });
+  markDirty(); closeModal(); renderGastos();
+  showToast({ kind: 'success', title: 'Ingreso registrado', body: 'Se sumaron ' + fmtMoney(monto) + ' (' + fecha + ') a lo entregado a la caja.' });
+}
+function goCajaDevolucion() {
+  if (!STATE.currentProject) return;
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Registrar devolución de Caja de producción</h3><button class="go-x" onclick="closeModal()">×</button></div>
+    <div class="go-mb">
+      <div class="go-help" style="margin-bottom:10px;line-height:1.55;">Efectivo que producción <b>devuelve</b> de la caja chica. Baja el saldo a devolver. <i>Nota: la devolución aún no persiste al recargar; eso se cierra con la parte de base de datos del handoff.</i></div>
+      <div class="go-frow">
+        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="cd_monto" placeholder="0" inputmode="numeric"></div>
+        <div class="go-field half"><label>Fecha de devolución</label><input class="go-inp" type="date" id="cd_fecha" value="${goToday()}"></div>
+      </div>
+      <div class="go-field"><label>Nota (opcional)</label><input class="go-inp" id="cd_nota" placeholder="ej. vuelto de caja al cierre"></div>
+    </div>
+    <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goCajaDevolucionSave()">Registrar devolución</button></div></div>`);
+}
+function goCajaDevolucionSave() {
+  const project = STATE.currentProject; const d = goData(project);
+  const monto = parseInt(((document.getElementById('cd_monto') || {}).value || '0').replace(/\D/g, '')) || 0;
+  if (monto <= 0) { showToast({ kind: 'warning', title: 'Monto inválido', body: 'Ingresa un monto mayor a 0.' }); return; }
+  const fecha = ((document.getElementById('cd_fecha') || {}).value) || goToday();
+  const nota = ((document.getElementById('cd_nota') || {}).value || '').trim();
+  d.cajaDevuelto = (d.cajaDevuelto || 0) + monto;
+  if (!Array.isArray(d.cajaMovs)) d.cajaMovs = [];
+  d.cajaMovs.push({ id: goNewId('c'), tipo: 'devolucion', monto: monto, fecha: fecha, nota: nota });
+  markDirty(); closeModal(); renderGastos();
+  showToast({ kind: 'success', title: 'Devolución registrada', body: 'Se descontaron ' + fmtMoney(monto) + ' (' + fecha + ') del saldo a devolver.' });
+}
+/* Pasada 4 (#1) · Historial de Caja de producción: ingresos (+), devoluciones (−)
+   y gastos pagados con caja (−), ordenados por fecha. Los gastos con medio "Caja
+   de producción" sí persisten; los ingresos/devoluciones de esta sesión aún no
+   (van en el handoff de BD). */
+function goCajaHistorial() {
+  const project = STATE.currentProject; if (!project) return;
+  const d = goData(project);
+  const rows = [];
+  (d.cajaMovs || []).forEach(c => rows.push({
+    fecha: c.fecha || '', tipo: c.tipo === 'ingreso' ? 'Ingreso' : 'Devolución',
+    detalle: c.nota || (c.tipo === 'ingreso' ? 'Ingreso a caja' : 'Devolución de caja'),
+    monto: (c.tipo === 'ingreso' ? 1 : -1) * (c.monto || 0)
+  }));
+  goMovs(project).filter(m => m.medio === 'Caja de producción').forEach(m => rows.push({
+    fecha: m.fecha || '', tipo: 'Gasto', detalle: m.concepto || '(sin concepto)', monto: -(m.monto || 0)
+  }));
+  rows.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const entregado = d.cajaProd || 0, gastado = goCajaGastado(project), devuelto = d.cajaDevuelto || 0;
+  const saldo = entregado - gastado - devuelto;
+  const body = rows.length
+    ? '<table class="go-tbl" style="width:100%;"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="go-num">Monto</th></tr></thead><tbody>'
+      + rows.map(r => '<tr><td class="go-sub">' + escapeHtml((r.fecha || '').slice(5) || '—') + '</td><td>' + escapeHtml(r.tipo) + '</td><td>' + escapeHtml(r.detalle) + '</td><td class="go-num" style="color:' + (r.monto >= 0 ? 'var(--positive)' : 'var(--accent-deep)') + ';white-space:nowrap;">' + (r.monto >= 0 ? '+' : '−') + fmtMoney(Math.abs(r.monto)) + '</td></tr>').join('')
+      + '</tbody></table>'
+    : '<div class="go-faint" style="padding:14px;">Sin movimientos de caja todavía. Registra un ingreso para empezar.</div>';
+  goModal('<div class="go-mc"><div class="go-mh"><h3>Historial · Caja de producción</h3><button class="go-x" onclick="closeModal()">×</button></div>'
+    + '<div class="go-mb">'
+    + '<div class="go-kpi-s" style="margin-bottom:10px;line-height:1.6;">Entregado <b>' + fmtMoney(entregado) + '</b> · gastado <b>' + fmtMoney(gastado) + '</b>' + (devuelto ? ' · devuelto <b>' + fmtMoney(devuelto) + '</b>' : '') + ' · saldo a devolver <b>' + fmtMoney(saldo) + '</b></div>'
+    + body
+    + '<div class="go-help" style="margin-top:10px;">Los <b>ingresos</b> y <b>devoluciones</b> de esta sesión aún no persisten al recargar (van en el handoff de BD). Los <b>gastos</b> pagados con caja sí persisten.</div>'
+    + '</div>'
+    + '<div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cerrar</button></div></div>');
 }
 
 /* ---------- acciones proyecto ---------- */
@@ -26440,6 +26674,12 @@ function goEditCaja() {
 function goMarcarListo(id) {
   const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
   if (m) { m.estado = 'por_revisar'; markDirty(); renderGastos(); showToast({ kind: 'success', title: 'Gasto listo', body: 'Pasó a la cola de validación del CFO.' }); }
+}
+/* Pasada 4 (#8) · devolver un gasto "Por revisar" al estado "Pendiente" (simétrico
+   a "marcar listo"). Lo saca de la cola del CFO. */
+function goRevertirPendiente(id) {
+  const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
+  if (m) { m.estado = 'pendiente'; markDirty(); renderGastos(); showToast({ kind: 'info', title: 'Vuelto a Pendiente', body: 'Salió de la cola de validación del CFO.' }); }
 }
 /* ── V11.x · comprobantes de gasto en Supabase Storage (bucket privado
    `adjuntos-gastos`). Antes el cliente guardaba una blob: URL efímera que moría
@@ -26525,6 +26765,49 @@ function goGastosLineas(project) {
   });
   return out;
 }
+/* V11.22 (Pasada 4) · helpers de vínculo Gastos ↔ Presupuesto.
+   La línea del Presupuesto (fila de project.data.gastos, campo `item`) se vincula
+   a las cajas de Gastos por NOMBRE (presupuesto.linea === item). Los movimientos
+   cuelgan de su caja (m.pres). Normalizamos a minúsculas/trim para tolerar
+   diferencias de mayúsculas/espacios. */
+function _normLinea(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+/* Cotizado (costo empresa) de una línea de Gastos: suma de las filas con ese item. */
+function goLineaCotizado(project, lineName) {
+  const gastos = (project && project.data && Array.isArray(project.data.gastos)) ? project.data.gastos : [];
+  const ln = _normLinea(lineName);
+  let total = 0;
+  gastos.forEach(r => { if (_normLinea(r.item) === ln && ln) { const c = calcCostoEmpresa(r.valor, r.cantidad, r.dte, 'gastos'); total += c.value || 0; } });
+  return Math.round(total);
+}
+/* 4a · escribe en cada fila de "Gastos de producción" su Costo Real = suma de los
+   movimientos asociados (vía su caja). Solo en ejecución (estados con costo real);
+   antes de aprobar el costo real no aplica y se deja como estaba. Sin markDirty: es
+   un valor DERIVADO que se recalcula en cada lectura/render desde los movimientos. */
+function _syncGastosCostoReal(project) {
+  if (!project || !project.data || !Array.isArray(project.data.gastos)) return;
+  if (!STATES_WITH_REAL_COST.includes(project.state)) return;
+  const d = goData(project);
+  const porLinea = {};
+  d.movimientos.forEach(m => { const k = _normLinea(goLineaOf(project, m)); porLinea[k] = (porLinea[k] || 0) + (m.monto || 0); });
+  /* #7 (decisión final) · una línea solo queda DERIVADA (bloqueada) si tiene al
+     menos una caja vinculada. Sin caja vinculada, su Costo Real se edita a mano
+     (ej. "Arriendo de camión de lluvia": un gasto puntual, un proveedor, sin
+     sentido crear un presupuesto). Esas líneas conservan su valor manual. */
+  const conCaja = {};
+  d.presupuestos.forEach(e => { const k = _normLinea(e.linea); if (k) conCaja[k] = true; });
+  project.data.gastos.forEach(r => { const k = _normLinea(r.item); if (r.item && conCaja[k]) r.costoReal = porLinea[k] || 0; });
+}
+/* #7 · ¿la línea de "Gastos" del Presupuesto tiene al menos una caja vinculada? */
+function goLineaTieneCaja(project, lineName) {
+  const ln = _normLinea(lineName); if (!ln) return false;
+  return goPresList(project).some(e => _normLinea(e.linea) === ln);
+}
+/* #3 · real efectivamente gastado en una línea (suma de movimientos). Si es 0, el
+   Costo Real vuelve a ser editable aunque haya una caja vinculada. */
+function goLineaRealGastado(project, lineName) {
+  const ln = _normLinea(lineName); if (!ln) return 0;
+  return goMovs(project).filter(m => _normLinea(goLineaOf(project, m)) === ln).reduce((s, m) => s + (m.monto || 0), 0);
+}
 /* V11.3.0 · crear presupuestos en Gastos es facultad de Administrador (1),
    Ejecutivo (2) y Producción (3). Fail-open coherente con Gate B. */
 function _puedeCrearPresupuestoGastos() {
@@ -26549,12 +26832,27 @@ function goOpenPresup() {
         <div class="go-field half"><label>Responsable</label><input class="go-inp" id="pp_resp" list="go_dl_contactos" placeholder="nombre"></div>
         <div class="go-field half"><label>Monto asignado (CLP)</label><input class="go-inp" id="pp_monto" placeholder="0" inputmode="numeric"></div>
       </div>
+      <div class="go-help" id="pp_iguala" style="display:none;margin-top:2px;color:var(--ink-secondary);"></div>
       <div class="go-help" style="margin-top:2px;">Crear presupuestos es facultad de los perfiles Administrador, Ejecutivo y Producción${jp.nombre ? (' · Jefe de producción del proyecto: <b>' + escapeHtml(jp.nombre) + '</b>') : ''}.</div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
     <div class="go-mf"><button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSavePresup()">Crear presupuesto</button></div></div>`);
 }
-function goPpLineaChange() { const el = document.getElementById('pp_linea'); document.getElementById('pp_newWrap').style.display = el.value === '__new__' ? 'block' : 'none'; }
+function goPpLineaChange() {
+  const el = document.getElementById('pp_linea'); if (!el) return;
+  const v = el.value;
+  const nw = document.getElementById('pp_newWrap'); if (nw) nw.style.display = (v === '__new__') ? 'block' : 'none';
+  /* V11.22 (Pasada 4b) · "Igualar monto de una línea": al elegir una línea
+     existente del Presupuesto, prellenar el Monto asignado con el cotizado de esa
+     línea, para no tener que retipear el mismo número. Queda editable. */
+  const igu = document.getElementById('pp_iguala');
+  const montoEl = document.getElementById('pp_monto');
+  if (v && v !== '__new__') {
+    const cot = goLineaCotizado(STATE.currentProject, v);
+    if (montoEl) montoEl.value = cot ? String(cot) : '';
+    if (igu) { igu.style.display = 'block'; igu.innerHTML = 'Monto igualado al cotizado de la línea <b>“' + escapeHtml(v) + '”</b>: <b>' + fmtMoney(cot) + '</b>. Puedes ajustarlo.'; }
+  } else if (igu) { igu.style.display = 'none'; }
+}
 function goSavePresup() {
   const project = STATE.currentProject; const d = goData(project); const jp = goJefeProd(project);
   const val = id => (document.getElementById(id) || {}).value || '';
@@ -26610,11 +26908,26 @@ function goOpenGasto(editId) {
       </div>
       <div class="go-frow">
         <div class="go-field half"><label>Concepto</label><input class="go-inp" id="f_concepto" placeholder="¿En qué se gastó?" value="${g ? escapeHtml(g.concepto) : ''}"></div>
-        <div class="go-field half"><label>Proveedor</label><input class="go-inp" id="f_prov" placeholder="¿A quién se le pagó?" value="${g ? escapeHtml(g.prov) : ''}"></div>
+        <div class="go-field half"><label>Proveedor <span class="go-faint" style="font-weight:400;">· empresa</span></label>
+          <span class="combobox-wrap person-combobox" style="display:block;">
+            <input class="go-inp combobox-input" id="f_prov" placeholder="Empresa proveedora — escribe para buscar en la BD…" autocomplete="off" value="${g ? escapeHtml(g.prov) : ''}" onfocus="comboboxFilterEmpresas(this)" oninput="comboboxFilterEmpresas(this)" onblur="comboboxCloseDelayed(this)">
+            <div class="combobox-dropdown" hidden></div>
+          </span>
+        </div>
       </div>
       <div class="go-frow">
-        <div class="go-field half"><label>Quién gastó</label><input class="go-inp" id="f_quien" list="go_dl_contactos" placeholder="nombre" oninput="goCheckPersona()" value="${g ? escapeHtml(g.quien === '—' ? '' : g.quien) : ''}"></div>
-        <div class="go-field half"><label>Quién registra</label><input class="go-inp" id="f_registra" list="go_dl_contactos" placeholder="nombre" value="${g ? escapeHtml(g.registra === '—' ? '' : g.registra) : ''}"></div>
+        <div class="go-field half"><label>Quién gastó</label>
+          <span class="combobox-wrap person-combobox" style="display:block;">
+            <input class="go-inp combobox-input" id="f_quien" placeholder="Buscar persona en la BD…" autocomplete="off" value="${g ? escapeHtml(g.quien === '—' ? '' : g.quien) : ''}" onfocus="comboboxOpen(this)" oninput="comboboxFilter(this); goCheckPersona();" onblur="comboboxCloseDelayed(this)" onchange="goCheckPersona()">
+            <div class="combobox-dropdown" hidden></div>
+          </span>
+        </div>
+        <div class="go-field half"><label>Quién registra</label>
+          <span class="combobox-wrap person-combobox" style="display:block;">
+            <input class="go-inp combobox-input" id="f_registra" placeholder="Buscar persona en la BD…" autocomplete="off" value="${g ? escapeHtml(g.registra === '—' ? '' : g.registra) : ''}" onfocus="comboboxOpen(this)" oninput="comboboxFilter(this)" onblur="comboboxCloseDelayed(this)">
+            <div class="combobox-dropdown" hidden></div>
+          </span>
+        </div>
       </div>
       <div class="go-newperson${dp ? ' show' : ''}" id="f_newperson"><div class="go-np-t">⚠ Esta persona no está en la base de datos · agrega sus datos de pago</div>
         <div class="go-frow"><div class="go-field half"><label>RUT</label><input class="go-inp" id="np_rut" placeholder="12.345.678-9" value="${dp ? escapeHtml(dp.rut || '') : ''}"></div><div class="go-field half"><label>Email</label><input class="go-inp" id="np_email" placeholder="correo@…" value="${dp ? escapeHtml(dp.email || '') : ''}"></div></div>
@@ -26632,7 +26945,7 @@ function goOpenGasto(editId) {
       <div class="go-field"><label>Comentario (opcional)</label><textarea class="go-inp" id="f_coment" placeholder="Nota para el equipo o el CFO… (ej. falta la boleta, llega mañana)">${g ? escapeHtml(g.coment || '') : ''}</textarea></div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
-    <div class="go-mf"><span class="go-help" style="margin-right:auto;">Si falta info (comprobante, concepto…) queda <b>Pendiente</b> y no molesta al CFO.</span>
+    <div class="go-mf">${esEd ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-deep);" onclick="goDeleteGasto('${GO_EDIT_ID}')">Eliminar gasto</button>` : ''}<span class="go-help" style="margin-right:auto;margin-left:${esEd ? '12px' : '0'};">Si falta info (comprobante, concepto…) queda <b>Pendiente</b> y no molesta al CFO.</span>
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSaveGasto()">${esEd ? 'Guardar cambios' : 'Guardar gasto'}</button></div></div>`);
   if (esEd) { try { goGastoHint(); } catch (e) {} }
 }
@@ -26705,6 +27018,30 @@ function goSaveGasto() {
   const m = Object.assign({ id: goNewId('m') }, campos, { fechaPago: null, objetivo: null, datosPago: datosPago });
   d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
   showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola del CFO.' : 'Falta info: complétalo y marca “listo”.' });
+}
+/* Pasada 4 (#2) · eliminar un gasto desde el modal de edición, con confirmación
+   (modal propio del software). Borra también el comprobante del Storage. */
+function goDeleteGasto(id) {
+  const project = STATE.currentProject; if (!project) return;
+  const d = goData(project);
+  const m = d.movimientos.find(x => x.id === id);
+  if (!m) return;
+  showModal({
+    title: 'Eliminar gasto',
+    body: '¿Estás seguro de que quieres eliminar este gasto?<br><br><b>' + escapeHtml(m.concepto || '(sin concepto)') + '</b> · ' + fmtMoney(m.monto || 0) + '<br><br>Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar gasto', cancelLabel: 'Cancelar', danger: true,
+    onConfirm: function () {
+      const i = d.movimientos.findIndex(x => x.id === id);
+      if (i >= 0) {
+        const fp = d.movimientos[i].filePath;
+        d.movimientos.splice(i, 1);
+        if (fp && sb && sb.storage) { try { sb.storage.from('adjuntos-gastos').remove([fp]); } catch (e) {} }
+      }
+      GO_EDIT_ID = null;
+      markDirty(); closeModal(); renderGastos();
+      showToast({ kind: 'success', title: 'Gasto eliminado', body: 'Se quitó del registro.' });
+    }
+  });
 }
 
 /* ---------- modal: captura rápida ---------- */
