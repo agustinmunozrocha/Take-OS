@@ -1382,9 +1382,9 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           Papelera
         </button>
-        <button class="btn btn-secondary" onclick="openGlobalCFO()" title="Finanzas · CFO: consolida los gastos de todos los proyectos, valida, paga reembolsos y exporta a Chipax.">
+        <button class="btn btn-secondary" onclick="openGlobalCFO()" title="Finanzas: consolida los gastos de todos los proyectos, valida, paga reembolsos y exporta a Chipax.">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
-          Finanzas · CFO
+          Finanzas
         </button>
         <button class="btn btn-primary" onclick="newProject()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3101,7 +3101,7 @@ function _tmAssigneeSelect(people, current) {
 function _tmTaskHtml(project, t, people) {
   const st = _tm(); const done = t.estado === 'completada';
   const txt = highlightMentions(escapeHtml(t.texto), people);
-  const atts = (t.adjuntos || []).length ? '<div class="tm-atts">' + t.adjuntos.map(a => '<span class="tm-att">\U0001F4CE ' + (a.path ? ('<a href="#" onclick="return _abrirAdjTarea(this)" data-bk="' + STORAGE_BUCKET_ADJUNTOS + '" data-pt="' + escapeHtml(a.path) + '">' + escapeHtml(a.name) + '</a>') : escapeHtml(a.name)) + '</span>').join('') + '</div>' : '';
+  const atts = (t.adjuntos || []).length ? '<div class="tm-atts">' + t.adjuntos.map(a => '<span class="tm-att">📎 ' + (a.path ? ('<a href="#" onclick="return _abrirAdjTarea(this)" data-bk="' + STORAGE_BUCKET_ADJUNTOS + '" data-pt="' + escapeHtml(a.path) + '">' + escapeHtml(a.name) + '</a>') : escapeHtml(a.name)) + '</span>').join('') + '</div>' : '';
   const expanded = st.expanded === t.id; const coms = (t.comentarios || []);
   const comsHtml = expanded ? '<div class="tm-coms">' + (coms.length ? coms.map(c => '<div class="tm-com"><div class="tm-com-h">' + escapeHtml(c.autor) + ' <span class="tm-com-ts">' + escapeHtml(c.ts) + '</span></div><div class="tm-com-b">' + highlightMentions(escapeHtml(c.texto), people) + '</div></div>').join('') : '<div class="tm-hint">Sin comentarios todavía.</div>') +
     '<div class="tm-addcom"><textarea id="tmCom_' + t.id + '" class="input" rows="2" placeholder="Responder con un comentario… escribe @ para etiquetar" oninput="mentionInput(this)" onblur="mentionBlur()"></textarea><button class="btn btn-secondary btn-sm" onclick="tmAddComentario(\'' + t.id + '\')">Comentar</button></div></div>' : '';
@@ -3110,7 +3110,7 @@ function _tmTaskHtml(project, t, people) {
       '<label class="tm-check"><input type="checkbox" ' + (done ? 'checked' : '') + ' onchange="tmToggle(\'' + t.id + '\')"></label>' +
       '<div class="tm-task-main"><div class="tm-task-text">' + txt + '</div>' +
         '<div class="tm-task-meta">Para <strong>' + escapeHtml(t.asignadoA || '\u2014') + '</strong> \u00b7 de ' + escapeHtml(t.creadoPor || '\u2014') + atts + '</div></div>' +
-      '<button class="tm-com-toggle" onclick="tmToggleExpand(\'' + t.id + '\')">' + (expanded ? 'Ocultar' : ('\U0001F4AC ' + (coms.length || ''))) + '</button>' +
+      '<button class="tm-com-toggle" onclick="tmToggleExpand(\'' + t.id + '\')">' + (expanded ? 'Ocultar' : ('Comentar' + (coms.length ? ' · ' + coms.length : ''))) + '</button>' +
     '</div>' + comsHtml + '</div>';
 }
 function renderTareasModal() {
@@ -3125,7 +3125,7 @@ function renderTareasModal() {
     : ('<div class="tm-create"><div class="tm-create-h">Crear tarea</div>' +
     '<div class="tm-field"><label>Asignar a</label>' + _tmAssigneeSelect(people, st.asignado) + '</div>' +
     '<div class="tm-field"><label>Tarea</label><textarea id="tmNuevoTexto" class="input" rows="3" placeholder="Ej: toma todas las personas de esta base de datos y agrégalas como visitas externas. Escribe @ para etiquetar." oninput="mentionInput(this)" onblur="mentionBlur()"></textarea></div>' +
-    '<div class="tm-field"><label>Adjuntos</label>' + ((st.adjuntos || []).length ? '<div class="tm-atts">' + st.adjuntos.map((a, i) => '<span class="tm-att">\U0001F4CE ' + escapeHtml(a.name) + ' <button onclick="tmRemoveAtt(' + i + ')">\u2715</button></span>').join('') + '</div>' : '<div class="tm-hint">Sin adjuntos.</div>') +
+    '<div class="tm-field"><label>Adjuntos</label>' + ((st.adjuntos || []).length ? '<div class="tm-atts">' + st.adjuntos.map((a, i) => '<span class="tm-att">\ud83d\udcce ' + escapeHtml(a.name) + ' <button onclick="tmRemoveAtt(' + i + ')">\u2715</button></span>').join('') + '</div>' : '<div class="tm-hint">Sin adjuntos.</div>') +
       '<input type="file" id="tmFile" multiple style="display:none;" onchange="tmAddFiles(this.files)"><button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'tmFile\').click()">+ Adjuntar archivo</button></div>' +
     '<div class="tm-create-actions"><button class="btn btn-ghost btn-sm" onclick="tmSelfAssign()">Auto-asignármela</button><button class="btn btn-primary btn-sm" onclick="tmCrear()">Crear tarea</button></div></div>');
   const list = tareas.length ? tareas.map(t => _tmTaskHtml(project, t, people)).join('') : '<div class="tm-empty">Sin tareas en esta sección todavía.</div>';
@@ -15294,7 +15294,7 @@ var GSEARCH_DESTS = [
   { icon: '⚙', label: 'Configuración', kw: 'configuracion ajustes settings preferencias opciones', sub: 'Abrir', run: () => openConfigPanel() },
   { icon: '🏢', label: 'Empresa / Productora (datos)', kw: 'empresa productora razon social rut giro direccion banco bancarios cuenta titular drive milanote chipax calendar perfil datos remitente representante', sub: 'Configuración', run: () => openEmpresaPerfil() },
   { icon: '👥', label: 'Base de Datos de Contactos', kw: 'base de datos contactos personas talentos proveedores clientes bd', sub: 'Abrir', run: () => openGlobalBDPersonas() },
-  { icon: '📊', label: 'Finanzas · CFO', kw: 'cfo finanzas gastos consolidado validacion reembolsos chipax exportar contador caja', sub: 'Abrir', run: () => openGlobalCFO() },
+  { icon: '📊', label: 'Finanzas', kw: 'cfo finanzas gastos consolidado validacion reembolsos chipax exportar contador caja', sub: 'Abrir', run: () => openGlobalCFO() },
   { icon: '🛡', label: 'Modo administrador', kw: 'modo administrador admin permisos clave contrasena password revertir', sub: 'Activar permisos', adminRequired: true, run: () => { if (!_puedeModoAdmin()) { showToast({ kind: 'error', title: 'Modo administrador no disponible', body: 'Solo el perfil Administrador puede activarlo.' }); return; } if (!STATE.adminMode) { STATE.adminMode = true; _applyAdminUI(); showToast({ kind: 'warning', title: 'Modo administrador activado', body: 'Acciones restringidas habilitadas. Úsalo con criterio.' }); } else { openConfigPanel(); } } },
   { icon: '🎨', label: 'Cambiar tema (claro / oscuro)', kw: 'tema theme claro oscuro dark light apariencia', sub: 'Preferencias', run: () => toggleTheme() },
   { icon: '💾', label: 'Guardar OS', kw: 'guardar respaldo backup exportar os json', sub: 'Datos del OS', run: () => { closeModal(); exportSave(); } },
@@ -15445,7 +15445,6 @@ function openEmpresaPerfil(subInicial) {
             <input type="file" id="empLogoInput" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="_empLogoPick(this)">
             ${esAdmin ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button class="btn btn-sm" onclick="document.getElementById('empLogoInput').click()">+ Subir variación</button>
-              <button class="btn btn-ghost btn-sm" onclick="_empLogoUsarProvisional()">Agregar isotipo provisional (AMR)</button>
             </div>` : ''}
             <p style="margin:10px 0 0;font-size:12px;color:var(--ink-faint);line-height:1.5;">La variación marcada como <strong>principal</strong> es la que usan los documentos por defecto. Hasta 8 variaciones de ~350 KB cada una; todas descargables para el equipo.</p>
             <div class="config-section-title" style="margin:20px 0 8px;">Colores de la marca</div>
@@ -15958,10 +15957,13 @@ function _empColores() {
 function _empColorAgregar() {
   var inp = document.getElementById('empColorHex');
   var pick = document.getElementById('empColorPick');
-  var v = String((inp && inp.value.trim()) || (pick && pick.value) || '').trim();
-  if (v && v[0] !== '#') v = '#' + v;
-  v = v.toUpperCase();
-  if (!/^#[0-9A-F]{6}$/.test(v)) { showToast({ kind: 'error', title: 'Color inválido', body: 'Usa un código hex de 6 dígitos, por ejemplo <strong>#B03A2F</strong>.' }); return; }
+  /* #8 · saneo robusto: tolera el '#', espacios y caracteres invisibles del
+     copy-paste (NBSP/zero-width) y acepta el shorthand de 3 dígitos. */
+  var raw = String((inp && inp.value) || (pick && pick.value) || '');
+  var hex = raw.replace(/[^0-9a-fA-F]/g, '');
+  if (hex.length === 3) hex = hex.split('').map(function (c) { return c + c; }).join('');
+  if (hex.length !== 6) { showToast({ kind: 'error', title: 'Color inválido', body: 'Usa un código hex de 6 dígitos, por ejemplo <strong>#B03A2F</strong>.' }); return; }
+  var v = '#' + hex.toUpperCase();
   var cols = _empColores();
   if (cols.indexOf(v) >= 0) { showToast({ kind: 'info', title: 'Ya está en la paleta', body: v }); return; }
   if (cols.length >= 10) { showToast({ kind: 'error', title: 'Paleta llena', body: 'Máximo 10 colores. Quita uno para agregar otro.' }); return; }
@@ -16083,9 +16085,6 @@ function _empLogoPick(input) {
     img.src = dataUrl;
   };
   reader.readAsDataURL(f);
-}
-function _empLogoUsarProvisional() {
-  if (typeof COT_LOGO !== 'undefined' && COT_LOGO) { _empLogoSet(COT_LOGO, 'Isotipo AMR (provisional)'); showToast({ kind: 'success', title: 'Isotipo provisional agregado', body: 'Puedes reemplazarlo cuando tengas el logo definitivo.' }); }
 }
 function _empLogoQuitar(id) {
   var e = EMPRESA_PERFIL; if (!Array.isArray(e.logos)) return;
@@ -23746,13 +23745,13 @@ function goEditCaja() {
 }
 function goMarcarListo(id) {
   const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
-  if (m) { m.estado = 'por_revisar'; markDirty(); renderGastos(); showToast({ kind: 'success', title: 'Gasto listo', body: 'Pasó a la cola de validación del CFO.' }); }
+  if (m) { m.estado = 'por_revisar'; markDirty(); renderGastos(); showToast({ kind: 'success', title: 'Gasto listo', body: 'Pasó a la cola de validación de Finanzas.' }); }
 }
 /* Pasada 4 (#8) · devolver un gasto "Por revisar" al estado "Pendiente" (simétrico
    a "marcar listo"). Lo saca de la cola del CFO. */
 function goRevertirPendiente(id) {
   const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
-  if (m) { m.estado = 'pendiente'; markDirty(); renderGastos(); showToast({ kind: 'info', title: 'Vuelto a Pendiente', body: 'Salió de la cola de validación del CFO.' }); }
+  if (m) { m.estado = 'pendiente'; markDirty(); renderGastos(); showToast({ kind: 'info', title: 'Vuelto a Pendiente', body: 'Salió de la cola de validación de Finanzas.' }); }
 }
 /* ── V11.x · comprobantes de gasto en Supabase Storage (bucket privado
    `adjuntos-gastos`). Antes el cliente guardaba una blob: URL efímera que moría
@@ -24015,10 +24014,10 @@ function goOpenGasto(editId) {
         <div class="go-dz" onclick="document.getElementById('f_file').click()"><span class="go-big">📎</span>Adjunta foto o PDF de la boleta/factura</div>
         <input type="file" id="f_file" accept="image/*,application/pdf" style="display:none" onchange="goOnFile(this)"><div id="f_fileBox">${compBox}</div>
       </div>
-      <div class="go-field"><label>Comentario (opcional)</label><textarea class="go-inp" id="f_coment" placeholder="Nota para el equipo o el CFO… (ej. falta la boleta, llega mañana)">${g ? escapeHtml(g.coment || '') : ''}</textarea></div>
+      <div class="go-field"><label>Comentario (opcional)</label><textarea class="go-inp" id="f_coment" placeholder="Nota para el equipo o Finanzas… (ej. falta la boleta, llega mañana)">${g ? escapeHtml(g.coment || '') : ''}</textarea></div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
-    <div class="go-mf">${esEd ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-deep);" onclick="goDeleteGasto('${GO_EDIT_ID}')">Eliminar gasto</button>` : ''}<span class="go-help" style="margin-right:auto;margin-left:${esEd ? '12px' : '0'};">Si falta info (comprobante, concepto…) queda <b>Pendiente</b> y no molesta al CFO.</span>
+    <div class="go-mf">${esEd ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-deep);" onclick="goDeleteGasto('${GO_EDIT_ID}')">Eliminar gasto</button>` : ''}<span class="go-help" style="margin-right:auto;margin-left:${esEd ? '12px' : '0'};">Si falta info (comprobante, concepto…) queda <b>Pendiente</b> y no molesta a Finanzas.</span>
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="goSaveGasto()">${esEd ? 'Guardar cambios' : 'Guardar gasto'}</button></div></div>`);
   if (esEd) { try { goGastoHint(); } catch (e) {} }
 }
@@ -24085,12 +24084,22 @@ function goSaveGasto() {
     if (oldFilePath && oldFilePath !== m.filePath && sb && sb.storage) { try { sb.storage.from('adjuntos-gastos').remove([oldFilePath]); } catch (e) {} }
     GO_EDIT_ID = null;
     markDirty(); closeModal(); renderGastos();
-    showToast({ kind: 'success', title: 'Gasto actualizado', body: completo ? 'Como cambió, vuelve a la cola de validación del CFO.' : 'Quedó Pendiente: falta info por completar.' });
+    showToast({ kind: 'success', title: 'Gasto actualizado', body: completo ? 'Como cambió, vuelve a la cola de validación de Finanzas.' : 'Quedó Pendiente: falta info por completar.' });
     return;
+  }
+  /* #1 · aviso de choque de Costo Real: si la línea de "Gastos" del Presupuesto
+     tiene un Costo Real cargado a mano (línea con caja y aún sin movimientos),
+     asignar este gasto lo vuelve un valor DERIVADO y reemplaza el manual. Avisamos
+     antes de sobrescribir (confirm nativo, coherente con prDelUnidad/prDelPlan). */
+  if (pres) {
+    const filaPres = (project.data.gastos || []).find(r => _normLinea(r.item) === _normLinea(pres));
+    if (filaPres && (filaPres.costoReal || 0) > 0 && goLineaTieneCaja(project, pres) && goLineaRealGastado(project, pres) === 0) {
+      if (!window.confirm('La línea «' + pres + '» ya tiene un Costo Real de ' + fmtMoney(filaPres.costoReal) + ' cargado a mano.\n\nAl asignar este gasto, el Costo Real pasará a calcularse automáticamente desde los gastos y ese valor manual se reemplazará.\n\n¿Quieres continuar?')) return;
+    }
   }
   const m = Object.assign({ id: goNewId('m') }, campos, { fechaPago: null, objetivo: null, datosPago: datosPago });
   d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
-  showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola del CFO.' : 'Falta info: complétalo y marca “listo”.' });
+  showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola de Finanzas.' : 'Falta info: complétalo y marca “listo”.' });
 }
 /* Pasada 4 (#2) · eliminar un gasto desde el modal de edición, con confirmación
    (modal propio del software). Borra también el comprobante del Storage. */
@@ -24181,7 +24190,7 @@ function openGlobalCFO() {
   document.getElementById('projectView').classList.add('hidden');
   document.getElementById('bdGlobalView').classList.remove('hidden');
   const mm = document.getElementById('moduleMain'); if (mm) mm.innerHTML = '';
-  document.getElementById('breadcrumb').innerHTML = `<span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-current">Finanzas · CFO</span>`;
+  document.getElementById('breadcrumb').innerHTML = `<span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-current">Finanzas</span>`;
   renderModule('cfo');
   window.scrollTo(0, 0);
   /* V11.7.1 · precarga los pagos de cliente desde la base y re-renderiza el
@@ -24526,10 +24535,10 @@ function renderCFO() {
   cont.innerHTML = `
   <div class="go-wrap">
     ${cfoBirdView()}
-    <div class="go-note">Consolida los gastos de <b>todos los proyectos</b>. El CFO valida gastos, administra los <b>pagos pendientes</b> (reembolsos y prontos pagos)${_usaChipax() ? ' y exporta a Chipax' : ''} y genera las nóminas de transferencias sin entrar proyecto por proyecto.</div>
+    <div class="go-note">Consolida los gastos de <b>todos los proyectos</b>. Finanzas valida los gastos, administra los <b>pagos pendientes</b> (reembolsos y prontos pagos)${_usaChipax() ? ' y exporta a Chipax' : ''} y genera las nóminas de transferencias sin entrar proyecto por proyecto.</div>
     <div class="go-card"><div class="go-card-b"><div class="go-kpis">
       <div class="go-kpi"><div class="l">Gasto del mes</div><div class="v">${fmtMoney(totalMes)}</div><div class="s">${all.length} gastos · ${PROJECTS.length} proyectos</div></div>
-      <div class="go-kpi warn"><div class="l">Por validar</div><div class="v">${pend.length}</div><div class="s">listos, esperando al CFO</div></div>
+      <div class="go-kpi warn"><div class="l">Por validar</div><div class="v">${pend.length}</div><div class="s">listos, esperando validación</div></div>
       <div class="go-kpi acc"><div class="l">Reembolsos por pagar</div><div class="v">${reemb.length}</div><div class="s">${fmtMoney(reembMonto)} a transferir</div></div>
       <div class="go-kpi acc"><div class="l">Prontos pagos</div><div class="v">${pp.length}</div><div class="s">${fmtMoney(ppMonto)} a transferir</div></div>
       <div class="go-kpi pos"><div class="l">Validado</div><div class="v">${validados}</div><div class="s">${_usaChipax() ? 'listo para Chipax' : 'gastos validados'}</div></div>
@@ -24957,7 +24966,7 @@ function goOpenExport(projId) {
   const rows = goChipaxRows(projId);
   const title = project ? ('Exportar a Chipax · ' + goProjName(project)) : 'Exportar a Chipax · consolidado (todos los proyectos)';
   const lotes = Math.ceil(rows.length / 100) || 1;
-  const body = rows.length ? rows.map(r => `<tr><td>${escapeHtml(r.Fecha)}</td><td>${escapeHtml(r.Periodo)}</td><td class="go-cuenta">${escapeHtml(r.Cuenta)}</td><td>${escapeHtml(r.Linea)}</td><td>${escapeHtml(r.Responsable)}</td><td>${escapeHtml(r.TipoDoc)}</td><td>${escapeHtml(r.Proveedor)}</td><td></td><td>${escapeHtml(r.Descripcion)}</td><td class="go-num">${r.Monto}</td><td>${r.Moneda}</td></tr>`).join('') : '<tr><td colspan="11" class="go-faint" style="padding:18px;">No hay gastos validados para exportar. Valida gastos en la pestaña Validación del CFO.</td></tr>';
+  const body = rows.length ? rows.map(r => `<tr><td>${escapeHtml(r.Fecha)}</td><td>${escapeHtml(r.Periodo)}</td><td class="go-cuenta">${escapeHtml(r.Cuenta)}</td><td>${escapeHtml(r.Linea)}</td><td>${escapeHtml(r.Responsable)}</td><td>${escapeHtml(r.TipoDoc)}</td><td>${escapeHtml(r.Proveedor)}</td><td></td><td>${escapeHtml(r.Descripcion)}</td><td class="go-num">${r.Monto}</td><td>${r.Moneda}</td></tr>`).join('') : '<tr><td colspan="11" class="go-faint" style="padding:18px;">No hay gastos validados para exportar. Valida gastos en la pestaña Validación de Finanzas.</td></tr>';
   goModal(`<div class="go-mc wide"><div class="go-mh"><h3>${escapeHtml(title)}</h3><button class="go-x" onclick="closeModal()">×</button></div>
     <div class="go-mb">
       <div class="go-expbar"><button class="btn btn-primary" onclick='goDescargarXlsx(${projId ? ('"' + projId + '"') : 'null'})' ${rows.length ? '' : 'disabled'}>⬇ Descargar .xlsx</button>
@@ -25005,13 +25014,13 @@ function goDescargarXlsx(projId) {
       MODULES['gastos'].subtitle = 'Bitácora operativa de gastos del proyecto: presupuestos, comprobantes y reconciliación. Reemplaza a Rinde Gastos.';
     }
     MODULES['cfo'] = {
-      title: 'Finanzas · CFO',
+      title: 'Finanzas',
       subtitle: 'Consolida los gastos de todos los proyectos: validar, reembolsos y exportar a Chipax.',
       eyebrow: 'Finanzas',
       layer: 'Implementado · V8',
       scope: 'global',
       render: renderCFO,
-      description: 'Vista del CFO transversal a todos los proyectos. Cola de validación consolidada, reembolsos con avisos de vencimiento y exportación a Chipax (.xlsx).'
+      description: 'Vista de Finanzas transversal a todos los proyectos. Cola de validación consolidada, reembolsos con avisos de vencimiento y exportación a Chipax (.xlsx).'
     };
   }
 })();

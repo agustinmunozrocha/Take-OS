@@ -1,5 +1,33 @@
 # Changelog — TakeOS
 
+## V11.27.0 — 28 de junio de 2026
+### Quick wins: saneo del perfil, Finanzas (ex-CFO), tareas legibles y aviso de choque en Gastos
+
+Rama `chore/quick-wins-takeos`. Solo **frontend**. Tanda de arreglos chicos pedidos por nota de voz.
+
+**Perfil de la productora · tab Diseño**
+- Se elimina el botón "Agregar isotipo provisional (AMR)" (rastro hardcodeado de marca ajena).
+- **Bug del color HEX corregido:** el campo rechazaba códigos válidos. Ahora sanea la
+  entrada (tolera el `#`, espacios y caracteres invisibles del copy-paste) y acepta el
+  atajo de 3 dígitos (`#fff` → `#FFFFFF`). Antes solo funcionaba por el selector RGB.
+
+**Renombre CFO → Finanzas**
+- El módulo deja de llamarse "Finanzas · CFO": en el botón, el buscador, el breadcrumb, los
+  títulos y los avisos pasa a ser solo **"Finanzas"**. (Sin tocar identificadores internos,
+  el changelog histórico ni el nombre del perfil de permisos "Finanzas / CFO".)
+
+**Tareas más legibles**
+- Los **saltos de párrafo** de una tarea (y de sus comentarios) ahora **se conservan** al
+  mostrarla, para poder dejar tareas en formato tipo correo.
+- El botón para comentar mostraba un emoji roto ("U0001F4AC"): ahora dice **"Comentar"**
+  (con el conteo del hilo). Se arreglan también los íconos 📎 de adjuntos, que mostraban
+  "U0001F4CE".
+
+**Gastos · aviso de choque de Costo Real**
+- Al asignar un gasto a una línea de Presupuesto que ya tenía un **Costo Real cargado a
+  mano**, el sistema ahora **avisa antes de sobrescribirlo** ("¿quieres continuar?") en vez
+  de reemplazarlo en silencio.
+
 ## V11.26.0 — 28 de junio de 2026
 ### Gastos: la devolución de caja persiste y "Observar" pasa a ser un hilo de comentarios
 
