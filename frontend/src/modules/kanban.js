@@ -7,9 +7,9 @@
 // Puentes a window al final del archivo: todo lo que el HTML inline o el
 // monolito clásico referencian como global.
 
-import { STATE } from '../state.js';
-import { authNivel } from '../auth.js';
-import { escapeHtml, showToast } from '../helpers.js';
+import { STATE } from '../lib/state.js';
+import { escapeHtml, showToast } from '../lib/helpers.js';
+// authNivel y authPuedeVer se leen desde window (auth.js auto-puentea a window en Etapa 1)
 
 // ── Constantes ──────────────────────────────────────────────────────────────
 
@@ -197,7 +197,7 @@ export function navigateToProject(projectId) {
     ${_esExterno ? `<div style="margin-top:10px;padding:8px 10px;border-radius:6px;background:var(--bg-surface-soft,rgba(120,113,108,.08));border:1px solid var(--rule);font-size:11px;color:var(--ink-faint);line-height:1.5;">Colaboras como externo · solo ves este proyecto.</div>` : ''}
   `;
 
-  var _modIni = (typeof authNivel === 'function' && typeof window.authPuedeVer === 'function' && !window.authPuedeVer('info-proyecto'))
+  var _modIni = (typeof window.authPuedeVer === 'function' && !window.authPuedeVer('info-proyecto'))
     ? (window._firstVisibleModule() || 'info-proyecto') : 'info-proyecto';
   window.navigateToModule(_modIni);
   window.captureUndoBaseline();
@@ -207,7 +207,7 @@ export function navigateToProject(projectId) {
 // ── Crear proyecto ───────────────────────────────────────────────────────────
 
 export function newProject() {
-  if (authNivel('crear_proyecto') !== 'E') { window._authBlockWriteToast(); return; }
+  if (window.authNivel('crear_proyecto') !== 'E') { window._authBlockWriteToast(); return; }
   window._npDraft = { nombre: '', cliente: '', pe: '' };
   window.showModal({
     title: 'Nuevo proyecto',
@@ -258,7 +258,7 @@ export function newProject() {
 // ── Eliminar proyecto ────────────────────────────────────────────────────────
 
 export function deleteProjectFlow(id) {
-  if (authNivel('eliminar_proyecto') !== 'E') { window._authBlockWriteToast(); return; }
+  if (window.authNivel('eliminar_proyecto') !== 'E') { window._authBlockWriteToast(); return; }
   const proj = window.PROJECTS.find(p => p.id === id);
   if (!proj) return;
   if (!STATE.adminMode) {
