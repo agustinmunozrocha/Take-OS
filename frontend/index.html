@@ -18460,7 +18460,7 @@ function _setOrgActiva(orgId){
    real. Además, una tapa de carga cubre el Control Room base (que vive siempre
    en el DOM) durante toda transición, para que nunca asome vacío.
    ════════════════════════════════════════════════════════════════════ */
-let _TIENE_EMPRESA = false;
+var _TIENE_EMPRESA = false; // var → window._TIENE_EMPRESA (leído desde módulos ES)
 function _bootCoverShow(msg){
   try{
     var c = document.getElementById('takeosBootCover');
