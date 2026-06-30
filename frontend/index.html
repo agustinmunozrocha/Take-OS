@@ -3373,7 +3373,7 @@ const MODULES = {
     eyebrow: 'Comunicación',
     layer: 'Implementado · V6.7 (experiencia final, envío vía backend)',
     scope: 'project',
-    render: renderNotificaciones,
+    render: function() { return window.renderNotificaciones(); },
     description: 'Plantillas editables sin tocar código, variables dinámicas, multi-canal (mail + WhatsApp Business), sistema de confirmación de asistencia, recordatorios automáticos según el cronograma operativo definido en el PRD.'
   },
   'documentos': {
@@ -23303,6 +23303,7 @@ function _usaChipax() { try { return !!(EMPRESA_PERFIL && EMPRESA_PERFIL.usaChip
    bellToggle, notifMarcarTodas, notifAbrir, notifAbrirRebind, _rebindRenderModal,
    _rebindAprobar, _rebindResolver, _empCargarRebinds, notifInit
    → movidos a src/modules/notificaciones.js (Etapa 2) */
+/* ════════════════════════════════════════════════════════════════════
    V11.7.1 · PAGOS DE CLIENTE EN SUPABASE (handoff BD resuelto)
    Tabla project_client_payments (SELECT directo, RLS por finanzas_consolidada
    E|L + auth_ve_proyecto) y RPC guardar_pagos_cliente(project_id, pagos[])
