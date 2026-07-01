@@ -4275,6 +4275,41 @@ function renderUnidadCellInput(sectionKey, dept, idx, currentUnidad) {
   `;
 }
 
+function onUnidadSelectChange(selectEl, sectionKey, dept, idx) {
+  const project = STATE.currentProject;
+  const item = sectionKey === 'servicios'
+    ? project.data.servicios[dept][idx]
+    : project.data[sectionKey][idx];
+  _markRowDirty(item);
+  if (selectEl.value === '__custom__') {
+    item.unidad = '';
+    const td = selectEl.closest('td');
+    td.innerHTML = renderUnidadCellInput(sectionKey, dept, idx, '');
+    const input = td.querySelector('input');
+    if (input) { input.focus(); input.select(); }
+  } else {
+    item.unidad = selectEl.value;
+  }
+}
+function onUnidadInputChange(inputEl, sectionKey, dept, idx) {
+  const project = STATE.currentProject;
+  const item = sectionKey === 'servicios'
+    ? project.data.servicios[dept][idx]
+    : project.data[sectionKey][idx];
+  item.unidad = inputEl.value;
+  _markRowDirty(item);
+}
+function onUnidadReset(btnEl, sectionKey, dept, idx) {
+  const project = STATE.currentProject;
+  const item = sectionKey === 'servicios'
+    ? project.data.servicios[dept][idx]
+    : project.data[sectionKey][idx];
+  item.unidad = 'Tarifa Plana';
+  _markRowDirty(item); window.markDirty();
+  const td = btnEl.closest('td');
+  td.innerHTML = renderUnidadCellSelect(sectionKey, dept, idx, 'Tarifa Plana');
+}
+
 // ── E: _budgetFindRow (disperso, línea 19359)
 function _budgetFindRow(project, clientUuid) {
   const d = (project && project.data) || {}; let found = null;

@@ -11902,46 +11902,8 @@ function comboboxCloseDelayed(inputEl) {
    en input de texto con foco automático.
    ════════════════════════════════════════════════════════════════════ */
 
-function onUnidadSelectChange(selectEl, sectionKey, dept, idx) {
-  const project = STATE.currentProject;
-  const item = sectionKey === 'servicios'
-    ? project.data.servicios[dept][idx]
-    : project.data[sectionKey][idx];
-  _markRowDirty(item);   // Pasada 1 · cambio de unidad por fuera de updateRowField
-
-  if (selectEl.value === '__custom__') {
-    item.unidad = '';  // limpia para permitir custom
-    const td = selectEl.closest('td');
-    td.innerHTML = renderUnidadCellInput(sectionKey, dept, idx, '');
-    const input = td.querySelector('input');
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  } else {
-    item.unidad = selectEl.value;
-  }
-}
-
-function onUnidadInputChange(inputEl, sectionKey, dept, idx) {
-  const project = STATE.currentProject;
-  const item = sectionKey === 'servicios'
-    ? project.data.servicios[dept][idx]
-    : project.data[sectionKey][idx];
-  item.unidad = inputEl.value;
-  _markRowDirty(item);   // Pasada 1 · cambio de unidad por fuera de updateRowField
-}
-
-function onUnidadReset(btnEl, sectionKey, dept, idx) {
-  const project = STATE.currentProject;
-  const item = sectionKey === 'servicios'
-    ? project.data.servicios[dept][idx]
-    : project.data[sectionKey][idx];
-  item.unidad = 'Tarifa Plana';
-  _markRowDirty(item); markDirty();   // Pasada 1 · onclick: no dispara el listener global → marcar la fila y guardar
-  const td = btnEl.closest('td');
-  td.innerHTML = renderUnidadCellSelect(sectionKey, dept, idx, 'Tarifa Plana');
-}
+/* onUnidadSelectChange, onUnidadInputChange, onUnidadReset
+   → movidos a src/modules/presupuesto-cotizacion.js (Etapa 2) */
 
 /* renderUnidadCellSelect, renderUnidadCellInput → movidos a src/modules/presupuesto-cotizacion.js (Etapa 2) */
 
