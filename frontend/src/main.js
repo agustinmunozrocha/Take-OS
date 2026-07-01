@@ -11,6 +11,7 @@ import './lib/auth.js';
 import './modules/kanban.js'; // puentea STATES, renderKanban, navigateToControlRoom, etc.
 import './modules/notificaciones.js'; // puentea bellToggle, notifInit, renderNotificaciones, ntf*, etc.
 import './modules/presupuesto-cotizacion.js'; // puentea renderPresupuesto, renderCotizacion, calcSummaryFin, cot*, budget*, etc.
+import './modules/locaciones.js'; // puentea bdLocFind, projLocList, renderLocaciones, openLocDetail, loc*, locScout*, scout*
 
 window.escapeHtml = escapeHtml;
 window.safeUrl = safeUrl;
