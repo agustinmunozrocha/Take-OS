@@ -331,6 +331,79 @@ function renderEspacioUsuario(data){
   }catch(e){ console.error('[espacio] render falló', e); try{ const o=document.getElementById('espacioUsuario'); if(o)o.remove(); }catch(_){ } _bootCoverHide(); }
 }
 
+function _espInyectarCtaProductora() {
+  /* Solo en "Tu espacio" de una cuenta SIN productora. La condición de
+     targeting (cero membresías activas) la decide el llamador. */
+  if (_ctaProdDescartado()) return;
+  try {
+    const host = document.getElementById('espacioUsuario'); if (!host) return;
+    if (host.querySelector('#espCtaProd')) return;
+    const cont = host.querySelector('.esp-wrap') || host.firstElementChild || host;
+    const sec = document.createElement('div');
+    sec.id = 'espCtaProd';
+    sec.style.cssText = 'max-width:680px;margin:18px auto 0;';
+    sec.innerHTML = '<div style="position:relative;border:1px solid var(--rule);border-radius:14px;padding:20px 22px;background:linear-gradient(135deg, var(--bg-card), var(--bg-surface));overflow:hidden;">'
+      + '<button onclick="ctaProdCerrar()" title="Cerrar" aria-label="Cerrar" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--ink-faint);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;">×</button>'
+      + '<div style="font-weight:700;font-size:17px;color:var(--ink-primary);margin-bottom:6px;">¿Tienes una productora?</div>'
+      + '<div style="font-size:13px;color:var(--ink-secondary);line-height:1.55;max-width:52ch;margin-bottom:14px;">Esta es la punta del iceberg. ' + TAKEOS_MARCA + ' ordena tu productora entera: la plata, el equipo y tu paz.</div>'
+      + '<button class="btn btn-primary btn-sm" onclick="ctaProdSaberMas()">Saber más →</button>'
+      + '</div>';
+    cont.appendChild(sec);
+    _ctaProdEvento('cta_productora_impression', { slot: 'dashboard' });
+  } catch (e) {}
+}
+/* V11.4.0 · Herramientas personales en Tu espacio (preparación de frontend;
+   el almacenamiento personal de estas herramientas viene en el handoff a BD). */
+function _espInyectarHerramientas() {
+  try {
+    const host = document.getElementById('espacioUsuario'); if (!host) return;
+    if (host.querySelector('#espHerr')) return;
+    const cont = host.querySelector('.esp-wrap') || host.firstElementChild || host;
+    const sec = document.createElement('div');
+    sec.id = 'espHerr';
+    sec.style.cssText = 'max-width:680px;margin:18px auto 30px;';
+    const card = function (nombre, sub) {
+      return '<div style="flex:1;min-width:170px;border:1px solid var(--rule);border-radius:10px;padding:14px;background:var(--bg-card);opacity:.75;" title="Disponible próximamente: tus herramientas se guardarán en tu cuenta personal.">'
+        + '<div style="font-weight:700;font-size:13.5px;margin-bottom:4px;">' + nombre + '</div>'
+        + '<div style="font-size:11.5px;color:var(--ink-faint);">' + sub + '</div></div>';
+    };
+    sec.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<div style="font-weight:700;font-size:14px;">Herramientas</div>'
+      + '<span style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--positive,#2e7d32);color:#fff;border-radius:999px;padding:2px 9px;">Gratis en Early Bird</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+      + card('Plan de Rodaje', 'Próximamente en tu cuenta personal')
+      + card('Guion Técnico', 'En construcción')
+      + card('Hoja de Llamado', 'Próximamente en tu cuenta personal')
+      + '</div>'
+      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de TakeOS, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
+    cont.appendChild(sec);
+  } catch (e) {}
+}
+/* Bandeja: inyecta las invitaciones pendientes en la pantalla "Tu espacio". */
+function _espInyectarInvitaciones(invs) {
+  if (!Array.isArray(invs) || !invs.length) return;
+  try {
+    const host = document.getElementById('espacioUsuario'); if (!host) return;
+    const cont = host.querySelector('.esp-wrap') || host.firstElementChild || host;
+    const sec = document.createElement('div');
+    sec.style.cssText = 'max-width:680px;margin:0 auto 22px;';
+    sec.innerHTML = '<div style="border:1px solid var(--accent);border-radius:12px;padding:16px 18px;background:var(--bg-card);">'
+      + '<div style="font-weight:700;font-size:14px;margin-bottom:10px;">Tienes ' + invs.length + (invs.length === 1 ? ' invitación pendiente' : ' invitaciones pendientes') + '</div>'
+      + invs.map(function (i) {
+          return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--rule);font-size:13px;">'
+            + '<div><strong>' + escapeHtml(i.org_nombre || 'Productora') + '</strong>'
+            + (i.proyecto ? ' · ' + escapeHtml(i.proyecto) : '')
+            + (i.cargo ? ' · como ' + escapeHtml(i.cargo) : '')
+            + ' <span style="color:var(--ink-faint);">(' + escapeHtml(i.perfil || '') + ', ' + escapeHtml(i.tipo || '') + ')</span></div>'
+            + '<button class="btn btn-primary btn-sm" onclick="abrirInvitacionRecibida(\'' + escapeHtml(i.token) + '\')">Ver invitación</button>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+    cont.insertBefore(sec, cont.firstChild);
+  } catch (e) { console.warn('[inv] inyectar bandeja', e); }
+}
+
 // ── Window bridges (3 barridos func+const) ──
 window.ESPACIO_DEMO = ESPACIO_DEMO;
 window._espAbrirProyecto = _espAbrirProyecto;
@@ -342,3 +415,7 @@ window._swPanel = _swPanel;
 window._swProyecto = _swProyecto;
 window._swToggle = _swToggle;
 window.renderEspacioUsuario = renderEspacioUsuario;
+// ── Bridges de reparación C4 (llamadas reales de las islas bootstrap, verificadas por cuerpo) ──
+window._espInyectarCtaProductora = _espInyectarCtaProductora;
+window._espInyectarHerramientas = _espInyectarHerramientas;
+window._espInyectarInvitaciones = _espInyectarInvitaciones;
