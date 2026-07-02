@@ -216,7 +216,7 @@ function presupHistDetailHTML(snap) {
   const e = escapeHtml;
   const numTd = 'style="text-align:right;font-variant-numeric:tabular-nums;"';
   /* V11.10.0 · BUG-8: la columna por línea ahora aplica el tratamiento del DTE
-     cotizado (boleta infla por retención; factura no, porque el window.IVA es crédito)
+     cotizado (boleta infla por retención; factura no, porque el IVA es crédito)
      usando la MISMA lógica que el presupuesto en vivo (calcCostoEmpresa). Antes
      mostraba valor×cantidad y lo llamaba "Subtotal", ignorando el impuesto del
      DTE en las versiones históricas. Ahora se llama "Costo Cotizado" y refleja
@@ -625,7 +625,7 @@ function renderRoleTable(sectionKey, dept, items, showReal, firstColLabel) {
   const _sortBar = _sortActive
     ? `<div class="budget-sort-bar">Orden por columna activo (solo en pantalla; no altera el orden guardado) <button type="button" class="budget-sort-restore" onclick="budgetSortClear('${sectionKey}', ${_deptArg})">↺ Restaurar orden</button></div>`
     : '';
-  const _costoRealTip = '<span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para la empresa.\n• Factura: ingresa el monto NETO (sin window.IVA). El window.IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span>';
+  const _costoRealTip = '<span class="tt" data-tip="Ingresa el costo EFECTIVO para la empresa, no el líquido que recibe el proveedor.\n\n• Boleta de honorarios: ingresa el monto BRUTO (con retención incluida). Ese es el costo real para la empresa.\n• Factura: ingresa el monto NETO (sin IVA). El IVA no es costo real porque se recupera contra el crédito fiscal.\n\nPara convertir entre líquido y bruto, usa la Calculadora tributaria en la barra superior.">?</span>';
   // V11.22 · cada columna sale por un helper redimensionable; rTh = ordenable + grip.
   const rTh = (label, colId, cls, tip) => _budgetSortTh(label, sectionKey, dept, colId, 'bcol-resizable' + (cls ? ' ' + cls : ''), ' style="width:' + _budgetColWGet(sectionKey, colId) + 'px;"', tip || '', _budgetColGrip(sectionKey, colId));
   // Ancho total de la tabla = suma de columnas VISIBLES (las de detalle cotizado se
@@ -823,7 +823,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
                    title="N° de horas extra. La HE se calcula con el valor hora (valor de la fila ÷ 10) y el recargo del proyecto. Usa el ⚙ para una tarifa plana o una fórmula propia."
                    onchange="setHeHoras(${ref}, this.value)">
             <span class="he-cost ${item.horaExtra ? 'he-on' : (heNeedsCfg ? 'needs-cfg' : 'zero')}" data-he-cell${heNeedsCfg ? ` onclick="openHorasExtraCalc(${ref})" style="color:var(--warning);cursor:pointer;text-decoration:underline dotted;white-space:nowrap;" title="Ingresaste horas, pero esta fila no es «Jornadas»: no hay un valor hora del cual calcular la HE. Haz clic para fijar un valor hora propio o un monto plano."` : ''}>${item.horaExtra ? window.fmtMoney(item.horaExtra) : (heNeedsCfg ? '⚠ definir' : '—')}</span>
-            <button type="button" class="he-cog ${heOverride ? 'is-override' : ''}" title="Ajustar las horas extra de esta fila (tarifa plana, fórmula propia, window.IVA)" onclick="openHorasExtraCalc(${ref})">⚙</button>
+            <button type="button" class="he-cog ${heOverride ? 'is-override' : ''}" title="Ajustar las horas extra de esta fila (tarifa plana, fórmula propia, IVA)" onclick="openHorasExtraCalc(${ref})">⚙</button>
           </div>
         </td>
       ` : ''}
@@ -2115,7 +2115,7 @@ function renderSummaryFin() {
 
         <tr>
           <td><strong style="color: var(--ink-primary);">Presupuesto Cliente (NETO)</strong>
-            <span class="tt" data-tip="Lo que se le cobra al cliente sin window.IVA. Si tu cliente paga con factura, el window.IVA se suma encima de este valor. Si paga con boleta exenta o como persona natural, este es el valor total.">?</span>
+            <span class="tt" data-tip="Lo que se le cobra al cliente sin IVA. Si tu cliente paga con factura, el IVA se suma encima de este valor. Si paga con boleta exenta o como persona natural, este es el valor total.">?</span>
             ${locked ? '<span class="locked-badge" data-tip="Bloqueado: el presupuesto cliente original queda congelado al aprobar el proyecto. Para cobros adicionales, agrega ítems extras en las secciones correspondientes.">🔒</span>' : ''}
           </td>
           <td class="pct">—</td>
@@ -2164,7 +2164,7 @@ function renderSummaryFin() {
         ${s.totalExtras > 0 ? `
         <tr class="summary-row efectivo-row">
           <td><strong>Presupuesto Cliente Efectivo (NETO)</strong>
-            <span class="tt" data-tip="Presupuesto Cliente original + suma de extras / ampliaciones. Es la base real (en neto, sin window.IVA) sobre la que se calcula la ganancia y los márgenes.">?</span>
+            <span class="tt" data-tip="Presupuesto Cliente original + suma de extras / ampliaciones. Es la base real (en neto, sin IVA) sobre la que se calcula la ganancia y los márgenes.">?</span>
           </td>
           <td class="pct">100%</td>
           <td class="num"><strong>${window.fmtMoney(s.presupCliente)}</strong></td>
@@ -2890,7 +2890,7 @@ function cotCondicionesCardHTML(project, c) {
         ${num('reprogramacionAvisoDiasHabiles', 'Aviso mínimo de reprogramación', 'días hábiles')}
         <div class="cond-field"><label>Presentación de montos</label>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-secondary);font-weight:400;text-transform:none;padding:6px 0;cursor:pointer;">
-            <input type="checkbox" ${k.montosMasIVA ? 'checked' : ''} onchange="cotSetCondicion('montosMasIVA', this.checked)"> Mostrar montos como “+ window.IVA”</label></div>
+            <input type="checkbox" ${k.montosMasIVA ? 'checked' : ''} onchange="cotSetCondicion('montosMasIVA', this.checked)"> Mostrar montos como “+ IVA”</label></div>
       </div>
       <p style="font-size:11.5px;color:var(--ink-faint);margin:14px 0 0;line-height:1.5;">
         Se comparten entre todas las ofertas del proyecto y alimentan el bloque “Condiciones del Servicio” de la Carta. El override por oferta se difiere hasta que un caso real lo pida.</p>
@@ -2902,12 +2902,12 @@ function cotOfertaCardHTML(project, o, i) {
   const id = o.id, base = !!o.esBase;
   const valorBlock = base
     ? `<div class="cot-field" style="margin-bottom:16px;">
-         <label>Valor al cliente (neto, sin window.IVA)</label>
+         <label>Valor al cliente (neto, sin IVA)</label>
          <div class="ro" style="font-size:18px;font-weight:700;color:var(--ink-primary);padding:2px 0;">${window.fmtMoney(o.valorCliente)}</div>
          <span style="font-size:11px;color:var(--ink-faint);">Viene del Presupuesto. Para cambiarlo, edita el Presupuesto del proyecto.</span>
        </div>`
     : `<div class="cot-field" style="margin-bottom:16px;">
-         <label>Valor al cliente (neto, sin window.IVA)</label>
+         <label>Valor al cliente (neto, sin IVA)</label>
          <input type="text" inputmode="numeric" class="cot-input num" style="max-width:220px;"
                 value="${window.displayMoneyInputValue(o.valorCliente)}" placeholder="$0"
                 onchange="cotMoneyOferta(this,'${id}')">
@@ -3307,7 +3307,7 @@ function cotFechaFmt(iso) {
   const p = String(iso).split('-');
   return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
 }
-function cotMoneyCarta(n, masIva) { return window.fmtMoney(n) + (masIva ? ' + window.IVA' : ''); }
+function cotMoneyCarta(n, masIva) { return window.fmtMoney(n) + (masIva ? ' + IVA' : ''); }
 
 function cotCartaOfertaSection(o, cond, i, total) {
   const ent = o.entregables || { videos: [], fotografia: [], otros: [] };
@@ -3354,7 +3354,7 @@ function cotCartaOfertaSection(o, cond, i, total) {
     <div class="offer-commercial">
       <div class="valor-band">
         <span class="valor-label">Valor</span>
-        <span class="valor-num">${window.fmtMoney(o.valorCliente || 0)}${cond.montosMasIVA ? ' <span class="valor-iva">+ window.IVA</span>' : ''}</span>
+        <span class="valor-num">${window.fmtMoney(o.valorCliente || 0)}${cond.montosMasIVA ? ' <span class="valor-iva">+ IVA</span>' : ''}</span>
       </div>
       <div class="incl-grid">
         <div>
@@ -3555,7 +3555,7 @@ function cotExportPresupuestoCSV(ofId) {
     'Proyecto;' + _csvCell(ip.nombreProyecto || project.name || ''),
     'Cliente;' + _csvCell(ip.cliente || ''),
     'Oferta;' + _csvCell(o.nombre || ''),
-    'Valor al cliente (neto, sin window.IVA);' + (o.valorCliente || 0),
+    'Valor al cliente (neto, sin IVA);' + (o.valorCliente || 0),
     ''
   ].join('\n');
   const csv = '\uFEFF' + meta + '\n' + lines.join('\n');
@@ -3642,7 +3642,7 @@ function cotCondVars(project) {
     CLIENTE: ip.cliente || '', PROYECTO: ip.nombreProyecto || project.name || '',
     ABONO_PCT: cond.abonoPct, ABONO_PLAZO: cond.abonoPlazoDiasHabiles,
     SALDO_PCT: cond.saldoPct, SALDO_PLAZO: cond.saldoPlazoDias,
-    IVA_NOTA: cond.montosMasIVA ? 'Todos los montos están sujetos a window.IVA.' : '',
+    IVA_NOTA: cond.montosMasIVA ? 'Todos los montos están sujetos a IVA.' : '',
     PRIMERA_ENTREGA: cond.primeraEntregaDiasHabiles, CORRECCIONES_PLAZO: cond.correccionesPlazoDiasHabiles,
     RONDAS: cond.rondasIncluidas, VALOR_RONDA_EXTRA: window.fmtMoney(cond.valorRondaExtra), VALOR_CAMBIO_MUSICA: window.fmtMoney(cond.valorCambioMusica),
     CANCELACION_ANTES_PCT: cond.cancelacionAntesPct, CANCELACION_DESPUES_PCT: cond.cancelacionDespuesPct,
@@ -3895,7 +3895,7 @@ function cotPrevDocModel(project) {
 /* ── PLANTILLA 2 · CARTA FORMAL (membrete + carta firmada + desglose por depto) ── */
 function cotTplCarta(M, opts) {
   const E = escapeHtml;
-  const iva = M.masIVA ? ' + window.IVA' : '';
+  const iva = M.masIVA ? ' + IVA' : '';
   const logo = cotPrevLogoData(opts), logoH = cotPrevLogoH(opts.logoSize);
   const lr = (typeof legalRep === 'function') ? legalRep() : {};
   const ep = (typeof window.EMPRESA_PERFIL !== 'undefined' && window.EMPRESA_PERFIL) ? window.EMPRESA_PERFIL : {};
@@ -3953,7 +3953,7 @@ function cotTplCarta(M, opts) {
       <div class="cuerpo">Junto con saludar, adjunto presupuesto por la realización y producción audiovisual del proyecto que se detalla a continuación.</div>
       ${ficha.length ? `<div class="ficha">${ficha.map(r => `<div><b>${E(r[0])}</b> ${E(r[1])}</div>`).join('')}</div>` : ''}
       <div class="valorbox">${M.ofertas.map(of => `<div class="vrow">${E(of.etiqueta)}${of.sub ? ' — ' + E(of.sub) : ''} &nbsp; <b>${E(of.valor)}${iva}</b></div>`).join('')}</div>
-      <div class="notas">* En caso de suspensión o cancelación del proyecto, se cobrará lo producido hasta la fecha.<br>* Presupuesto válido por 5 días hábiles.${M.masIVA ? '<br>* Los valores no incluyen window.IVA.' : ''}</div>
+      <div class="notas">* En caso de suspensión o cancelación del proyecto, se cobrará lo producido hasta la fecha.<br>* Presupuesto válido por 5 días hábiles.${M.masIVA ? '<br>* Los valores no incluyen IVA.' : ''}</div>
       ${M.pe ? `<div class="firma"><div class="nm">${E(M.pe)}</div><div class="rl">Producción Ejecutiva${M.org ? ' · ' + E(M.org) : ''}</div></div>` : ''}
       <div class="foot">${M.org ? E(M.org) + ' · ' : ''}${E(M.proyecto)} · Cotización confidencial</div>
     </div>
@@ -3974,7 +3974,7 @@ function cotTplCarta(M, opts) {
 /* ── PLANTILLA 3 · MANIFIESTO (portada statement, valor protagonista, bloques) ── */
 function cotTplManifiesto(M, opts) {
   const E = escapeHtml;
-  const iva = M.masIVA ? ' <span style="font-size:14px;font-weight:600;color:#888;">+ window.IVA</span>' : '';
+  const iva = M.masIVA ? ' <span style="font-size:14px;font-weight:600;color:#888;">+ IVA</span>' : '';
   const logo = cotPrevLogoData(opts), logoH = cotPrevLogoH(opts.logoSize);
   const mar = Math.round(opts.margenMm * COTPREV_MM2PX);
   const tags = [['Derechos · tiempo', M.dTiempo], ['Plataformas', M.dPlat], ['Territorio', M.dTerr]].filter(t => (t[1] || '').trim());
