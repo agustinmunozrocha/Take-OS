@@ -1430,7 +1430,7 @@ function goCfoExportPanel() {
 }
 
 /* ---------- acciones CFO ---------- */
-function goValidar(id) { const r = goFindMov(id); if (r) { r.m.estado = 'validado'; markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Gasto validado', body: 'Listo para exportar a Chipax.' }); } }
+function goValidar(id) { const r = goFindMov(id); if (r) { r.m.estado = 'validado'; markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project); renderCFO(); showToast({ kind: 'success', title: 'Gasto validado', body: 'Listo para exportar a Chipax.' }); } }
 /* ── Hilo de "Observar" un gasto (gasto_comments · PR8) ────────────────────────
    Antes la observación era un único campo (m.coment) que rendidor y CFO se
    pisaban por turnos. Ahora es un HILO: lista de mensajes {autor, texto, ts} por
@@ -1503,10 +1503,10 @@ function goResponderHilo(id) {
   _goAbrirHilo(r.project, r.m, false);
 }
 function goCfoVer(id) { const r = goFindMov(id); if (!r) return; const prev = STATE.currentProject; STATE.currentProject = r.project; goVerComprobante(id); STATE.currentProject = prev; }
-function goPagarReemb(id) { const r = goFindMov(id); if (!r) return; const inp = document.getElementById('rp_' + id); r.m.fechaPago = (inp && inp.value) || goToday(); markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Reembolso pagado', body: 'Pagado el ' + r.m.fechaPago + '.' }); }
-function goPagarTodos() { const d = goToday(); PROJECTS.forEach(p => goReembPend(p).forEach(m => m.fechaPago = d)); markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Lote pagado', body: 'Fecha editable después para conciliar.' }); }
-function goSetFechaPago(id, v) { const r = goFindMov(id); if (r) { r.m.fechaPago = v || null; markDirty(); renderCFO(); } }
-function goSetObjetivo(id, v) { const r = goFindMov(id); if (r) { r.m.objetivo = v || null; markDirty(); } }
+function goPagarReemb(id) { const r = goFindMov(id); if (!r) return; const inp = document.getElementById('rp_' + id); r.m.fechaPago = (inp && inp.value) || goToday(); markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project); renderCFO(); showToast({ kind: 'success', title: 'Reembolso pagado', body: 'Pagado el ' + r.m.fechaPago + '.' }); }
+function goPagarTodos() { const d = goToday(); PROJECTS.forEach(p => { const pend = goReembPend(p); if (pend.length) { pend.forEach(m => m.fechaPago = d); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(p); } }); markDirty(); renderCFO(); showToast({ kind: 'success', title: 'Lote pagado', body: 'Fecha editable después para conciliar.' }); }
+function goSetFechaPago(id, v) { const r = goFindMov(id); if (r) { r.m.fechaPago = v || null; markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project); renderCFO(); } }
+function goSetObjetivo(id, v) { const r = goFindMov(id); if (r) { r.m.objetivo = v || null; markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project); } }
 
 /* ---------- editor de mapeo de cuentas Chipax ---------- */
 function goOpenMapeo() {
