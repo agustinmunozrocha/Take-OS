@@ -1503,3 +1503,6 @@ window.prEffectiveStartMin = prEffectiveStartMin;
 window.prFmtClock = prFmtClock;
 window.prFmtDur = prFmtDur;
 window.prParseHM = prParseHM;
+
+// ── Bridge auditoría pre-B (botón «Exportar de todas formas» del modal HL) ──
+window._hlDoExportPDF = _hlDoExportPDF;

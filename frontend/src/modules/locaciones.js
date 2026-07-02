@@ -887,3 +887,7 @@ window.locScoutingHTML       = locScoutingHTML;
 window.scoutBuildPDFHTML     = scoutBuildPDFHTML;
 window.scoutPreviewPDF       = scoutPreviewPDF;
 window.scoutPreviewGenerar   = scoutPreviewGenerar;
+
+// ── Bridges auditoría pre-B (onclick en HTML generado por el propio módulo) ──
+window._locLbClose = _locLbClose;
+window._locLbMove  = _locLbMove;

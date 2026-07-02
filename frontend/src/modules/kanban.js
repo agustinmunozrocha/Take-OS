@@ -248,7 +248,7 @@ export function newProject() {
       window.markDirty();
       renderMetrics();
       renderKanban();
-      showToast({ kind: 'success', title: 'Proyecto creado', body: `"${escapeHtml(nombre)}" creado en Venta. Ábrelo para empezar a cotizar.` });
+      showToast({ kind: 'success', title: 'Proyecto creado', body: `“${escapeHtml(nombre)}” creado en Venta. Ábrelo para empezar a cotizar.` });
       navigateToProject(id);
     },
     onCancel: () => {}
@@ -272,7 +272,7 @@ export function deleteProjectFlow(id) {
       <div class="modal" onclick="event.stopPropagation()" style="max-width: 520px; border: 1px solid var(--negative);">
         <div class="modal-header">
           <div class="modal-title" style="color: var(--negative);">⚠ Eliminar proyecto</div>
-          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Esto es <strong>irreversible</strong>: se borra "${escapeHtml(proj.name)}" y todos sus datos de esta sesión. Si no exportaste un guardado, no hay vuelta atrás.</div>
+          <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Esto es <strong>irreversible</strong>: se borra “${escapeHtml(proj.name)}” y todos sus datos de esta sesión. Si no exportaste un guardado, no hay vuelta atrás.</div>
         </div>
         <div class="modal-body">
           <label class="field-label">Para confirmar, escribe el nombre exacto del proyecto:</label>
@@ -320,7 +320,7 @@ export async function confirmDeleteProject(id) {
   navigateToControlRoom();
   renderMetrics();
   renderKanban();
-  showToast({ kind: 'success', title: 'Proyecto movido a la papelera', body: `"${escapeHtml(name)}" se puede restaurar desde la Papelera en el Control Room.` });
+  showToast({ kind: 'success', title: 'Proyecto movido a la papelera', body: `“${escapeHtml(name)}” se puede restaurar desde la Papelera en el Control Room.` });
 }
 
 // ── Puentes a window (el monolito clásico los busca como globales) ───────────

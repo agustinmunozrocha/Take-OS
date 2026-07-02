@@ -6564,10 +6564,7 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
   });
 });
 
-document.getElementById('globalSearch').addEventListener('input', (e) => {
-  // TODO V5.2: búsqueda transversal por proyecto, persona o documento
-  console.log('Búsqueda:', e.target.value);
-});
+// listener placeholder de #globalSearch eliminado (auditoría pre-B): el buscador real vive en src/modules/buscador.js
 
 /* ════════════════════════════════════════════════════════════════════
    ACCIONES PLACEHOLDER
@@ -7611,7 +7608,7 @@ function _renderEspacioSeguro(email){
   catch(e){ _bootCoverHide(); }
 }
 let CONTACTS_SOURCE = 'pending';    // pasa a 'supabase' SOLO tras una lectura exitosa (fail-safe). 'pending' = aún sin confirmar.
-let LOCATIONS_SOURCE = 'pending';   // idem para la BD de locaciones (BD_LOC)
+var LOCATIONS_SOURCE = 'pending';   // var → window.LOCATIONS_SOURCE automático (leído desde locaciones.js); idem PROJECTS_SOURCE
 const DAL_KNOWN_LOC_IDS = new Set();
 let LEGAL_SOURCE = 'pending';       // idem para la BD de Legal (documentos + plantillas)
 const DAL_KNOWN_LEGAL_DOC_IDS = new Set();

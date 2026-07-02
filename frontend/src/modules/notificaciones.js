@@ -748,3 +748,7 @@ window.notifLoadConfig = notifLoadConfig;
 window.notifRenderPanel = notifRenderPanel;
 window.ntfEnsureSched = ntfEnsureSched;
 window.ntfTemplates = ntfTemplates;
+
+// ── Bridges auditoría pre-B (onclick/oninput en HTML generado por el propio módulo) ──
+window.ntfSaveEditor      = ntfSaveEditor;
+window.ntfRefreshPreview  = ntfRefreshPreview;
