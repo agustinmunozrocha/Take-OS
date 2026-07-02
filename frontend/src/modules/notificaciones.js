@@ -315,26 +315,9 @@ function notifSetCfg(path, val) {
 function notifSetTpl(key, field, val) {
   const cfg = getNotifConfig(); const t = cfg.templates.find(x => x.key === key); if (t) { t[field] = val; notifSaveConfig(); }
 }
-function notifSelectedRecs(project) {
-  const st = ntfState();
-  return notifRecipients(project).filter(r => st.sel[ntfCurTpl().key + '::' + r.nombre] !== false);
-}
-function notifMarkSent(nombre) {
-  const project = STATE.currentProject; const n = ensureNotif(project); const st = ntfState();
-  const key = st.template + '::' + nombre;
-  if (n.status[key] === 'enviado') delete n.status[key];
-  else { n.status[key] = 'enviado'; notifLogPush(project, st.template, 1); }
-  window.markDirty(); renderNotificaciones();
-}
-function notifMarkAllSent() {
-  const project = STATE.currentProject; const n = ensureNotif(project); const st = ntfState();
-  const sel = notifSelectedRecs(project);
-  if (!sel.length) { showToast({ kind: 'info', title: 'Nada seleccionado', body: 'Marca al menos un destinatario.' }); return; }
-  sel.forEach(r => n.status[st.template + '::' + r.nombre] = 'enviado');
-  notifLogPush(project, st.template, sel.length);
-  window.markDirty(); renderNotificaciones();
-  showToast({ kind: 'success', title: 'Marcados como enviados', body: `${sel.length} destinatario(s). Quedó registrado en el log.` });
-}
+// notifSelectedRecs eliminada (investigación ntf* 2-jul): código muerto — su único invocador era la vista legacy huérfana; usaba st.template, inexistente en ntfState()
+// notifMarkSent eliminada (investigación ntf* 2-jul): código muerto — su único invocador era la vista legacy huérfana; usaba st.template, inexistente en ntfState()
+// notifMarkAllSent eliminada (investigación ntf* 2-jul): código muerto — su único invocador era la vista legacy huérfana; usaba st.template, inexistente en ntfState()
 function notifLogPush(project, templateKey, count) {
   const cfg = getNotifConfig(); const n = ensureNotif(project);
   const tpl = cfg.templates.find(t => t.key === templateKey);
@@ -502,14 +485,23 @@ function ntfViewEnviar(project) {
     + '<button class="btn btn-ghost btn-sm" onclick="notifCopyTemplate()">⧉ Copiar plantilla</button>'
     + '</div>'
     + (bloqueados.length ? '<p style="margin:10px 0 0;font-size:12px;color:var(--warning);">No se puede enviar a ' + bloqueados.length + ' de ' + selRecs.length + ': ' + bloqueados.map(r => { const vr = val(r); return escapeHtml(r.nombre.split(' ')[0]) + ' (' + (vr.kind === 'sinmail' ? 'sin mail' : 'faltan datos: ' + vr.miss.map(k => NTF_LABELS[k] || k).join(', ')) + ')'; }).join(', ') + '.</p>' : (selRecs.length ? '<p style="margin:10px 0 0;font-size:12px;color:var(--positive);">Listo para enviar a ' + okN + ' persona(s).</p>' : ''))
-    + (st.viewAs ? ('<div style="margin-top:16px;border:1px solid var(--rule);border-radius:10px;padding:14px;background:var(--bg-surface);">'
-        + '<div style="font-size:11px;color:var(--ink-faint);margin-bottom:8px;">Vista previa para <strong>' + escapeHtml(st.viewAs) + '</strong> · ' + escapeHtml(tpl.nombre) + '</div>'
+    + (st.viewAs ? (function () {
+        // Regresión restaurada (investigación ntf* 2-jul): el monolito V7.13 LEÍA
+        // st.overrides[ovKey] y lo aplicaba al preview; la extracción conservó el
+        // guardado (ntfSaveOverride) pero perdió esta lectura — el override se
+        // guardaba y jamás se aplicaba ni se indicaba.
+        const _ovKey = tpl.key + '::' + st.viewAs;
+        const _ovStored = st.overrides[_ovKey];
+        const _viewRec = notifRecipients(project).find(r => r.nombre === st.viewAs) || ntfSampleRec(project);
+        return '<div style="margin-top:16px;border:1px solid var(--rule);border-radius:10px;padding:14px;background:var(--bg-surface);">'
+        + '<div style="font-size:11px;color:var(--ink-faint);margin-bottom:8px;">Vista previa para <strong>' + escapeHtml(st.viewAs) + '</strong> · ' + escapeHtml(tpl.nombre) + (_ovStored != null ? ' · <span style="color:var(--positive);">✓ override guardado</span>' : '') + '</div>'
         + (!st.override
-          ? ('<div style="font-size:12.5px;line-height:1.6;">' + ntfPreviewHtml(project, tpl, st.channel, notifRecipients(project).find(r => r.nombre === st.viewAs) || ntfSampleRec(project)) + '</div>'
+          ? ('<div style="font-size:12.5px;line-height:1.6;">' + ntfPreviewHtml(project, tpl, st.channel, _viewRec, _ovStored != null ? _ovStored : null) + '</div>'
             + '<button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="ntfStartOverride()">Editar solo para esta persona</button>')
-          : ('<div id="ntfOverrideBody" contenteditable="true" spellcheck="false" style="font-size:12.5px;line-height:1.6;border:1px solid var(--accent);border-radius:6px;padding:10px;outline:none;min-height:80px;" oninput="ntfOverrideInput()">' + ntfPillify(ntfPreviewHtml(project, tpl, st.channel, notifRecipients(project).find(r => r.nombre === st.viewAs) || ntfSampleRec(project))) + '</div>'
+          : ('<div id="ntfOverrideBody" contenteditable="true" spellcheck="false" style="font-size:12.5px;line-height:1.6;border:1px solid var(--accent);border-radius:6px;padding:10px;outline:none;min-height:80px;" oninput="ntfOverrideInput()">' + ntfPillify(_ovStored != null ? _ovStored : ntfPreviewHtml(project, tpl, st.channel, _viewRec)) + '</div>'
             + '<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-sm btn-primary" onclick="ntfSaveOverride()">Guardar override</button><button class="btn btn-sm btn-ghost" onclick="ntfState().override=false;renderNotificaciones()">Cancelar</button></div>'))
-        + '</div>') : '')
+        + '</div>';
+      })() : '')
     + '</div></div>';
 }
 function ntfPickTpl(k) { const st = ntfState(); st.tplKey = k; st.override = false; renderNotificaciones(); }
@@ -700,12 +692,9 @@ window.notifVarsFor        = notifVarsFor;
 window.notifHtmlToPlain    = notifHtmlToPlain;
 window.notifSetCfg         = notifSetCfg;
 window.notifSetTpl         = notifSetTpl;
-window.notifMarkSent       = notifMarkSent;
-window.notifMarkAllSent    = notifMarkAllSent;
 window.notifLogPush        = notifLogPush;
 window.notifCopyTemplate   = notifCopyTemplate;
 window.notifGmailDraft     = notifGmailDraft;
-window.notifSelectedRecs   = notifSelectedRecs;
 // Sistema C (ntf*)
 window.renderNotificaciones = renderNotificaciones;
 window.ntfState            = ntfState;
