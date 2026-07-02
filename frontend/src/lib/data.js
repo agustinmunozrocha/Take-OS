@@ -147,6 +147,20 @@ function montoNetoDesde(costoReal, dte) { const c = Number(costoReal) || 0; if (
 function montoBrutoDesde(liquido, dte) { const l = Number(liquido) || 0; if (!l) return 0; return dteTieneRetencion(dte) ? Math.round(l / factorRetencionDte(dte)) : Math.round(l); }
 const UNIDAD_OPTIONS = ['Tarifa Plana', 'Jornadas', 'Horas', 'Personas', 'Locaciones', 'Fotografías'];
 
+// ── Window bridges — DEBEN preceder a DEMO_PROJECTS: su inicializador llama
+// al builder CLÁSICO, que lee window.DEFAULT_* (lección del bug del 2-jul) ──
+window.LOC_ORIENTACIONES     = LOC_ORIENTACIONES;     // locaciones.js (tras dedup)
+window.REGIONES_CHILE        = REGIONES_CHILE;        // perfil-onboarding.js la lee a pelo
+window.BANCOS_CHILE          = BANCOS_CHILE;          // dal.js:95 a pelo
+window.LOC_ESTADO_RANK       = LOC_ESTADO_RANK;
+window.ROLES_OPERATIVOS      = ROLES_OPERATIVOS;
+window.DEFAULT_DEPARTAMENTOS = DEFAULT_DEPARTAMENTOS; // buildDefaultProjectData (clásico) los lee a pelo
+window.DEFAULT_GASTOS        = DEFAULT_GASTOS;
+window.DEFAULT_EQUIPOS       = DEFAULT_EQUIPOS;
+window.DEFAULT_TALENTOS      = DEFAULT_TALENTOS;
+window.DTE_OPTIONS           = DTE_OPTIONS;           // bd.js y presupuesto-cotizacion.js a pelo
+window.UNIDAD_OPTIONS        = UNIDAD_OPTIONS;        // presupuesto-cotizacion.js (tras dedup)
+
 const DEMO_PROJECTS = [
   {
     id: 'DEMO-1', client: "Watt's", name: 'Lanzamiento Yogurt Griego de Watt\'s',
@@ -326,17 +340,4 @@ const DEMO_PROJECTS = [
     })
   }
 ];
-
-// ── Window bridges (los que no venían inline de index.html) ──
-window.LOC_ORIENTACIONES     = LOC_ORIENTACIONES;     // locaciones.js (tras dedup)
-window.REGIONES_CHILE        = REGIONES_CHILE;        // perfil-onboarding.js la lee a pelo
-window.BANCOS_CHILE          = BANCOS_CHILE;          // dal.js:95 a pelo
-window.LOC_ESTADO_RANK       = LOC_ESTADO_RANK;
-window.ROLES_OPERATIVOS      = ROLES_OPERATIVOS;
-window.DEFAULT_DEPARTAMENTOS = DEFAULT_DEPARTAMENTOS; // buildDefaultProjectData (clásico) los lee a pelo
-window.DEFAULT_GASTOS        = DEFAULT_GASTOS;
-window.DEFAULT_EQUIPOS       = DEFAULT_EQUIPOS;
-window.DEFAULT_TALENTOS      = DEFAULT_TALENTOS;
-window.DTE_OPTIONS           = DTE_OPTIONS;           // bd.js y presupuesto-cotizacion.js a pelo
-window.UNIDAD_OPTIONS        = UNIDAD_OPTIONS;        // presupuesto-cotizacion.js (tras dedup)
-window.DEMO_PROJECTS         = DEMO_PROJECTS;         // loadDemoData (clásico)
+window.DEMO_PROJECTS = DEMO_PROJECTS; // loadDemoData (clásico)
