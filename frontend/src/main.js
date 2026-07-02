@@ -14,6 +14,8 @@ import './modules/presupuesto-cotizacion.js'; // puentea renderPresupuesto, rend
 import './modules/locaciones.js'; // puentea bdLocFind, projLocList, renderLocaciones, openLocDetail, loc*, locScout*, scout*
 import './modules/legal.js'; // puentea renderLegal, legalSetSub, legalSetFiltro, openLegalGen, legalDoGenerate, legalExportPDF, legal* (todas)
 import './modules/plan-rodaje.js'; // puentea renderPlanRodaje, exportPlanRodajePDF, pr*, renderHojaLlamado, exportHojaLlamadoPDF, printViaIframe, hl* (todas)
+import './modules/bd.js'; // puentea renderBD*, openEmpresa*, empresa*, archivar*, openPersonaForm, openGlobalBDPersonas, crewAddToBD, openPersonaByName, etc.
+import './modules/bd-excel.js'; // puentea _normKey, _norm*BD, ensureXLSX, exportBDExcelV71, importBDExcelV71, buildPersonasDatalist, etc.
 
 window.escapeHtml = escapeHtml;
 window.safeUrl = safeUrl;
