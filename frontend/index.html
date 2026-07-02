@@ -3039,7 +3039,7 @@ const MODULES = {   // window.MODULES se asigna al cierre de la definición (lí
     eyebrow: 'Creative Hub',
     layer: 'Implementado · V6.7 (registro por link)',
     scope: 'project',
-    render: renderDocumentos,
+    render: () => renderDocumentos(),   // arrow diferido (C1): referencia directa evaluaba en parse-time y renderDocumentos ya vive en documentos.js
     description: 'Repositorio central que reemplaza el rol de Milanote/Excel para documentos creativos y estratégicos del proyecto.'
   },
   'gastos': {
