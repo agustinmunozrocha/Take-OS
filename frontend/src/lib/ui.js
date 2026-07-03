@@ -173,7 +173,7 @@ function _empAddRol(tipo, rolCap) {
   });
   return roles.join(', ');
 }
-function comboboxAddEmpresaToBD(btn) {
+export function comboboxAddEmpresaToBD(btn) {
   const wrap = btn && btn.closest ? btn.closest('.combobox-wrap') : null;
   const inp = wrap ? wrap.querySelector('.combobox-input') : null;
   if (!inp) return;

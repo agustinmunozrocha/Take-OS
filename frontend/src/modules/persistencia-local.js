@@ -254,7 +254,7 @@ function _writeSnapshots(list) {
   try { window.localStorage.setItem(SNAP_KEY, JSON.stringify(list)); }
   catch (e) { console.error('[snapshots] no se pudo escribir el snapshot de seguridad', e); _persisAvisarFallo('No se pudo guardar el snapshot de seguridad previo a la operación. Considera exportar un respaldo (.json) manualmente.'); }
 }
-function pushSnapshot(label) {
+export function pushSnapshot(label) {
   const snap = {
     label: label || 'Snapshot',
     createdAt: new Date().toISOString(),

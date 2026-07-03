@@ -722,7 +722,7 @@ async function dalBulkSyncBD(contactIds, companyIds) {
 
 /* Cierra una importación .xlsx en modo fusión sincronizando lo tocado a Supabase
    (si la fuente es Supabase). Avisa progreso y resultado. */
-async function dalFinishBulkImport(contactIds, companyIds) {
+export async function dalFinishBulkImport(contactIds, companyIds) {
   if (CONTACTS_SOURCE !== 'supabase') return;   // sin Supabase confirmado, basta el autosave local
   const nC = (contactIds || []).length, nE = (companyIds || []).length;
   if (!nC && !nE) return;

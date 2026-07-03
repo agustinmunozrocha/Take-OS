@@ -138,7 +138,7 @@ export const STATES_WITH_LOCKED_BUDGET = ['preproduccion', 'produccion', 'postpr
 export const BD_CONTACTOS = {}; window.BD_CONTACTOS = BD_CONTACTOS;             // CANÓNICO (id-keyed)
 export const BD_EMPRESAS_BYID = {}; window.BD_EMPRESAS_BYID = BD_EMPRESAS_BYID; // CANÓNICO (id-keyed)
 export const BD_PERSONAS = {}; window.BD_PERSONAS = BD_PERSONAS; // proyección name-keyed (UI)
-const BD_TALENTOS = {}; window.BD_TALENTOS = BD_TALENTOS;                // proyección name-keyed (UI)
+export const BD_TALENTOS = {}; window.BD_TALENTOS = BD_TALENTOS;                // proyección name-keyed (UI)
 export const BD_EMPRESAS = {}; window.BD_EMPRESAS = BD_EMPRESAS;                // proyección name-keyed por nombreFantasia (UI)
 
 /* V8.2 — BD DE LOCACIONES (transversal, canónica). Misma jerarquía que

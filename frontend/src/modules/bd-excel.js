@@ -3,6 +3,16 @@
 // Incluye normalizadores (_normKey, _norm*BD), tablas SBIF de bancos y los
 // flujos de exportar/importar/plantilla de la BD. La UI de la BD vive en bd.js.
 
+// D1d · imports reales. DIFERIDA la arista a bd (renderBDPersonas queda vía
+// window): bd importará bd-excel — no cerrar el ciclo ESM.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_PERSONAS, BD_TALENTOS, STATE } from '../lib/state.js';
+import { _buildPerfilPago, _buildPerfilTalento, _clearStore, _dedupKeys, _genId, ingestLegacyIntoContactos, syncLegacyFromContactos } from '../lib/modelo.js';
+import { comboboxAddEmpresaToBD, showModal } from '../lib/ui.js';
+import { getBDPresupuesto } from './presupuesto-cotizacion.js';
+import { dalFinishBulkImport } from './dal.js';
+import { autosaveNow, markDirty, pushSnapshot } from './persistencia-local.js';
+
 /* Helper para datalists: lista de nombres para autocompletar */
 /* ════════════════════════════════════════════════════════════════════
    V5.7 (Nota 4) · IMPORTACIÓN DE LA BD DESDE EXCEL (.xlsx)

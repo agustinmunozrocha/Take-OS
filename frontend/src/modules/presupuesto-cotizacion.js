@@ -15,7 +15,7 @@ function cotizadoLocked(project) {
 }
 
 // ── A1: getBDPresupuesto (disperso, línea 2085)
-function getBDPresupuesto() {
+export function getBDPresupuesto() {
   const out = {};
   Object.keys(window.BD_PERSONAS).forEach(k => {
     const p = window.BD_PERSONAS[k];
