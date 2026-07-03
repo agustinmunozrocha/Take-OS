@@ -38,7 +38,7 @@ export function navigateToModule(moduleKey) {
    conectan aquí. La arquitectura no cambia.
    ════════════════════════════════════════════════════════════════════ */
 
-const MODULES = {   // window.MODULES se asigna al cierre de la definición (línea marcada A4)
+export const MODULES = {   // window.MODULES se asigna al cierre de la definición (línea marcada A4)
   'info-proyecto': {
     title: 'Info Proyecto',
     subtitle: 'Identidad del proyecto, cliente, equipo, fechas y resumen financiero.',
@@ -190,7 +190,7 @@ window.MODULES = MODULES; // bridge para gastos.js (goWire registra render de Ga
    Si no, dibuja el stub de Capa 1.
    V5.1.1: ahora decide en qué container pintar según STATE.currentView.
    Esto evita el bug de los IDs duplicados de V5.1. */
-function renderModule(key) {
+export function renderModule(key) {
   const m = MODULES[key];
   // Container correcto según vista actual
   const mainId = STATE.currentView === 'bd-global' ? 'bdGlobalMain' : 'moduleMain';
