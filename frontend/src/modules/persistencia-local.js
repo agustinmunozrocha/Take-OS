@@ -247,7 +247,8 @@ function _readSnapshots() {
 }
 function _writeSnapshots(list) {
   if (!hasLS()) return;
-  try { window.localStorage.setItem(SNAP_KEY, JSON.stringify(list)); } catch (e) {}
+  try { window.localStorage.setItem(SNAP_KEY, JSON.stringify(list)); }
+  catch (e) { console.error('[snapshots] no se pudo escribir el snapshot de seguridad', e); _persisAvisarFallo('No se pudo guardar el snapshot de seguridad previo a la operación. Considera exportar un respaldo (.json) manualmente.'); }
 }
 function pushSnapshot(label) {
   const snap = {
@@ -459,10 +460,19 @@ function importSingleProjectFromInput(input) {
 }
 
 /* ─── AUTOGUARDADO (localStorage, best-effort) ─────────────────────── */
+let _persisFalloAvisado = false;
+function _persisAvisarFallo(body) {
+  /* D0 · el fallo de escritura local (quota llena, modo privado) era tragado en
+     silencio por ~30 llamadores que jamás revisan el retorno. Un aviso por
+     sesión: informar sin spamear. Hallazgo 🔴 de la Fase 0. */
+  if (_persisFalloAvisado) return; _persisFalloAvisado = true;
+  try { showToast({ kind: 'warning', title: 'Respaldo local con problemas', body: body, duration: 9000 }); } catch (e) {}
+}
 function autosaveNow() {
   let ok = false;
   if (hasLS()) {
-    try { window.localStorage.setItem(LS_KEY, JSON.stringify(buildSaveObject())); ok = true; } catch (e) {}
+    try { window.localStorage.setItem(LS_KEY, JSON.stringify(buildSaveObject())); ok = true; }
+    catch (e) { console.error('[autosave] no se pudo escribir localStorage', e); _persisAvisarFallo('El autoguardado local falló (¿espacio del navegador lleno?). Tus cambios siguen yendo a la nube, pero el respaldo offline no se está actualizando.'); }
   }
   return ok;
 }
