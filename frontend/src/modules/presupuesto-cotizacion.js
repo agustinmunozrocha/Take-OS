@@ -4359,7 +4359,6 @@ window.recalcSubdeptTotals         = recalcSubdeptTotals;
 window.recalcDeptSummary           = recalcDeptSummary;
 // Presupuesto — acciones
 window.toggleBudgetCotizado        = toggleBudgetCotizado;
-window.toggleBudgetServiciosBreakdown = toggleBudgetServiciosBreakdown;
 window.snapshotFullBudget          = snapshotFullBudget;
 window.presupCotVersionBarHTML     = presupCotVersionBarHTML;
 window.presupSetCotVersion         = presupSetCotVersion;

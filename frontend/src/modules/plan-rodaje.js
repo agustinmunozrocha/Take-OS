@@ -1487,7 +1487,6 @@ window.prFmtDur = prFmtDur;
 window.prParseHM = prParseHM;
 
 // ── Bridge auditoría pre-B (botón «Exportar de todas formas» del modal HL) ──
-window._hlDoExportPDF = _hlDoExportPDF;
 
 // D2 · despachador pr.d con centinelas de runtime (§v§=el.value, §c§=el.checked)
 var _PR_FN = {
