@@ -101,8 +101,6 @@ window.manejarErrorPlan = manejarErrorPlan;
 
 // D0 · puentes que faltaban desde la Etapa C (barrido 3 re-ejecutado): los
 // handlers on* generados los invocan como globales.
-window.ctaProdCerrar = ctaProdCerrar;
-window.ctaProdSaberMas = ctaProdSaberMas;
 
 // D2 · acciones delegadas de este módulo
 registrarAcciones('plan', {

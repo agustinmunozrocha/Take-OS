@@ -1892,7 +1892,6 @@ export async function dalFlushProyectos() {
 /* Banner visible dentro del modulo Base de Datos (claridad sobre comodidad). */
 
 // ── Window bridges DAL (3 barridos: consumo externo, auto-consumo, nombre-string) ──
-window._conflictoBannerHide = _conflictoBannerHide;
 window._dalEmpresaSaveSoon = _dalEmpresaSaveSoon;
 window._dalPerfilSaveSoon = _dalPerfilSaveSoon;
 window.dalBootProyectos = dalBootProyectos;

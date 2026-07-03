@@ -200,7 +200,6 @@ async function invRechazar(token) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window.abrirInvitacionRecibida = abrirInvitacionRecibida;
 window.dalInvitar = dalInvitar;
 window.invitacionLink = invitacionLink;
 

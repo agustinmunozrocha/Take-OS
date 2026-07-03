@@ -791,9 +791,6 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
 
 // ── Bridges C6 (barrido final) ──
 window.THEME_KEY = THEME_KEY;
-window.comboboxFilterEmpresas = comboboxFilterEmpresas;
-window.togglePfCrew = togglePfCrew;
-window.togglePfExtranjera = togglePfExtranjera;
 
 // D2 · namespace 'ui': acciones universales (cerrar/backdrop, movidas desde
 // delegacion.js para no cerrar el ciclo delegacion⇄ui) + las propias.

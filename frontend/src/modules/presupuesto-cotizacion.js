@@ -4484,8 +4484,6 @@ window.cotPrevSaveSettings         = cotPrevSaveSettings;
 window.CotPreview                  = CotPreview;
 
 // ── Bridges agregados por auditoría 2-jul (consumidos por index.html u otros módulos sin bridge) ──
-window._cotPrevFamiliaGF = _cotPrevFamiliaGF;
-window._cotPrevHexValido = _cotPrevHexValido;
 window.cotPrevColores = cotPrevColores;
 window.cotPrevFontLink = cotPrevFontLink;
 window.cotPrevFonts = cotPrevFonts;

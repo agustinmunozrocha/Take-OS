@@ -421,9 +421,7 @@ export function _espInyectarInvitaciones(invs) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window.ESPACIO_DEMO = ESPACIO_DEMO;
 window._espAbrirProyecto = _espAbrirProyecto;
-window._espConstruir = _espConstruir;
 window._espEntrarInterna = _espEntrarInterna;
 window._espPerfil = _espPerfil;
 window._swControlRoom = _swControlRoom;
@@ -432,9 +430,6 @@ window._swProyecto = _swProyecto;
 window._swToggle = _swToggle;
 window.renderEspacioUsuario = renderEspacioUsuario;
 // ── Bridges de reparación C4 (llamadas reales de las islas bootstrap, verificadas por cuerpo) ──
-window._espInyectarCtaProductora = _espInyectarCtaProductora;
-window._espInyectarHerramientas = _espInyectarHerramientas;
-window._espInyectarInvitaciones = _espInyectarInvitaciones;
 
 // D2 · acciones delegadas (cta*/abrirInvitacionRecibida/abrirPrivacidadDatos vía window)
 registrarAcciones('esp', {
