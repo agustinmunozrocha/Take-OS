@@ -34,7 +34,6 @@ export const BANCOS_CHILE = [
 
 
 
-window.COTIZACION_CONDICIONES_DEFAULTS = COTIZACION_CONDICIONES_DEFAULTS;
 
 export const DTE_OPTIONS = [
   { value: 'boleta',           label: 'Boleta de honorarios' },
@@ -78,14 +77,9 @@ window.montoBrutoDesde    = montoBrutoDesde;
 window.LOC_ORIENTACIONES     = LOC_ORIENTACIONES;     // locaciones.js (tras dedup)
 window.REGIONES_CHILE        = REGIONES_CHILE;        // perfil-onboarding.js la lee a pelo
 window.BANCOS_CHILE          = BANCOS_CHILE;          // dal.js:95 a pelo
-window.LOC_ESTADO_RANK       = LOC_ESTADO_RANK;
-window.ROLES_OPERATIVOS      = ROLES_OPERATIVOS;
-window.DEFAULT_DEPARTAMENTOS = DEFAULT_DEPARTAMENTOS; // buildDefaultProjectData (clásico) los lee a pelo
-window.DEFAULT_GASTOS        = DEFAULT_GASTOS;
-window.DEFAULT_EQUIPOS       = DEFAULT_EQUIPOS;
-window.DEFAULT_TALENTOS      = DEFAULT_TALENTOS;
 window.DTE_OPTIONS           = DTE_OPTIONS;           // bd.js y presupuesto-cotizacion.js a pelo
 window.UNIDAD_OPTIONS        = UNIDAD_OPTIONS;        // presupuesto-cotizacion.js (tras dedup)
 
 // D4b · catálogos compartidos movidos a lib/catalogos.js (hoja); re-export para compat
-export { DEFAULT_DEPARTAMENTOS, DEFAULT_EQUIPOS, DEFAULT_GASTOS, DEFAULT_TALENTOS, COTIZACION_CONDICIONES_DEFAULTS, LOC_ESTADO_RANK, ROLES_OPERATIVOS } from './catalogos.js';
+import { DEFAULT_DEPARTAMENTOS, DEFAULT_EQUIPOS, DEFAULT_GASTOS, DEFAULT_TALENTOS, COTIZACION_CONDICIONES_DEFAULTS, LOC_ESTADO_RANK, ROLES_OPERATIVOS } from './catalogos.js';
+export { DEFAULT_DEPARTAMENTOS, DEFAULT_EQUIPOS, DEFAULT_GASTOS, DEFAULT_TALENTOS, COTIZACION_CONDICIONES_DEFAULTS, LOC_ESTADO_RANK, ROLES_OPERATIVOS };
