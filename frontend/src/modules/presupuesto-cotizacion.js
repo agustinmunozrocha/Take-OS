@@ -56,7 +56,7 @@ function isEmptyTemplateRow(item) {
   const cotizadoZero = !(Number(item.valor) > 0) || !(Number(item.cantidad) > 0);
   return !hasNombre && !item.confirmado && !hasReal && !item.extra && cotizadoZero;
 }
-function purgeEmptyRows(project) {
+export function purgeEmptyRows(project) {
   let removed = 0;
   const d = project.data;
   Object.keys(d.servicios).forEach(dept => {
@@ -1468,7 +1468,7 @@ export function recalcAllDeptSummaries() {
    Antes vivía solo en hoja de cálculo, perdida en V5.0 Capa 2.
    ════════════════════════════════════════════════════════════════════ */
 
-function calcSummaryFin(project) {
+export function calcSummaryFin(project) {
   _syncGastosCostoReal(project);   // 4a · el real de Gastos sale de los movimientos, no de tipeo manual
   const d = project.data;
   const fin = d.finanzas;

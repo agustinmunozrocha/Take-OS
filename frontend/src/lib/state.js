@@ -96,7 +96,7 @@ const STATES_WITH_REAL_COST = ['preproduccion', 'produccion', 'postproduccion', 
 /* V5.2.2: estados donde el presupuesto cotizado queda bloqueado.
    Filas existentes (no extras) no se pueden editar en Rol/DTE/Valor/
    Cantidad. Filas marcadas como `extra` siempre son editables. */
-const STATES_WITH_LOCKED_BUDGET = ['preproduccion', 'produccion', 'postproduccion', 'cierre', 'cerrado']; window.STATES_WITH_LOCKED_BUDGET = STATES_WITH_LOCKED_BUDGET;
+export const STATES_WITH_LOCKED_BUDGET = ['preproduccion', 'produccion', 'postproduccion', 'cierre', 'cerrado']; window.STATES_WITH_LOCKED_BUDGET = STATES_WITH_LOCKED_BUDGET;
 
 /* cotizadoLocked → movido a src/modules/presupuesto-cotizacion.js (Etapa 2) */
 
@@ -222,7 +222,7 @@ let EMPRESA_PERFIL = {
    ════════════════════════════════════════════════════════════════════ */
 /* USUARIO_ACTUAL -> a src/lib/state.js (Etapa 1); en window */
 var _TIENE_EMPRESA = false; // var → window._TIENE_EMPRESA (leído desde módulos ES)
-const TAKEOS_VERSION = 'V11.14.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+export const TAKEOS_VERSION = 'V11.14.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
 // Bridges C6 (BD_LEGAL/TPL eran léxicas: los módulos las leen a pelo → ahora resuelven vía window)
 window.BD_LEGAL = BD_LEGAL;
 window.BD_LEGAL_TPL = BD_LEGAL_TPL;

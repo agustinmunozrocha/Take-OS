@@ -638,7 +638,7 @@ function sectionResponsableHTML(key) {
 
 /* ─── CONFETI ──────────────────────────────────────────────────────── */
 
-function fireConfetti() {
+export function fireConfetti() {
   const canvas = document.getElementById('confettiCanvas');
   if (!canvas) return;
   canvas.width = window.innerWidth;

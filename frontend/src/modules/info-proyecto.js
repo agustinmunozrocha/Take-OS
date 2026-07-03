@@ -101,7 +101,7 @@ function infoContactoChanged(field, value) {
 }
 function infoVincularEmpresa(id) { updateInfoField('clienteEmpresaId', id); renderInfoProyecto(); }
 
-function renderInfoProyecto() {
+export function renderInfoProyecto() {
   const project = STATE.currentProject;
   if (!project) return;
   const ip = project.data.infoProyecto;
@@ -419,7 +419,7 @@ function updateProjectHeader() {
    NO bloquea (queda como aviso suave en recalcAlerts): "confirmado sin
    nombre". Eso no compromete la integridad de la cotización congelada.
    ════════════════════════════════════════════════════════════════════ */
-function collectApprovalBlockers(project) {
+export function collectApprovalBlockers(project) {
   const blockers = [];
   const d = project.data;
 
