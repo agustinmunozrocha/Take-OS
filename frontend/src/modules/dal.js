@@ -905,7 +905,7 @@ function _dalPerfilSaveSoon() {
    por id), sin tocar lo operativo. No destructivo: si un proyecto no está en
    Supabase, queda 100% como estaba.
    ════════════════════════════════════════════════════════════════════ */
-const DAL_KNOWN_PROJECT_IDS = new Set(); window.DAL_KNOWN_PROJECT_IDS = DAL_KNOWN_PROJECT_IDS; // puente para módulos
+export const DAL_KNOWN_PROJECT_IDS = new Set(); window.DAL_KNOWN_PROJECT_IDS = DAL_KNOWN_PROJECT_IDS; // puente para módulos
 
 /* V10.6.0 · Flags SUPA_SOLE eliminados (Supabase es la única fuente, sin doble escritura). */
 
@@ -1110,7 +1110,7 @@ function _dalDocumentosPartes(p) {
   });
   return { items: items };
 }
-function _dalProyectoPartes(p) {
+export function _dalProyectoPartes(p) {
   const asg = p.project_assignments || [];
   function porFuncion(fn) {
     const a = asg.find(x => x.project_functions && x.project_functions.nombre === fn);
@@ -1179,7 +1179,7 @@ function _dalProyectoPartes(p) {
 }
 
 /* Fusiona partes migradas (Supabase) sobre un proyecto, sin tocar lo operativo. */
-function _dalFusionarProyecto(target, partes) {
+export function _dalFusionarProyecto(target, partes) {
   if (!target.data) target.data = buildDefaultProjectData();
   target.state = partes.estado;
   if (partes.nombre) target.name = partes.nombre;
@@ -1255,7 +1255,7 @@ function _dalProyectoSelect() {
     + 'gasto_comments(id,gasto_id,autor,texto,ts,posicion)';
 }
 
-async function dalLoadProyectos(soloBorrados) {
+export async function dalLoadProyectos(soloBorrados) {
   if (!sb) return null;
   const sel = _dalProyectoSelect();
   try {
