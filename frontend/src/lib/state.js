@@ -148,10 +148,10 @@ export const BD_EMPRESAS = {}; window.BD_EMPRESAS = BD_EMPRESAS;                
    comuna, ciudad, region, maps, orientacion, contactos:[{nombre,mail,tel,obs,
    relacion}], notas, fotos:[{url}] }. (Antes había un único `dueno`; ahora
    son varios contactos con su relación, p.ej. Dueño/Gerente/Encargado.) */
-const BD_LOC = []; window.BD_LOC = BD_LOC;
+export const BD_LOC = []; window.BD_LOC = BD_LOC;
 // LOC_ORIENTACIONES, LOC_ESTADOS, REGIONES_CHILE → movido a src/lib/data.js (Etapa B3)
-const BD_LEGAL = [];
-const BD_LEGAL_TPL = [];   // V8.4: plantillas legales personalizadas (las oficiales viven en LEGAL_TPL, en código)
+export const BD_LEGAL = [];
+export const BD_LEGAL_TPL = [];   // V8.4: plantillas legales personalizadas (las oficiales viven en LEGAL_TPL, en código)
 // nextLegalId, legalDocsForProject → movidos a src/modules/legal.js (Etapa A1)
 
 

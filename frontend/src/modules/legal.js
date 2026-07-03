@@ -8,6 +8,22 @@
 // comboboxCloseDelayed, ensureLocShape, locPrimaryContact, locFullAddress,
 // locMoney, montoNetoDesde, _fechaCorta, _toISODate
 
+// D1c · imports reales. VETADOS: ORG_ID, LEGAL_SOURCE (window mutables),
+// combobox* (solo strings). Hoists: plan-rodaje 21→20, bd-excel 23→20,
+// dal 26→20 (top-levels inertes firmados). renderLegal sigue saliendo vía
+// window para nav y dal — bridge intocable.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { STATE, BD_CONTACTOS, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL } from '../lib/state.js';
+import { montoNetoDesde } from '../lib/data.js';
+import { showModal, closeModal, _toISODate } from '../lib/ui.js';
+import { _fechaCorta } from './notificaciones.js';
+import { bdLocFind, ensureLocShape, locPrimaryContact, locFullAddress, locMoney } from './locaciones.js';
+import { printViaIframe } from './plan-rodaje.js';
+import { _normKey } from './bd-excel.js';
+import { _dalLegalDocSaveSoon, _dalLegalTplSaveSoon, dalEliminarLegalDoc, dalEliminarLegalTpl } from './dal.js';
+import { markDirty, autosaveNow } from './persistencia-local.js';
+
 /* ════════════════════════════════════════════════════════════════════
    V8.3 · MÓDULO LEGAL
    Genera, versiona y archiva documentos legales (cesión de derechos,

@@ -260,7 +260,7 @@ function notifFill(str, vars) {
 function _dteWord(dte) {
   return ({ boleta: 'boleta', factura: 'factura', factura_exenta: 'factura exenta', boleta_terceros: 'boleta de terceros' })[dte] || 'boleta o factura';
 }
-function _fechaCorta(iso) {
+export function _fechaCorta(iso) {
   if (!iso) return ''; const p = String(iso).split('-');
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
 }

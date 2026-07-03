@@ -379,7 +379,7 @@ function bancoSelectHTML(current, opts) {
 }
 function pfBancoChange(nombre) { const cb = document.getElementById('pf_codigoBanco'); if (cb) cb.value = bancoCodigo(nombre); }
 
-function _toISODate(v) {
+export function _toISODate(v) {
   if (!v) return '';
   v = String(v).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
