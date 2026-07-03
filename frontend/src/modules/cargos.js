@@ -420,21 +420,9 @@ function cargoQuitar(id) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._cargoAgregarRol2 = _cargoAgregarRol2;
 window._cargoContactIdPorNombre = _cargoContactIdPorNombre;
-window._cargoPerfilChecklist = _cargoPerfilChecklist;
-window._cargoSelChanged = _cargoSelChanged;
-window._cargoTipoChanged = _cargoTipoChanged;
 window._cargosDerivarRECI = _cargosDerivarRECI;
 window._cargosKey = _cargosKey;
-window.cargoAbrirModal = cargoAbrirModal;
-window.cargoComboboxFilter = cargoComboboxFilter;
-window.cargoCopiarInvitacion = cargoCopiarInvitacion;
-window.cargoEditar = cargoEditar;
-window.cargoGuardarModal = cargoGuardarModal;
-window.cargoIrAInvitar = cargoIrAInvitar;
-window.cargoPersonaChanged = cargoPersonaChanged;
-window.cargoQuitar = cargoQuitar;
 window.renderCargos = renderCargos;
 
 // D2 · acciones delegadas (comboboxSelect/comboboxCloseDelayed vía window: ui)

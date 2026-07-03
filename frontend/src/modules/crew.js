@@ -338,15 +338,12 @@ function doExportTransporte() {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window.addCrewExterno = addCrewExterno;
 window.doExportTransporte = doExportTransporte;
 window.exportCateringPDF = exportCateringPDF;
 window.exportCrewListPDF = exportCrewListPDF;
 window.exportTransportePDF = exportTransportePDF;
 window.getCrewForExport = getCrewForExport;
-window.removeCrewExterno = removeCrewExterno;
 window.renderCrew = renderCrew;
-window.updateCrewExterno = updateCrewExterno;
 
 // D2 · acciones delegadas (crewAddToBD vía window: arista diferida ui/bd)
 registrarAcciones('crew', {

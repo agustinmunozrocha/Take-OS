@@ -341,10 +341,7 @@ export function updateThemeButton(theme) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._modalCancel = _modalCancel;
-window._modalConfirm = _modalConfirm;
 window.closeModal = closeModal;
-window.comboboxAddEmpresaToBD = comboboxAddEmpresaToBD;
 window.comboboxAddToBD = comboboxAddToBD;
 window.comboboxCloseDelayed = comboboxCloseDelayed;
 window.comboboxFilter = comboboxFilter;
@@ -795,7 +792,6 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
 // ── Bridges C6 (barrido final) ──
 window.THEME_KEY = THEME_KEY;
 window.comboboxFilterEmpresas = comboboxFilterEmpresas;
-window.setSectionResponsable = setSectionResponsable;
 window.togglePfCrew = togglePfCrew;
 window.togglePfExtranjera = togglePfExtranjera;
 

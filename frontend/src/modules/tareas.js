@@ -298,7 +298,6 @@ function crtGoTask(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) 
 function crtGoSenal(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) return; navigateToProject(projId); setTimeout(() => { try { navigateToModule(seccion); } catch (e) {} }, 90); }
 
 // ── Window bridges (3 barridos func+const) ──
-window._abrirAdjTarea = _abrirAdjTarea;
 window._tm = _tm;
 window.crtGoSenal = crtGoSenal;
 window.crtGoTask = crtGoTask;
@@ -306,21 +305,12 @@ window.crtToggle = crtToggle;
 window.ensureSenales = ensureSenales;
 window.ensureTareas = ensureTareas;
 window.marcarSenal = marcarSenal;
-window.marcarSenalVista = marcarSenalVista;
 window.mentionBlur = mentionBlur;
 window.mentionInput = mentionInput;
-window.mentionPick = mentionPick;
 window.openTareasModal = openTareasModal;
 window.refreshSidebarTaskCounters = refreshSidebarTaskCounters;
 window.renderMisTareas = renderMisTareas;
 window.sectionTaskCount = sectionTaskCount;
-window.tmAddComentario = tmAddComentario;
-window.tmAddFiles = tmAddFiles;
-window.tmCrear = tmCrear;
-window.tmRemoveAtt = tmRemoveAtt;
-window.tmSelfAssign = tmSelfAssign;
-window.tmToggle = tmToggle;
-window.tmToggleExpand = tmToggleExpand;
 window.userSenales = userSenales;
 
 // D2 · acciones delegadas
