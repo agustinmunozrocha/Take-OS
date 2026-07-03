@@ -15,6 +15,10 @@ import { markDirty } from './persistencia-local.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { gancho, define } from '../lib/ganchos.js';
+let _mentionEnd;   // D4c: estado propio del módulo (antes window._mentionEnd, era de los handlers inline)
+let _mentionStart;   // D4c: estado propio del módulo (antes window._mentionStart, era de los handlers inline)
+let _mentionTarget;   // D4c: estado propio del módulo (antes window._mentionTarget, era de los handlers inline)
+let _tmState;   // D4c: estado propio del módulo (antes window._tmState, era de los handlers inline)
 function ensureTareas(project) { if (!project.data.tareas) project.data.tareas = []; return project.data.tareas; }
 function ensureSenales(project) { if (!project.data.senales) project.data.senales = []; return project.data.senales; }
 function _taskId() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -116,7 +120,7 @@ function mentionInput(el) {
   const q = (m[2] || '').toLowerCase();
   const people = _mentionPeople().filter(n => n.toLowerCase().indexOf(q) !== -1).slice(0, 8);
   if (!people.length) { drop.hidden = true; return; }
-  window._mentionTarget = el; window._mentionStart = pos - m[2].length - 1; window._mentionEnd = pos;
+  _mentionTarget = el; _mentionStart = pos - m[2].length - 1; _mentionEnd = pos;
   drop.innerHTML = people.map(n => '<div class="mention-opt" ' + accionHTML('tm.pick', n, { on: 'mousedown' }) + '>@' + escapeHtml(n) + '</div>').join('');
   const r = el.getBoundingClientRect();
   drop.style.left = (r.left + window.scrollX) + 'px';
@@ -125,9 +129,9 @@ function mentionInput(el) {
   drop.hidden = false;
 }
 function mentionPick(name) {
-  const el = window._mentionTarget; const drop = _mentionDrop(); drop.hidden = true;
+  const el = _mentionTarget; const drop = _mentionDrop(); drop.hidden = true;
   if (!el) return;
-  const v = el.value || ''; const a = window._mentionStart, b = window._mentionEnd;
+  const v = el.value || ''; const a = _mentionStart, b = _mentionEnd;
   const ins = '@' + name + ' ';
   el.value = v.slice(0, a) + ins + v.slice(b);
   const np = a + ins.length; el.focus(); try { el.setSelectionRange(np, np); } catch (e) {}
@@ -143,8 +147,8 @@ function highlightMentions(escapedText, people) {
   return out;
 }
 
-function openTareasModal(seccion) { if (!STATE.currentProject) return; window._tmState = { seccion: seccion, expanded: null, asignado: '', adjuntos: [] }; renderTareasModal(); }
-function _tm() { return window._tmState || { seccion: null, adjuntos: [] }; }
+function openTareasModal(seccion) { if (!STATE.currentProject) return; _tmState = { seccion: seccion, expanded: null, asignado: '', adjuntos: [] }; renderTareasModal(); }
+function _tm() { return _tmState || { seccion: null, adjuntos: [] }; }
 function _tmFind(id) { const p = STATE.currentProject; if (!p) return null; return ensureTareas(p).find(t => t.id === id); }
 function _tmAssigneeSelect(people, current) {
   let list = people.slice(); const u = gancho('currentUser')(); if (u && list.indexOf(u) === -1) list = [u].concat(list);

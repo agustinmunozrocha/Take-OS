@@ -26,6 +26,7 @@ import { markDirty, autosaveNow } from './persistencia-local.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { define } from '../lib/ganchos.js';
+let _lglQT;   // D4c: estado propio del módulo (antes window._lglQT, era de los handlers inline)
 /* ════════════════════════════════════════════════════════════════════
    V8.3 · MÓDULO LEGAL
    Genera, versiona y archiva documentos legales (cesión de derechos,
@@ -916,7 +917,7 @@ window.openLegalGenTpl       = openLegalGenTpl;
 // D2 · acciones delegadas
 registrarAcciones('lgl', {
   sub: function (a) { legalSetSub(a[0]); },
-  q: function (a, el) { clearTimeout(window._lglQT); window._lglQT = setTimeout(function () { legalSetFiltro('q', el.value); }, 250); },
+  q: function (a, el) { clearTimeout(_lglQT); _lglQT = setTimeout(function () { legalSetFiltro('q', el.value); }, 250); },
   filtro: function (a, el) { legalSetFiltro(a[0], el.value); },
   gen: function () { openLegalGen(); },
   verDoc: function (a) { openLegalGenDoc(a[0]); },

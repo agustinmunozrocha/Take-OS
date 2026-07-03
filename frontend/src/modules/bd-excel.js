@@ -15,6 +15,7 @@ import { autosaveNow, markDirty, pushSnapshot } from './persistencia-local.js';
 
 import { renderBDPersonas } from './bd.js';
 import { define } from '../lib/ganchos.js';
+let _bdReplaceAll;   // D4c: estado propio del módulo (antes window._bdReplaceAll, era de los handlers inline)
 /* Helper para datalists: lista de nombres para autocompletar */
 /* ════════════════════════════════════════════════════════════════════
    V5.7 (Nota 4) · IMPORTACIÓN DE LA BD DESDE EXCEL (.xlsx)
@@ -498,8 +499,8 @@ async function importBDExcelV71(input) {   // nombre conservado por compat
     }
 
     pushSnapshot('Antes de importar BD desde ' + file.name);
-    const replaceAll = window._bdReplaceAll === true;
-    window._bdReplaceAll = false;
+    const replaceAll = _bdReplaceAll === true;
+    _bdReplaceAll = false;
     const _touchedC = new Set(), _touchedE = new Set();   // V9.6.3: ids tocados para sync a Supabase (fusión)
 
     if (wsC) {
@@ -595,7 +596,7 @@ async function importBDExcelV71(input) {   // nombre conservado por compat
 
 function triggerBDExcelImport() {
   // V9.6.3: descongelado — la fusión escribe a Supabase vía dalFinishBulkImport.
-  window._bdReplaceAll = false;
+  _bdReplaceAll = false;
   const inp = document.getElementById('bdExcelImportInputV71');
   if (inp) { inp.value = ''; inp.click(); }
 }

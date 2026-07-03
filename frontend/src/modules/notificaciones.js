@@ -32,6 +32,7 @@ import { escapeHtml, showToast } from '../lib/helpers.js';
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { IVA } from '../lib/rates.js';
 import { define } from '../lib/ganchos.js';
+let _notifCfg;   // D4c: estado propio del módulo (antes window._notifCfg, era de los handlers inline)
 let NOTIF = [];
 let _NOTIF_TIMER = null;
 let _NOTIF_OUTSIDE = false;
@@ -243,7 +244,7 @@ function notifLoadConfig() {
   });
   return cfg;
 }
-function getNotifConfig() { if (!window._notifCfg) window._notifCfg = notifLoadConfig(); return window._notifCfg; }
+function getNotifConfig() { if (!_notifCfg) _notifCfg = notifLoadConfig(); return _notifCfg; }
 function notifSaveConfig() { try { localStorage.setItem(NOTIF_CFG_KEY, JSON.stringify(getNotifConfig())); } catch (e) {} }
 
 function ensureNotif(project) {

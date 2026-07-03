@@ -22,6 +22,7 @@ import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { IVA } from '../lib/rates.js';
 import { navigateToModule } from '../lib/nav.js';
 import { gancho, define, valor } from '../lib/ganchos.js';
+let _BUDGET_COLW;   // D4c: estado propio del módulo (antes window._BUDGET_COLW, era de los handlers inline)
 function cotizadoLocked(project) {
   if (!project) return false;
   return STATES_WITH_LOCKED_BUDGET.includes(project.state);
@@ -1038,11 +1039,11 @@ var _BUDGET_COL_CFG = {
 var BUDGET_MENU_W = 36;
 function _budgetColCfg(colId) { return _BUDGET_COL_CFG[colId] || { min: 60, def: 120, max: 300 }; }
 function _budgetColWStore() {
-  if (!window._BUDGET_COLW) {
-    try { window._BUDGET_COLW = JSON.parse(localStorage.getItem('takeos_budget_colw') || '{}') || {}; }
-    catch (e) { window._BUDGET_COLW = {}; }
+  if (!_BUDGET_COLW) {
+    try { _BUDGET_COLW = JSON.parse(localStorage.getItem('takeos_budget_colw') || '{}') || {}; }
+    catch (e) { _BUDGET_COLW = {}; }
   }
-  return window._BUDGET_COLW;
+  return _BUDGET_COLW;
 }
 export function _budgetColWGet(sectionKey, colId, def) {
   var cfg = _budgetColCfg(colId);

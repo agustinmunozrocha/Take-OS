@@ -30,6 +30,8 @@ import { captureUndoBaseline, markDirty } from './persistencia-local.js';
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { gancho, define, valor } from '../lib/ganchos.js';
 import { sb } from '../lib/supabase.js';
+let _delExpected;   // D4c: estado propio del módulo (antes window._delExpected, era de los handlers inline)
+let _npDraft;   // D4c: estado propio del módulo (antes window._npDraft, era de los handlers inline)
 export const STATES = {
   'venta':         { name: 'Venta',          color: 'var(--state-sale)',   order: 1 },
   'preproduccion': { name: 'Preproducción',  color: 'var(--state-prep)',   order: 2 },
@@ -225,7 +227,7 @@ export function navigateToProject(projectId) {
 
 export function newProject() {
   if (authNivel('crear_proyecto') !== 'E') { _authBlockWriteToast(); return; }
-  window._npDraft = { nombre: '', cliente: '', pe: '' };
+  _npDraft = { nombre: '', cliente: '', pe: '' };
   showModal({
     title: 'Nuevo proyecto',
     body: `
@@ -247,7 +249,7 @@ export function newProject() {
     confirmLabel: 'Crear proyecto',
     cancelLabel: 'Cancelar',
     onConfirm: () => {
-      const d = window._npDraft || {};
+      const d = _npDraft || {};
       const nombre = (d.nombre || '').trim();
       const cliente = (d.cliente || '').trim();
       const pe = (d.pe || '').trim();
@@ -282,7 +284,7 @@ export function deleteProjectFlow(id) {
     showToast({ kind: 'warning', title: 'Solo administrador', body: 'Activa el Modo administrador para eliminar proyectos.' });
     return;
   }
-  window._delExpected = proj.name;
+  _delExpected = proj.name;
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-backdrop" data-accion="ui.backdrop">
@@ -362,8 +364,8 @@ registrarAcciones('kanban', {
   panel: function () { gancho('irAlPanelPersonal')(); },
   controlRoom: function () { navigateToControlRoom(); },
   exportar: function (a) { gancho('exportSingleProject')(a[0]); },
-  npDraft: function (a, el) { window._npDraft[a[0]] = el.value; },
-  delCheck: function (a, el) { document.getElementById('delConfirmBtn').disabled = (el.value.trim() !== window._delExpected); },
+  npDraft: function (a, el) { _npDraft[a[0]] = el.value; },
+  delCheck: function (a, el) { document.getElementById('delConfirmBtn').disabled = (el.value.trim() !== _delExpected); },
   delConfirm: function (a) { confirmDeleteProject(a[0]); },
 });
 

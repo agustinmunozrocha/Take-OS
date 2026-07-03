@@ -22,6 +22,7 @@ import { _gsearchHide, globalSearchInput, globalSearchKey } from '../modules/bus
 import { navigateToModule, MODULES } from './nav.js';
 import { openTrash } from '../modules/info-proyecto.js';
 import { gancho, valor, define } from './ganchos.js';
+let _bootCoverTO;   // D4c: estado propio del módulo (antes window._bootCoverTO, era de los handlers inline)
 function currentUser() {
   if (USUARIO_ACTUAL && String(USUARIO_ACTUAL).trim()) return USUARIO_ACTUAL;
   const ep = (typeof EMPRESA_PERFIL !== 'undefined') ? EMPRESA_PERFIL : {};
@@ -204,11 +205,11 @@ export function _bootCoverShow(msg){
     }
     var m = document.getElementById('takeosBootCoverMsg'); if (m) m.textContent = msg || 'Cargando…';
     c.style.display = 'grid';
-    try{ clearTimeout(window._bootCoverTO); }catch(e){}
-    window._bootCoverTO = setTimeout(_bootCoverHide, 10000);   /* red de seguridad: nunca dejar al usuario pegado */
+    try{ clearTimeout(_bootCoverTO); }catch(e){}
+    _bootCoverTO = setTimeout(_bootCoverHide, 10000);   /* red de seguridad: nunca dejar al usuario pegado */
   }catch(e){}
 }
-export function _bootCoverHide(){ try{ clearTimeout(window._bootCoverTO); }catch(e){} try{ var c = document.getElementById('takeosBootCover'); if (c) c.remove(); }catch(e){} }
+export function _bootCoverHide(){ try{ clearTimeout(_bootCoverTO); }catch(e){} try{ var c = document.getElementById('takeosBootCover'); if (c) c.remove(); }catch(e){} }
 /* Render seguro cuando NO hay empresa confirmada: el Panel Personal cubre el
    Control Room. Jamás cae al Control Room. */
 function _renderEspacioSeguro(email){

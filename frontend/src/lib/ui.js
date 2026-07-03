@@ -9,6 +9,8 @@ import { _puedeEditarResponsables } from './auth.js';
 
 import { registrarAcciones, accionHTML } from './delegacion.js';
 import { gancho } from './ganchos.js';
+let _modalOnCancel;   // D4c: estado propio del módulo (antes window._modalOnCancel, era de los handlers inline)
+let _modalOnConfirm;   // D4c: estado propio del módulo (antes window._modalOnConfirm, era de los handlers inline)
 /* ─── PERSON SELECT (sustituye datalist+input bugeado) ──────────────
    Bug original: el datalist+input no permitía cambiar ni borrar a una
    persona ya seleccionada. UX rota.
@@ -41,15 +43,15 @@ export function showModal({ title, body, confirmLabel = 'Confirmar', cancelLabel
       </div>
     </div>
   `;
-  window._modalOnConfirm = onConfirm || (() => {});
-  window._modalOnCancel = onCancel || (() => {});
+  _modalOnConfirm = onConfirm || (() => {});
+  _modalOnCancel = onCancel || (() => {});
 }
 
 function _modalConfirm() {
   // V9.1.2: ejecutar el onConfirm ANTES de cerrar, para que pueda leer los <input> del modal.
   // Si devuelve false (validación fallida) el modal se mantiene abierto; y si el onConfirm
   // abrió otro modal encima, no lo borramos.
-  const fn = window._modalOnConfirm;
+  const fn = _modalOnConfirm;
   const root = document.getElementById('modalRoot');
   const before = root ? root.firstElementChild : null;
   const keepOpen = fn ? (fn() === false) : false;
@@ -58,7 +60,7 @@ function _modalConfirm() {
 }
 
 function _modalCancel() {
-  const fn = window._modalOnCancel;
+  const fn = _modalOnCancel;
   closeModal();
   if (fn) fn();
 }
