@@ -5,6 +5,15 @@
 // vive en dal.js; las 2 costuras entre ambas: markDirty→dalTouchProyecto y
 // undo/redo→_conflictoBannerHide (vía window, bridgeadas en dal.js).
 
+// D1e · imports reales. DIFERIDOS anti-ciclo: dal (dalTouchProyecto,
+// _conflictoBannerHide — dal importa persistencia), kanban (3 renders — kanban
+// importa persistencia), admin (_puedeModoAdmin — arrastre por 1 símbolo).
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH } from '../lib/state.js';
+import { hydrateContactStore } from '../lib/modelo.js';
+import { showModal } from '../lib/ui.js';
+import { navigateToModule } from '../lib/nav.js';
+
 let UNDO_STACK = [];
 let UNDO_BASELINE = null;
 const UNDO_MAX = 30;
@@ -77,7 +86,7 @@ function buildSaveObject() {
 /* Reinyecta en BD_LOC (en memoria) las fotos guardadas en localStorage, que NO
    viajan por la nube. Solo rellena registros que llegan SIN fotos, así no pisa
    fotos entrantes de un cliente antiguo que todavía las envíe. */
-function restoreLocalLocPhotos() {
+export function restoreLocalLocPhotos() {
   try {
     const raw = window.localStorage.getItem(LS_KEY);
     if (!raw) return;
@@ -558,7 +567,7 @@ function _resetFlagsRuntime(project) {
   project._autosaveSuspendedByConflict = false; project._conflictoModalAbierto = false;
   try { _conflictoBannerHide(); } catch (e) {}
 }
-function undoLast() {
+export function undoLast() {
   if (UNDO_STACK.length === 0) {
     showToast({ kind: 'info', title: 'Nada que deshacer', body: 'No hay una acción reciente para revertir en este proyecto.' });
     return;
@@ -581,7 +590,7 @@ function undoLast() {
   if (STATE.currentView === 'project') navigateToModule(STATE.currentModule);
   showToast({ kind: 'success', title: 'Acción deshecha', body: 'Cmd+Shift+Z para rehacer.' });
 }
-function redoLast() {
+export function redoLast() {
   if (REDO_STACK.length === 0) { showToast({ kind: 'info', title: 'Nada que rehacer', body: 'No hay una acción reciente para rehacer.' }); return; }
   const next = REDO_STACK.pop();
   if (UNDO_BASELINE && UNDO_BASELINE.id === next.id) UNDO_STACK.push(UNDO_BASELINE);

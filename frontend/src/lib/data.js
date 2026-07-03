@@ -6,13 +6,16 @@
 // ORDEN INTERNO: los DEFAULT_* y COTIZACION_CONDICIONES_DEFAULTS deben preceder
 // a DEMO_PROJECTS (su inicializador los lee).
 
+// D1e · imports reales (regla lib-precede: solo de libs anteriores en main.js)
+import { buildDefaultProjectData } from './modelo.js';
+
 export const LOC_ORIENTACIONES = ['—', 'Norte', 'Sur', 'Oriente', 'Poniente', 'Nororiente', 'Norponiente', 'Suroriente', 'Surponiente'];
 export const LOC_ESTADOS = { candidata: 'Candidata', confirmada: 'Confirmada', descartada: 'Descartada' }; window.LOC_ESTADOS = LOC_ESTADOS;
 /* V8.3.3 — Regiones de Chile (orden norte→sur). Ciudad y Comuna quedan libres
    porque aún no hay garantía de mantener un catálogo completo actualizado. */
 export const REGIONES_CHILE = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "Libertador General Bernardo O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén del General Carlos Ibáñez del Campo', 'Magallanes y de la Antártica Chilena'];
 
-const BANCOS_CHILE = [
+export const BANCOS_CHILE = [
   { nombre: 'Banco de Chile', codigo: '001' }, { nombre: 'Banco Internacional', codigo: '009' },
   { nombre: 'BancoEstado', codigo: '012' }, { nombre: 'Scotiabank Chile', codigo: '014' },
   { nombre: 'Banco BCI', codigo: '016' }, { nombre: 'Banco BICE', codigo: '028' },
@@ -98,7 +101,7 @@ const DEFAULT_TALENTOS = [
   { item: 'Talento secundario', valor: 150000, unidad: 'Tarifa Plana' }
 ];
 
-const COTIZACION_CONDICIONES_DEFAULTS = {
+export const COTIZACION_CONDICIONES_DEFAULTS = {
   validezDiasHabiles: 5,
   abonoPct: 50,
   abonoPlazoDiasHabiles: 5,      // tras aprobación
@@ -145,7 +148,7 @@ export function factorRetencionDte(dte) {
 }
 export function montoNetoDesde(costoReal, dte) { const c = Number(costoReal) || 0; if (!c) return 0; return dteTieneRetencion(dte) ? Math.round(c * factorRetencionDte(dte)) : Math.round(c); }
 export function montoBrutoDesde(liquido, dte) { const l = Number(liquido) || 0; if (!l) return 0; return dteTieneRetencion(dte) ? Math.round(l / factorRetencionDte(dte)) : Math.round(l); }
-const UNIDAD_OPTIONS = ['Tarifa Plana', 'Jornadas', 'Horas', 'Personas', 'Locaciones', 'Fotografías'];
+export const UNIDAD_OPTIONS = ['Tarifa Plana', 'Jornadas', 'Horas', 'Personas', 'Locaciones', 'Fotografías'];
 
 // Fórmulas tributarias puras (viajaron con su data DTE; consumidas por el
 // clásico calcCostoEmpresa y por notificaciones/gastos/legal):

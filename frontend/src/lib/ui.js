@@ -1,5 +1,12 @@
 // UI compartida: renderPersonSelect, modales, tooltip global, combobox, tema — extraído de index.html (Etapa C5)
 
+// D1e · imports reales (regla lib-precede: solo de libs anteriores en main.js)
+import { escapeHtml, safeUrl, showToast } from './helpers.js';
+import { BD_EMPRESAS, BD_EMPRESAS_BYID, BD_PERSONAS, STATE } from './state.js';
+import { _genId, syncLegacyFromContactos } from './modelo.js';
+import { BANCOS_CHILE, REGIONES_CHILE } from './data.js';
+import { _puedeEditarResponsables } from './auth.js';
+
 /* ─── PERSON SELECT (sustituye datalist+input bugeado) ──────────────
    Bug original: el datalist+input no permitía cambiar ni borrar a una
    persona ya seleccionada. UX rota.
@@ -101,7 +108,7 @@ export function hideTooltip() {
   }
 }
 
-function setupTooltipListeners() {
+export function setupTooltipListeners() {
   // Delegación: escucha mouseover/mouseout en body. Funciona aún con
   // contenido inyectado dinámicamente por innerHTML.
   document.body.addEventListener('mouseover', (e) => {
@@ -309,7 +316,7 @@ const THEME_KEY = 'takeos_theme';
 export function getStoredTheme() {
   try { return window.localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
 }
-function applyStoredTheme() {
+export function applyStoredTheme() {
   const theme = getStoredTheme();
   if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');
@@ -333,10 +340,8 @@ export function updateThemeButton(theme) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._empTieneRol = _empTieneRol;
 window._modalCancel = _modalCancel;
 window._modalConfirm = _modalConfirm;
-window.applyStoredTheme = applyStoredTheme;
 window.closeModal = closeModal;
 window.comboboxAddEmpresaToBD = comboboxAddEmpresaToBD;
 window.comboboxAddToBD = comboboxAddToBD;
@@ -345,9 +350,6 @@ window.comboboxFilter = comboboxFilter;
 window.comboboxOpen = comboboxOpen;
 window.comboboxSelect = comboboxSelect;
 window.getStoredTheme = getStoredTheme;
-window.hideTooltip = hideTooltip;
-window.positionComboboxDropdown = positionComboboxDropdown;
-window.setupTooltipListeners = setupTooltipListeners;
 window.showModal = showModal;
 window.toggleTheme = toggleTheme;
 window.updateThemeButton = updateThemeButton;
@@ -515,7 +517,7 @@ function sectionTareasBtnHTML(key) {
   const n = sectionTaskCount(STATE.currentProject, key);
   return '<button type="button" class="module-tareas-btn" onclick="openTareasModal(\'' + key + '\')" data-tip="Tareas de esta sección — asigna trabajo a tu equipo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tareas' + (n ? '<span class="module-tareas-badge">' + n + '</span>' : '') + '</button>';
 }
-function sectionResponsableHTML(key) {
+export function sectionResponsableHTML(key) {
   const m = MODULES[key];
   if (m && m.scope === 'project' && !STATE.currentProject) return '';
   if (!STATE.currentProject) return '';
@@ -791,17 +793,7 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
 
 // ── Bridges C6 (barrido final) ──
 window.THEME_KEY = THEME_KEY;
-window._edadDesde = _edadDesde;
-window._locThumbAsync = _locThumbAsync;
-window._toISODate = _toISODate;
-window.bancoCodigo = bancoCodigo;
-window.bancoSelectHTML = bancoSelectHTML;
 window.comboboxFilterEmpresas = comboboxFilterEmpresas;
-window.fireConfetti = fireConfetti;
-window.pfBancoChange = pfBancoChange;
-window.regionSelectHTML = regionSelectHTML;
-window.sectionResponsableHTML = sectionResponsableHTML;
 window.setSectionResponsable = setSectionResponsable;
-window.slugify = slugify;
 window.togglePfCrew = togglePfCrew;
 window.togglePfExtranjera = togglePfExtranjera;

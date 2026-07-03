@@ -5,6 +5,15 @@
 // ════════════════════════════════════════════════════════════════════════════
 import { STATE } from '../lib/state.js';
 import { escapeHtml, showToast, safeUrl } from '../lib/helpers.js';
+// D1e · imports reales (fusionado con los preexistentes de la era C — lección #12).
+// DIFERIDOS anti-ciclo (quedan vía window): boot (applyModuleReadonly/orgNombre),
+// dal, bd-excel, gastos (ciclo DURO: renderGastos/_syncGastosCostoReal/goLinea* —
+// mueren en D2), info-proyecto (_markRowDirty), legal, plan-rodaje, calculadoras, config.
+import { BD_PERSONAS, EMPRESA_PERFIL, STATES_WITH_LOCKED_BUDGET, STATES_WITH_REAL_COST } from '../lib/state.js';
+import { COTIZACION_CONDICIONES_DEFAULTS, DTE_LABEL, DTE_OPTIONS, UNIDAD_OPTIONS } from '../lib/data.js';
+import { calcCostoEmpresa, deltaClassCosto, deltaClassGanancia, displayMoneyInputValue, fmtDelta, fmtDeltaWithSymbol, fmtMoney, fmtPct, getCostoReal, parseMoneyCLP, readNum } from '../lib/calc.js';
+import { closeModal, showModal } from '../lib/ui.js';
+import { markDirty } from './persistencia-local.js';
 
 // UNIDAD_OPTIONS: ahora en lib/data.js (window) — dedup B3
 
@@ -1330,7 +1339,7 @@ function _clientUuid() {
   });
 }
 
-function addRow(sectionKey, dept) {
+export function addRow(sectionKey, dept) {
   const project = STATE.currentProject;
   // V5.2.2: si el proyecto ya está aprobado, las nuevas filas son
   // "extras" — editables, no afectan la cotización original.
@@ -4305,7 +4314,7 @@ function onUnidadReset(btnEl, sectionKey, dept, idx) {
 }
 
 // ── E: _budgetFindRow (disperso, línea 19359)
-function _budgetFindRow(project, clientUuid) {
+export function _budgetFindRow(project, clientUuid) {
   const d = (project && project.data) || {}; let found = null;
   function scan(arr) { (arr || []).forEach(function (r) { if (r && r.clientUuid === clientUuid) found = r; }); }
   for (const dep in (d.servicios || {})) scan(d.servicios[dep]);
@@ -4356,7 +4365,6 @@ window.snapshotFullBudget          = snapshotFullBudget;
 window.presupCotVersionBarHTML     = presupCotVersionBarHTML;
 window.presupSetCotVersion         = presupSetCotVersion;
 window.exportPresupuestoExcel      = exportPresupuestoExcel;
-window.debeExportarseFilaPresupuesto = debeExportarseFilaPresupuesto;
 window.budgetSortBy                = budgetSortBy;
 window.budgetSortClear             = budgetSortClear;
 window.budgetColResizeDown         = budgetColResizeDown;
@@ -4476,14 +4484,8 @@ window.cotPrevSaveSettings         = cotPrevSaveSettings;
 window.CotPreview                  = CotPreview;
 
 // ── Bridges agregados por auditoría 2-jul (consumidos por index.html u otros módulos sin bridge) ──
-window._budgetCaptureScroll = _budgetCaptureScroll;
-window._budgetColGrip = _budgetColGrip;
-window._budgetColTh = _budgetColTh;
-window._budgetColWGet = _budgetColWGet;
-window._budgetRestoreScroll = _budgetRestoreScroll;
 window._cotPrevFamiliaGF = _cotPrevFamiliaGF;
 window._cotPrevHexValido = _cotPrevHexValido;
-window._rowNoteItem = _rowNoteItem;
 window.cotPrevColores = cotPrevColores;
 window.cotPrevFontLink = cotPrevFontLink;
 window.cotPrevFonts = cotPrevFonts;

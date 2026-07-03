@@ -7,6 +7,24 @@
 // aquí se escriben via window.X. El resto del estado DAL (sets de IDs conocidos,
 // timers de debounce, mapas label↔code) es interno del módulo.
 
+// D1e · imports reales. CICLO DURO boot⇄dal resuelto por dirección: boot→dal
+// es import (down-call); dal→boot QUEDA VÍA WINDOW (up-edge: _bootCoverHide,
+// _setOrgActiva, aplicarMarcaOrg, applyPermisosUI, renderTopbarUser,
+// setCurrentUser, orgNombre — mueren en D2/D3). También diferidos anti-ciclo:
+// kanban (5), bd (2), cargos (3), gastos (goSavePresup), legal (renderLegal),
+// locaciones (2).
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, PROJECTS, STATE } from '../lib/state.js';
+import { _clearStore, _clientUuid, buildDefaultProjectData, syncLegacyFromContactos } from '../lib/modelo.js';
+import { BANCOS_CHILE, DTE_LABEL } from '../lib/data.js';
+import { _authBlockWriteToast, authPuedeGuardarOperaciones, authPuedeGuardarProyecto } from '../lib/auth.js';
+import { fmtMoney } from '../lib/calc.js';
+import { bancoCodigo, showModal } from '../lib/ui.js';
+import { navigateToModule, renderModule } from '../lib/nav.js';
+import { restoreLocalLocPhotos } from './persistencia-local.js';
+import { _budgetFindRow, addRow } from './presupuesto-cotizacion.js';
+import { manejarErrorPlan } from './plan-limites.js';
+
 export async function dalCargarCargos(project) {
   if (!project || project.data._cargosOK) return;
   if (!sb || PROJECTS_SOURCE !== 'supabase') { project.data._cargosOK = true; return; }
@@ -230,7 +248,7 @@ export async function dalBootContactos() {
    celular) —sin RUT, dirección ni nada más— y las inyecta en BD_CONTACTOS para
    que el proyecto las muestre. Gateada estrictamente a tipo 'externo': no toca a
    los internos (que sí leen contacts por RLS). Apoya el Frente F. */
-async function dalBootPersonasExternos() {
+export async function dalBootPersonasExternos() {
   const _ep = _dalEpoca();
   try {
     if (!sb) return;
@@ -364,7 +382,7 @@ function dalApplyLegal(data) {
   DAL_KNOWN_LEGAL_TPL_IDS.clear(); data.tpls.forEach(function(t){ DAL_KNOWN_LEGAL_TPL_IDS.add(t.id); });
   window.LEGAL_SOURCE = 'supabase';
 }
-async function dalBootLegal(opts) {
+export async function dalBootLegal(opts) {
   const silent = opts && opts.silent;
   const _ep = _dalEpoca();
   const data = await dalLoadLegal();
@@ -429,7 +447,7 @@ function dalApplyPerfil(profile, nombreCanonico) {
   window.PERFIL_SOURCE = 'supabase';
   try { aplicarMarcaOrg(); } catch (e) {}
 }
-async function dalBootPerfil(opts) {
+export async function dalBootPerfil(opts) {
   const silent = opts && opts.silent;
   const _ep = _dalEpoca();
   const res = await dalLoadPerfil();
@@ -450,7 +468,7 @@ async function dalBootPerfil(opts) {
 /* --- Identidad de la sesión --- */
 /* DAL_SESSION_UID -> a src/lib/state.js (Etapa 1); en window */
 /* DAL_SESSION_EMAIL -> a src/lib/state.js (Etapa 1); en window */
-async function dalResolveIdentidad() {
+export async function dalResolveIdentidad() {
   if (!sb) return;
   try {
     const { data } = await sb.auth.getSession();
@@ -515,7 +533,7 @@ async function dalResolveIdentidad() {
 
 /* Carga la membresía (por user_id, más confiable que el email) y la matriz
    de permisos. Corre tras dalBootContactos -> dalResolveIdentidad. */
-async function dalLoadPermisos() {
+export async function dalLoadPermisos() {
   if (!sb || !DAL_SESSION_UID) return;
   const _ep = _dalEpoca();
   try {
@@ -1287,7 +1305,7 @@ async function dalReloadProyecto(id) {
   } catch (e) { console.error('[dal] recargar proyecto', id, e); return false; }
 }
 
-async function dalBootProyectos() {
+export async function dalBootProyectos() {
   const _ep = _dalEpoca();
   const rows = await dalLoadProyectos();
   if (_ep !== _dalEpoca()) return;                    // cadena obsoleta: no aplica ni toca el veil (la cadena vigente lo cierra)
@@ -1829,7 +1847,7 @@ function _dalEpoca() { return window._ORG_EPOCA || 0; }
 /* Las cadenas de boot capturan la época al entrar y abortan tras cada await si
    cambió: una cadena obsoleta no puede re-poblar los stores recién reseteados
    con datos de la org anterior (hallazgo de la auditoría adversarial de D0). */
-function dalResetOrg() {
+export function dalResetOrg() {
   try {
     window._ORG_EPOCA = _dalEpoca() + 1;   // invalida toda cadena de boot en vuelo
     [DAL_KNOWN_LOC_IDS, DAL_KNOWN_LEGAL_DOC_IDS, DAL_KNOWN_LEGAL_TPL_IDS,
@@ -1847,7 +1865,7 @@ export function dalTouchProyecto(project) {
   clearTimeout(_dalProyFlushTimer);
   _dalProyFlushTimer = setTimeout(dalFlushProyectos, 1500);
 }
-async function dalFlushProyectos() {
+export async function dalFlushProyectos() {
   const _ep = _dalEpoca();
   const ids = Array.from(_dalDirtyProjects); _dalDirtyProjects.clear();
   for (const id of ids) {
@@ -1871,34 +1889,14 @@ async function dalFlushProyectos() {
 
 // ── Window bridges DAL (3 barridos: consumo externo, auto-consumo, nombre-string) ──
 window._conflictoBannerHide = _conflictoBannerHide;
-window._dalBancoNombre = _dalBancoNombre;
-window._dalContactoSaveSoon = _dalContactoSaveSoon;
 window._dalEmpresaSaveSoon = _dalEmpresaSaveSoon;
-window._dalFusionarProyecto = _dalFusionarProyecto;
-window._dalLegalDocSaveSoon = _dalLegalDocSaveSoon;
-window._dalLegalTplSaveSoon = _dalLegalTplSaveSoon;
-window._dalLocacionSaveSoon = _dalLocacionSaveSoon;
 window._dalPerfilSaveSoon = _dalPerfilSaveSoon;
-window._dalProyectoPartes = _dalProyectoPartes;
-window.dalBootContactos = dalBootContactos;
-window.dalBootLegal = dalBootLegal;
-window.dalBootLocaciones = dalBootLocaciones;
-window.dalBootPerfil = dalBootPerfil;
-window.dalBootPersonasExternos = dalBootPersonasExternos;
 window.dalBootProyectos = dalBootProyectos;
-window.dalCargarCargos = dalCargarCargos;
 window.dalCargarTopeColaboradores = dalCargarTopeColaboradores;
-window.dalEliminarLegalDoc = dalEliminarLegalDoc;
-window.dalEliminarLegalTpl = dalEliminarLegalTpl;
-window.dalFinishBulkImport = dalFinishBulkImport;
-window.dalGuardarCargos = dalGuardarCargos;
 window.dalGuardarContacto = dalGuardarContacto;
 window.dalGuardarEmpresa = dalGuardarEmpresa;
 window.dalGuardarLegalDoc = dalGuardarLegalDoc;
-window.dalGuardarLocacion = dalGuardarLocacion;
 window.dalLoadPermisos = dalLoadPermisos;
-window.dalLoadProyectos = dalLoadProyectos;
 window.dalResolveIdentidad = dalResolveIdentidad;
 window.dalTouchProyecto = dalTouchProyecto;
 window.dalFlushProyectos = dalFlushProyectos;   // D0 · rescate pre-reset en el cambio de org (boot.js/_setOrgActiva)
-window._DAL_TIPOCUENTA_LABEL = _DAL_TIPOCUENTA_LABEL; // el perfil personal (clásico) la lee a pelo — regresión latente B1 detectada en pre-análisis B2

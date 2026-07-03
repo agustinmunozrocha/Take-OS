@@ -2,6 +2,9 @@
 // ⚠ ORDEN: este módulo DEBE importarse ANTES que lib/data.js — el inicializador
 // de DEMO_PROJECTS (data.js, eval-time) llama buildProjectData/_clientUuid vía window.
 
+// D1e · imports reales (regla lib-precede: solo de libs anteriores en main.js)
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LOC, BD_PERSONAS, BD_TALENTOS } from './state.js';
+
 /* ── DTE: texto del Excel/Form ("Boleta de Honorarios") → código interno ── */
 function _tipoDTEaCodigo(tipo) {
   const t = String(tipo || '').toLowerCase();
@@ -198,7 +201,7 @@ export function syncLegacyFromContactos() {
 }
 
 /* Reconstruye el modelo canónico desde un objeto de save (nuevo o viejo). */
-function hydrateContactStore(obj) {
+export function hydrateContactStore(obj) {
   if (obj && obj.bdContactos && typeof obj.bdContactos === 'object') {
     _clearStore(BD_CONTACTOS); _clearStore(BD_EMPRESAS_BYID);
     Object.keys(obj.bdContactos).forEach(k => {
@@ -416,13 +419,8 @@ export function buildProjectData(overrides) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._buildPerfilPago = _buildPerfilPago;
-window._buildPerfilTalento = _buildPerfilTalento;
 window._clientUuid = _clientUuid;
-window.buildDefaultProjectData = buildDefaultProjectData;
 window.buildProjectData = buildProjectData;
-window.hydrateContactStore = hydrateContactStore;
-window.ingestLegacyIntoContactos = ingestLegacyIntoContactos;
 window.syncLegacyFromContactos = syncLegacyFromContactos;
 
 // ═══ Helpers de stores + modelo de locaciones de proyecto (Etapa C6) ═══
@@ -531,9 +529,5 @@ export function _dedupKeys(rut, email, nombre) {
    Los proyectos demo se cargan a demanda con "Cargar datos de ejemplo". */
 
 // ── Bridges C6 (barrido final) ──
-window._clearStore = _clearStore;
-window._dedupKeys = _dedupKeys;
-window._genId = _genId;
 window._norm = _norm;
 window.ensureProjectLoc = ensureProjectLoc;
-window.normLocName = normLocName;
