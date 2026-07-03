@@ -29,6 +29,7 @@ import { escapeHtml, showToast } from '../lib/helpers.js';
 
 // ── Sistema A · variables internas del panel ──────────────────────────────────
 
+import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 let NOTIF = [];
 let _NOTIF_TIMER = null;
 let _NOTIF_OUTSIDE = false;
@@ -66,8 +67,8 @@ function notifRenderPanel() {
   cont.innerHTML = NOTIF.map(function (n) {
     const noLeido = !n.read_at;
     const esRebind = !!(n.data && n.data.request_id);
-    const irA = esRebind ? (' onclick="notifAbrirRebind(\'' + n.data.request_id + '\')" style="cursor:pointer;"')
-              : (n.project_id ? (' onclick="notifAbrir(\'' + n.project_id + '\')" style="cursor:pointer;"') : '');
+    const irA = esRebind ? (' ' + accionHTML('ntf.rebind', n.data.request_id) + ' style="cursor:pointer;"')
+              : (n.project_id ? (' ' + accionHTML('ntf.abrir', n.project_id) + ' style="cursor:pointer;"') : '');
     return '<div' + irA + ' style="display:flex;gap:10px;padding:13px 18px;border-bottom:1px solid var(--rule,#2a2a28);' + (noLeido ? 'background:rgba(194,65,12,.06);' : '') + ((esRebind || n.project_id) ? 'cursor:pointer;' : '') + '">'
       + '<div style="flex:0 0 8px;">' + (noLeido ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--accent,#c2410c);margin-top:5px;"></div>' : '') + '</div>'
       + '<div style="flex:1;min-width:0;">'
@@ -122,7 +123,7 @@ function _rebindRenderModal(req) {
   const inv = escapeHtml(req.invited_email || '');
   const cla = escapeHtml(req.claiming_email || '');
   const root = document.getElementById('modalRoot'); if (!root) return;
-  root.innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px;">'
+  root.innerHTML = '<div class="modal-backdrop" data-accion="ui.backdrop"><div class="modal" style="max-width:520px;">'
     + '<div class="modal-header"><div class="modal-title">Aprobar acceso · cambio de correo</div></div>'
     + '<div class="modal-body">'
     +   '<p style="margin:0 0 12px;color:var(--ink-secondary);font-size:13px;line-height:1.55;">Una persona reclamó una invitación con un correo <strong>distinto</strong> al que se le envió. No tendrá acceso al proyecto hasta que lo apruebes. Elige cuál correo queda como el de esta persona.</p>'
@@ -133,8 +134,8 @@ function _rebindRenderModal(req) {
     +   '<p style="margin:12px 0 0;font-size:11.5px;color:var(--ink-faint);line-height:1.5;">Si rechazas, se cancela la invitación y se <strong>libera el cupo del cargo</strong> (queda sin asignar). Si querías a la persona correcta, vuelve a invitar con el correo adecuado.</p>'
     + '</div>'
     + '<div class="modal-footer" style="justify-content:space-between;">'
-    +   '<button class="btn btn-secondary" onclick="_rebindResolver(\'' + escapeHtml(req.id) + '\', false)">Rechazar y liberar cupo</button>'
-    +   '<button class="btn btn-primary" onclick="_rebindAprobar(\'' + escapeHtml(req.id) + '\')">Aprobar acceso</button>'
+    +   '<button class="btn btn-secondary" ' + accionHTML('ntf.rebindNo', req.id) + '>Rechazar y liberar cupo</button>'
+    +   '<button class="btn btn-primary" ' + accionHTML('ntf.rebindSi', req.id) + '>Aprobar acceso</button>'
     + '</div>'
     + '</div></div>';
 }
@@ -176,7 +177,7 @@ export async function _empCargarRebinds() {
       + rows.map(function (q) {
           return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule);padding:8px 0;">'
             + '<div style="font-size:12.5px;color:var(--ink-secondary);line-height:1.4;">Invitado: <strong>' + escapeHtml(q.invited_email || '—') + '</strong><br>Reclamó como: <strong>' + escapeHtml(q.claiming_email || '—') + '</strong></div>'
-            + '<button class="btn btn-sm" onclick="notifAbrirRebind(\'' + escapeHtml(q.id) + '\')">Revisar</button>'
+            + '<button class="btn btn-sm" ' + accionHTML('ntf.rebind', q.id) + '>Revisar</button>'
             + '</div>';
         }).join('')
       + '</div>';
@@ -447,7 +448,7 @@ function ntfPreviewHtml(project, tpl, channel, rec, overrideBody) {
 }
 function ntfChannelSeg(current, onclickPrefix) {
   const channels = [{ k: 'email', label: '✉ Email' }, { k: 'wsp', label: '💬 WhatsApp' }];
-  return '<div style="display:flex;gap:6px;margin-bottom:12px;">' + channels.map(c => '<button class="btn btn-sm ' + (current === c.k ? 'btn-primary' : 'btn-secondary') + '" onclick="' + onclickPrefix + '(\'' + c.k + '\')">' + c.label + '</button>').join('') + '</div>';
+  return '<div style="display:flex;gap:6px;margin-bottom:12px;">' + channels.map(c => '<button class="btn btn-sm ' + (current === c.k ? 'btn-primary' : 'btn-secondary') + '" ' + accionHTML('ntf.canal', onclickPrefix, c.k) + '>' + c.label + '</button>').join('') + '</div>';
 }
 function ntfSetTab(t) { ntfState().tab = t; renderNotificaciones(); }
 function ntfRecState(project) {
@@ -467,32 +468,32 @@ function ntfViewEnviar(project) {
     + '<div style="flex:0 0 180px;min-width:140px;">'
     + Object.entries(gruposTpls).map(([g, ts]) =>
         '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:700;margin:10px 0 4px;">' + escapeHtml(g) + '</div>'
-        + ts.map(t => '<button class="btn btn-sm ' + (t.key === tpl.key ? 'btn-primary' : 'btn-ghost') + '" style="width:100%;text-align:left;margin-bottom:3px;" onclick="ntfPickTpl(\'' + t.key + '\')">' + escapeHtml(t.nombre) + '</button>').join('')
+        + ts.map(t => '<button class="btn btn-sm ' + (t.key === tpl.key ? 'btn-primary' : 'btn-ghost') + '" style="width:100%;text-align:left;margin-bottom:3px;" ' + accionHTML('ntf.tpl', t.key) + '>' + escapeHtml(t.nombre) + '</button>').join('')
       ).join('')
     + '</div>'
     + '<div style="flex:1;min-width:260px;">'
     + ntfChannelSeg(st.channel, 'ntfSetChannel')
     + '<div style="overflow-x:auto;margin-bottom:12px;"><table class="data-table"><thead><tr>'
-    + '<th style="width:28px;"><input type="checkbox" ' + (selRecs.length === recs.length && recs.length ? 'checked' : '') + ' onchange="ntfSelAll(this.checked)"></th>'
+    + '<th style="width:28px;"><input type="checkbox" ' + (selRecs.length === recs.length && recs.length ? 'checked' : '') + ' data-accion="ntf.selAll" data-on="change"></th>'
     + '<th>Nombre</th><th>Rol</th><th>Mail</th><th>Monto</th><th>Estado</th></tr></thead><tbody>'
     + recs.map(({ rec: r, sel }) => {
         const vr = val(r); const sent = (n.status || {})[tpl.key + '::' + r.nombre] === 'enviado';
-        return '<tr onclick="ntfToggleRec(\'' + escapeHtml(r.nombre) + '\',' + (!sel) + ')" style="cursor:pointer;' + (!sel ? 'opacity:.45;' : '') + '">'
-          + '<td onclick="event.stopPropagation()"><input type="checkbox" ' + (sel ? 'checked' : '') + ' onchange="ntfToggleRec(\'' + escapeHtml(r.nombre) + '\',this.checked)"></td>'
+        return '<tr ' + accionHTML('ntf.rec', r.nombre, !sel) + ' style="cursor:pointer;' + (!sel ? 'opacity:.45;' : '') + '">'
+          + '<td data-accion="ui.stop"><input type="checkbox" ' + (sel ? 'checked' : '') + ' ' + accionHTML('ntf.recCk', r.nombre, { on: 'change' }) + '></td>'
           + '<td>' + escapeHtml(r.nombre) + (!r.enBD ? ' <span style="color:var(--warning);" title="Sin mail en BD">●</span>' : '') + '</td>'
           + '<td>' + escapeHtml(r.rol) + '</td>'
           + '<td>' + (r.mail ? escapeHtml(r.mail) : '<span style="color:var(--warning);">sin mail</span>') + '</td>'
           + '<td>' + window.fmtMoney(r.monto) + '</td>'
           + '<td>' + (sent ? '<span style="color:var(--positive);font-weight:600;">Enviado</span>' : '<span style="color:var(--ink-faint);">Pendiente</span>')
-          + ' <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();ntfSetViewAs(\'' + escapeHtml(r.nombre) + '\')">Vista previa</button>'
-          + (r.mail && st.channel === 'email' ? ' <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();notifGmailDraft(\'' + escapeHtml(r.nombre) + '\')">✉</button>' : '')
+          + ' <button class="btn btn-ghost btn-sm" ' + accionHTML('ntf.verComo', r.nombre) + '>Vista previa</button>'
+          + (r.mail && st.channel === 'email' ? ' <button class="btn btn-ghost btn-sm" ' + accionHTML('ntf.gmail', r.nombre) + '>✉</button>' : '')
           + '</td></tr>';
       }).join('')
     + '</tbody></table></div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">'
-    + '<button class="btn btn-primary" ' + (okN ? '' : 'disabled') + ' onclick="ntfSend()">Enviar a ' + okN + ' ' + (st.channel === 'wsp' ? 'por WhatsApp' : 'por email') + '</button>'
-    + '<button class="btn btn-secondary btn-sm" onclick="ntfProgramar()">Programar</button>'
-    + '<button class="btn btn-ghost btn-sm" onclick="notifCopyTemplate()">⧉ Copiar plantilla</button>'
+    + '<button class="btn btn-primary" ' + (okN ? '' : 'disabled') + ' data-accion="ntf.enviar">Enviar a ' + okN + ' ' + (st.channel === 'wsp' ? 'por WhatsApp' : 'por email') + '</button>'
+    + '<button class="btn btn-secondary btn-sm" data-accion="ntf.programar">Programar</button>'
+    + '<button class="btn btn-ghost btn-sm" data-accion="ntf.copiarTpl">⧉ Copiar plantilla</button>'
     + '</div>'
     + (bloqueados.length ? '<p style="margin:10px 0 0;font-size:12px;color:var(--warning);">No se puede enviar a ' + bloqueados.length + ' de ' + selRecs.length + ': ' + bloqueados.map(r => { const vr = val(r); return escapeHtml(r.nombre.split(' ')[0]) + ' (' + (vr.kind === 'sinmail' ? 'sin mail' : 'faltan datos: ' + vr.miss.map(k => NTF_LABELS[k] || k).join(', ')) + ')'; }).join(', ') + '.</p>' : (selRecs.length ? '<p style="margin:10px 0 0;font-size:12px;color:var(--positive);">Listo para enviar a ' + okN + ' persona(s).</p>' : ''))
     + (st.viewAs ? (function () {
@@ -507,9 +508,9 @@ function ntfViewEnviar(project) {
         + '<div style="font-size:11px;color:var(--ink-faint);margin-bottom:8px;">Vista previa para <strong>' + escapeHtml(st.viewAs) + '</strong> · ' + escapeHtml(tpl.nombre) + (_ovStored != null ? ' · <span style="color:var(--positive);">✓ override guardado</span>' : '') + '</div>'
         + (!st.override
           ? ('<div style="font-size:12.5px;line-height:1.6;">' + ntfPreviewHtml(project, tpl, st.channel, _viewRec, _ovStored != null ? _ovStored : null) + '</div>'
-            + '<button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="ntfStartOverride()">Editar solo para esta persona</button>')
-          : ('<div id="ntfOverrideBody" contenteditable="true" spellcheck="false" style="font-size:12.5px;line-height:1.6;border:1px solid var(--accent);border-radius:6px;padding:10px;outline:none;min-height:80px;" oninput="ntfOverrideInput()">' + ntfPillify(_ovStored != null ? _ovStored : ntfPreviewHtml(project, tpl, st.channel, _viewRec)) + '</div>'
-            + '<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-sm btn-primary" onclick="ntfSaveOverride()">Guardar override</button><button class="btn btn-sm btn-ghost" onclick="ntfState().override=false;renderNotificaciones()">Cancelar</button></div>'))
+            + '<button class="btn btn-ghost btn-sm" style="margin-top:8px;" data-accion="ntf.override">Editar solo para esta persona</button>')
+          : ('<div id="ntfOverrideBody" contenteditable="true" spellcheck="false" style="font-size:12.5px;line-height:1.6;border:1px solid var(--accent);border-radius:6px;padding:10px;outline:none;min-height:80px;" data-accion="ntf.overrideIn" data-on="input">' + ntfPillify(_ovStored != null ? _ovStored : ntfPreviewHtml(project, tpl, st.channel, _viewRec)) + '</div>'
+            + '<div style="display:flex;gap:6px;margin-top:8px;"><button class="btn btn-sm btn-primary" data-accion="ntf.overrideOk">Guardar override</button><button class="btn btn-sm btn-ghost" data-accion="ntf.overrideNo">Cancelar</button></div>'))
         + '</div>';
       })() : '')
     + '</div></div>';
@@ -550,10 +551,10 @@ function ntfViewProgramados(project) {
   if (!n.programados.length && !Object.values(n.reglas || {}).some(Boolean)) return '<p style="font-size:12px;color:var(--ink-faint);">No hay envíos programados.</p>';
   return (n.programados.length ? '<div style="margin-bottom:14px;">'
     + '<div style="font-weight:600;font-size:13px;margin-bottom:8px;">Programados manualmente</div>'
-    + n.programados.map((s, i) => '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin-bottom:6px;"><div style="flex:1;font-size:12.5px;">' + escapeHtml(ntfTpl(s.tpl)?.nombre || s.tpl) + ' · ' + escapeHtml(s.when) + ' · ' + s.count + ' persona(s)</div><button class="btn btn-ghost btn-sm" onclick="ntfReprogramar(' + i + ')">Editar</button><button class="btn btn-ghost btn-sm" style="color:var(--negative);" onclick="ntfCancelProg(' + i + ')">✕</button></div>').join('')
+    + n.programados.map((s, i) => '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;margin-bottom:6px;"><div style="flex:1;font-size:12.5px;">' + escapeHtml(ntfTpl(s.tpl)?.nombre || s.tpl) + ' · ' + escapeHtml(s.when) + ' · ' + s.count + ' persona(s)</div><button class="btn btn-ghost btn-sm" ' + accionHTML('ntf.reprog', i) + '>Editar</button><button class="btn btn-ghost btn-sm" style="color:var(--negative);" ' + accionHTML('ntf.cancelProg', i) + '>✕</button></div>').join('')
     + '</div>' : '')
     + '<div><div style="font-weight:600;font-size:13px;margin-bottom:8px;">Reglas automáticas <span style="font-size:11px;color:var(--ink-faint);">(requieren backend)</span></div>'
-    + Object.entries(n.reglas).map(([id, on]) => '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer;"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="ntfToggleRegla(\'' + id + '\')">' + escapeHtml(NTF_EFX_LABEL[id] || id) + '</label>').join('')
+    + Object.entries(n.reglas).map(([id, on]) => '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer;"><input type="checkbox" ' + (on ? 'checked' : '') + ' ' + accionHTML('ntf.regla', id, { on: 'change' }) + '>' + escapeHtml(NTF_EFX_LABEL[id] || id) + '</label>').join('')
     + '</div>';
 }
 function ntfCancelProg(i) { const n = STATE.currentProject.data.notificaciones; n.programados.splice(i, 1); window.markDirty(); showToast({ kind: 'info', title: 'Programación cancelada' }); renderNotificaciones(); }
@@ -564,7 +565,7 @@ function ntfViewHistorial(project) {
   if (!n.log || !n.log.length) return '<p style="font-size:12px;color:var(--ink-faint);">Aún no hay envíos registrados.</p>';
   return n.log.slice().reverse().map((l, i) =>
     '<div style="border:1px solid var(--rule);border-radius:8px;margin-bottom:6px;">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;" onclick="ntfToggleHist(' + i + ')">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;" ' + accionHTML('ntf.hist', i) + '>'
     + '<div style="font-size:12.5px;"><strong>' + escapeHtml(l.template) + '</strong> · ' + l.count + ' destinatario(s) · ' + escapeHtml(l.ts) + (l.by ? ' · ' + escapeHtml(l.by) : '') + '</div>'
     + '<span style="font-size:11px;color:var(--ink-faint);">' + (st.histOpen[i] ? '▾' : '▸') + '</span>'
     + '</div>'
@@ -577,29 +578,29 @@ function ntfCanEdit(tpl) { return ntfIsAdmin() || !!tpl.privada; }
 function ntfViewPlantillas(project) {
   const st = ntfState(); const tpl = ntfCurEditTpl(); const sv = ntfCurSubver(tpl);
   const canEdit = ntfCanEdit(tpl);
-  const chip = v => '<span class="ntf-chip" onmousedown="event.preventDefault();ntfInsertVar(\'' + v.replace(/'/g, "\\'") + '\')">' + escapeHtml(NTF_LABELS[v] || v) + '</span>';
+  const chip = v => '<span class="ntf-chip" ' + accionHTML('ntf.var', v, { on: 'mousedown' }) + '>' + escapeHtml(NTF_LABELS[v] || v) + '</span>';
   return '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">'
     + '<div style="flex:0 0 180px;min-width:140px;">'
-    + ntfTemplates().map(t => '<button class="btn btn-sm ' + (t.key === tpl.key ? 'btn-primary' : 'btn-ghost') + '" style="width:100%;text-align:left;margin-bottom:3px;" onclick="ntfState().editKey=\'' + t.key + '\';renderNotificaciones()">' + escapeHtml(t.nombre) + '</button>').join('')
-    + '<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;" onclick="ntfNewTemplate()">+ Nueva</button>'
+    + ntfTemplates().map(t => '<button class="btn btn-sm ' + (t.key === tpl.key ? 'btn-primary' : 'btn-ghost') + '" style="width:100%;text-align:left;margin-bottom:3px;" ' + accionHTML('ntf.editKey', t.key) + '>' + escapeHtml(t.nombre) + '</button>').join('')
+    + '<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:6px;" data-accion="ntf.nuevaTpl">+ Nueva</button>'
     + '</div>'
     + '<div style="flex:1;min-width:260px;">'
     + '<div class="field" style="margin-bottom:10px;"><label class="field-label">Nombre de plantilla</label>'
-    + '<input class="input" value="' + escapeHtml(tpl.nombre) + '" ' + (!canEdit ? 'disabled' : '') + ' oninput="ntfSetTplName(this.value)"></div>'
-    + (tpl.subvers && tpl.subvers.length ? '<div style="display:flex;gap:6px;margin-bottom:10px;">' + tpl.subvers.map(s => '<button class="btn btn-sm ' + (sv === s.key ? 'btn-primary' : 'btn-secondary') + '" onclick="ntfSetEditSubver(\'' + s.key + '\')">' + escapeHtml(s.label) + '</button>').join('') + '</div>' : '')
+    + '<input class="input" value="' + escapeHtml(tpl.nombre) + '" ' + (!canEdit ? 'disabled' : '') + ' data-accion="ntf.tplNombre" data-on="input"></div>'
+    + (tpl.subvers && tpl.subvers.length ? '<div style="display:flex;gap:6px;margin-bottom:10px;">' + tpl.subvers.map(s => '<button class="btn btn-sm ' + (sv === s.key ? 'btn-primary' : 'btn-secondary') + '" ' + accionHTML('ntf.subver', s.key) + '>' + escapeHtml(s.label) + '</button>').join('') + '</div>' : '')
     + ntfChannelSeg(st.editChannel, 'ntfSetEditChannel')
     + '<div class="field" style="margin-bottom:8px;"><label class="field-label">Asunto</label>'
-    + '<div id="ntfEdSubject" contenteditable="' + canEdit + '" spellcheck="false" style="border:1px solid var(--rule);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;min-height:32px;" oninput="ntfSaveEditor()">' + ntfPillify(tpl.asunto) + '</div></div>'
+    + '<div id="ntfEdSubject" contenteditable="' + canEdit + '" spellcheck="false" style="border:1px solid var(--rule);border-radius:6px;padding:8px 10px;font-size:13px;outline:none;min-height:32px;" data-accion="ntf.editor" data-on="input">' + ntfPillify(tpl.asunto) + '</div></div>'
     + '<div class="field"><label class="field-label">Cuerpo</label>'
     + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">'
-    + '<button class="btn btn-ghost btn-sm" onclick="ntfFmt(\'bold\')"><b>B</b></button>'
-    + '<button class="btn btn-ghost btn-sm" onclick="ntfFmt(\'italic\')"><i>I</i></button>'
-    + '<button class="btn btn-ghost btn-sm" onclick="ntfFmt(\'underline\')"><u>U</u></button>'
+    + '<button class="btn btn-ghost btn-sm" data-accion="ntf.fmt" data-args="[&quot;bold&quot;]"><b>B</b></button>'
+    + '<button class="btn btn-ghost btn-sm" data-accion="ntf.fmt" data-args="[&quot;italic&quot;]"><i>I</i></button>'
+    + '<button class="btn btn-ghost btn-sm" data-accion="ntf.fmt" data-args="[&quot;underline&quot;]"><u>U</u></button>'
     + '</div>'
     + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">'
     + [NTF_PERSON_VARS, NTF_PROJ_VARS, NTF_COMPANY_VARS, NTF_SENDER_VARS].flat().map(chip).join('')
     + '</div>'
-    + '<div id="ntfEdBody" contenteditable="' + canEdit + '" spellcheck="false" style="border:1px solid var(--rule);border-radius:6px;padding:10px;font-size:12.5px;line-height:1.6;outline:none;min-height:120px;" oninput="ntfSaveEditor();ntfRefreshPreview()">' + ntfPillify(sv && tpl.cuerpos ? (tpl.cuerpos[sv] || tpl.cuerpo) : (st.editChannel === 'wsp' && tpl.wsp ? tpl.wsp : tpl.cuerpo)) + '</div></div>'
+    + '<div id="ntfEdBody" contenteditable="' + canEdit + '" spellcheck="false" style="border:1px solid var(--rule);border-radius:6px;padding:10px;font-size:12.5px;line-height:1.6;outline:none;min-height:120px;" data-accion="ntf.editorBody" data-on="input">' + ntfPillify(sv && tpl.cuerpos ? (tpl.cuerpos[sv] || tpl.cuerpo) : (st.editChannel === 'wsp' && tpl.wsp ? tpl.wsp : tpl.cuerpo)) + '</div></div>'
     + '<div style="margin-top:16px;"><label class="field-label">Vista previa · ' + escapeHtml(ntfSampleRec(project).nombre) + '</label>'
     + '<div id="ntfPreview" style="border:1px solid var(--rule);border-radius:8px;padding:12px;background:var(--bg-surface);font-size:12.5px;line-height:1.6;">' + ntfPreviewHtml(project, tpl, st.editChannel, ntfSampleRec(project)) + '</div></div>'
     + '</div></div>';
@@ -656,8 +657,8 @@ export function renderNotificaciones() {
   ensureNotif(project); ntfEnsureSched(project);
   const st = ntfState(); const n = project.data.notificaciones;
   const content = document.getElementById('moduleContent');
-  const banner = st.fromHoja ? '<div class="ntf-ctxbanner">📎 Envío preparado desde Hoja de Llamado — plantilla y destinatarios cargados. <button class="ntf-x" onclick="ntfState().fromHoja=false;renderNotificaciones()">✕</button></div>' : '';
-  const tabBtn = (id, label, badge) => '<button class="ntf-subtab ' + (st.tab === id ? 'on' : '') + '" onclick="ntfSetTab(\'' + id + '\')">' + label + (badge != null ? ' <span class="ntf-badge">' + badge + '</span>' : '') + '</button>';
+  const banner = st.fromHoja ? '<div class="ntf-ctxbanner">📎 Envío preparado desde Hoja de Llamado — plantilla y destinatarios cargados. <button class="ntf-x" data-accion="ntf.cerrarBanner">✕</button></div>' : '';
+  const tabBtn = (id, label, badge) => '<button class="ntf-subtab ' + (st.tab === id ? 'on' : '') + '" ' + accionHTML('ntf.tab', id) + '>' + label + (badge != null ? ' <span class="ntf-badge">' + badge + '</span>' : '') + '</button>';
   const prog = (n.programados || []).length;
   content.innerHTML = banner
     + '<div class="ntf-tabs">'
@@ -743,3 +744,39 @@ window.ntfTemplates = ntfTemplates;
 // ── Bridges auditoría pre-B (onclick/oninput en HTML generado por el propio módulo) ──
 window.ntfSaveEditor      = ntfSaveEditor;
 window.ntfRefreshPreview  = ntfRefreshPreview;
+
+// D2 · acciones delegadas
+registrarAcciones('ntf', {
+  rebind: function (a) { notifAbrirRebind(a[0]); },
+  abrir: function (a) { notifAbrir(a[0]); },
+  rebindNo: function (a) { _rebindResolver(a[0], false); },
+  rebindSi: function (a) { _rebindAprobar(a[0]); },
+  canal: function (a) { var f = { ntfSetChannel: ntfSetChannel, ntfSetEditChannel: ntfSetEditChannel }[a[0]]; if (f) f(a[1]); },
+  tpl: function (a) { ntfPickTpl(a[0]); },
+  selAll: function (a, el) { ntfSelAll(el.checked); },
+  rec: function (a) { ntfToggleRec(a[0], a[1]); },
+  recCk: function (a, el) { ntfToggleRec(a[0], el.checked); },
+  verComo: function (a) { ntfSetViewAs(a[0]); },
+  gmail: function (a) { notifGmailDraft(a[0]); },
+  enviar: function () { ntfSend(); },
+  programar: function () { ntfProgramar(); },
+  copiarTpl: function () { notifCopyTemplate(); },
+  override: function () { ntfStartOverride(); },
+  overrideIn: function () { ntfOverrideInput(); },
+  overrideOk: function () { ntfSaveOverride(); },
+  overrideNo: function () { ntfState().override = false; renderNotificaciones(); },
+  reprog: function (a) { ntfReprogramar(a[0]); },
+  cancelProg: function (a) { ntfCancelProg(a[0]); },
+  regla: function (a) { ntfToggleRegla(a[0]); },
+  hist: function (a) { ntfToggleHist(a[0]); },
+  var: function (a, el, ev) { ev.preventDefault(); ntfInsertVar(a[0]); },
+  editKey: function (a) { ntfState().editKey = a[0]; renderNotificaciones(); },
+  nuevaTpl: function () { ntfNewTemplate(); },
+  tplNombre: function (a, el) { ntfSetTplName(el.value); },
+  subver: function (a) { ntfSetEditSubver(a[0]); },
+  editor: function () { ntfSaveEditor(); },
+  editorBody: function () { ntfSaveEditor(); ntfRefreshPreview(); },
+  fmt: function (a) { ntfFmt(a[0]); },
+  cerrarBanner: function () { ntfState().fromHoja = false; renderNotificaciones(); },
+  tab: function (a) { ntfSetTab(a[0]); },
+});

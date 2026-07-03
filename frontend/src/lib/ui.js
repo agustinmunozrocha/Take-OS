@@ -801,6 +801,7 @@ window.togglePfExtranjera = togglePfExtranjera;
 // inline — se convierten con sus llamadores (bd/config/perfil).
 registrarAcciones('ui', {
   cerrar: function () { closeModal(); },
+  stop: function () {},   // absorbe el evento: closest() se detiene aquí (ex event.stopPropagation() de celdas)
   backdrop: function (a, el, ev) { if (ev.target === el) closeModal(); },
   modalCancel: function () { _modalCancel(); },
   modalConfirm: function () { _modalConfirm(); },
