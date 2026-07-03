@@ -7,14 +7,14 @@ import { escapeHtml, showToast, safeUrl } from '../lib/helpers.js';
 // LOC_ORIENTACIONES: ahora en lib/data.js (window) — dedup B3
 // REGIONES_CHILE local eliminada (estaba muerta) — dedup B3
 
-function bdLocFind(locId) { return window.BD_LOC.find(l => l.locId === locId) || null; }
+export function bdLocFind(locId) { return window.BD_LOC.find(l => l.locId === locId) || null; }
 function projLocList(project) { const d = project && project.data; if (!d) return []; if (!Array.isArray(d.locaciones)) d.locaciones = []; return d.locaciones; }
 function projLocFind(project, locId) { return projLocList(project).find(u => u.locId === locId) || null; }
 function nextLocIdBD() { let m = 0; window.BD_LOC.forEach(l => { const x = /LOC-(\d+)/.exec(l.locId || ''); if (x) m = Math.max(m, +x[1]); }); return 'LOC-' + String(m + 1).padStart(2, '0'); }
 function locNombre(locId) { const l = bdLocFind(locId); return l ? (l.nombre || 'sin nombre') : (locId || '—'); }
 /* V8.3.1 — normaliza una locación de la BD al esquema nuevo (idempotente):
    migra `dueno` → `contactos[]`, agrega direccion2/region/orientacion. */
-function ensureLocShape(l) {
+export function ensureLocShape(l) {
   if (!l) return l;
   if (l.direccion2 === undefined) l.direccion2 = '';
   if (l.region === undefined) l.region = '';
@@ -25,8 +25,8 @@ function ensureLocShape(l) {
   }
   return l;
 }
-function locPrimaryContact(l) { const cs = (l && Array.isArray(l.contactos)) ? l.contactos : []; return cs.find(c => /due/i.test(c.relacion || '')) || cs[0] || null; }
-function locFullAddress(l) { if (!l) return ''; return [l.direccion, l.direccion2, l.comuna, l.ciudad, l.region].filter(Boolean).join(', '); }
+export function locPrimaryContact(l) { const cs = (l && Array.isArray(l.contactos)) ? l.contactos : []; return cs.find(c => /due/i.test(c.relacion || '')) || cs[0] || null; }
+export function locFullAddress(l) { if (!l) return ''; return [l.direccion, l.direccion2, l.comuna, l.ciudad, l.region].filter(Boolean).join(', '); }
 /* Locaciones del proyecto en estado Confirmada (las únicas que ofrecen
    Hoja de Llamado y Plan de Rodaje). */
 function projLocConfirmadas(project) { return projLocList(project).filter(u => u.estado === 'confirmada' && bdLocFind(u.locId)); }
@@ -57,7 +57,7 @@ function locacionOptions(project, selectedId) {
 function _locState() { if (!STATE.loc) STATE.loc = { sub: 'repo', filtro: 'todas' }; return STATE.loc; }
 function locSetSub(s) { _locState().sub = s; renderLocaciones(); }
 function locSetFiltro(f) { _locState().filtro = f; renderLocaciones(); }
-function locMoney(n) { return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
+export function locMoney(n) { return '$' + Math.round(n || 0).toLocaleString('es-CL'); }
 function locEnsureScout(project) {
   const d = project.data;
   if (!d.scouting || typeof d.scouting !== 'object') d.scouting = { fecha: '', inicio: '09:00', quienes: [], filas: [] };

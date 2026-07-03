@@ -214,7 +214,7 @@ function aplicarMarcaOrg() {
     }
   } catch (e) {}
 }
-function aplicarUsuario() {
+export function aplicarUsuario() {
   var nom = String(USER_NOMBRE || '').trim();
   var ape = String(USER_APELLIDO || '').trim();
   try { var g = document.getElementById('crGreeting'); if (g) g.textContent = nom ? ('Buenos días, ' + nom + '.') : 'Buenos días.'; } catch (e) {}

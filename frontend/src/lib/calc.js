@@ -50,7 +50,7 @@ function getCostoReal(item, sectionKey) {
 }
 
 /* Totales completos del proyecto: usado para KPI bar, alerts, Info Proyecto */
-function calcProjectTotals(project) {
+export function calcProjectTotals(project) {
   _syncGastosCostoReal(project);   // 4a · el real de Gastos sale de los movimientos, no de tipeo manual
   const d = project.data;
   let totalCot = 0, totalReal = 0;
@@ -109,7 +109,7 @@ export function fmtMoney(n) {
   return '$' + Math.round(n).toLocaleString('es-CL');
 }
 
-function fmtDelta(n) {
+export function fmtDelta(n) {
   if (n === null || n === undefined || !isFinite(n)) return '—';
   const r = Math.round(n);
   // V5.2.1: si el redondeo da 0, mostrar $0 limpio sin signo (evita
@@ -140,7 +140,7 @@ function fmtPct(n) {
    fracciones (ej -0.20 por redondeo entre cotizado calculado con boleta
    y real entero) producían "$0" en pantalla pero pintado en verde — bug
    visual reportado por Agustín en V5.2. */
-function deltaClassCosto(n) {
+export function deltaClassCosto(n) {
   const r = Math.round(n || 0);
   if (r === 0) return 'neutral';
   return r < 0 ? 'positive' : 'negative';

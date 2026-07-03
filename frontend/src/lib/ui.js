@@ -353,7 +353,7 @@ window.toggleTheme = toggleTheme;
 window.updateThemeButton = updateThemeButton;
 
 // ═══ Helpers de formularios BD + responsables por sección + confetti/slugify/demo (Etapa C6) ═══
-function regionSelectHTML(current, opts) {
+export function regionSelectHTML(current, opts) {
   opts = opts || {};
   /* V11.8.1 · si `current` matchea una región chilena ignorando may/acentos,
      usamos la forma canónica para que el <option> quede seleccionado. */
@@ -367,8 +367,8 @@ function regionSelectHTML(current, opts) {
 }
 
 // BANCOS_CHILE → movido a src/lib/data.js (Etapa B3)
-function bancoCodigo(nombre) { const b = BANCOS_CHILE.find(x => x.nombre === nombre); if (b) return b.codigo; return (typeof _codigoBancoSBIF === 'function') ? _codigoBancoSBIF(nombre) : ''; }
-function bancoSelectHTML(current, opts) {
+export function bancoCodigo(nombre) { const b = BANCOS_CHILE.find(x => x.nombre === nombre); if (b) return b.codigo; return (typeof _codigoBancoSBIF === 'function') ? _codigoBancoSBIF(nombre) : ''; }
+export function bancoSelectHTML(current, opts) {
   opts = opts || {};
   const cur = current || '';
   const inList = BANCOS_CHILE.some(b => b.nombre === cur);
@@ -379,7 +379,7 @@ function bancoSelectHTML(current, opts) {
 }
 function pfBancoChange(nombre) { const cb = document.getElementById('pf_codigoBanco'); if (cb) cb.value = bancoCodigo(nombre); }
 
-function _toISODate(v) {
+export function _toISODate(v) {
   if (!v) return '';
   v = String(v).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;

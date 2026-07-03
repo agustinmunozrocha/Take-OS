@@ -718,7 +718,7 @@ function showBDImportResult(added, merged, skipped) {
   });
 }
 
-function buildPersonasDatalist() {
+export function buildPersonasDatalist() {
   // V7.1: filtrar a Crew + Interno. Los talentos viven en BD_TALENTOS, no
   // contaminan el autocompletado del Presupuesto ni los campos PE/Dir/JP
   // de Info Proyecto.

@@ -54,7 +54,7 @@ function _puedeEditarResponsables() {
 }
 /* V10.5.2: la escritura de tareas se gobierna por el módulo 'tareas' (no por
    operacion_creatividad), para que Finanzas pueda crear/editar tareas. */
-function _puedeEditarTareas() { return authNivel('tareas') === 'E'; }
+export function _puedeEditarTareas() { return authNivel('tareas') === 'E'; }
 /* Guardas de los RPCs de escritura: el proyecto-core (guardar_proyecto) toca
    varios módulos, así que se permite si hay 'E' en alguno de ellos; las
    operaciones usan 'operacion_creatividad'. */

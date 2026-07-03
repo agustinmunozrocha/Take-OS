@@ -1,6 +1,18 @@
 // Tareas, Señales y Mis Tareas — extraído de index.html (Etapa C3)
 // Incluye @menciones, adjuntos a Storage y el repositorio del Control Room.
 
+// D1c · imports reales. VETADOS: currentUser (window mutable), PROJECTS_SOURCE,
+// ORG_ID, closeModal (solo strings). Bridge window.MODULES INTOCABLE: el goWire
+// de gastos lo lee en eval. Ciclo nav⇄tareas: refreshSidebarTaskCounters queda
+// vía window hasta la tranche de nav.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { STATE, PROJECTS } from '../lib/state.js';
+import { _puedeEditarTareas } from '../lib/auth.js';
+import { navigateToModule, MODULES, renderModule } from '../lib/nav.js';
+import { navigateToProject, renderMetrics, renderKanban } from './kanban.js';
+import { markDirty } from './persistencia-local.js';
+
 function ensureTareas(project) { if (!project.data.tareas) project.data.tareas = []; return project.data.tareas; }
 function ensureSenales(project) { if (!project.data.senales) project.data.senales = []; return project.data.senales; }
 function _taskId() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }

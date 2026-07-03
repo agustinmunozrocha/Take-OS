@@ -4,6 +4,16 @@
 // abrirPerfilUsuario (espacio/config/invitaciones/iniciarSesión la llaman),
 // _rutValido (config.js) y _regionCanonica (regionSelectHTML clásico).
 
+// D1c · imports reales. VETADOS: USER_NOMBRE/USER_APELLIDO — este módulo LOS
+// ESCRIBE (:553) igual que boot: import read-only = TypeError; quedan window.
+// Hoist: boot 33→29 (cruza documentos/rodajes/info-proyecto/crew — inertes).
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { sb, supabaseInit } from '../lib/supabase.js';
+import { REGIONES_CHILE } from '../lib/data.js';
+import { regionSelectHTML, bancoSelectHTML, bancoCodigo } from '../lib/ui.js';
+import { _DAL_TIPOCUENTA_LABEL, _dalBancoNombre } from './dal.js';
+import { aplicarUsuario } from '../lib/boot.js';
+
 /* ════════════════════════════════════════════════════════════════════
    V10.8.0 · PERFIL PERSONAL DEL USUARIO + ONBOARDING
    ─────────────────────────────────────────────────────────────────────

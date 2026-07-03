@@ -90,9 +90,9 @@ const DAL_KNOWN_LEGAL_TPL_IDS = new Set();
 
 /* Mapeos codigo (Postgres) -> etiqueta de la app (lo que la UI ya espera). */
 const _DAL_ROLE_LABEL = { crew: 'Crew', interno: 'Interno', talento: 'Talento', contacto_cliente: 'Contacto cliente', proveedor_individual: 'Proveedor individual' };
-const _DAL_TIPOCUENTA_LABEL = { corriente: 'Cuenta Corriente', vista: 'Cuenta Vista', ahorro: 'Cuenta de Ahorro', rut: 'Cuenta RUT', chequera_electronica: 'Chequera Electr\u00f3nica' };
+export const _DAL_TIPOCUENTA_LABEL = { corriente: 'Cuenta Corriente', vista: 'Cuenta Vista', ahorro: 'Cuenta de Ahorro', rut: 'Cuenta RUT', chequera_electronica: 'Chequera Electr\u00f3nica' };
 const _DAL_TIPO_EMPRESA_LABEL = { cliente: 'Cliente', proveedor: 'Proveedor', agencia: 'Agencia', socio: 'Socio' };
-function _dalBancoNombre(codigo) { if (!codigo) return ''; const b = BANCOS_CHILE.find(x => x.codigo === String(codigo)); return b ? b.nombre : ''; }
+export function _dalBancoNombre(codigo) { if (!codigo) return ''; const b = BANCOS_CHILE.find(x => x.codigo === String(codigo)); return b ? b.nombre : ''; }
 
 /* Fila de Supabase (con satelites embebidos) -> contacto canonico BD_CONTACTOS[id]. */
 function _dalContactoDesdeRow(r) {
@@ -830,7 +830,7 @@ async function dalGuardarLegalDoc(d) {
     return { ok: false, error: e };
   }
 }
-async function dalEliminarLegalDoc(docId) {
+export async function dalEliminarLegalDoc(docId) {
   if (!sb || LEGAL_SOURCE !== 'supabase' || !docId) return;
   try { const r = await sb.from('legal_documents').delete().eq('doc_id', docId); if (r.error) throw r.error; DAL_KNOWN_LEGAL_DOC_IDS.delete(docId); }
   catch (e) { console.error('[dal] eliminar documento legal', docId, e); }
@@ -860,17 +860,17 @@ async function dalGuardarLegalTpl(t) {
     return { ok: false, error: e };
   }
 }
-async function dalEliminarLegalTpl(tplId) {
+export async function dalEliminarLegalTpl(tplId) {
   if (!sb || LEGAL_SOURCE !== 'supabase' || !tplId) return;
   try { const r = await sb.from('legal_templates').delete().eq('id', tplId); if (r.error) throw r.error; DAL_KNOWN_LEGAL_TPL_IDS.delete(tplId); }
   catch (e) { console.error('[dal] eliminar plantilla legal', tplId, e); }
 }
-function _dalLegalDocSaveSoon(docId) {
+export function _dalLegalDocSaveSoon(docId) {
   if (LEGAL_SOURCE !== 'supabase' || !docId) return;
   clearTimeout(_dalSaveTimers['legaldoc:' + docId]);
   _dalSaveTimers['legaldoc:' + docId] = setTimeout(function(){ const d = BD_LEGAL.find(function(x){ return x.docId === docId; }); if (d) dalGuardarLegalDoc(d); }, 900);
 }
-function _dalLegalTplSaveSoon(tplId) {
+export function _dalLegalTplSaveSoon(tplId) {
   if (LEGAL_SOURCE !== 'supabase' || !tplId) return;
   clearTimeout(_dalSaveTimers['legaltpl:' + tplId]);
   _dalSaveTimers['legaltpl:' + tplId] = setTimeout(function(){ const t = BD_LEGAL_TPL.find(function(x){ return x.id === tplId; }); if (t) dalGuardarLegalTpl(t); }, 900);
@@ -905,7 +905,7 @@ function _dalPerfilSaveSoon() {
    por id), sin tocar lo operativo. No destructivo: si un proyecto no está en
    Supabase, queda 100% como estaba.
    ════════════════════════════════════════════════════════════════════ */
-const DAL_KNOWN_PROJECT_IDS = new Set(); window.DAL_KNOWN_PROJECT_IDS = DAL_KNOWN_PROJECT_IDS; // puente para módulos
+export const DAL_KNOWN_PROJECT_IDS = new Set(); window.DAL_KNOWN_PROJECT_IDS = DAL_KNOWN_PROJECT_IDS; // puente para módulos
 
 /* V10.6.0 · Flags SUPA_SOLE eliminados (Supabase es la única fuente, sin doble escritura). */
 
@@ -1110,7 +1110,7 @@ function _dalDocumentosPartes(p) {
   });
   return { items: items };
 }
-function _dalProyectoPartes(p) {
+export function _dalProyectoPartes(p) {
   const asg = p.project_assignments || [];
   function porFuncion(fn) {
     const a = asg.find(x => x.project_functions && x.project_functions.nombre === fn);
@@ -1179,7 +1179,7 @@ function _dalProyectoPartes(p) {
 }
 
 /* Fusiona partes migradas (Supabase) sobre un proyecto, sin tocar lo operativo. */
-function _dalFusionarProyecto(target, partes) {
+export function _dalFusionarProyecto(target, partes) {
   if (!target.data) target.data = buildDefaultProjectData();
   target.state = partes.estado;
   if (partes.nombre) target.name = partes.nombre;
@@ -1255,7 +1255,7 @@ function _dalProyectoSelect() {
     + 'gasto_comments(id,gasto_id,autor,texto,ts,posicion)';
 }
 
-async function dalLoadProyectos(soloBorrados) {
+export async function dalLoadProyectos(soloBorrados) {
   if (!sb) return null;
   const sel = _dalProyectoSelect();
   try {

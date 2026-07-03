@@ -1,5 +1,22 @@
 // Info Proyecto + Gate de aprobación + Papelera de proyectos — extraído de index.html (Etapa C2)
 
+// D1c · imports reales. VETADOS: PROJECTS_SOURCE, ORG_ID (window mutables);
+// updateProjectState solo-string (importarlo hoistearía admin 37→32 — línea
+// roja #2). Ciclo con presupu: _markRowDirty sigue saliendo vía window desde
+// allá — este lado no se cierra.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { STATE, BD_PERSONAS, PROJECTS, BD_EMPRESAS, BD_EMPRESAS_BYID, TRASH } from '../lib/state.js';
+import { buildDefaultProjectData } from '../lib/modelo.js';
+import { authNivel } from '../lib/auth.js';
+import { fmtMoney, calcProjectTotals, fmtDelta, deltaClassCosto } from '../lib/calc.js';
+import { showModal, closeModal } from '../lib/ui.js';
+import { STATES, navigateToControlRoom, renderMetrics, renderKanban } from './kanban.js';
+import { calcSummaryFin } from './presupuesto-cotizacion.js';
+import { _normKey, buildPersonasDatalist } from './bd-excel.js';
+import { dalLoadProyectos, _dalProyectoPartes, _dalFusionarProyecto, DAL_KNOWN_PROJECT_IDS } from './dal.js';
+import { markDirty } from './persistencia-local.js';
+
 /* ════════════════════════════════════════════════════════════════════
    ════════════════════════════════════════════════════════════════════
    MÓDULO: INFO PROYECTO

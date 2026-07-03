@@ -237,7 +237,7 @@ function _clientUuid() {
   });
 }
 
-function buildDefaultProjectData() {
+export function buildDefaultProjectData() {
   const data = {
     infoProyecto: {
       cliente: '',
