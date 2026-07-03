@@ -1033,7 +1033,7 @@ function _budgetColWStore() {
   }
   return window._BUDGET_COLW;
 }
-function _budgetColWGet(sectionKey, colId, def) {
+export function _budgetColWGet(sectionKey, colId, def) {
   var cfg = _budgetColCfg(colId);
   var s = _budgetColWStore()[sectionKey]; var v = s && s[colId];
   if (typeof v !== 'number' || !(v > 0)) return (typeof def === 'number' ? def : cfg.def);
@@ -1044,7 +1044,7 @@ function _budgetColWSet(sectionKey, colId, px) {
   all[sectionKey][colId] = Math.round(px);
   try { localStorage.setItem('takeos_budget_colw', JSON.stringify(all)); } catch (e) {}
 }
-function _budgetColGrip(sectionKey, colId) {
+export function _budgetColGrip(sectionKey, colId) {
   return '<span class="col-resize-grip" title="Arrastra para ajustar el ancho · doble clic para restablecer"'
     + ' onmousedown="budgetColResizeDown(event, \'' + sectionKey + '\', \'' + colId + '\')"'
     + ' onclick="event.stopPropagation();"'
@@ -1111,12 +1111,12 @@ function budgetColResizeReset(ev, sectionKey, colId) {
    reconstruir el innerHTML deja el wrapper en scrollLeft=0 y la vista "salta" a la
    izquierda. Se capturan los scrollLeft por clave estable (data-budget-scroll) y se
    restauran tras rearmar el DOM. */
-function _budgetCaptureScroll() {
+export function _budgetCaptureScroll() {
   var m = {};
   document.querySelectorAll('[data-budget-scroll]').forEach(function (el) { m[el.getAttribute('data-budget-scroll')] = el.scrollLeft; });
   return m;
 }
-function _budgetRestoreScroll(m) {
+export function _budgetRestoreScroll(m) {
   if (!m) return;
   document.querySelectorAll('[data-budget-scroll]').forEach(function (el) {
     var k = el.getAttribute('data-budget-scroll');
@@ -2389,7 +2389,7 @@ function recalcAlerts() {
 function jsq(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
 
 /* Monto del Presupuesto real del proyecto (NETO al cliente). */
-function cotRealPresup(project) {
+export function cotRealPresup(project) {
   const f = project.data.finanzas || {};
   return f.presupuestoCliente || 0;
 }
@@ -4314,7 +4314,7 @@ function _budgetFindRow(project, clientUuid) {
 }
 
 // ── F: goCotizadoTotal (disperso, línea 22501)
-function goCotizadoTotal(project) { try { const f = calcSummaryFin(project); return (f && f.subtotal) ? f.subtotal.cot : 0; } catch (e) { return 0; } }
+export function goCotizadoTotal(project) { try { const f = calcSummaryFin(project); return (f && f.subtotal) ? f.subtotal.cot : 0; } catch (e) { return 0; } }
 
 
 

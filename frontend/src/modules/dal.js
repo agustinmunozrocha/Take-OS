@@ -890,7 +890,7 @@ async function dalGuardarPerfil() {
     return { ok: false, error: e };
   }
 }
-function _dalPerfilSaveSoon() {
+export function _dalPerfilSaveSoon() {
   if (PERFIL_SOURCE !== 'supabase') return;
   clearTimeout(_dalSaveTimers['perfil']);
   _dalSaveTimers['perfil'] = setTimeout(function(){ dalGuardarPerfil(); }, 900);

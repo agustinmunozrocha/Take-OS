@@ -11,7 +11,7 @@
    negociación de retención). Si no hay DTE en esas secciones, se
    calcula directo sin retención (asume factura). En servicios y
    talentos sigue siendo requerido. */
-function calcCostoEmpresa(valor, cantidad, dte, sectionKey) {
+export function calcCostoEmpresa(valor, cantidad, dte, sectionKey) {
   if (!cantidad || cantidad === 0) return { value: 0, error: null };
   if (!valor) return { value: 0, error: null };
   // V9.6.13 (#4): el costo empresa se REDONDEA a peso entero en la fuente.

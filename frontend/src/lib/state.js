@@ -91,7 +91,7 @@ window._TOPE_COLAB_ORG = null;
 /* En estados ≥ preproducción se muestra columna "Costo Real" en el
    Presupuesto. Atado al estado del proyecto, no a un toggle manual.
    (Decisión tomada en la planificación de V5 Capa 2.) */
-const STATES_WITH_REAL_COST = ['preproduccion', 'produccion', 'postproduccion', 'cierre', 'cerrado']; window.STATES_WITH_REAL_COST = STATES_WITH_REAL_COST;
+export const STATES_WITH_REAL_COST = ['preproduccion', 'produccion', 'postproduccion', 'cierre', 'cerrado']; window.STATES_WITH_REAL_COST = STATES_WITH_REAL_COST;
 
 /* V5.2.2: estados donde el presupuesto cotizado queda bloqueado.
    Filas existentes (no extras) no se pueden editar en Rol/DTE/Valor/

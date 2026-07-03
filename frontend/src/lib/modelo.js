@@ -229,7 +229,7 @@ function hydrateContactStore(obj) {
 /* _clientUuid: necesaria en startup (buildDefaultProjectData / DEMO_PROJECTS).
    El módulo presupuesto-cotizacion.js tiene su propia copia y puentea window._clientUuid
    al cargar, pero ese puente llega después del classic script — este stub cubre el gap. */
-function _clientUuid() {
+export function _clientUuid() {
   try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = (window.crypto && crypto.getRandomValues) ? (crypto.getRandomValues(new Uint8Array(1))[0] % 16) : Math.floor(Math.random() * 16);

@@ -183,7 +183,7 @@ const _BANCO_ALIAS = {
   'mercado pago': '875', 'mercadopago': '875'
 };
 /* Devuelve el código SBIF a partir de un nombre de banco (cualquier variante). '' si no matchea. */
-function _codigoBancoSBIF(banco) {
+export function _codigoBancoSBIF(banco) {
   if (!banco) return '';
   const key = String(banco).trim().toLowerCase();
   if (_BANCO_ALIAS[key]) return _BANCO_ALIAS[key];
