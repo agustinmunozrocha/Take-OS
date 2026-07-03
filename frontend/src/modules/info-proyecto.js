@@ -17,6 +17,7 @@ import { _normKey, buildPersonasDatalist } from './bd-excel.js';
 import { dalLoadProyectos, _dalProyectoPartes, _dalFusionarProyecto, DAL_KNOWN_PROJECT_IDS } from './dal.js';
 import { markDirty } from './persistencia-local.js';
 
+import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 /* ════════════════════════════════════════════════════════════════════
    ════════════════════════════════════════════════════════════════════
    MÓDULO: INFO PROYECTO
@@ -42,19 +43,16 @@ function empresaSelectInfoHTML(ip) {
   const curNombre = (cur && BD_EMPRESAS_BYID[cur]) ? (BD_EMPRESAS_BYID[cur].nombreFantasia || '') : '';
   const cbx = `<span class="combobox-wrap cbx-anchored" style="display:block;">
     <input class="input combobox-input" value="${escapeHtml(curNombre)}" data-emp-rol="cliente" data-emp-add="1" placeholder="Escribe para buscar y vincular…" autocomplete="off"
-           onfocus="comboboxFilterEmpresas(this)"
-           oninput="comboboxFilterEmpresas(this)"
-           onblur="comboboxCloseDelayed(this)"
-           onchange="infoVincularEmpresaPorNombre(this.value)">
+           data-accion="info.vinculoCombo" data-on="focus input blur change">
     <div class="combobox-dropdown" hidden></div>
   </span>
-  <div id="bdwarn-vinculo" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ Esa empresa no está en la BD: el vínculo no cambió. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" onclick="navigateToModule('bd-personas')">+ Agregarla a la BD</button></div>`;
+  <div id="bdwarn-vinculo" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ Esa empresa no está en la BD: el vínculo no cambió. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" data-accion="info.irBD">+ Agregarla a la BD</button></div>`;
   let sugg = '';
   if (!cur && ip.cliente) {
     const ids = Object.keys(BD_EMPRESAS_BYID);
     const q = _normKey(ip.cliente);
     const match = ids.find(id => _normKey(BD_EMPRESAS_BYID[id].nombreFantasia || '') === q || _normKey(BD_EMPRESAS_BYID[id].razonSocial || '') === q);
-    if (match) sugg = `<div style="margin-top:6px;"><button class="btn btn-secondary btn-sm" onclick="infoVincularEmpresa('${match}')">Vincular a «${escapeHtml(BD_EMPRESAS_BYID[match].nombreFantasia)}» (coincide con el nombre)</button></div>`;
+    if (match) sugg = `<div style="margin-top:6px;"><button class="btn btn-secondary btn-sm" ${accionHTML('info.vincular', match)}>Vincular a «${escapeHtml(BD_EMPRESAS_BYID[match].nombreFantasia)}» (coincide con el nombre)</button></div>`;
   }
   return cbx + sugg;
 }
@@ -142,13 +140,10 @@ export function renderInfoProyecto() {
           <label class="field-label">Cliente</label>
           <span class="combobox-wrap cbx-anchored" style="display:block;">
             <input class="input combobox-input" value="${escapeHtml(ip.cliente)}" data-emp-rol="cliente" placeholder="Escribe para buscar en la BD de empresas…" autocomplete="off"
-                   onfocus="comboboxFilterEmpresas(this); var w=document.getElementById('cliente-warn'); if(w) w.style.display='flex';"
-                   oninput="comboboxFilterEmpresas(this); updateInfoField('cliente', this.value); updateProjectHeader(); _infoEmpresaBDHint('cliente', this.value);"
-                   onblur="comboboxCloseDelayed(this); var w=document.getElementById('cliente-warn'); if(w) w.style.display='none';"
-                   onchange="infoEmpresaChanged('cliente', this.value);">
+                   data-accion="info.clienteCombo" data-on="focus input blur change">
             <div class="combobox-dropdown" hidden></div>
           </span>
-          <div id="bdwarn-cliente" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ No está en la BD de empresas — puedes seguir igual. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" onclick="navigateToModule('bd-personas')">+ Agregarla a la BD</button></div>
+          <div id="bdwarn-cliente" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ No está en la BD de empresas — puedes seguir igual. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" data-accion="info.irBD">+ Agregarla a la BD</button></div>
           <div id="cliente-warn" style="display:none; align-items:flex-start; gap:6px; font-size:10.5px; color:var(--warning); background:var(--warning-bg); border-radius:6px; padding:7px 9px; margin-top:6px; line-height:1.45;">
             <span style="flex:0 0 auto;">⚠</span>
             <span>Cambiar el cliente se propaga a todo el sistema y puede romper la coherencia con documentos (cotizaciones, hojas de llamado) ya generados con el nombre anterior.</span>
@@ -163,25 +158,22 @@ export function renderInfoProyecto() {
           <label class="field-label">Agencia (opcional)</label>
           <span class="combobox-wrap cbx-anchored" style="display:block;">
             <input class="input combobox-input" value="${escapeHtml(ip.agencia)}" placeholder="Escribe para buscar en la BD de empresas…" autocomplete="off"
-                   onfocus="comboboxFilterEmpresas(this)"
-                   oninput="comboboxFilterEmpresas(this); updateInfoField('agencia', this.value); _infoEmpresaBDHint('agencia', this.value);"
-                   onblur="comboboxCloseDelayed(this)"
-                   onchange="infoEmpresaChanged('agencia', this.value);">
+                   data-accion="info.agenciaCombo" data-on="focus input blur change">
             <div class="combobox-dropdown" hidden></div>
           </span>
-          <div id="bdwarn-agencia" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ No está en la BD de empresas — puedes seguir igual. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" onclick="navigateToModule('bd-personas')">+ Agregarla a la BD</button></div>
+          <div id="bdwarn-agencia" style="display:none;align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ No está en la BD de empresas — puedes seguir igual. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" data-accion="info.irBD">+ Agregarla a la BD</button></div>
         </div>
         <div class="field">
           <label class="field-label">Productora</label>
-          <input class="input" value="${escapeHtml(ip.productora)}" oninput="updateInfoField('productora', this.value)">
+          <input class="input" value="${escapeHtml(ip.productora)}" ${accionHTML('info.campo', 'productora', { on: 'input' })}>
         </div>
         <div class="field" style="grid-column: span 2;">
           <label class="field-label">Nombre del proyecto</label>
-          <input class="input" value="${escapeHtml(ip.nombreProyecto)}" oninput="updateInfoField('nombreProyecto', this.value); updateProjectHeader();" placeholder="Nombre comercial / interno">
+          <input class="input" value="${escapeHtml(ip.nombreProyecto)}" ${accionHTML('info.nombre', { on: 'input' })} placeholder="Nombre comercial / interno">
         </div>
         <div class="field">
           <label class="field-label">Servicio</label>
-          <input class="input" value="${escapeHtml(ip.servicio)}" oninput="updateInfoField('servicio', this.value)" placeholder="Ej: Spot + RRSS">
+          <input class="input" value="${escapeHtml(ip.servicio)}" ${accionHTML('info.campo', 'servicio', { on: 'input' })} placeholder="Ej: Spot + RRSS">
         </div>
       </div>
     </div>
@@ -193,15 +185,15 @@ export function renderInfoProyecto() {
       <div class="form-grid cols-3">
         <div class="field">
           <label class="field-label">Tiempo de exhibición</label>
-          <input class="input" value="${escapeHtml((ip.derechos || {}).tiempo || '')}" oninput="updateDerechos('tiempo', this.value)" placeholder="Ej: 6 meses · 1 año · perpetuo">
+          <input class="input" value="${escapeHtml((ip.derechos || {}).tiempo || '')}" ${accionHTML('info.derechos', 'tiempo', { on: 'input' })} placeholder="Ej: 6 meses · 1 año · perpetuo">
         </div>
         <div class="field">
           <label class="field-label">Plataformas</label>
-          <input class="input" value="${escapeHtml((ip.derechos || {}).plataformas || '')}" oninput="updateDerechos('plataformas', this.value)" placeholder="Ej: Instagram, TikTok, YouTube, PoP, TV">
+          <input class="input" value="${escapeHtml((ip.derechos || {}).plataformas || '')}" ${accionHTML('info.derechos', 'plataformas', { on: 'input' })} placeholder="Ej: Instagram, TikTok, YouTube, PoP, TV">
         </div>
         <div class="field">
           <label class="field-label">Países / territorio</label>
-          <input class="input" value="${escapeHtml((ip.derechos || {}).territorio || '')}" oninput="updateDerechos('territorio', this.value)" placeholder="Ej: Chile · Latam · Mundial">
+          <input class="input" value="${escapeHtml((ip.derechos || {}).territorio || '')}" ${accionHTML('info.derechos', 'territorio', { on: 'input' })} placeholder="Ej: Chile · Latam · Mundial">
         </div>
       </div>
     </div>
@@ -215,39 +207,33 @@ export function renderInfoProyecto() {
           <label class="field-label">Contacto principal</label>
           <span class="combobox-wrap person-combobox cbx-anchored" style="display:block;">
             <input class="input combobox-input" value="${escapeHtml(ip.contactoCliente)}" placeholder="Escribe para buscar en la Base de Datos…" autocomplete="off"
-                   onfocus="comboboxOpen(this)"
-                   oninput="comboboxFilter(this); updateInfoField('contactoCliente', this.value);"
-                   onblur="comboboxCloseDelayed(this)"
-                   onchange="infoContactoChanged('contactoCliente', this.value)">
+                   ${accionHTML('info.contactoCombo', 'contactoCliente', { on: 'focus input blur change' })}>
             <div class="combobox-dropdown" hidden></div>
           </span>
         </div>
         <div class="field">
           <label class="field-label">Mail</label>
-          <input class="input" type="email" value="${escapeHtml(ip.mailContactoCliente)}" oninput="updateInfoField('mailContactoCliente', this.value)" placeholder="—">
+          <input class="input" type="email" value="${escapeHtml(ip.mailContactoCliente)}" ${accionHTML('info.campo', 'mailContactoCliente', { on: 'input' })} placeholder="—">
         </div>
         <div class="field">
           <label class="field-label">Teléfono</label>
-          <input class="input" value="${escapeHtml(ip.telefonoContactoCliente)}" oninput="updateInfoField('telefonoContactoCliente', this.value)" placeholder="+56 …">
+          <input class="input" value="${escapeHtml(ip.telefonoContactoCliente)}" ${accionHTML('info.campo', 'telefonoContactoCliente', { on: 'input' })} placeholder="+56 …">
         </div>
         <div class="field">
           <label class="field-label">Contacto Agencia</label>
           <span class="combobox-wrap person-combobox cbx-anchored" style="display:block;">
             <input class="input combobox-input" value="${escapeHtml(ip.contactoAgencia || '')}" placeholder="Escribe para buscar en la Base de Datos…" autocomplete="off"
-                   onfocus="comboboxOpen(this)"
-                   oninput="comboboxFilter(this); updateInfoField('contactoAgencia', this.value);"
-                   onblur="comboboxCloseDelayed(this)"
-                   onchange="infoContactoChanged('contactoAgencia', this.value)">
+                   ${accionHTML('info.contactoCombo', 'contactoAgencia', { on: 'focus input blur change' })}>
             <div class="combobox-dropdown" hidden></div>
           </span>
         </div>
         <div class="field">
           <label class="field-label">Mail Agencia</label>
-          <input class="input" type="email" value="${escapeHtml(ip.mailContactoAgencia || '')}" oninput="updateInfoField('mailContactoAgencia', this.value)" placeholder="—">
+          <input class="input" type="email" value="${escapeHtml(ip.mailContactoAgencia || '')}" ${accionHTML('info.campo', 'mailContactoAgencia', { on: 'input' })} placeholder="—">
         </div>
         <div class="field">
           <label class="field-label">Teléfono Agencia</label>
-          <input class="input" value="${escapeHtml(ip.telefonoContactoAgencia || '')}" oninput="updateInfoField('telefonoContactoAgencia', this.value)" placeholder="+56 …">
+          <input class="input" value="${escapeHtml(ip.telefonoContactoAgencia || '')}" ${accionHTML('info.campo', 'telefonoContactoAgencia', { on: 'input' })} placeholder="+56 …">
         </div>
       </div>
     </div>
@@ -276,7 +262,7 @@ export function renderInfoProyecto() {
           ${renderPersonContactSub(jpData)}
         </div>
       </div>
-      <div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="navigateToModule('cargos')">Gestionar en Cargos →</button></div>
+      <div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" data-accion="info.irCargos">Gestionar en Cargos →</button></div>
     </div>
 
     <!-- ESTADO -->
@@ -286,7 +272,7 @@ export function renderInfoProyecto() {
       <div class="form-grid cols-3">
         <div class="field">
           <label class="field-label">Estado actual</label>
-          <select class="select" data-state-selector onchange="updateProjectState(this.value)">
+          <select class="select" data-state-selector data-accion="info.estado" data-on="change">
             ${Object.entries(STATES).sort((a,b) => a[1].order - b[1].order).map(([k, s]) =>
               `<option value="${k}" ${project.state === k ? 'selected' : ''}>${s.name}</option>`
             ).join('')}
@@ -297,23 +283,23 @@ export function renderInfoProyecto() {
         </div>
         <div class="field">
           <label class="field-label">Fecha de cotización</label>
-          <input class="input" type="date" value="${escapeHtml(ip.fechaCotizacion)}" onchange="updateInfoField('fechaCotizacion', this.value)">
+          <input class="input" type="date" value="${escapeHtml(ip.fechaCotizacion)}" ${accionHTML('info.campo', 'fechaCotizacion', { on: 'change' })}>
         </div>
         <div class="field">
           <label class="field-label">Fecha de aprobación</label>
-          <input class="input" type="date" value="${escapeHtml(ip.fechaAprobacion)}" onchange="updateInfoField('fechaAprobacion', this.value)">
+          <input class="input" type="date" value="${escapeHtml(ip.fechaAprobacion)}" ${accionHTML('info.campo', 'fechaAprobacion', { on: 'change' })}>
         </div>
         <div class="field">
           <label class="field-label">Fecha entrega final</label>
-          <input class="input" type="date" value="${escapeHtml(ip.fechaEntregaFinal)}" onchange="updateInfoField('fechaEntregaFinal', this.value)">
+          <input class="input" type="date" value="${escapeHtml(ip.fechaEntregaFinal)}" ${accionHTML('info.campo', 'fechaEntregaFinal', { on: 'change' })}>
         </div>
         <div class="field">
           <label class="field-label">Fecha de pago</label>
-          <input class="input" type="date" value="${escapeHtml(ip.fechaPago)}" onchange="updateInfoField('fechaPago', this.value)">
+          <input class="input" type="date" value="${escapeHtml(ip.fechaPago)}" ${accionHTML('info.campo', 'fechaPago', { on: 'change' })}>
         </div>
         <div class="field" style="grid-column: span 1;">
           <label class="field-label">Condiciones de pago</label>
-          <input class="input" value="${escapeHtml(ip.condicionPago)}" oninput="updateInfoField('condicionPago', this.value)">
+          <input class="input" value="${escapeHtml(ip.condicionPago)}" ${accionHTML('info.campo', 'condicionPago', { on: 'input' })}>
         </div>
       </div>
     </div>
@@ -354,7 +340,7 @@ export function renderInfoProyecto() {
     <div class="form-section" style="border: 1px solid var(--negative); background: var(--negative-bg);">
       <div class="form-section-title" style="color: var(--negative);">⚠ Zona peligrosa</div>
       <div class="form-section-subtitle">Acción irreversible, solo administrador. Antes de eliminar, exporta un guardado con “Guardar” si quieres conservar el proyecto.</div>
-      <button class="btn btn-danger" onclick="deleteProjectFlow('${project.id}')">Eliminar este proyecto</button>
+      <button class="btn btn-danger" ${accionHTML('info.borrarProy', project.id)}>Eliminar este proyecto</button>
     </div>` : ''}
   `;
 }
@@ -414,7 +400,7 @@ function updateProjectHeader() {
   if (ip.nombreProyecto) p.name = ip.nombreProyecto;
   if (ip.cliente) p.client = ip.cliente;
   document.getElementById('breadcrumb').innerHTML = `
-    <span class="breadcrumb-link" onclick="navigateToControlRoom()">Control Room</span>
+    <span class="breadcrumb-link" data-accion="kanban.controlRoom">Control Room</span>
     <span class="breadcrumb-sep">›</span>
     <span class="breadcrumb-current">${escapeHtml(p.client)} · ${escapeHtml(p.name)}</span>
   `;
@@ -507,19 +493,19 @@ async function openTrash() {
         <div style="font-weight:600;">${escapeHtml(p.name)}</div>
         <div style="font-size:11px; color:var(--ink-muted);">${escapeHtml(p.client || '')} · eliminado ${escapeHtml(when)}</div>
       </div>
-      <button class="btn btn-secondary" onclick="restoreFromTrash('${p.id}')">Restaurar</button>
+      <button class="btn btn-secondary" ${accionHTML('info.restaurar', p.id)}>Restaurar</button>
     </div>`;
   }).join('');
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
-    <div class="modal-backdrop" onclick="closeModal()">
-      <div class="modal" onclick="event.stopPropagation()" style="max-width: 560px;">
+    <div class="modal-backdrop" data-accion="ui.backdrop">
+      <div class="modal" style="max-width: 560px;">
         <div class="modal-header">
           <div class="modal-title">Papelera</div>
           <div style="font-size:12px; color:var(--ink-muted); margin-top:4px;">${TRASH.length} proyecto(s) eliminado(s). Se conservan indefinidamente. Puedes restaurarlos al Control Room.</div>
         </div>
         <div class="modal-body" style="max-height:50vh; overflow:auto;">${rows}</div>
-        <div class="modal-footer"><button class="btn" onclick="closeModal()">Cerrar</button></div>
+        <div class="modal-footer"><button class="btn" data-accion="ui.cerrar">Cerrar</button></div>
       </div>
     </div>`;
 }
@@ -558,17 +544,47 @@ async function restoreFromTrash(id) {
 // ── Window bridges (3 barridos func+const) ──
 window._markRowDirty = _markRowDirty;
 window.collectApprovalBlockers = collectApprovalBlockers;
-window.infoContactoChanged = infoContactoChanged;
-window.infoEmpresaChanged = infoEmpresaChanged;
-window.infoVincularEmpresa = infoVincularEmpresa;
-window.infoVincularEmpresaPorNombre = infoVincularEmpresaPorNombre;
 window.openTrash = openTrash;
 window.renderInfoProyecto = renderInfoProyecto;
 window.restoreFromTrash = restoreFromTrash;
-window.updateDerechos = updateDerechos;
 window.updateInfoField = updateInfoField;
 
 // D0 · puentes que faltaban desde la Etapa C (barrido 3 re-ejecutado): los
 // handlers on* generados los invocan como globales.
-window.updateProjectHeader = updateProjectHeader;
-window._infoEmpresaBDHint = _infoEmpresaBDHint;
+
+// D2 · acciones delegadas (comboboxes de 4 eventos → una acción por combobox)
+registrarAcciones('info', {
+  vinculoCombo: function (a, el, ev) {
+    if (ev.type === 'focus' || ev.type === 'input') comboboxFilterEmpresas(el);
+    else if (ev.type === 'blur') comboboxCloseDelayed(el);
+    else infoVincularEmpresaPorNombre(el.value);
+  },
+  irBD: function () { navigateToModule('bd-personas'); },
+  vincular: function (a) { infoVincularEmpresa(a[0]); },
+  clienteCombo: function (a, el, ev) {
+    var w = document.getElementById('cliente-warn');
+    if (ev.type === 'focus') { comboboxFilterEmpresas(el); if (w) w.style.display = 'flex'; }
+    else if (ev.type === 'input') { comboboxFilterEmpresas(el); updateInfoField('cliente', el.value); updateProjectHeader(); _infoEmpresaBDHint('cliente', el.value); }
+    else if (ev.type === 'blur') { comboboxCloseDelayed(el); if (w) w.style.display = 'none'; }
+    else infoEmpresaChanged('cliente', el.value);
+  },
+  agenciaCombo: function (a, el, ev) {
+    if (ev.type === 'focus') comboboxFilterEmpresas(el);
+    else if (ev.type === 'input') { comboboxFilterEmpresas(el); updateInfoField('agencia', el.value); _infoEmpresaBDHint('agencia', el.value); }
+    else if (ev.type === 'blur') comboboxCloseDelayed(el);
+    else infoEmpresaChanged('agencia', el.value);
+  },
+  contactoCombo: function (a, el, ev) {
+    if (ev.type === 'focus') comboboxOpen(el);
+    else if (ev.type === 'input') { comboboxFilter(el); updateInfoField(a[0], el.value); }
+    else if (ev.type === 'blur') comboboxCloseDelayed(el);
+    else infoContactoChanged(a[0], el.value);
+  },
+  campo: function (a, el) { updateInfoField(a[0], el.value); },
+  nombre: function (a, el) { updateInfoField('nombreProyecto', el.value); updateProjectHeader(); },
+  derechos: function (a, el) { updateDerechos(a[0], el.value); },
+  irCargos: function () { navigateToModule('cargos'); },
+  estado: function (a, el) { updateProjectState(el.value); },
+  borrarProy: function (a) { deleteProjectFlow(a[0]); },
+  restaurar: function (a) { restoreFromTrash(a[0]); },
+});
