@@ -363,7 +363,7 @@ export function regionSelectHTML(current, opts) {
   let o = '<option value=""' + (cur === '' ? ' selected' : '') + '>— Sin especificar</option>';
   if (cur && !inList) o += '<option value="' + escapeHtml(cur) + '" selected>' + escapeHtml(cur) + ' (texto)</option>';
   o += REGIONES_CHILE.map(r => '<option' + (cur === r ? ' selected' : '') + '>' + escapeHtml(r) + '</option>').join('');
-  return '<select class="input"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.onchange ? ' onchange="' + opts.onchange + '"' : '') + '>' + o + '</select>';
+  return '<select class="input"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.accion ? ' ' + opts.accion : '') + '>' + o + '</select>';
 }
 
 // BANCOS_CHILE → movido a src/lib/data.js (Etapa B3)
@@ -375,7 +375,7 @@ export function bancoSelectHTML(current, opts) {
   let o = '<option value="">\u2014 Sin especificar</option>';
   if (cur && !inList) o += '<option value="' + escapeHtml(cur) + '" selected>' + escapeHtml(cur) + ' (texto)</option>';
   o += BANCOS_CHILE.map(b => '<option' + (cur === b.nombre ? ' selected' : '') + '>' + escapeHtml(b.nombre) + '</option>').join('');
-  return '<select class="select"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.onchange ? ' onchange="' + opts.onchange + '"' : '') + '>' + o + '</select>';
+  return '<select class="select"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.accion ? ' ' + opts.accion : '') + '>' + o + '</select>';
 }
 export function pfBancoChange(nombre) { const cb = document.getElementById('pf_codigoBanco'); if (cb) cb.value = bancoCodigo(nombre); }
 

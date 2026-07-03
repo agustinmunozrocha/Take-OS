@@ -280,7 +280,7 @@ export function openLocDetail(locId) {
             <div class="loc-field"><label>Dirección</label><input class="input" value="${e(l.direccion || '')}" placeholder="Calle 123" ${accionHTML('loc.bd', locId, 'direccion', { on: 'change' })}></div>
             <div class="loc-field"><label>Segunda línea (opcional)</label><input class="input" value="${e(l.direccion2 || '')}" placeholder="Torre B · Depto 302 · Casa 7 · Villa…" ${accionHTML('loc.bd', locId, 'direccion2', { on: 'change' })}></div>
             <div class="loc-field" style="display:flex;gap:8px;"><span style="flex:1;"><label>Comuna</label><input class="input" value="${e(l.comuna || '')}" ${accionHTML('loc.bd', locId, 'comuna', { on: 'change' })}></span><span style="flex:1;"><label>Ciudad</label><input class="input" value="${e(l.ciudad || '')}" ${accionHTML('loc.bd', locId, 'ciudad', { on: 'change' })}></span></div>
-            <div class="loc-field"><label>Región</label>${regionSelectHTML(l.region, {onchange:`locSetBD('${locId}','region',this.value)`})}</div>
+            <div class="loc-field"><label>Región</label>${regionSelectHTML(l.region, { accion: accionHTML('loc.bd', locId, 'region', { on: 'change' }) })}</div>
             <div class="loc-field"><label>Link Google Maps</label><input class="input" value="${e(l.maps || '')}" placeholder="https://maps.google.com/…" ${accionHTML('loc.bd', locId, 'maps', { on: 'change' })}></div>
             <div class="loc-field"><label>Notas generales</label><textarea class="input" rows="2" ${accionHTML('loc.bd', locId, 'notas', { on: 'change' })}>${e(l.notas || '')}</textarea></div>
           </div>

@@ -33,7 +33,7 @@ function tipoCuentaSelectHTML(current, opts) {
   let o = '<option value="">\u2014 Sin especificar</option>';
   if (cur && !inList) o += '<option value="' + escapeHtml(cur) + '" selected>' + escapeHtml(cur) + ' (texto)</option>';
   o += TIPOS_CUENTA.map(t => '<option' + (cur === t ? ' selected' : '') + '>' + escapeHtml(t) + '</option>').join('');
-  return '<select class="select"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.onchange ? ' onchange="' + opts.onchange + '"' : '') + '>' + o + '</select>';
+  return '<select class="select"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.accion ? ' ' + opts.accion : '') + '>' + o + '</select>';
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -975,7 +975,7 @@ function openPersonaForm(mode, contactId) {
               <div class="form-grid cols-2">
                 <div class="field">
                   <label class="field-label">Banco</label>
-                  ${bancoSelectHTML(pago.banco, { id: 'pf_banco', onchange: 'pfBancoChange(this.value)' })}
+                  ${bancoSelectHTML(pago.banco, { id: 'pf_banco', accion: accionHTML('bd.pfBanco', { on: 'change' }) })}
                 </div>
                 <div class="field">
                   <label class="field-label">Código banco (SBIF) <span class="tt" data-tip="Se completa automáticamente según el banco. No es editable.">?</span></label>
@@ -1211,6 +1211,7 @@ registrarAcciones('bd', {
   invitarLink: function () { closeModal(); _invAbrirDatos(); },
   pfEmpresa: function (a, el, ev) { if (ev.type === 'blur') comboboxCloseDelayed(el); else comboboxFilterEmpresas(el); },
   pfExtranjera: function () { togglePfExtranjera(); },
+  pfBanco: function (a, el) { pfBancoChange(el.value); },
   archivarContacto: function (a) { archivarContactoModal(a[0]); },
   guardarPersona: function (a) { submitPersonaForm(a[0], a[1]); },
 });

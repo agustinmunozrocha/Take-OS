@@ -6,10 +6,10 @@
   ════════════════════════════════════════════════════════════════════
   SEGURIDAD · Content-Security-Policy (CSP) — Prioridad #2, §6 ítem 5
   ════════════════════════════════════════════════════════════════════
-  Política ACOTADA (camino 1): conserva 'unsafe-inline' en script/style
-  porque este monolito usa manejadores inline (onclick="..."), un <script>
-  inline gigante y style="..." por todos lados; una CSP estricta sin
-  'unsafe-inline' rompería la app entera. Aun así cierra los demás vectores:
+  D3 (jul-2026): script-src SIN 'unsafe-inline' — el Desacople eliminó los
+  ~991 manejadores on*= (delegación data-accion) y el <script> inline (módulos
+  ES). style-src conserva 'unsafe-inline' (miles de style= — proyecto aparte,
+  decisión documentada en el Plan de Desacople). Además cierra:
   bloquea plugins/objetos (object-src 'none'), fija el origen base
   (base-uri 'self') y restringe DESDE QUÉ ORÍGENES se cargan scripts,
   estilos, fuentes, imágenes y datos.
@@ -32,7 +32,7 @@
   Meta post-modularización (camino 2): pasar handlers inline a
   addEventListener y usar nonce/hash para retirar 'unsafe-inline'.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>TakeOS</title>
 
