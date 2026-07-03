@@ -315,7 +315,7 @@ function applyStoredTheme() {
   else document.documentElement.removeAttribute('data-theme');
   updateThemeButton(theme);
 }
-function toggleTheme() {
+export function toggleTheme() {
   const next = getStoredTheme() === 'light' ? 'dark' : 'light';
   try { window.localStorage.setItem(THEME_KEY, next); } catch (e) {}
   applyStoredTheme();

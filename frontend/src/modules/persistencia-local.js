@@ -134,7 +134,7 @@ function applyLoadedState(obj) {
 }
 
 /* ─── EXPORTAR (.json) ─────────────────────────────────────────────── */
-function exportSave() {
+export function exportSave() {
   try {
     const data = buildSaveObject();
     const json = JSON.stringify(data, null, 2);
@@ -300,7 +300,7 @@ function deleteSnapshot(index) {
   _writeSnapshots(list);
 }
 
-function openSnapshotsModal() {
+export function openSnapshotsModal() {
   const list = _readSnapshots();
   let body;
   if (list.length === 0) {

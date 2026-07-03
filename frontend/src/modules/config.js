@@ -21,7 +21,7 @@ function irAlPanelPersonal() {
   window.location.href = window.location.pathname + '?espacio=1';
 }
 
-function openConfigPanel() {
+export function openConfigPanel() {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `
     <div class="modal-backdrop" onclick="closeModal()">
@@ -107,7 +107,7 @@ function closeConfigPanel() { closeModal(); }
 function _configPanelOpen() { return !!document.querySelector('.config-panel'); }
 
 /* V7.9: perfil de la empresa/productora emisora (datos para documentos). */
-function openEmpresaPerfil(subInicial) {
+export function openEmpresaPerfil(subInicial) {
   /* V11.11.0 · el panel es PÚBLICO para todo el equipo de la productora:
      Equipo y Diseño son visibles para cualquier perfil (solo lectura para
      quien no es Administrador). "Datos de la empresa" sigue siendo exclusivo
