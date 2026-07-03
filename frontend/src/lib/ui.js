@@ -12,7 +12,7 @@
 
 /* ─── MODAL SYSTEM ─────────────────────────────────────────────────── */
 
-function showModal({ title, body, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = false, onConfirm, onCancel }) {
+export function showModal({ title, body, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', danger = false, onConfirm, onCancel }) {
   const root = document.getElementById('modalRoot');
   // V7.2: si cancelLabel viene null/vacío, no renderizamos el botón (antes mostraba "null" o un botón vacío)
   const cancelBtn = (cancelLabel != null && String(cancelLabel).trim() !== '')
