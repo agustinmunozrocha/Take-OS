@@ -90,9 +90,9 @@ const DAL_KNOWN_LEGAL_TPL_IDS = new Set();
 
 /* Mapeos codigo (Postgres) -> etiqueta de la app (lo que la UI ya espera). */
 const _DAL_ROLE_LABEL = { crew: 'Crew', interno: 'Interno', talento: 'Talento', contacto_cliente: 'Contacto cliente', proveedor_individual: 'Proveedor individual' };
-const _DAL_TIPOCUENTA_LABEL = { corriente: 'Cuenta Corriente', vista: 'Cuenta Vista', ahorro: 'Cuenta de Ahorro', rut: 'Cuenta RUT', chequera_electronica: 'Chequera Electr\u00f3nica' };
+export const _DAL_TIPOCUENTA_LABEL = { corriente: 'Cuenta Corriente', vista: 'Cuenta Vista', ahorro: 'Cuenta de Ahorro', rut: 'Cuenta RUT', chequera_electronica: 'Chequera Electr\u00f3nica' };
 const _DAL_TIPO_EMPRESA_LABEL = { cliente: 'Cliente', proveedor: 'Proveedor', agencia: 'Agencia', socio: 'Socio' };
-function _dalBancoNombre(codigo) { if (!codigo) return ''; const b = BANCOS_CHILE.find(x => x.codigo === String(codigo)); return b ? b.nombre : ''; }
+export function _dalBancoNombre(codigo) { if (!codigo) return ''; const b = BANCOS_CHILE.find(x => x.codigo === String(codigo)); return b ? b.nombre : ''; }
 
 /* Fila de Supabase (con satelites embebidos) -> contacto canonico BD_CONTACTOS[id]. */
 function _dalContactoDesdeRow(r) {

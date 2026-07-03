@@ -10,7 +10,7 @@ const LOC_ORIENTACIONES = ['—', 'Norte', 'Sur', 'Oriente', 'Poniente', 'Norori
 const LOC_ESTADOS = { candidata: 'Candidata', confirmada: 'Confirmada', descartada: 'Descartada' }; window.LOC_ESTADOS = LOC_ESTADOS;
 /* V8.3.3 — Regiones de Chile (orden norte→sur). Ciudad y Comuna quedan libres
    porque aún no hay garantía de mantener un catálogo completo actualizado. */
-const REGIONES_CHILE = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "Libertador General Bernardo O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén del General Carlos Ibáñez del Campo', 'Magallanes y de la Antártica Chilena'];
+export const REGIONES_CHILE = ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "Libertador General Bernardo O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén del General Carlos Ibáñez del Campo', 'Magallanes y de la Antártica Chilena'];
 
 const BANCOS_CHILE = [
   { nombre: 'Banco de Chile', codigo: '001' }, { nombre: 'Banco Internacional', codigo: '009' },
