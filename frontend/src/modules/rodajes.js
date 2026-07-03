@@ -1,5 +1,10 @@
 // Rodajes (días de rodaje) — extraído de index.html (Etapa C1)
 
+// D1b · imports reales (bridges de productores intactos; ver Plan v1.1)
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { STATE } from '../lib/state.js';
+import { showModal } from '../lib/ui.js';
+
 /* ════════════════════════════════════════════════════════════════════
    ════════════════════════════════════════════════════════════════════
    V5.3 · CAPA 3 — MÓDULO: RODAJES
