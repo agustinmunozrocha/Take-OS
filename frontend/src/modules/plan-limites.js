@@ -39,7 +39,7 @@ function _planVerPlanes() {
   try { window.open(TAKEOS_LANDING_URL, '_blank', 'noopener'); } catch (e) { window.location.href = TAKEOS_LANDING_URL; }
 }
 /* Modal sobrio reutilizable: hecho + salida + CTA "Ver planes". */
-function _planModalVenta(titulo, cuerpo) {
+export function _planModalVenta(titulo, cuerpo) {
   if (typeof showModal !== 'function') { try { showToast({ kind: 'info', title: titulo, body: cuerpo, duration: 8000 }); } catch (e) {} return; }
   showModal({
     title: titulo,
@@ -70,7 +70,7 @@ function _planModuloBloqueado(recurso) {
 /* D.1 · MANEJADOR CENTRAL. Dado un error de la base: si trae un código de plan,
    muestra la pieza correspondiente y devuelve true (lo manejó). Si no, false
    (para que el caller siga con su manejo de error normal). */
-function manejarErrorPlan(err) {
+export function manejarErrorPlan(err) {
   var raw = (err && err.message) ? String(err.message) : String(err || '');
   var mLim = raw.match(/TAKEOS_PLAN_LIMITE:\s*([a-z_]+)\s*:\s*(\d+)/i);   // recurso + tope
   if (mLim) {

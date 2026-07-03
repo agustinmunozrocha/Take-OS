@@ -21,10 +21,10 @@ import { _setOrgActiva, _bootCoverShow, arrancarTakeOS, resolverEspacioYArrancar
    · cerrar_invitacion(token,'aceptada'|'rechazada') / cancelar_invitacion(token)
    El canal de CORREO aún no existe (dominio/Resend pendiente): la entrega es
    por LINK copiable y, para cuentas ya registradas, por la bandeja interna. */
-const PERFIL_CODIGO_POR_NOMBRE = { 'Administrador': 1, 'Ejecutivo': 2, 'Producción': 3, 'Asistencia de Producción': 4, 'Asistencia': 4, 'Coordinación': 5, 'Creativo': 6, 'Invitado': 7, 'Finanzas / CFO': 8, 'Finanzas': 8 };
+export const PERFIL_CODIGO_POR_NOMBRE = { 'Administrador': 1, 'Ejecutivo': 2, 'Producción': 3, 'Asistencia de Producción': 4, 'Asistencia': 4, 'Coordinación': 5, 'Creativo': 6, 'Invitado': 7, 'Finanzas / CFO': 8, 'Finanzas': 8 };
 const PERFIL_NOMBRE_POR_CODIGO = { 1: 'Administrador', 2: 'Ejecutivo', 3: 'Producción', 4: 'Asistencia de Producción', 5: 'Coordinación', 6: 'Creativo', 7: 'Invitado', 8: 'Finanzas / CFO' };
-function invitacionLink(token) { return window.location.origin + window.location.pathname + '?invitacion=' + encodeURIComponent(token); }
-async function dalInvitar(email, tipo, perfilCodigo, cargoId, projectId) {
+export function invitacionLink(token) { return window.location.origin + window.location.pathname + '?invitacion=' + encodeURIComponent(token); }
+export async function dalInvitar(email, tipo, perfilCodigo, cargoId, projectId) {
   if (!sb) throw new Error('Sin conexión a la base.');
   const { data, error } = await sb.rpc('invitar_a_organizacion', {
     p_org_id: ORG_ID, p_email: email, p_tipo: tipo, p_perfil_codigo: perfilCodigo,
@@ -33,7 +33,7 @@ async function dalInvitar(email, tipo, perfilCodigo, cargoId, projectId) {
   if (error) throw error;
   return data || {};
 }
-function _invMostrarResultado(res) {
+export function _invMostrarResultado(res) {
   const link = invitacionLink(res.token || '');
   const registrado = !!res.registrado;
   document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:560px;">'

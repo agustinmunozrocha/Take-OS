@@ -1,5 +1,22 @@
 // Cargos del proyecto (asignación, perfiles, tope de colaboradores) — extraído de index.html (Etapa C3)
 
+// D1b · imports reales. VETADOS (línea roja #1): ORG_ID, PROJECTS_SOURCE,
+// _TOPE_COLAB/_TOPE_COLAB_ORG (dal los escribe en window — lección #6),
+// TAKEOS_PERFIL (dal lo reasigna). Ciclo cargos⇄dal: esta mitad ya es import;
+// dal consume _cargosKey/_cargosDerivarRECI/_cargoContactIdPorNombre vía
+// window hasta su tranche — bridges :405-420 INTOCABLES.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { STATE, BD_CONTACTOS, BD_PERSONAS } from '../lib/state.js';
+import { closeModal } from '../lib/ui.js';
+import { _normKey } from './bd-excel.js';
+import { openEmpresaPerfil, _empShowSub, _empPerfilesOrg } from './config.js';
+import { dalCargarCargos, dalGuardarCargos, dalCargarTopeColaboradores } from './dal.js';
+import { markDirty } from './persistencia-local.js';
+import { renderInfoProyecto } from './info-proyecto.js';
+import { invitacionLink, dalInvitar, _invMostrarResultado, PERFIL_CODIGO_POR_NOMBRE } from './invitaciones.js';
+import { _planModalVenta, manejarErrorPlan } from './plan-limites.js';
+
 /* ════════════════════════════════════════════════════════════════════
    V11.2.0 · CARGOS DEL PROYECTO
    ════════════════════════════════════════════════════════════════════

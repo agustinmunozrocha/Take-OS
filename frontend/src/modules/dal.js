@@ -7,7 +7,7 @@
 // aquí se escriben via window.X. El resto del estado DAL (sets de IDs conocidos,
 // timers de debounce, mapas label↔code) es interno del módulo.
 
-async function dalCargarCargos(project) {
+export async function dalCargarCargos(project) {
   if (!project || project.data._cargosOK) return;
   if (!sb || PROJECTS_SOURCE !== 'supabase') { project.data._cargosOK = true; return; }
   try {
@@ -42,7 +42,7 @@ async function dalCargarCargos(project) {
   }
 }
 
-async function dalGuardarCargos(project) {
+export async function dalGuardarCargos(project) {
   if (!sb || PROJECTS_SOURCE !== 'supabase' || !project) return false;
   try {
     const payload = (project.data.cargos || []).map(function (c) {
@@ -65,7 +65,7 @@ async function dalGuardarCargos(project) {
 // Tope de colaboradores por proyecto (handoff PR #2). Lee el max del plan de la
 // org activa desde la base; cache por org. null = desconocido -> no bloquea
 // proactivamente (el server-side en guardar_cargos sigue siendo la red de seguridad).
-async function dalCargarTopeColaboradores() {
+export async function dalCargarTopeColaboradores() {
   if (!sb || PROJECTS_SOURCE !== 'supabase') return null;
   if (_TOPE_COLAB != null && _TOPE_COLAB_ORG === ORG_ID) return _TOPE_COLAB;
   try {

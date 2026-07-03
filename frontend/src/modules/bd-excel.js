@@ -17,7 +17,7 @@
    ════════════════════════════════════════════════════════════════════ */
 
 
-function _normKey(s) {
+export function _normKey(s) {
   return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[°º]/g, '').replace(/\s+/g, ' ').trim();
 }
