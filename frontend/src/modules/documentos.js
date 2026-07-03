@@ -207,15 +207,6 @@ function docRemoveArchivo(id) {
 
 
 // ── Window bridges (3 barridos: externos, auto-consumo, nombre-string) ──
-window.docAdd = docAdd;
-window.docAttachPDF = docAttachPDF;
-window.docDelete = docDelete;
-window.docDragLeave = docDragLeave;
-window.docDragOver = docDragOver;
-window.docDrop = docDrop;
-window.docOpenArchivo = docOpenArchivo;
-window.docRemoveArchivo = docRemoveArchivo;
-window.docSet = docSet;
 window.renderDocumentos = renderDocumentos;
 
 // D2 · acciones delegadas
