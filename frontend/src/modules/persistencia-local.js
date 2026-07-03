@@ -15,6 +15,8 @@ import { showModal } from '../lib/ui.js';
 import { navigateToModule } from '../lib/nav.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { _conflictoBannerHide, dalTouchProyecto } from './dal.js';
+import { navigateToControlRoom, renderKanban, renderMetrics } from './kanban.js';
 let UNDO_STACK = [];
 let UNDO_BASELINE = null;
 const UNDO_MAX = 30;
@@ -180,7 +182,7 @@ function mergeAddProjectsFromSave(obj) {
   });
   return res;
 }
-function importSaveFromInput(input) {
+export function importSaveFromInput(input) {
   const file = input.files && input.files[0];
   input.value = ''; // permitir recargar el mismo archivo después
   if (!file) return;
@@ -395,7 +397,7 @@ function exportSingleProject(projectId) {
   }
 }
 
-function importSingleProjectFromInput(input) {
+export function importSingleProjectFromInput(input) {
   const file = input.files && input.files[0];
   input.value = '';
   if (!file) return;

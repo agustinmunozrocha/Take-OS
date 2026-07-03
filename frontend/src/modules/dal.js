@@ -14,7 +14,7 @@
 // kanban (5), bd (2), cargos (3), gastos (goSavePresup), legal (renderLegal),
 // locaciones (2).
 import { escapeHtml, showToast } from '../lib/helpers.js';
-import { BD_CONTACTOS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, PROJECTS, STATE, setUsuarioActual, setTopeColab, setTopeColabOrg, setSource, setTakeosPerfil, setTakeosAcceso, ORG_ID } from '../lib/state.js';
+import { BD_CONTACTOS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, PROJECTS, STATE, setUsuarioActual, setTopeColab, setTopeColabOrg, setSource, setTakeosPerfil, setTakeosAcceso, ORG_ID, CONTACTS_SOURCE, LEGAL_SOURCE, LOCATIONS_SOURCE, PERFIL_SOURCE, PROJECTS_SOURCE, TAKEOS_PERFIL, _TOPE_COLAB, _TOPE_COLAB_ORG } from '../lib/state.js';
 import { _clearStore, _clientUuid, buildDefaultProjectData, syncLegacyFromContactos } from '../lib/modelo.js';
 import { BANCOS_CHILE, DTE_LABEL } from '../lib/data.js';
 import { _authBlockWriteToast, authPuedeGuardarOperaciones, authPuedeGuardarProyecto } from '../lib/auth.js';
@@ -25,6 +25,10 @@ import { restoreLocalLocPhotos } from './persistencia-local.js';
 import { _budgetFindRow, addRow } from './presupuesto-cotizacion.js';
 import { manejarErrorPlan } from './plan-limites.js';
 
+import { _lastViewLeer, navigateToControlRoom, navigateToProject, renderKanban, renderMetrics } from './kanban.js';
+import { bdLocFind, renderLocaciones } from './locaciones.js';
+import { openGlobalBDPersonas, renderBDPersonas } from './bd.js';
+import { renderLegal } from './legal.js';
 export async function dalCargarCargos(project) {
   if (!project || project.data._cargosOK) return;
   if (!sb || PROJECTS_SOURCE !== 'supabase') { project.data._cargosOK = true; return; }
@@ -1676,7 +1680,7 @@ function _conflictoBannerShow(project) {
   var btn = document.getElementById('conflictoBannerBtn');
   if (btn) btn.onclick = function () { _conflictoRecargarAhora(project); };
 }
-function _conflictoBannerHide() {
+export function _conflictoBannerHide() {
   var b = document.getElementById('conflictoBanner');
   if (b && b.parentNode) b.parentNode.removeChild(b);
 }
@@ -1888,7 +1892,6 @@ export async function dalFlushProyectos() {
 /* Banner visible dentro del modulo Base de Datos (claridad sobre comodidad). */
 
 // ── Window bridges DAL (3 barridos: consumo externo, auto-consumo, nombre-string) ──
-window._conflictoBannerHide = _conflictoBannerHide;
 window._dalEmpresaSaveSoon = _dalEmpresaSaveSoon;
 window._dalPerfilSaveSoon = _dalPerfilSaveSoon;
 window.dalBootProyectos = dalBootProyectos;

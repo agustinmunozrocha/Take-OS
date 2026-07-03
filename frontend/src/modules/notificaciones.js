@@ -79,7 +79,7 @@ function notifRenderPanel() {
       + '</div></div>';
   }).join('');
 }
-function bellToggle() {
+export function bellToggle() {
   const p = document.getElementById('notifPanel'); if (!p) return;
   const abrir = (p.style.display === 'none' || !p.style.display);
   if (abrir) {
@@ -88,7 +88,7 @@ function bellToggle() {
     setTimeout(notifMarcarTodas, 1200);
   } else { p.style.display = 'none'; }
 }
-async function notifMarcarTodas() {
+export async function notifMarcarTodas() {
   const ids = NOTIF.filter(function (n) { return !n.read_at; }).map(function (n) { return n.id; });
   if (!ids.length) return;
   const now = new Date().toISOString();
@@ -648,7 +648,7 @@ function ntfWireEditor() {
     });
   }, 60);
 }
-function ntfOpenFromHoja() {
+export function ntfOpenFromHoja() {
   const st = ntfState(); st.tab = 'enviar'; st.tplKey = 'hoja'; st.fromHoja = true; st.override = false;
   window.navigateToModule('correos');
 }

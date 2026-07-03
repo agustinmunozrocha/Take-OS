@@ -22,11 +22,11 @@ export async function _ctaProdEvento(nombre, props) {
 export function _ctaProdDescartado() {
   try { return sessionStorage.getItem(_CTA_PROD_DISMISS_KEY) === '1'; } catch (e) { return false; }
 }
-function ctaProdCerrar() {
+export function ctaProdCerrar() {
   try { sessionStorage.setItem(_CTA_PROD_DISMISS_KEY, '1'); } catch (e) {}
   const el = document.getElementById('espCtaProd'); if (el) el.remove();
 }
-function ctaProdSaberMas() {
+export function ctaProdSaberMas() {
   _ctaProdEvento('cta_productora_click');
   try { window.open(TAKEOS_LANDING_URL, '_blank', 'noopener'); } catch (e) { window.location.href = TAKEOS_LANDING_URL; }
 }
@@ -101,8 +101,6 @@ window.manejarErrorPlan = manejarErrorPlan;
 
 // D0 · puentes que faltaban desde la Etapa C (barrido 3 re-ejecutado): los
 // handlers on* generados los invocan como globales.
-window.ctaProdCerrar = ctaProdCerrar;
-window.ctaProdSaberMas = ctaProdSaberMas;
 
 // D2 · acciones delegadas de este módulo
 registrarAcciones('plan', {

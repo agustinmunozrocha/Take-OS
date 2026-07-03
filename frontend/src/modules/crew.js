@@ -12,6 +12,7 @@ import { markDirty } from './persistencia-local.js';
 import { orgNombre } from '../lib/boot.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { crewAddToBD } from './bd.js';
 function renderCrew() {
   const project = STATE.currentProject;
   if (!project) return;

@@ -64,7 +64,7 @@ function _gsearchResults(q) {
   try { const seen = {}; Object.keys(BD_CONTACTOS || {}).forEach(k => { const c = BD_CONTACTOS[k] || {}; const nom = c.nombre || ''; if (!nom || seen[_gsNorm(nom)]) return; if (test(nom + ' contacto persona')) { seen[_gsNorm(nom)] = 1; out.push({ icon: '👤', label: nom, sub: 'Contacto · Base de Datos', run: () => openGlobalBDPersonas() }); } }); } catch (e) {}
   return out.slice(0, 8);
 }
-function globalSearchInput(q) {
+export function globalSearchInput(q) {
   GSEARCH_CUR = _gsearchResults(q);
   const box = document.getElementById('gsearchResults'); if (!box) return;
   if (!q || !q.trim()) { box.hidden = true; box.innerHTML = ''; return; }
@@ -72,11 +72,11 @@ function globalSearchInput(q) {
   box.innerHTML = GSEARCH_CUR.map((r, i) => `<div class="gsearch-item ${i === 0 ? 'sel' : ''}" ${accionHTML('buscador.ir', i, { on: 'mousedown' })}><span class="gsearch-ic">${r.icon || '•'}</span><span class="gsearch-tx"><span class="gsearch-lb">${escapeHtml(r.label)}${r.adminRequired ? ' <span class="gsearch-lock">🔒</span>' : ''}</span><span class="gsearch-sb">${escapeHtml(r.sub || '')}</span></span></div>`).join('');
   box.hidden = false;
 }
-function globalSearchKey(ev) {
+export function globalSearchKey(ev) {
   if (ev.key === 'Enter') { if (GSEARCH_CUR.length) { ev.preventDefault(); _gsearchGo(0); } }
   else if (ev.key === 'Escape') { const inp = document.getElementById('globalSearch'); if (inp) inp.value = ''; _gsearchHide(); }
 }
-function _gsearchHide() { const box = document.getElementById('gsearchResults'); if (box) { box.hidden = true; box.innerHTML = ''; } }
+export function _gsearchHide() { const box = document.getElementById('gsearchResults'); if (box) { box.hidden = true; box.innerHTML = ''; } }
 function _gsearchGo(i) {
   const r = GSEARCH_CUR[i]; if (!r) return;
   const inp = document.getElementById('globalSearch'); if (inp) inp.value = '';

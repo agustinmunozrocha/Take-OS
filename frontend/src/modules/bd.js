@@ -11,7 +11,7 @@ import { _buildPerfilPago, _buildPerfilTalento, _genId, normLocName, syncLegacyF
 import { DTE_LABEL, DTE_LABEL_SHORT, DTE_OPTIONS } from '../lib/data.js';
 import { authNivel } from '../lib/auth.js';
 import { fmtMoney, initials } from '../lib/calc.js';
-import { _edadDesde, _empTieneRol, _locThumbAsync, _toISODate, bancoSelectHTML, closeModal, comboboxAddToBD, pfBancoChange, regionSelectHTML, showModal } from '../lib/ui.js';
+import { _edadDesde, _empTieneRol, _locThumbAsync, _toISODate, bancoSelectHTML, closeModal, comboboxAddToBD, pfBancoChange, regionSelectHTML, showModal, comboboxCloseDelayed, comboboxFilter, comboboxFilterEmpresas, comboboxOpen, togglePfCrew, togglePfExtranjera } from '../lib/ui.js';
 import { renderModule } from '../lib/nav.js';
 import { STATES, _lastViewSave } from './kanban.js';
 import { calcSummaryFin } from './presupuesto-cotizacion.js';
@@ -46,7 +46,7 @@ export function openPersonaByName(nombre) {
   openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre; el.focus(); }
 }
 
-function renderBDPersonas() {
+export function renderBDPersonas() {
   const content = document.getElementById('moduleContent');
   const tab = STATE.ui.bdTab || 'personas';
   const tabStyle = (active) => `padding:8px 16px;background:${active?'var(--accent)':'transparent'};color:${active?'#fff':'var(--ink-secondary)'};border:1px solid ${active?'var(--accent)':'var(--border-soft)'};border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;`;
@@ -845,7 +845,7 @@ const PF_ROLES = ['Crew', 'Interno', 'Talento', 'Contacto cliente', 'Proveedor i
 function openAddPersonaQuick() { openPersonaForm('create', null); }
 /* V8.2 (#2): desde Crew, las advertencias "Sin BD"/"Agregar a BD" abren el
    formulario de Nueva persona con el nombre ya rellenado. */
-function crewAddToBD(nombre) { openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre || ''; el.focus(); } }
+export function crewAddToBD(nombre) { openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre || ''; el.focus(); } }
 
 /* V10.5.1: editar fichas de BD requiere permiso de módulo BD en nivel E
    (Administrador, Ejecutivo, Producción, Asistencia, Coordinación). Reemplaza el

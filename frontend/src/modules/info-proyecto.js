@@ -10,14 +10,15 @@ import { STATE, BD_PERSONAS, PROJECTS, BD_EMPRESAS, BD_EMPRESAS_BYID, TRASH, ORG
 import { buildDefaultProjectData } from '../lib/modelo.js';
 import { authNivel } from '../lib/auth.js';
 import { fmtMoney, calcProjectTotals, fmtDelta, deltaClassCosto } from '../lib/calc.js';
-import { showModal, closeModal } from '../lib/ui.js';
-import { STATES, navigateToControlRoom, renderMetrics, renderKanban } from './kanban.js';
+import { showModal, closeModal, comboboxCloseDelayed, comboboxFilter, comboboxFilterEmpresas, comboboxOpen } from '../lib/ui.js';
+import { STATES, navigateToControlRoom, renderMetrics, renderKanban, deleteProjectFlow } from './kanban.js';
 import { calcSummaryFin } from './presupuesto-cotizacion.js';
 import { _normKey, buildPersonasDatalist } from './bd-excel.js';
 import { dalLoadProyectos, _dalProyectoPartes, _dalFusionarProyecto, DAL_KNOWN_PROJECT_IDS } from './dal.js';
 import { markDirty } from './persistencia-local.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { navigateToModule } from '../lib/nav.js';
 /* ════════════════════════════════════════════════════════════════════
    ════════════════════════════════════════════════════════════════════
    MÓDULO: INFO PROYECTO
@@ -480,7 +481,7 @@ async function dalCargarPapelera() {
   });
 }
 /* V5.10 (Respuesta 1): Papelera — listar, restaurar. */
-async function openTrash() {
+export async function openTrash() {
   await dalCargarPapelera();
   if (TRASH.length === 0) {
     showModal({ title: 'Papelera vacía', body: 'No hay proyectos eliminados. Cuando elimines un proyecto, queda aquí por si necesitas recuperarlo.', confirmLabel: 'Cerrar', cancelLabel: '', onConfirm: () => {} });

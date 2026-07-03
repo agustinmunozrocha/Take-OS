@@ -60,7 +60,7 @@ function invCopiarLink() {
   showToast({ kind: 'success', title: 'Link copiado', body: 'Pégalo donde quieras compartirlo.' });
 }
 /* Pantalla "Invitación recibida" (momento E del flujo). */
-async function abrirInvitacionRecibida(token) {
+export async function abrirInvitacionRecibida(token) {
   try { sessionStorage.removeItem('takeos_inv_pendiente'); } catch (e) {}
   let info = null;
   try {
@@ -200,7 +200,6 @@ async function invRechazar(token) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window.abrirInvitacionRecibida = abrirInvitacionRecibida;
 window.dalInvitar = dalInvitar;
 window.invitacionLink = invitacionLink;
 

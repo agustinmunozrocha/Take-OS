@@ -231,7 +231,7 @@ export function displayMoneyInputValue(n) {
 
 /* Handler de inputs monetarios: parsea, actualiza el modelo, y re-formatea
    lo que ve el usuario en el mismo input. */
-function onMoneyInput(input, sectionKey, dept, idx, field) {
+export function onMoneyInput(input, sectionKey, dept, idx, field) {
   const parsed = parseMoneyCLP(input.value);
   updateRowField(sectionKey, dept, idx, field, parsed);
   input.value = parsed == null ? '' : displayMoneyInputValue(parsed);

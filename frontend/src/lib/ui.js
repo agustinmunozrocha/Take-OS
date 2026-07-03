@@ -220,11 +220,11 @@ export function comboboxAddEmpresaToBD(btn) {
   inp.dispatchEvent(new Event('change'));
 }
 function dropdownDe(wrap) { return wrap ? wrap.querySelector('.combobox-dropdown') : null; }
-function comboboxOpen(inputEl) {
+export function comboboxOpen(inputEl) {
   comboboxFilter(inputEl);
 }
 
-function comboboxFilter(inputEl) {
+export function comboboxFilter(inputEl) {
   const wrap = inputEl.closest('.combobox-wrap');
   if (!wrap) return;
   const dropdown = wrap.querySelector('.combobox-dropdown');
@@ -278,7 +278,7 @@ export function positionComboboxDropdown(inputEl, dropdown) {
   dropdown.style.width = dw + 'px';
 }
 
-function comboboxSelect(optEl, value) {
+export function comboboxSelect(optEl, value) {
   // onmousedown se dispara ANTES de onblur, evitando que el dropdown se cierre primero
   const wrap = optEl.closest('.combobox-wrap');
   const input = wrap.querySelector('.combobox-input');
@@ -301,7 +301,7 @@ function comboboxSelect(optEl, value) {
 /* NTF_LABELS, NTF_*_VARS, NTF_TPL_META, NTF_EXTRA_TPLS, ntfState, ntfEnsureSched,
    ntfTemplates, renderNotificaciones, ntfSend, ntfOpenFromHoja, y todas las ntf*
    → movidos a src/modules/notificaciones.js (Etapa 2) */
-function comboboxCloseDelayed(inputEl) {
+export function comboboxCloseDelayed(inputEl) {
   // Delay para que onmousedown del option alcance a registrar
   setTimeout(() => {
     const wrap = inputEl.closest('.combobox-wrap');
@@ -395,12 +395,12 @@ export function _edadDesde(iso) {
   return (age >= 0 && age < 130) ? String(age) : '';
 }
 
-function togglePfCrew() {
+export function togglePfCrew() {
   const cb = Array.from(document.querySelectorAll('.pf-role')).find(c => c.value === 'Crew');
   const sec = document.getElementById('pf_crew_section');
   if (sec) sec.style.display = (cb && cb.checked) ? '' : 'none';
 }
-function togglePfExtranjera() {
+export function togglePfExtranjera() {
   const cb = document.getElementById('pf_cuentaExtranjera');
   const chile = document.getElementById('pf_pago_chile');
   const ext = document.getElementById('pf_pago_ext');
@@ -409,7 +409,7 @@ function togglePfExtranjera() {
   if (ext) ext.style.display = on ? '' : 'none';
 }
 
-function comboboxFilterEmpresas(inputEl) {
+export function comboboxFilterEmpresas(inputEl) {
   const wrap = inputEl.closest('.combobox-wrap'); if (!wrap) return;
   const dropdown = wrap.querySelector('.combobox-dropdown'); if (!dropdown) return;
   // V11.23 (Pasada 4.1): el input puede declarar un rol (data-emp-rol = proveedor|
@@ -791,9 +791,6 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
 
 // ── Bridges C6 (barrido final) ──
 window.THEME_KEY = THEME_KEY;
-window.comboboxFilterEmpresas = comboboxFilterEmpresas;
-window.togglePfCrew = togglePfCrew;
-window.togglePfExtranjera = togglePfExtranjera;
 
 // D2 · namespace 'ui': acciones universales (cerrar/backdrop, movidas desde
 // delegacion.js para no cerrar el ciclo delegacion⇄ui) + las propias.
