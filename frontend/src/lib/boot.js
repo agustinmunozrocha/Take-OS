@@ -8,7 +8,7 @@
 // VETADO: _TIENE_EMPRESA (boot lo escribe).
 import { supabaseInit } from './supabase.js';
 import { dalBootTaxRates } from './rates.js';
-import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH } from './state.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH, setOrgId, setSource, setTakeosAcceso, setTieneEmpresa, setUserNombre, setUserApellido, setUsuarioActual, TAKEOS_PERFIL } from './state.js';
 import { authNivel, authNivelModulo, authPuedeVer } from './auth.js';
 import { applyStoredTheme, setupTooltipListeners, showModal } from './ui.js';
 import { newProject, renderKanban, renderMetrics } from '../modules/kanban.js';
@@ -25,8 +25,8 @@ function currentUser() {
   if (typeof BD_PERSONAS !== 'undefined') { const ks = Object.keys(BD_PERSONAS); if (ks.length) return ks[0]; }
   return 'Yo';
 }
-function setCurrentUser(name) { USUARIO_ACTUAL = name || ''; try { localStorage.setItem('takeos_usuario_actual', USUARIO_ACTUAL); } catch (e) {} try { renderMetrics(); renderKanban(); } catch (e) {} }
-(function(){ try { const u = localStorage.getItem('takeos_usuario_actual'); if (u) USUARIO_ACTUAL = u; } catch (e) {} })();
+function setCurrentUser(name) { setUsuarioActual(name || ''); try { localStorage.setItem('takeos_usuario_actual', window.USUARIO_ACTUAL); } catch (e) {} try { renderMetrics(); renderKanban(); } catch (e) {} }
+(function(){ try { const u = localStorage.getItem('takeos_usuario_actual'); if (u) setUsuarioActual(u); } catch (e) {} })();
 
 // TAREAS/SEÑALES: ensureTareas, ensureSenales, marcarSenal*, senalAplica, userSenales, menciones, openTareasModal, _tm*, renderTareasModal, tm*, renderMisTareas, crtToggle, crtGoTask, crtGoSenal, STORAGE_BUCKET_ADJUNTOS → movido a src/modules/tareas.js (Etapa C3)
 /* renderMetrics, renderKanban, renderProjectCard -> movidos a src/modules/kanban.js (Etapa 2) */
@@ -146,10 +146,10 @@ export function _setOrgActiva(orgId){
           Object.keys(o).forEach(function (k) { delete o[k]; });
         });
         Object.keys(EMPRESA_PERFIL).forEach(function (k) { delete EMPRESA_PERFIL[k]; });
-        window.CONTACTS_SOURCE = 'pending'; window.LOCATIONS_SOURCE = 'pending';
-        window.LEGAL_SOURCE = 'pending'; window.PERFIL_SOURCE = 'pending';
-        window.PROJECTS_SOURCE = 'pending';
-        window.TAKEOS_ACCESO = null;                      // fail-closed hasta dalLoadPermisos de la nueva org
+        setSource('contacts', 'pending'); setSource('locations', 'pending');
+        setSource('legal', 'pending'); setSource('perfil', 'pending');
+        setSource('projects', 'pending');
+        setTakeosAcceso(null);                      // fail-closed hasta dalLoadPermisos de la nueva org
         if (window.STATE) window.STATE.currentProject = null;
         if (window.dalResetOrg) window.dalResetOrg();     // sets de IDs conocidos + timers pendientes del DAL + época (aborta cadenas de boot en vuelo)
         if (window._persisResetOrg) window._persisResetOrg();   // pilas de deshacer + timer de autosave de la org anterior
@@ -173,7 +173,7 @@ export function _setOrgActiva(orgId){
         } catch (e) {}
       } catch (e) { console.error('[org] reset al cambiar de organización', e); }
     }
-    ORG_ID = s;
+    setOrgId(s);
     try { localStorage.setItem(_ORG_LS_KEY, s); } catch(e){}   // recordamos la última (para futura entrada directa)
     return true;
   }catch(e){ return false; }
@@ -618,7 +618,7 @@ export async function resolverEspacioYArrancar(){
     let _invs = [];
     try { const ir = await client.rpc('mis_invitaciones'); if (!ir.error && Array.isArray(ir.data)) _invs = ir.data; } catch (e) {}
     if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); _espInyectarHerramientas(); _espInyectarCtaProductora(); return; }  // cuenta sin productora aún (land-and-expand)
-    if (rows.length === 1 && !forzar && _invs.length === 0 && rows[0].tipo !== 'externo') { _TIENE_EMPRESA = true; _bootCoverShow('Entrando a tu productora…'); _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // un interno único entra directo a su productora
+    if (rows.length === 1 && !forzar && _invs.length === 0 && rows[0].tipo !== 'externo') { setTieneEmpresa(true); _bootCoverShow('Entrando a tu productora…'); _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // un interno único entra directo a su productora
     /* V11.9.7 · un externo opera desde su Panel Personal: ve sus proyectos y
        entra directo a ellos. Nunca aterriza en el Control Room de la productora. */
     renderEspacioUsuario(_espConstruir(rows, email));
@@ -648,7 +648,7 @@ async function iniciarSesionTakeOS() {
       if (uid) {
         var pr = await client.from('user_profiles').select('user_id, nombre, apellido').eq('user_id', uid).maybeSingle();
         if (pr.error) console.warn('[perfil] no se pudo verificar el perfil personal; se omite el onboarding', pr.error);
-        if (!pr.error && pr && pr.data) { USER_NOMBRE = String(pr.data.nombre || '').trim(); USER_APELLIDO = String(pr.data.apellido || '').trim(); try { aplicarUsuario(); } catch (e) {} }
+        if (!pr.error && pr && pr.data) { setUserNombre(String(pr.data.nombre || '').trim()); setUserApellido(String(pr.data.apellido || '').trim()); try { aplicarUsuario(); } catch (e) {} }
         if (!pr.error && (!pr || !pr.data)) {
           abrirPerfilUsuario(true, function () { resolverEspacioYArrancar(); });
           return;
