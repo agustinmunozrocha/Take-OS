@@ -29,7 +29,6 @@ let _bdReplaceAll;   // D4c: estado propio del módulo (antes window._bdReplaceA
    - Importación parcial + resumen de lo omitido.
    ════════════════════════════════════════════════════════════════════ */
 
-
 export function _normKey(s) {
   return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[°º]/g, '').replace(/\s+/g, ' ').trim();
@@ -742,22 +741,9 @@ export function buildPersonasDatalist() {
 }
 
 // ── Window bridges XLSX BD ─────────────────────────────────────────
-window._normKey             = _normKey;             // locaciones.js la llama como _normKey; combobox (index) desnuda
-window._normRut             = _normRut;
-window.ensureXLSX           = ensureXLSX;
-window.ensureExcelJS        = ensureExcelJS;
-window._normRutBD           = _normRutBD;
-window._normPhoneBD         = _normPhoneBD;
-window._normEmailBD         = _normEmailBD;
-window._normNameBD          = _normNameBD;          // comboboxAddEmpresaToBD (index) y bd.js la llaman
+
 window._codigoBancoSBIF     = _codigoBancoSBIF;
 window._nombreBancoOficial  = _nombreBancoOficial;
-window.exportBDExcelV71     = exportBDExcelV71;
-window.downloadBDPlantilla  = downloadBDPlantilla;
-window.importBDExcelV71     = importBDExcelV71;
-window.processBDRows        = processBDRows;
-window.showBDImportResult   = showBDImportResult;
-window.buildPersonasDatalist = buildPersonasDatalist; // presupuesto-cotizacion.js:296 e INFO PROYECTO (index) la llaman
 
 // D4b · ganchos definidos por este módulo (consumidos por módulos más tempranos)
 define('_codigoBancoSBIF', _codigoBancoSBIF);

@@ -344,20 +344,7 @@ export async function confirmDeleteProject(id) {
 
 // ── Puentes a window (el monolito clásico los busca como globales) ───────────
 
-window.STATES                  = STATES;
-window.renderMetrics           = renderMetrics;
-window.renderKanban            = renderKanban;
-window.renderProjectCard       = renderProjectCard;
-window.navigateToControlRoom   = navigateToControlRoom;
-window.navigateToProject       = navigateToProject;
-window.projectClientNet        = projectClientNet;
-window.projectAttentionCount   = projectAttentionCount;
-window.projectsNeedingAttention = projectsNeedingAttention;
 window.newProject              = newProject;
-window.deleteProjectFlow       = deleteProjectFlow;
-window.confirmDeleteProject    = confirmDeleteProject;
-window._lastViewSave           = _lastViewSave;
-window._lastViewLeer           = _lastViewLeer;
 
 // D2 · acciones delegadas (panel/exportar llaman vía window: aristas diferidas de D1)
 registrarAcciones('kanban', {

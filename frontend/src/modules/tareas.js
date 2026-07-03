@@ -303,18 +303,8 @@ function crtGoTask(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) 
 function crtGoSenal(projId, seccion) { if (!PROJECTS.find(x => x.id === projId)) return; navigateToProject(projId); setTimeout(() => { try { navigateToModule(seccion); } catch (e) {} }, 90); }
 
 // ── Window bridges (3 barridos func+const) ──
-window._tm = _tm;
-window.crtGoSenal = crtGoSenal;
-window.crtGoTask = crtGoTask;
-window.crtToggle = crtToggle;
-window.ensureSenales = ensureSenales;
-window.ensureTareas = ensureTareas;
-window.marcarSenal = marcarSenal;
 window.mentionBlur = mentionBlur;
 window.mentionInput = mentionInput;
-window.openTareasModal = openTareasModal;
-window.renderMisTareas = renderMisTareas;
-window.userSenales = userSenales;
 
 // D2 · acciones delegadas
 registrarAcciones('tm', {

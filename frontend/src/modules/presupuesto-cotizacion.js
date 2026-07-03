@@ -7,8 +7,8 @@ import { STATE, TAKEOS_PERFIL } from '../lib/state.js';
 import { escapeHtml, showToast, safeUrl } from '../lib/helpers.js';
 // D1e · imports reales (fusionado con los preexistentes de la era C — lección #12).
 // DIFERIDOS anti-ciclo (quedan vía window): boot (applyModuleReadonly/orgNombre),
-// dal, bd-excel, gastos (ciclo DURO: renderGastos/_syncGastosCostoReal/goLinea* —
-// mueren en D2), info-proyecto (_markRowDirty), legal, plan-rodaje, calculadoras, config.
+// dal, bd-excel, gastos (ciclo DURO: gancho('renderGastos')/_syncGastosCostoReal/goLinea* —
+// mueren en D2), info-proyecto (gancho('_markRowDirty')), legal, plan-rodaje, calculadoras, config.
 import { BD_PERSONAS, EMPRESA_PERFIL, STATES_WITH_LOCKED_BUDGET, STATES_WITH_REAL_COST } from '../lib/state.js';
 import { COTIZACION_CONDICIONES_DEFAULTS, DTE_LABEL, DTE_OPTIONS, UNIDAD_OPTIONS } from '../lib/data.js';
 import { calcCostoEmpresa, deltaClassCosto, deltaClassGanancia, displayMoneyInputValue, fmtDelta, fmtDeltaWithSymbol, fmtMoney, fmtPct, getCostoReal, parseMoneyCLP, readNum, onMoneyInput } from '../lib/calc.js';
@@ -462,7 +462,7 @@ function _renameServiceDeptCore(idx, rawNew) {
   const rebuilt = {};
   names.forEach(n => { rebuilt[n === oldName ? newName : n] = d[n]; });
   project.data.servicios = rebuilt;
-  (rebuilt[newName] || []).forEach(_markRowDirty);   // Pasada 1 · cambió el departamento de estas filas → re-enviarlas (su department_id se resuelve por nombre en el RPC)
+  (rebuilt[newName] || []).forEach(gancho('_markRowDirty'));   // Pasada 1 · cambió el departamento de estas filas → re-enviarlas (su department_id se resuelve por nombre en el RPC)
   markDirty();
   return { oldName, newName };
 }
@@ -914,7 +914,7 @@ function rowDrop(ev) {
   if (from !== to) {
     const moved = arr.splice(from, 1)[0];
     arr.splice(to, 0, moved);
-    arr.forEach(_markRowDirty);   // Pasada 1 · cambió la posición de las filas → re-enviarlas para persistir el orden
+    arr.forEach(gancho('_markRowDirty'));   // Pasada 1 · cambió la posición de las filas → re-enviarlas para persistir el orden
     markDirty();
   }
   _budgetDrag = null;
@@ -1111,7 +1111,7 @@ function budgetColResizeReset(ev, sectionKey, colId) {
   var all = _budgetColWStore();
   if (all[sectionKey]) { delete all[sectionKey][colId]; try { localStorage.setItem('takeos_budget_colw', JSON.stringify(all)); } catch (e) {} }
   /* re-render SOLO de la sección afectada (no toda la página): renderServiciosBody /
-     renderSimpleSection / renderGastos preservan el scroll horizontal, así la columna
+     renderSimpleSection / gancho('renderGastos') preservan el scroll horizontal, así la columna
      vuelve a su ancho por defecto sin que la vista salte a la izquierda. */
   if (sectionKey === 'gastosReg') { if (typeof renderGastos === 'function') gancho('renderGastos')(); }
   else if (sectionKey === 'hlCrew' || sectionKey === 'hlExt') { if (typeof renderHojaLlamado === 'function') gancho('renderHojaLlamado')(); }
@@ -3500,7 +3500,6 @@ function cotBuildCartaHTML(project, opts) {
 
 /* ─── Exportación PDF ───────────────────────────────────────────────── */
 
-
 /* ─── V6.5 (Nota 2): export del detalle de presupuesto a CSV (abre en Excel) ──
    Sin dependencias ni backend: CSV con separador ';' (Excel es-CL) y BOM UTF-8
    para que las tildes se lean bien. Base/overall = presupuesto real (con
@@ -3721,7 +3720,7 @@ function cotCondPreviewVivo() {
    3 plantillas estructurales: Editorial / Carta formal / Manifiesto.
    Personalización (plantilla, color, logo, tamaño de logo, tipografía,
    orientación, formato, márgenes) persiste como default de la productora.
-   Sin literales de marca: nombre por gancho('orgNombre')(), logo por _orgLogos(),
+   Sin literales de marca: nombre por gancho('orgNombre')(), logo por valor('_orgLogos')(),
    contacto por gancho('legalRep')()/EMPRESA_PERFIL con fallback vacío.
    ════════════════════════════════════════════════════════════════════ */
 
@@ -3810,7 +3809,7 @@ function cotPrevSaveSettings(patch) {
 /* ── Logo seleccionado (default = principal) ── */
 function cotPrevLogoData(opts) {
   try {
-    const logos = _orgLogos().filter(l => l && l.dataUrl);
+    const logos = valor('_orgLogos')().filter(l => l && l.dataUrl);
     if (opts && opts.logoId) { const f = logos.find(l => l.id === opts.logoId); if (f) return f.dataUrl; }
     return gancho('orgLogo')();
   } catch (e) { return ''; }
@@ -4139,7 +4138,7 @@ function cotPrevPanelHTML() {
   const colorCtl = `<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;">${colorSw}<label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-muted,#a0a399);cursor:pointer;">Otro <input type="color" value="${o.acc || '#B03A2F'}" data-accion="pre.d" data-args="[&quot;cotPrevSetOptLive&quot;, &quot;acc&quot;, &quot;\u00a7v\u00a7&quot;]" data-on="input" style="width:28px;height:28px;border:none;background:none;padding:0;cursor:pointer;"></label></div>`;
 
   let logos = [];
-  try { logos = (typeof _orgLogos === 'function') ? _orgLogos().filter(l => l && l.dataUrl) : []; } catch (e) { logos = []; }
+  try { logos = (typeof _orgLogos === 'function') ? valor('_orgLogos')().filter(l => l && l.dataUrl) : []; } catch (e) { logos = []; }
   const logoCtl = logos.length
     ? logos.map(l => { const on = o.logoId ? (o.logoId === l.id) : !!l.principal; return `<label style="display:flex;align-items:center;gap:7px;border:1px solid ${on ? 'var(--accent,#B03A2F)' : 'var(--rule,#34342f)'};border-radius:8px;padding:5px 8px;cursor:pointer;margin-bottom:6px;background:var(--bg-surface-soft,#262624);"><input type="radio" name="cotPrevLogo" ${on ? 'checked' : ''} ${accionHTML('pre.d', 'cotPrevSetOpt', 'logoId', l.id, { on: 'change' })}><img src="${safeUrl(l.dataUrl)}" style="height:22px;max-width:64px;object-fit:contain;"><span style="font-size:11px;color:var(--ink-secondary,#d3d6cb);">${E(l.nombre || 'Logo')}</span></label>`; }).join('')
     : '<div style="font-size:10.5px;color:var(--ink-faint,#71736a);line-height:1.4;">Carga el logo de la productora en Configuración → Diseño para que aparezca en los documentos.</div>';
@@ -4328,168 +4327,44 @@ export function _budgetFindRow(project, clientUuid) {
 // ── F: goCotizadoTotal (disperso, línea 22501)
 export function goCotizadoTotal(project) { try { const f = calcSummaryFin(project); return (f && f.subtotal) ? f.subtotal.cot : 0; } catch (e) { return 0; } }
 
-
-
 // ── Puentes a window (para que el classic script y los onclick inline sigan funcionando) ──
 // Constantes de módulo
-window._BUDGET_COL_CFG             = _BUDGET_COL_CFG;
-window.BUDGET_MENU_W               = BUDGET_MENU_W;
-window.COTPREV_MM2PX               = COTPREV_MM2PX;
+
 // Helpers compartidos
-window.cotizadoLocked              = cotizadoLocked;
-window.getBDPresupuesto            = getBDPresupuesto;
-window.isEmptyTemplateRow          = isEmptyTemplateRow;
-window.purgeEmptyRows              = purgeEmptyRows;
+
 window._clientUuid                 = _clientUuid;
-window._budgetQueueDeletes         = _budgetQueueDeletes;
-window.renderUnidadCell            = renderUnidadCell;
-window.renderUnidadCellSelect      = renderUnidadCellSelect;
-window.renderUnidadCellInput       = renderUnidadCellInput;
+
 // Presupuesto — render
-window.renderPresupuesto           = renderPresupuesto;
-window.renderPresupuestoHistorico  = renderPresupuestoHistorico;
-window.renderSummaryFin            = renderSummaryFin;
-window.renderServiciosBody         = renderServiciosBody;
-window.renderSimpleSection         = renderSimpleSection;
-window.renderRoleTable             = renderRoleTable;
-window.renderRoleRow               = renderRoleRow;
-window.renderHeadcountPanel        = renderHeadcountPanel;
+
 // Presupuesto — cálculo
-window.calcSummaryFin              = calcSummaryFin;   // kanban.js lo usa
-window.recalcAlerts                = recalcAlerts;
-window.recalcAllDeptSummaries      = recalcAllDeptSummaries;  // llamado desde fuera del bloque (~línea 16009)
-window.recalcKPIs                  = recalcKPIs;
-window.recalcSubdeptTotals         = recalcSubdeptTotals;
-window.recalcDeptSummary           = recalcDeptSummary;
+
 // Presupuesto — acciones
-window.toggleBudgetCotizado        = toggleBudgetCotizado;
-window.snapshotFullBudget          = snapshotFullBudget;
-window.presupCotVersionBarHTML     = presupCotVersionBarHTML;
-window.presupSetCotVersion         = presupSetCotVersion;
-window.exportPresupuestoExcel      = exportPresupuestoExcel;
-window.budgetSortBy                = budgetSortBy;
-window.budgetSortClear             = budgetSortClear;
-window.budgetColResizeDown         = budgetColResizeDown;
-window.budgetColResizeReset        = budgetColResizeReset;
-window._budgetFindRow              = _budgetFindRow;
-window.openVisualizacionPanel      = openVisualizacionPanel;
+
 // Presupuesto — filas y departamentos
-window.addRow                      = addRow;
-window.deleteRow                   = deleteRow;
-window.updateRowField              = updateRowField;
-window.afterRowChange              = afterRowChange;
-window.afterRowConfirmToggle       = afterRowConfirmToggle;
-window.openRowNote                 = openRowNote;
-window.saveRowNote                 = saveRowNote;
-window.addServiceDept              = addServiceDept;
-window.renameServiceDept           = renameServiceDept;
-window.deleteServiceDept           = deleteServiceDept;
-window.moveServiceDept             = moveServiceDept;
-window.vizRenameInput              = vizRenameInput;
-window.rowHandleDown               = rowHandleDown;
-window.rowDragStart                = rowDragStart;
-window.rowDragOver                 = rowDragOver;
-window.rowDrop                     = rowDrop;
-window.rowDragEnd                  = rowDragEnd;
-window.isCollapsed                 = isCollapsed;
-window.toggleDept                  = toggleDept;
+
 // Presupuesto — finanzas/comisiones/riesgos
-window.updateFinanzasField         = updateFinanzasField;
-window.updateComisionMode          = updateComisionMode;
-window.updateComisionValue         = updateComisionValue;
-window.updateComisionLabel         = updateComisionLabel;
-window.addComision                 = addComision;
-window.deleteComision              = deleteComision;
-window.updateRiesgoLabel           = updateRiesgoLabel;
-window.updateRiesgoMode            = updateRiesgoMode;
-window.updateRiesgoValue           = updateRiesgoValue;
-window.addRiesgo                   = addRiesgo;
-window.deleteRiesgo                = deleteRiesgo;
-window.addExtraIngreso             = addExtraIngreso;
-window.updateExtraIngresoLabel     = updateExtraIngresoLabel;
-window.updateExtraIngresoMonto     = updateExtraIngresoMonto;
-window.deleteExtraIngreso          = deleteExtraIngreso;
-window.updateAsistentes            = updateAsistentes;
-window.headcountPanelHTML          = headcountPanelHTML;
-window.calcHeadcount               = calcHeadcount;
-window.rowCountsAsPerson           = rowCountsAsPerson;
+
 // Presupuesto — unidad
-window.onUnidadSelectChange        = onUnidadSelectChange;
-window.onUnidadInputChange         = onUnidadInputChange;
-window.onUnidadReset               = onUnidadReset;
-window.goCotizadoTotal             = goCotizadoTotal;
+
 // Cotización — render y CRUD
-window.renderCotizacion            = renderCotizacion;
-window.ensureCotizaciones          = ensureCotizaciones;
-window.ensureCotizacion            = ensureCotizacion;
-window.cotUltimaNum                = cotUltimaNum;
-window.cotCrearVersion             = cotCrearVersion;
-window.cotSetActiveVersion         = cotSetActiveVersion;
-window.cotNuevaVersion             = cotNuevaVersion;
-window.cotDesbloquearMisma         = cotDesbloquearMisma;
-window.cotAbrirComparador          = cotAbrirComparador;
-window.cotCmpSelectOffer           = cotCmpSelectOffer;
-window.cotAddOferta                = cotAddOferta;
-window.cotDeleteOferta             = cotDeleteOferta;
-window.cotSetMeta                  = cotSetMeta;
-window.cotSetCondicion             = cotSetCondicion;
-window.cotSetCondicionMoney        = cotSetCondicionMoney;
-window.cotSetOfertaField           = cotSetOfertaField;
-window.cotMoneyOferta              = cotMoneyOferta;
-window.cotSetVersionNota           = cotSetVersionNota;
-window.cotRealPresup               = cotRealPresup;
-window.cotBudgetRows               = cotBudgetRows;
-window.cotContarEntregables        = cotContarEntregables;
+
 // Cotización — drag
-window.cotDragStart                = cotDragStart;
-window.cotDragEnd                  = cotDragEnd;
-window.cotDragOver                 = cotDragOver;
-window.cotDragLeave                = cotDragLeave;
-window.cotDrop                     = cotDrop;
+
 // Cotización — bullets
-window.cotBulletEdit               = cotBulletEdit;
-window.cotBulletAdd                = cotBulletAdd;
-window.cotBulletDel                = cotBulletDel;
-window.cotRegenIncluye             = cotRegenIncluye;
-window.cotRerenderBullets          = cotRerenderBullets;
+
 // Cotización — videos y variables
-window.cotRerenderVideos           = cotRerenderVideos;
-window.cotVideoAdd                 = cotVideoAdd;
-window.cotVideoDel                 = cotVideoDel;
-window.cotVideoName                = cotVideoName;
-window.cotVarAdd                   = cotVarAdd;
-window.cotVarEdit                  = cotVarEdit;
-window.cotVarDel                   = cotVarDel;
+
 // Cotización — snaps
-window.cotSnapEdit                 = cotSnapEdit;
-window.cotSnapAdd                  = cotSnapAdd;
-window.cotSnapDel                  = cotSnapDel;
+
 // Cotización — descripción
-window.cotDescGuardarAlto          = cotDescGuardarAlto;
-window.cotDescWrap                 = cotDescWrap;
+
 // Cotización — condiciones
-window.cotCondTplSet               = cotCondTplSet;
-window.cotCondRestaurar            = cotCondRestaurar;
-window.cotCondInsertarVar          = cotCondInsertarVar;
-window.cotCondPreviewVivo          = cotCondPreviewVivo;
-window.cotToggleCondiciones        = cotToggleCondiciones;
+
 // Cotización — export
-window.cotExportPresupuestoCSV     = cotExportPresupuestoCSV;
+
 // Cotización — preview PDF
-window.cotPreviewPDF               = cotPreviewPDF;
-window.cotPreviewGenerar           = cotPreviewGenerar;
-window.cotPrevSetOpt               = cotPrevSetOpt;
-window.cotPrevSetOptLive           = cotPrevSetOptLive;
-window.cotPrevBuildAndLoad         = cotPrevBuildAndLoad;
-window.cotPrevRenderPanel          = cotPrevRenderPanel;
-window.cotPrevSaveSettings         = cotPrevSaveSettings;
-window.CotPreview                  = CotPreview;
 
 // ── Bridges agregados por auditoría 2-jul (consumidos por index.html u otros módulos sin bridge) ──
-window.cotPrevColores = cotPrevColores;
-window.cotPrevFontLink = cotPrevFontLink;
-window.cotPrevFonts = cotPrevFonts;
-window.ofertaCosteo = ofertaCosteo;
 
 // D2 · despachador pre.d + acciones compuestas
 var _PRE_FN = {

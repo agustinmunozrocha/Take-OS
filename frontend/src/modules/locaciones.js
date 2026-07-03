@@ -18,7 +18,6 @@ import { autosaveNow, markDirty } from './persistencia-local.js';
 import { fmtFechaLarga } from './rodajes.js';
 import { orgNombre } from '../lib/boot.js';
 
-
 // LOC_ORIENTACIONES: ahora en lib/data.js (window) — dedup B3
 // REGIONES_CHILE local eliminada (estaba muerta) — dedup B3
 
@@ -837,70 +836,16 @@ function scoutPreviewGenerar() {
 
 // ── Puentes a window ─────────────────────────────────────────────────────────
 // Helpers de utilidad — usados por Legal, Hoja de Llamado, Plan de Rodaje, BD
-window.bdLocFind             = bdLocFind;
-window.projLocList           = projLocList;
-window.projLocFind           = projLocFind;
-window.nextLocIdBD           = nextLocIdBD;
+
 window.locNombre             = locNombre;
-window.ensureLocShape        = ensureLocShape;
-window.locPrimaryContact     = locPrimaryContact;
-window.locFullAddress        = locFullAddress;
-window.projLocConfirmadas    = projLocConfirmadas;
-window.locacionOptions       = locacionOptions;
+
 // Módulo Locaciones — entry points y utilidades
-window.renderLocaciones      = renderLocaciones;
-window.openLocDetail         = openLocDetail;
-window.locSetSub             = locSetSub;
-window.locSetFiltro          = locSetFiltro;
-window._locState             = _locState;
-window.locMoney              = locMoney;
-window.locEnsureScout        = locEnsureScout;
+
 // Gestión de fichas de locación
-window.locSetEstado          = locSetEstado;
-window.locSetBD              = locSetBD;
-window.locSetContacto        = locSetContacto;
-window.locSetProj            = locSetProj;
-window.locAddContacto        = locAddContacto;
-window.locDelContacto        = locDelContacto;
-window.locRemoveFromProject  = locRemoveFromProject;
-window.locAddMode            = locAddMode;
-window.locAddFotos           = locAddFotos;
-window.locDelFoto            = locDelFoto;
-window.locDescargarFotos     = locDescargarFotos;
-window.locFotoDragStart      = locFotoDragStart;
-window.locFotoDragEnd        = locFotoDragEnd;
-window.locFotoDragOver       = locFotoDragOver;
-window.locFotoDragLeave      = locFotoDragLeave;
-window.locFotoDrop           = locFotoDrop;
-window.locLightbox           = locLightbox;
-window.openLocAdd            = openLocAdd;
-window.saveLocAdd            = saveLocAdd;
+
 // Scouting
-window.locScoutTimes         = locScoutTimes;
-window.locScoutSet           = locScoutSet;
-window.locScoutSetFila       = locScoutSetFila;
-window.locScoutAddParada     = locScoutAddParada;
-window.locScoutDelParada     = locScoutDelParada;
-window.locScoutSetParadaLoc  = locScoutSetParadaLoc;
-window.locScoutBuscarMaps    = locScoutBuscarMaps;
-window.locScoutRutaEntera    = locScoutRutaEntera;
-window.locScoutDragStart     = locScoutDragStart;
-window.locScoutDragEnd       = locScoutDragEnd;
-window.locScoutDragOver      = locScoutDragOver;
-window.locScoutDragLeave     = locScoutDragLeave;
-window.locScoutDrop          = locScoutDrop;
-window.locScoutMoverParada   = locScoutMoverParada;
-window.locScoutAddLocBD      = locScoutAddLocBD;
-window.locScoutAddQuien      = locScoutAddQuien;
-window.locScoutSetQuien      = locScoutSetQuien;
-window.locScoutDelQuien      = locScoutDelQuien;
-window.locScoutingHTML       = locScoutingHTML;
-window.scoutBuildPDFHTML     = scoutBuildPDFHTML;
-window.scoutPreviewPDF       = scoutPreviewPDF;
-window.scoutPreviewGenerar   = scoutPreviewGenerar;
 
 // ── Bridges auditoría pre-B (onclick en HTML generado por el propio módulo) ──
-window._locLbMove  = _locLbMove;
 
 // D2 · acciones delegadas
 registrarAcciones('loc', {

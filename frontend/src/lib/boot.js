@@ -693,20 +693,7 @@ try {
 } catch (e) {}
 
 // ── Bridges C6 (barrido final) ──
-window._bootCoverHide = _bootCoverHide;
-window._firstVisibleModule = _firstVisibleModule;
-window._setOrgActiva = _setOrgActiva;
-window.aplicarMarcaOrg = aplicarMarcaOrg;
-window.applyModuleReadonly = applyModuleReadonly;
-window.applyPermisosUI = applyPermisosUI;
-window.arrancarTakeOS = arrancarTakeOS;
 window.cloudGate = cloudGate;
-window.currentUser = currentUser;
-window.iniciarSesionTakeOS = iniciarSesionTakeOS;
-window.orgNombre = orgNombre;
-window.renderTopbarUser = renderTopbarUser;
-window.resolverEspacioYArrancar = resolverEspacioYArrancar;
-window.setCurrentUser = setCurrentUser;
 
 // D2 · acciones delegadas
 registrarAcciones('boot', {

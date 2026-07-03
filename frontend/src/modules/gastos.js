@@ -1611,16 +1611,13 @@ function goDescargarXlsx(projId) {
   }
 })();
 
-
 // ── Window bridges Gastos/CFO ──────────────────────────────────────
 // Lista generada cruzando definiciones con consumidores (index, módulos, HTML generado).
-window._syncGastosCostoReal = _syncGastosCostoReal;
-window.goDescargarXlsx = goDescargarXlsx;
+
 window.goGastoHint = goGastoHint;
 window.goLineaTieneCaja = goLineaTieneCaja;
-window.goSavePresup = goSavePresup;
 window.openGlobalCFO = openGlobalCFO;
-window.renderCFO = renderCFO;
+
 window.renderGastos = renderGastos;
 
 // ── Bridges auditoría pre-B (nombres pasados como string a goCompCell → onclick generado) ──

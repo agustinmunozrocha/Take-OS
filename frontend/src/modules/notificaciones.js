@@ -682,71 +682,18 @@ export function renderNotificaciones() {
 
 // ── Bridges a window ──────────────────────────────────────────────────────────
 // Sistema A
-window.bellToggle          = bellToggle;
-window.notifInit           = notifInit;
-window.notifCargar         = notifCargar;
-window.notifPintarBadge    = notifPintarBadge;
-window.notifMarcarTodas    = notifMarcarTodas;
-window.notifAbrir          = notifAbrir;
-window.notifAbrirRebind    = notifAbrirRebind;
-window._rebindAprobar      = _rebindAprobar;
-window._rebindResolver     = _rebindResolver;
-window._empCargarRebinds   = _empCargarRebinds;
+
 // Sistema B
-window.getNotifConfig      = getNotifConfig;
-window.notifSaveConfig     = notifSaveConfig;
-window.ensureNotif         = ensureNotif;
-window.notifFill           = notifFill;
-window.notifRecipients     = notifRecipients;
-window.notifVarsFor        = notifVarsFor;
-window.notifHtmlToPlain    = notifHtmlToPlain;
-window.notifSetCfg         = notifSetCfg;
-window.notifSetTpl         = notifSetTpl;
-window.notifLogPush        = notifLogPush;
-window.notifCopyTemplate   = notifCopyTemplate;
-window.notifGmailDraft     = notifGmailDraft;
+
 // Sistema C (ntf*)
-window.renderNotificaciones = renderNotificaciones;
-window.ntfState            = ntfState;
-window.ntfSetTab           = ntfSetTab;
-window.ntfPickTpl          = ntfPickTpl;
+
 window.ntfSetChannel       = ntfSetChannel;
-window.ntfSetViewAs        = ntfSetViewAs;
-window.ntfToggleRec        = ntfToggleRec;
-window.ntfSelAll           = ntfSelAll;
-window.ntfStartOverride    = ntfStartOverride;
-window.ntfOverrideInput    = ntfOverrideInput;
-window.ntfSaveOverride     = ntfSaveOverride;
-window.ntfSend             = ntfSend;
-window.ntfProgramar        = ntfProgramar;
-window.ntfCancelProg       = ntfCancelProg;
-window.ntfReprogramar      = ntfReprogramar;
-window.ntfToggleRegla      = ntfToggleRegla;
-window.ntfToggleHist       = ntfToggleHist;
-window.ntfSetEditSubver    = ntfSetEditSubver;
+
 window.ntfSetEditChannel   = ntfSetEditChannel;
-window.ntfSetTplName       = ntfSetTplName;
-window.ntfNewTemplate      = ntfNewTemplate;
-window.ntfFmt              = ntfFmt;
-window.ntfInsertVar        = ntfInsertVar;
-window.ntfOpenFromHoja     = ntfOpenFromHoja;
-window.NTF_LABELS          = NTF_LABELS;
-window.NOTIF_VAR_KEYS      = NOTIF_VAR_KEYS;
 
 // ── Bridges agregados por auditoría 2-jul (consumidos por index.html u otros módulos sin bridge) ──
-window._dteWord = _dteWord;
-window._fechaCorta = _fechaCorta;
-window._rebindRenderModal = _rebindRenderModal;
-window.notifDefaultTemplates = notifDefaultTemplates;
-window.notifEmpresaDefault = notifEmpresaDefault;
-window.notifLoadConfig = notifLoadConfig;
-window.notifRenderPanel = notifRenderPanel;
-window.ntfEnsureSched = ntfEnsureSched;
-window.ntfTemplates = ntfTemplates;
 
 // ── Bridges auditoría pre-B (onclick/oninput en HTML generado por el propio módulo) ──
-window.ntfSaveEditor      = ntfSaveEditor;
-window.ntfRefreshPreview  = ntfRefreshPreview;
 
 // D2 · acciones delegadas
 registrarAcciones('ntf', {

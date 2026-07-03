@@ -618,12 +618,10 @@ function _hepConfirm() {
 }
 
 // ── Window bridges (3 barridos: externos, auto-consumo, nombre-string) ──
-window.calcUpdate = calcUpdate;
 window.openCalculadoraTributaria = openCalculadoraTributaria;
 window.openCostoRealCalc = openCostoRealCalc;
 window.openHeProyectoDefault = openHeProyectoDefault;
 window.openHorasExtraCalc = openHorasExtraCalc;
-window.renderCostoRealCalc = renderCostoRealCalc;
 window.setHeHoras = setHeHoras;
 
 // D2 · acciones delegadas (el estado _calc*/_crc/_hec/_hep sigue en window:

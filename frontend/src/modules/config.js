@@ -1522,7 +1522,6 @@ function _cpTourKanbanSample() {
   }).join('');
 }
 
-
 /* ════════════════════════════════════════════════════════════════════
    FRENTE B · B1 · CENTRO DE PRIVACIDAD Y DATOS (hub + ruteo)
    ─────────────────────────────────────────────────────────────────────
@@ -2111,36 +2110,13 @@ function _pdEsMayorDe(fechaISO, n) {
 // ── Window bridges Configuración ───────────────────────────────────
 // Lista generada cruzando definiciones con consumidores (index, módulos,
 // handlers inline en HTML generado). Incluye helpers internos por seguridad.
-window._configPanelOpen = _configPanelOpen;
-window._cpAtras = _cpAtras;
+
 window._cpCerrar = _cpCerrar;
 window._cpSiguiente = _cpSiguiente;
-window._cpTourCerrar = _cpTourCerrar;
+
 window._cpTourNext = _cpTourNext;
-window._empCambiarTipo = _empCambiarTipo;
-window._empCancelarInvitacion = _empCancelarInvitacion;
-window._empColorCopiar = _empColorCopiar;
-window._empColorQuitar = _empColorQuitar;
-window._empCopiarInv = _empCopiarInv;
-window._empEcharMiembro = _empEcharMiembro;
-window._empLogoDescargar = _empLogoDescargar;
-window._empLogoPrincipal = _empLogoPrincipal;
-window._empLogoQuitar = _empLogoQuitar;
-window._empShowSub = _empShowSub;
-window._empTipoQuitar = _empTipoQuitar;
+
 window._orgLogos = _orgLogos;
-window._pdCkTouch = _pdCkTouch;
-window._pdIr = _pdIr;
-window._pdRevocarConfirm = _pdRevocarConfirm;
-window.abrirFlujoCrearProductora = abrirFlujoCrearProductora;
-window.abrirPrivacidadDatos = abrirPrivacidadDatos;
-window.cfgSetUsaChipax = cfgSetUsaChipax;
-window.closeConfigPanel = closeConfigPanel;
-window.irAlPanelPersonal = irAlPanelPersonal;
-window.openConfigPanel = openConfigPanel;
-window.openEmpresaPerfil = openEmpresaPerfil;
-window.orgLogo = orgLogo;
-window.saveEmpresaPerfil = saveEmpresaPerfil;
 
 // D2 · acciones delegadas — cfg.fn despacha por nombre a un mapa LOCAL.
 var _CFG_FN = {
@@ -2191,3 +2167,5 @@ define('closeConfigPanel', closeConfigPanel);
 define('irAlPanelPersonal', irAlPanelPersonal);
 define('openConfigPanel', openConfigPanel);
 define('orgLogo', orgLogo);
+
+define('_orgLogos', _orgLogos);

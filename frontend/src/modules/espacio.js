@@ -423,14 +423,6 @@ export function _espInyectarInvitaciones(invs) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._espAbrirProyecto = _espAbrirProyecto;
-window._espEntrarInterna = _espEntrarInterna;
-window._espPerfil = _espPerfil;
-window._swControlRoom = _swControlRoom;
-window._swPanel = _swPanel;
-window._swProyecto = _swProyecto;
-window._swToggle = _swToggle;
-window.renderEspacioUsuario = renderEspacioUsuario;
 // ── Bridges de reparación C4 (llamadas reales de las islas bootstrap, verificadas por cuerpo) ──
 
 // D2 · acciones delegadas (cta*/abrirInvitacionRecibida/abrirPrivacidadDatos vía window)

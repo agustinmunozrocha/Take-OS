@@ -191,7 +191,6 @@ export const MODULES = {   // MODULES se asigna al cierre de la definición (lí
     description: 'PDF de business intelligence generado automáticamente al cerrar un proyecto. Métricas, gráficos, conclusiones por IA. Diferenciador estratégico de TakeOS como SaaS. Ver sección 14 del PRD V2.'
   }
 };
-window.MODULES = MODULES; // bridge para gastos.js (goWire registra render de Gastos/CFO) — Etapa A4
 
 /* Dispatcher. Si el módulo tiene función render, la ejecuta.
    Si no, dibuja el stub de Capa 1.
@@ -246,5 +245,4 @@ export function renderModule(key) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window.navigateToModule = navigateToModule;
-window.renderModule = renderModule;
+
