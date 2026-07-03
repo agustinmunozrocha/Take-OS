@@ -876,13 +876,11 @@ window.saveLocAdd            = saveLocAdd;
 // Scouting
 window.locScoutTimes         = locScoutTimes;
 window.locScoutSet           = locScoutSet;
-window.comboboxFilterLocScout = comboboxFilterLocScout;
 window.locScoutSetFila       = locScoutSetFila;
 window.locScoutAddParada     = locScoutAddParada;
 window.locScoutDelParada     = locScoutDelParada;
 window.locScoutSetParadaLoc  = locScoutSetParadaLoc;
 window.locScoutBuscarMaps    = locScoutBuscarMaps;
-window.locScoutSetParadaMaps = locScoutSetParadaMaps;
 window.locScoutRutaEntera    = locScoutRutaEntera;
 window.locScoutDragStart     = locScoutDragStart;
 window.locScoutDragEnd       = locScoutDragEnd;
@@ -894,14 +892,12 @@ window.locScoutAddLocBD      = locScoutAddLocBD;
 window.locScoutAddQuien      = locScoutAddQuien;
 window.locScoutSetQuien      = locScoutSetQuien;
 window.locScoutDelQuien      = locScoutDelQuien;
-window.locScoutAddContactoBD = locScoutAddContactoBD;
 window.locScoutingHTML       = locScoutingHTML;
 window.scoutBuildPDFHTML     = scoutBuildPDFHTML;
 window.scoutPreviewPDF       = scoutPreviewPDF;
 window.scoutPreviewGenerar   = scoutPreviewGenerar;
 
 // ── Bridges auditoría pre-B (onclick en HTML generado por el propio módulo) ──
-window._locLbClose = _locLbClose;
 window._locLbMove  = _locLbMove;
 
 // D2 · acciones delegadas

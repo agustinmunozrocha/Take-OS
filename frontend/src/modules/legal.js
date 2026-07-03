@@ -910,7 +910,6 @@ window.legalTplGet = legalTplGet;
 window.legalVarMap = legalVarMap;
 
 // ── Bridges auditoría pre-B (onclick/oninput en HTML generado por el propio módulo) ──
-window.legalTplUpdatePreview = legalTplUpdatePreview;
 window.openLegalGenTpl       = openLegalGenTpl;
 
 // D2 · acciones delegadas
