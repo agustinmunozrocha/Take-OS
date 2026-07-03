@@ -1,5 +1,19 @@
 // Modo Administrador + transición de estado del proyecto + respaldo Supabase — extraído de index.html (Etapa C4)
 
+// D1b · imports reales. NO convertir (línea roja #1): TAKEOS_PERFIL (reasignado
+// por dal), ORG_ID — siguen vía window.
+import { showToast, escapeHtml } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { STATE, STATES_WITH_LOCKED_BUDGET, TAKEOS_VERSION } from '../lib/state.js';
+import { authEsAdmin } from '../lib/auth.js';
+import { showModal, closeModal, fireConfetti } from '../lib/ui.js';
+import { navigateToModule } from '../lib/nav.js';
+import { STATES } from './kanban.js';
+import { calcSummaryFin, purgeEmptyRows } from './presupuesto-cotizacion.js';
+import { openConfigPanel } from './config.js';
+import { dalTouchProyecto } from './dal.js';
+import { collectApprovalBlockers, renderInfoProyecto } from './info-proyecto.js';
+
 /* V11.3.0 · la contraseña compartida del Modo Admin fue eliminada. El permiso
    depende del perfil (solo Administrador); el modo se mantiene como barrera
    operacional consciente, con advertencia, no como autenticación. */

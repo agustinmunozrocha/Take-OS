@@ -231,7 +231,7 @@ function saveEmpresaPerfil() {
 }
 
 /* ═══ V11.2.0 · Configuración de la productora: subtabs, equipo y diseño ═══ */
-function _empShowSub(k) {
+export function _empShowSub(k) {
   var map = { datos: 'empSubDatos', equipo: 'empSubEquipo', diseno: 'empSubDiseno' };
   Object.keys(map).forEach(function (key) {
     var el = document.getElementById(map[key]); if (el) el.style.display = (key === k) ? '' : 'none';
@@ -240,7 +240,7 @@ function _empShowSub(k) {
   });
 }
 let _EMP_PERFILES = null;   // V11.3.0 · perfiles de la org activa: [{id,codigo,nombre}]
-async function _empPerfilesOrg() {
+export async function _empPerfilesOrg() {
   if (_EMP_PERFILES) return _EMP_PERFILES;
   try {
     const r = await sb.from('permission_profiles').select('id, codigo, nombre').eq('organization_id', ORG_ID).order('codigo');
