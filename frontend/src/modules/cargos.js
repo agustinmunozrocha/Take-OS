@@ -18,6 +18,7 @@ import { invitacionLink, dalInvitar, _invMostrarResultado, PERFIL_CODIGO_POR_NOM
 import { _planModalVenta, manejarErrorPlan } from './plan-limites.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { define } from '../lib/ganchos.js';
 /* ════════════════════════════════════════════════════════════════════
    V11.2.0 · CARGOS DEL PROYECTO
    ════════════════════════════════════════════════════════════════════
@@ -445,3 +446,9 @@ registrarAcciones('cargo', {
   cbSel: function (a, el) { comboboxSelect(el, a[0]); },
   invitar: function (a, el, ev) { ev.preventDefault(); cargoIrAInvitar(); },
 });
+
+// D4b · ganchos definidos por este módulo (consumidos por módulos más tempranos)
+define('_cargoContactIdPorNombre', _cargoContactIdPorNombre);
+define('_cargosDerivarRECI', _cargosDerivarRECI);
+define('_cargosKey', _cargosKey);
+define('renderCargos', renderCargos);

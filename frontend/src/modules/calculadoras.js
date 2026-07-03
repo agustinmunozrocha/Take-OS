@@ -17,6 +17,7 @@ import { _markRowDirty } from './info-proyecto.js';
 
 import { registrarAcciones } from '../lib/delegacion.js';
 import { IVA, FACTOR_BOLETA } from '../lib/rates.js';
+import { define } from '../lib/ganchos.js';
 /* ─── CALCULADORA TRIBUTARIA ────────────────────────────────────────
    Recuperada del Master Sheet V2.4.1 (M2:O9 de la pestaña PRESUPUESTO).
    Convierte entre líquido y bruto según tipo de documento.
@@ -641,3 +642,11 @@ registrarAcciones('calc', {
   hepRecargo: function (a, el) { window._hep.recargo = (el.value === '' ? 150 : parseFloat(el.value)); },
   hepOk: function () { _hepConfirm(); },
 });
+
+// D4b · ganchos definidos por este módulo (consumidos por módulos más tempranos)
+define('_heComputeCosto', _heComputeCosto);
+define('openCalculadoraTributaria', openCalculadoraTributaria);
+define('openCostoRealCalc', openCostoRealCalc);
+define('openHeProyectoDefault', openHeProyectoDefault);
+define('openHorasExtraCalc', openHorasExtraCalc);
+define('setHeHoras', setHeHoras);
