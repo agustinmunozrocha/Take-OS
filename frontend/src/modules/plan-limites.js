@@ -22,11 +22,11 @@ export async function _ctaProdEvento(nombre, props) {
 export function _ctaProdDescartado() {
   try { return sessionStorage.getItem(_CTA_PROD_DISMISS_KEY) === '1'; } catch (e) { return false; }
 }
-function ctaProdCerrar() {
+export function ctaProdCerrar() {
   try { sessionStorage.setItem(_CTA_PROD_DISMISS_KEY, '1'); } catch (e) {}
   const el = document.getElementById('espCtaProd'); if (el) el.remove();
 }
-function ctaProdSaberMas() {
+export function ctaProdSaberMas() {
   _ctaProdEvento('cta_productora_click');
   try { window.open(TAKEOS_LANDING_URL, '_blank', 'noopener'); } catch (e) { window.location.href = TAKEOS_LANDING_URL; }
 }

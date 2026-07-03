@@ -16,9 +16,9 @@ import { escapeHtml, showToast } from '../lib/helpers.js';
 import { sb } from '../lib/supabase.js';
 import { STATE, BD_CONTACTOS, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, ORG_ID, LEGAL_SOURCE } from '../lib/state.js';
 import { montoNetoDesde } from '../lib/data.js';
-import { showModal, closeModal, _toISODate } from '../lib/ui.js';
+import { showModal, closeModal, _toISODate, comboboxCloseDelayed } from '../lib/ui.js';
 import { _fechaCorta } from './notificaciones.js';
-import { bdLocFind, ensureLocShape, locPrimaryContact, locFullAddress, locMoney } from './locaciones.js';
+import { bdLocFind, ensureLocShape, locPrimaryContact, locFullAddress, locMoney, locNombre } from './locaciones.js';
 import { printViaIframe } from './plan-rodaje.js';
 import { _normKey } from './bd-excel.js';
 import { _dalLegalDocSaveSoon, _dalLegalTplSaveSoon, dalEliminarLegalDoc, dalEliminarLegalTpl } from './dal.js';
@@ -212,7 +212,7 @@ function legalVars(gen) {
   return Object.assign(base, gen.ov || {});
 }
 
-function renderLegal() {
+export function renderLegal() {
   const project = STATE.currentProject; if (!project) return;
   const st = _legalState();
   const content = document.getElementById('moduleContent');

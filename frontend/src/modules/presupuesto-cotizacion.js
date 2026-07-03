@@ -11,8 +11,8 @@ import { escapeHtml, showToast, safeUrl } from '../lib/helpers.js';
 // mueren en D2), info-proyecto (_markRowDirty), legal, plan-rodaje, calculadoras, config.
 import { BD_PERSONAS, EMPRESA_PERFIL, STATES_WITH_LOCKED_BUDGET, STATES_WITH_REAL_COST } from '../lib/state.js';
 import { COTIZACION_CONDICIONES_DEFAULTS, DTE_LABEL, DTE_OPTIONS, UNIDAD_OPTIONS } from '../lib/data.js';
-import { calcCostoEmpresa, deltaClassCosto, deltaClassGanancia, displayMoneyInputValue, fmtDelta, fmtDeltaWithSymbol, fmtMoney, fmtPct, getCostoReal, parseMoneyCLP, readNum } from '../lib/calc.js';
-import { closeModal, showModal } from '../lib/ui.js';
+import { calcCostoEmpresa, deltaClassCosto, deltaClassGanancia, displayMoneyInputValue, fmtDelta, fmtDeltaWithSymbol, fmtMoney, fmtPct, getCostoReal, parseMoneyCLP, readNum, onMoneyInput } from '../lib/calc.js';
+import { closeModal, showModal, comboboxCloseDelayed, comboboxFilter, comboboxOpen } from '../lib/ui.js';
 import { markDirty } from './persistencia-local.js';
 
 // UNIDAD_OPTIONS: ahora en lib/data.js (window) — dedup B3
@@ -20,6 +20,7 @@ import { markDirty } from './persistencia-local.js';
 // ── A0: cotizadoLocked (disperso, línea 1583)
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { IVA } from '../lib/rates.js';
+import { navigateToModule } from '../lib/nav.js';
 function cotizadoLocked(project) {
   if (!project) return false;
   return window.STATES_WITH_LOCKED_BUDGET.includes(project.state);
@@ -3737,7 +3738,7 @@ const COTPREV_FONTS_SISTEMA = [
   { id: 'poppins', n: 'Poppins', css: "'Poppins',-apple-system,'Segoe UI',Roboto,Arial,sans-serif", link: 'Poppins:wght@300;400;500;600;700;800' },
   { id: 'serif', n: 'Serif', css: "'Source Serif 4',Georgia,'Times New Roman',serif", link: 'Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400' }
 ];
-function _cotPrevFamiliaGF(family) { return String(family || '').trim().replace(/\s+/g, '+'); }
+export function _cotPrevFamiliaGF(family) { return String(family || '').trim().replace(/\s+/g, '+'); }
 function cotPrevFonts() {
   let org = [];
   try {
@@ -3764,7 +3765,7 @@ const COTPREV_PLANTILLAS = [
 /* V11.11.0 · los colores de énfasis salen de la paleta de marca definida en
    Configuración → Diseño (window.EMPRESA_PERFIL.coloresMarca). Si la productora aún
    no define paleta, presets del sistema. */
-function _cotPrevHexValido(h) { return /^#[0-9a-fA-F]{6}$/.test(String(h || '')); }
+export function _cotPrevHexValido(h) { return /^#[0-9a-fA-F]{6}$/.test(String(h || '')); }
 function cotPrevColores() {
   try {
     const m = (typeof window.EMPRESA_PERFIL !== 'undefined' && window.EMPRESA_PERFIL && Array.isArray(window.EMPRESA_PERFIL.coloresMarca))

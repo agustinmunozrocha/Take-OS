@@ -13,6 +13,7 @@ import { getBDPresupuesto } from './presupuesto-cotizacion.js';
 import { dalFinishBulkImport } from './dal.js';
 import { autosaveNow, markDirty, pushSnapshot } from './persistencia-local.js';
 
+import { renderBDPersonas } from './bd.js';
 /* Helper para datalists: lista de nombres para autocompletar */
 /* ════════════════════════════════════════════════════════════════════
    V5.7 (Nota 4) · IMPORTACIÓN DE LA BD DESDE EXCEL (.xlsx)

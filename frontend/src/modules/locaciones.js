@@ -9,7 +9,7 @@ import { BD_LOC, BD_PERSONAS, STATE, ORG_ID, LOCATIONS_SOURCE } from '../lib/sta
 import { ensureProjectLoc, normLocName } from '../lib/modelo.js';
 import { LOC_ESTADOS, LOC_ORIENTACIONES } from '../lib/data.js';
 import { normalizeTime24 } from '../lib/calc.js';
-import { _locThumbAsync, closeModal, positionComboboxDropdown, regionSelectHTML } from '../lib/ui.js';
+import { _locThumbAsync, closeModal, positionComboboxDropdown, regionSelectHTML, comboboxCloseDelayed, comboboxOpen } from '../lib/ui.js';
 import { CotPreview } from './presupuesto-cotizacion.js';
 import { openPersonaByName } from './bd.js';
 import { _normKey } from './bd-excel.js';
@@ -27,7 +27,7 @@ export function bdLocFind(locId) { return window.BD_LOC.find(l => l.locId === lo
 export function projLocList(project) { const d = project && project.data; if (!d) return []; if (!Array.isArray(d.locaciones)) d.locaciones = []; return d.locaciones; }
 function projLocFind(project, locId) { return projLocList(project).find(u => u.locId === locId) || null; }
 export function nextLocIdBD() { let m = 0; window.BD_LOC.forEach(l => { const x = /LOC-(\d+)/.exec(l.locId || ''); if (x) m = Math.max(m, +x[1]); }); return 'LOC-' + String(m + 1).padStart(2, '0'); }
-function locNombre(locId) { const l = bdLocFind(locId); return l ? (l.nombre || 'sin nombre') : (locId || '—'); }
+export function locNombre(locId) { const l = bdLocFind(locId); return l ? (l.nombre || 'sin nombre') : (locId || '—'); }
 /* V8.3.1 — normaliza una locación de la BD al esquema nuevo (idempotente):
    migra `dueno` → `contactos[]`, agrega direccion2/region/orientacion. */
 export function ensureLocShape(l) {
@@ -47,7 +47,7 @@ export function locFullAddress(l) { if (!l) return ''; return [l.direccion, l.di
    Hoja de Llamado y Plan de Rodaje). */
 export function projLocConfirmadas(project) { return projLocList(project).filter(u => u.estado === 'confirmada' && bdLocFind(u.locId)); }
 
-function locacionOptions(project, selectedId) {
+export function locacionOptions(project, selectedId) {
   // V8.2: las opciones salen de las locaciones CONFIRMADAS del proyecto
   // (módulo Locaciones), no de una lista propia de la Hoja de Llamado.
   window.ensureProjectLoc(project);
@@ -172,7 +172,7 @@ const LOC_CSS = `<style>
 .loc-lightbox-x{position:absolute;top:18px;right:24px;background:none;border:none;color:#fff;font-size:34px;cursor:pointer;}
 </style>`;
 
-function renderLocaciones() {
+export function renderLocaciones() {
   const project = STATE.currentProject; if (!project) return;
   window.ensureProjectLoc(project);
   window.BD_LOC.forEach(ensureLocShape);

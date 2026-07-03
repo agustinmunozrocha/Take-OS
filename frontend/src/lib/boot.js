@@ -8,16 +8,23 @@
 // VETADO: _TIENE_EMPRESA (boot lo escribe).
 import { supabaseInit } from './supabase.js';
 import { dalBootTaxRates } from './rates.js';
-import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH, setOrgId, setSource, setTakeosAcceso, setTieneEmpresa, setUserNombre, setUserApellido, setUsuarioActual, TAKEOS_PERFIL } from './state.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH, setOrgId, setSource, setTakeosAcceso, setTieneEmpresa, setUserNombre, setUserApellido, setUsuarioActual, TAKEOS_PERFIL, USER_APELLIDO, USER_NOMBRE, USUARIO_ACTUAL, _TIENE_EMPRESA } from './state.js';
 import { authNivel, authNivelModulo, authPuedeVer } from './auth.js';
 import { applyStoredTheme, setupTooltipListeners, showModal } from './ui.js';
-import { newProject, renderKanban, renderMetrics } from '../modules/kanban.js';
-import { notifInit } from '../modules/notificaciones.js';
-import { autosaveNow, markDirty, redoLast, undoLast } from '../modules/persistencia-local.js';
+import { newProject, renderKanban, renderMetrics, navigateToControlRoom } from '../modules/kanban.js';
+import { notifInit, bellToggle, notifMarcarTodas } from '../modules/notificaciones.js';
+import { autosaveNow, markDirty, redoLast, undoLast, importSaveFromInput, importSingleProjectFromInput } from '../modules/persistencia-local.js';
 import { dalBootContactos, dalBootLegal, dalBootLocaciones, dalBootPerfil, dalBootPersonasExternos, dalBootProyectos, dalFlushProyectos, dalLoadPermisos, dalResetOrg, dalResolveIdentidad, dalTouchProyecto } from '../modules/dal.js';
 import { openGlobalCFO } from '../modules/gastos.js';
 
 import { registrarAcciones } from './delegacion.js';
+import { ESPACIO_DEMO, _espConstruir, _espInyectarCtaProductora, _espInyectarHerramientas, _espInyectarInvitaciones, _swToggle, renderEspacioUsuario } from '../modules/espacio.js';
+import { _configPanelOpen, _cpTourInicialQuizas, _pdCookiesBootCheck, abrirFlujoCrearProductora, closeConfigPanel, openConfigPanel } from '../modules/config.js';
+import { _gsearchHide, globalSearchInput, globalSearchKey } from '../modules/buscador.js';
+import { abrirInvitacionRecibida } from '../modules/invitaciones.js';
+import { abrirPerfilUsuario } from '../modules/perfil-onboarding.js';
+import { navigateToModule } from './nav.js';
+import { openTrash } from '../modules/info-proyecto.js';
 function currentUser() {
   if (USUARIO_ACTUAL && String(USUARIO_ACTUAL).trim()) return USUARIO_ACTUAL;
   const ep = (typeof EMPRESA_PERFIL !== 'undefined') ? EMPRESA_PERFIL : {};

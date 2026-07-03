@@ -13,7 +13,7 @@ import { BD_PERSONAS, EMPRESA_PERFIL, PROJECTS, STATE, STATES_WITH_REAL_COST, OR
 import { _clientUuid } from '../lib/modelo.js';
 import { montoNetoDesde } from '../lib/data.js';
 import { calcCostoEmpresa, fmtMoney } from '../lib/calc.js';
-import { closeModal, showModal } from '../lib/ui.js';
+import { closeModal, showModal, comboboxCloseDelayed, comboboxFilter, comboboxOpen } from '../lib/ui.js';
 import { MODULES, navigateToModule, renderModule } from '../lib/nav.js';
 import { STATES, navigateToProject } from './kanban.js';
 import { _fechaCorta } from './notificaciones.js';

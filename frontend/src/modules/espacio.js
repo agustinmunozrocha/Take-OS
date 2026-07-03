@@ -10,13 +10,14 @@
 import { escapeHtml, showToast } from '../lib/helpers.js';
 import { sb } from '../lib/supabase.js';
 import { STATES } from './kanban.js';
-import { irAlPanelPersonal, _pdCookiesBootCheck } from './config.js';
+import { irAlPanelPersonal, _pdCookiesBootCheck, abrirPrivacidadDatos } from './config.js';
 import { abrirPerfilUsuario } from './perfil-onboarding.js';
-import { TAKEOS_MARCA, _ctaProdEvento, _ctaProdDescartado } from './plan-limites.js';
+import { TAKEOS_MARCA, _ctaProdEvento, _ctaProdDescartado, ctaProdCerrar, ctaProdSaberMas } from './plan-limites.js';
 import { _setOrgActiva, _bootCoverShow, _bootCoverHide, arrancarTakeOS } from '../lib/boot.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
 import { setTieneEmpresa, USER_NOMBRE, USER_APELLIDO } from '../lib/state.js';
+import { abrirInvitacionRecibida } from './invitaciones.js';
 /* ── FRENTE C · C3 · Selector "Cambiar de espacio" (topbar) ──────────────────
    Cambia el contexto de organización activa desde la barra superior. Lista:
    Panel personal · tus productoras (Control Room, interno) · proyectos externos
@@ -24,7 +25,7 @@ import { setTieneEmpresa, USER_NOMBRE, USER_APELLIDO } from '../lib/state.js';
    (server-side); el selector solo refleja y no puede construir una ruta a un
    Control Room ajeno. Motor de organización activa: _setOrgActiva (V10.9.0). */
 var _swData = null;
-function _swToggle(ev) {
+export function _swToggle(ev) {
   if (ev) ev.stopPropagation();
   var menu = document.getElementById('eswMenu'); if (!menu) return;
   if (menu.hidden) { menu.hidden = false; _swRender(); if (!_swData) _swCargar(); }
@@ -107,7 +108,7 @@ function _espSello(nombre){
   return String(nombre||'··').slice(0,2).toUpperCase();
 }
 
-const ESPACIO_DEMO = {
+export const ESPACIO_DEMO = {
   _demo: true,
   usuario: { nombre:'Tyrion Lannister', email:'tyrion@casterlyrock.cl', iniciales:'TL' },
   internas: [
@@ -127,7 +128,7 @@ const ESPACIO_DEMO = {
 function _titleCaseNombre(s) {
   return String(s || '').trim().split(/\s+/).map(function (w) { return w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ''; }).join(' ');
 }
-function _espConstruir(rows, email){
+export function _espConstruir(rows, email){
   const internas=[], externas=[];
   (rows||[]).forEach(function(r){
     const nombre = (r.organizations && r.organizations.nombre) || 'Organización';
@@ -236,7 +237,7 @@ async function _espCargarProyectosExternos(externas){
 }
 function _espPerfil(){ try{ abrirPerfilUsuario(false); }catch(e){} }
 
-function renderEspacioUsuario(data){
+export function renderEspacioUsuario(data){
   try{
     _bootCoverHide();
     const demo = !!data._demo, u = data.usuario||{};
@@ -346,7 +347,7 @@ function renderEspacioUsuario(data){
   }catch(e){ console.error('[espacio] render falló', e); try{ const o=document.getElementById('espacioUsuario'); if(o)o.remove(); }catch(_){ } _bootCoverHide(); }
 }
 
-function _espInyectarCtaProductora() {
+export function _espInyectarCtaProductora() {
   /* Solo en "Tu espacio" de una cuenta SIN productora. La condición de
      targeting (cero membresías activas) la decide el llamador. */
   if (_ctaProdDescartado()) return;
@@ -369,7 +370,7 @@ function _espInyectarCtaProductora() {
 }
 /* V11.4.0 · Herramientas personales en Tu espacio (preparación de frontend;
    el almacenamiento personal de estas herramientas viene en el handoff a BD). */
-function _espInyectarHerramientas() {
+export function _espInyectarHerramientas() {
   try {
     const host = document.getElementById('espacioUsuario'); if (!host) return;
     if (host.querySelector('#espHerr')) return;
@@ -396,7 +397,7 @@ function _espInyectarHerramientas() {
   } catch (e) {}
 }
 /* Bandeja: inyecta las invitaciones pendientes en la pantalla "Tu espacio". */
-function _espInyectarInvitaciones(invs) {
+export function _espInyectarInvitaciones(invs) {
   if (!Array.isArray(invs) || !invs.length) return;
   try {
     const host = document.getElementById('espacioUsuario'); if (!host) return;
