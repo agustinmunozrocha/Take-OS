@@ -1,5 +1,10 @@
 // CTA productora + FRENTE D límites de plan (manejarErrorPlan, carteles de venta) — extraído de index.html (Etapa C4)
 
+// D1c · imports reales (guard typeof de showModal y bridges intactos)
+import { showToast, escapeHtml } from '../lib/helpers.js';
+import { sb } from '../lib/supabase.js';
+import { showModal } from '../lib/ui.js';
+
 /* ════════════════════════════════════════════════════════════════════
    V11.8.0 · CTA "¿Tienes una productora?" (land-and-expand)
    Para usuarios persona natural SIN productora (cero membresías activas).
