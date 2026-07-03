@@ -1798,6 +1798,21 @@ async function dalGuardarOperaciones4e(project) {
 /* Debounce por proyecto: junta ediciones y escribe los proyectos tocados. */
 const _dalDirtyProjects = new Set();
 let _dalProyFlushTimer = null;
+
+/* D0 · Reset del estado interno del DAL al cambiar de organización activa.
+   Sin esto, los sets de IDs conocidos y los timers de guardado pendientes
+   sobreviven al cambio de org → fusiones contra IDs ajenos y writes tardíos
+   contra la org equivocada. Lo invoca _setOrgActiva (boot.js) vía window. */
+function dalResetOrg() {
+  try {
+    [DAL_KNOWN_LOC_IDS, DAL_KNOWN_LEGAL_DOC_IDS, DAL_KNOWN_LEGAL_TPL_IDS,
+     DAL_KNOWN_CONTACT_IDS, DAL_KNOWN_COMPANY_IDS, DAL_KNOWN_PROJECT_IDS,
+     _dalDirtyProjects].forEach(function (s) { s.clear(); });
+    Object.keys(_dalSaveTimers).forEach(function (k) { clearTimeout(_dalSaveTimers[k]); delete _dalSaveTimers[k]; });
+    clearTimeout(_dalProyFlushTimer); _dalProyFlushTimer = null;
+  } catch (e) { console.error('[dal] reset de org', e); }
+}
+window.dalResetOrg = dalResetOrg;
 function dalTouchProyecto(project) {
   if (PROJECTS_SOURCE !== 'supabase' || !project || !project.id) return;
   if (project._autosaveSuspendedByConflict) return;   // Pasada 1 · autosave suspendido por conflicto (hasta recargar)

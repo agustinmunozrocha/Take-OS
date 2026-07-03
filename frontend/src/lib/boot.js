@@ -110,6 +110,26 @@ function _setOrgActiva(orgId){
   try{
     var s = String(orgId == null ? '' : orgId).trim();
     if (!_ORG_UUID_RE.test(s)) return false;     // valor inválido: no tocamos la org actual
+    /* D0 · cambio REAL de organización → resetear TODO el estado en memoria de
+       la org anterior. Sin esto, dalBootProyectos fusionaba los proyectos de la
+       nueva org SOBRE los de la vieja (mezcla de datos entre organizaciones) y
+       los flags *_SOURCE one-way impedían recargar. Hallazgo 🔴 de la Fase 0. */
+    if (s !== window.ORG_ID) {
+      try {
+        PROJECTS.length = 0; TRASH.length = 0;
+        [BD_LOC, BD_LEGAL, BD_LEGAL_TPL].forEach(function (a) { a.length = 0; });
+        [BD_CONTACTOS, BD_EMPRESAS_BYID, BD_PERSONAS, BD_TALENTOS, BD_EMPRESAS].forEach(function (o) {
+          Object.keys(o).forEach(function (k) { delete o[k]; });
+        });
+        Object.keys(EMPRESA_PERFIL).forEach(function (k) { delete EMPRESA_PERFIL[k]; });
+        window.CONTACTS_SOURCE = 'pending'; window.LOCATIONS_SOURCE = 'pending';
+        window.LEGAL_SOURCE = 'pending'; window.PERFIL_SOURCE = 'pending';
+        window.PROJECTS_SOURCE = 'pending';
+        window.TAKEOS_ACCESO = null;                      // fail-closed hasta dalLoadPermisos de la nueva org
+        if (window.STATE) window.STATE.currentProject = null;
+        if (window.dalResetOrg) window.dalResetOrg();     // sets de IDs conocidos + timers pendientes del DAL
+      } catch (e) { console.error('[org] reset al cambiar de organización', e); }
+    }
     ORG_ID = s;
     try { localStorage.setItem(_ORG_LS_KEY, s); } catch(e){}   // recordamos la última (para futura entrada directa)
     return true;
