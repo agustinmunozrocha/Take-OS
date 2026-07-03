@@ -567,7 +567,7 @@ function _resetFlagsRuntime(project) {
   project._autosaveSuspendedByConflict = false; project._conflictoModalAbierto = false;
   try { _conflictoBannerHide(); } catch (e) {}
 }
-function undoLast() {
+export function undoLast() {
   if (UNDO_STACK.length === 0) {
     showToast({ kind: 'info', title: 'Nada que deshacer', body: 'No hay una acción reciente para revertir en este proyecto.' });
     return;
@@ -590,7 +590,7 @@ function undoLast() {
   if (STATE.currentView === 'project') navigateToModule(STATE.currentModule);
   showToast({ kind: 'success', title: 'Acción deshecha', body: 'Cmd+Shift+Z para rehacer.' });
 }
-function redoLast() {
+export function redoLast() {
   if (REDO_STACK.length === 0) { showToast({ kind: 'info', title: 'Nada que rehacer', body: 'No hay una acción reciente para rehacer.' }); return; }
   const next = REDO_STACK.pop();
   if (UNDO_BASELINE && UNDO_BASELINE.id === next.id) UNDO_STACK.push(UNDO_BASELINE);

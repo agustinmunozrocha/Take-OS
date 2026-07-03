@@ -41,7 +41,7 @@ export function authNivel(modCode) {
    sin mapear es una anomalía (módulo nuevo sin registrar en MODULE_PERM_CODE),
    no un permiso legítimo => se esconde por seguridad. Todas las claves vivas del
    registro MODULES y del sidebar están en MODULE_PERM_CODE. */
-function authNivelModulo(appKey) {
+export function authNivelModulo(appKey) {
   const code = MODULE_PERM_CODE[appKey];
   if (!code) return 'none';
   return authNivel(code);

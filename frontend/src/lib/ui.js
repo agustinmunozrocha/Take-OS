@@ -108,7 +108,7 @@ export function hideTooltip() {
   }
 }
 
-function setupTooltipListeners() {
+export function setupTooltipListeners() {
   // Delegación: escucha mouseover/mouseout en body. Funciona aún con
   // contenido inyectado dinámicamente por innerHTML.
   document.body.addEventListener('mouseover', (e) => {
@@ -316,7 +316,7 @@ const THEME_KEY = 'takeos_theme';
 export function getStoredTheme() {
   try { return window.localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
 }
-function applyStoredTheme() {
+export function applyStoredTheme() {
   const theme = getStoredTheme();
   if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');

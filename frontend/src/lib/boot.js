@@ -2,6 +2,21 @@
 // Importado AL FINAL de main.js: cuando evalúa, todos los bridges del sistema existen.
 // El veil ahora nace en el HTML estático (anti-flash CSS-first); aquí solo se gobierna.
 
+// D1e · imports reales — la mitad IMPORT del ciclo duro boot⇄dal (down-call
+// del orquestador). DIFERIDOS anti-ciclo: config, espacio, invitaciones,
+// perfil-onboarding (todos importan boot; sus símbolos siguen vía window).
+// VETADO: _TIENE_EMPRESA (boot lo escribe).
+import { supabaseInit } from './supabase.js';
+import { dalBootTaxRates } from './rates.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH } from './state.js';
+import { authNivel, authNivelModulo, authPuedeVer } from './auth.js';
+import { applyStoredTheme, setupTooltipListeners, showModal } from './ui.js';
+import { newProject, renderKanban, renderMetrics } from '../modules/kanban.js';
+import { notifInit } from '../modules/notificaciones.js';
+import { autosaveNow, markDirty, redoLast, undoLast } from '../modules/persistencia-local.js';
+import { dalBootContactos, dalBootLegal, dalBootLocaciones, dalBootPerfil, dalBootPersonasExternos, dalBootProyectos, dalFlushProyectos, dalLoadPermisos, dalResetOrg, dalResolveIdentidad, dalTouchProyecto } from '../modules/dal.js';
+import { openGlobalCFO } from '../modules/gastos.js';
+
 function currentUser() {
   if (USUARIO_ACTUAL && String(USUARIO_ACTUAL).trim()) return USUARIO_ACTUAL;
   const ep = (typeof EMPRESA_PERFIL !== 'undefined') ? EMPRESA_PERFIL : {};

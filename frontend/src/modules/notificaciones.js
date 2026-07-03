@@ -182,7 +182,7 @@ export async function _empCargarRebinds() {
       + '</div>';
   } catch (e) { box.style.display = 'none'; }
 }
-function notifInit() {
+export function notifInit() {
   notifCargar();
   if (_NOTIF_TIMER) clearInterval(_NOTIF_TIMER);
   _NOTIF_TIMER = setInterval(notifCargar, 60000);
