@@ -52,7 +52,7 @@ function despachar(ev) {
    migración: un stopPropagation inline aguas abajo sigue frenando esto).
    Tipos que no burbujean (blur/focus/toggle) se agregan con captura cuando
    una tranche los necesite. */
-['click', 'input', 'change', 'keydown', 'dblclick', 'mousedown', 'paste', 'submit'].forEach(function (t) {
+['click', 'input', 'change', 'keydown', 'dblclick', 'mousedown', 'paste', 'submit', 'dragover', 'dragleave', 'drop'].forEach(function (t) {
   document.addEventListener(t, despachar);
 });
 
