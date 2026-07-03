@@ -22,7 +22,7 @@ import { _setOrgActiva, _bootCoverShow, arrancarTakeOS, resolverEspacioYArrancar
    El canal de CORREO aún no existe (dominio/Resend pendiente): la entrega es
    por LINK copiable y, para cuentas ya registradas, por la bandeja interna. */
 export const PERFIL_CODIGO_POR_NOMBRE = { 'Administrador': 1, 'Ejecutivo': 2, 'Producción': 3, 'Asistencia de Producción': 4, 'Asistencia': 4, 'Coordinación': 5, 'Creativo': 6, 'Invitado': 7, 'Finanzas / CFO': 8, 'Finanzas': 8 };
-const PERFIL_NOMBRE_POR_CODIGO = { 1: 'Administrador', 2: 'Ejecutivo', 3: 'Producción', 4: 'Asistencia de Producción', 5: 'Coordinación', 6: 'Creativo', 7: 'Invitado', 8: 'Finanzas / CFO' };
+export const PERFIL_NOMBRE_POR_CODIGO = { 1: 'Administrador', 2: 'Ejecutivo', 3: 'Producción', 4: 'Asistencia de Producción', 5: 'Coordinación', 6: 'Creativo', 7: 'Invitado', 8: 'Finanzas / CFO' };
 export function invitacionLink(token) { return window.location.origin + window.location.pathname + '?invitacion=' + encodeURIComponent(token); }
 export async function dalInvitar(email, tipo, perfilCodigo, cargoId, projectId) {
   if (!sb) throw new Error('Sin conexión a la base.');

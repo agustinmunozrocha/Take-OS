@@ -57,7 +57,7 @@ function _perfilEsExtranjero(prof) {
      (case/acentos-insensitive). El title-case de la BD ya no lo confunde. */
   try { return !!(prof && prof.region && _regionCanonica(prof.region) === null); } catch (e) { return false; }
 }
-function _rutValido(s) {
+export function _rutValido(s) {
   const x = String(s || '').toUpperCase().replace(/[^0-9K]/g, '');
   if (x.length < 2) return false;
   const cuerpo = x.slice(0, -1), dv = x.slice(-1);

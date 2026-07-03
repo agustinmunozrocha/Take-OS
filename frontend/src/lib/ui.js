@@ -306,7 +306,7 @@ function comboboxCloseDelayed(inputEl) {
 /* ═══ TEMA CLARO/OSCURO (V7.2) ═══════════════════════════════════════
    Persistido en localStorage. Por defecto: oscuro (la marca nació dark). */
 const THEME_KEY = 'takeos_theme';
-function getStoredTheme() {
+export function getStoredTheme() {
   try { return window.localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
 }
 function applyStoredTheme() {
@@ -321,7 +321,7 @@ export function toggleTheme() {
   applyStoredTheme();
   showToast({ kind: 'info', title: next === 'light' ? 'Modo claro activado' : 'Modo oscuro activado', body: 'Tu preferencia queda guardada en este navegador.' });
 }
-function updateThemeButton(theme) {
+export function updateThemeButton(theme) {
   const btn = document.getElementById('themeToggleBtn');
   if (!btn) return;
   // Sol cuando estás en oscuro (para pasar a claro); luna cuando estás en claro.
@@ -696,7 +696,7 @@ export function fireConfetti() {
    IDs HTML con tildes y espacios eran frágiles. Esta función genera
    slugs limpios para usar como sufijos de id/data-attributes. Se mantiene
    el texto original con tildes para la UI visible. */
-function slugify(str) {
+export function slugify(str) {
   return String(str)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quita diacríticos
     .toLowerCase()
