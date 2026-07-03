@@ -1453,7 +1453,7 @@ window.prMoveCol             = prMoveCol;
 window.prDelColumna          = prDelColumna;
 window.prAddColumna          = prAddColumna;
 window.prResetCols           = prResetCols;
-window.prNormalizeDur        = prNormalizeDur;   // locaciones.js lo llama como window.prNormalizeDur
+window.prNormalizeDur        = prNormalizeDur;   // locaciones.js lo llama como prNormalizeDur
 
 // ── Window bridges Hoja de Llamado ─────────────────────────────────
 window.renderHojaLlamado     = renderHojaLlamado;
@@ -1566,3 +1566,5 @@ define('prParseHM', prParseHM);
 define('printViaIframe', printViaIframe);
 define('renderHojaLlamado', renderHojaLlamado);
 define('renderPlanRodaje', renderPlanRodaje);
+
+define('prNormalizeDur', prNormalizeDur);

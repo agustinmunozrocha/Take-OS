@@ -1156,7 +1156,7 @@ window.openPersonaForm        = openPersonaForm;
 window.togglePfTalento        = togglePfTalento;
 window.submitPersonaForm      = submitPersonaForm;
 window.tipoCuentaSelectHTML   = tipoCuentaSelectHTML;
-window.openPersonaByName      = openPersonaByName;   // locaciones.js la llama como window.openPersonaByName
+window.openPersonaByName      = openPersonaByName;   // locaciones.js la llama como openPersonaByName
 
 // D2 · acciones delegadas
 registrarAcciones('bd', {
@@ -1222,3 +1222,5 @@ define('crewAddToBD', crewAddToBD);
 define('openPersonaByName', openPersonaByName);
 define('openPersonaForm', openPersonaForm);
 define('renderBDPersonas', renderBDPersonas);
+
+define('archivarLocacionModal', archivarLocacionModal);

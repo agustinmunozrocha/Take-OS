@@ -741,7 +741,7 @@ export function buildPersonasDatalist() {
 }
 
 // ── Window bridges XLSX BD ─────────────────────────────────────────
-window._normKey             = _normKey;             // locaciones.js la llama como window._normKey; combobox (index) desnuda
+window._normKey             = _normKey;             // locaciones.js la llama como _normKey; combobox (index) desnuda
 window._normRut             = _normRut;
 window.ensureXLSX           = ensureXLSX;
 window.ensureExcelJS        = ensureExcelJS;
@@ -768,3 +768,5 @@ define('ensureExcelJS', ensureExcelJS);
 define('exportBDExcelV71', exportBDExcelV71);
 define('importBDExcelV71', importBDExcelV71);
 define('triggerBDExcelImport', triggerBDExcelImport);
+
+define('buildPersonasDatalist', buildPersonasDatalist);

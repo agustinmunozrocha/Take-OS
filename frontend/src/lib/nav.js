@@ -1,6 +1,6 @@
 // Navegación + registro MODULES + dispatcher renderModule — extraído de index.html (Etapa C5)
 // ⚠ ORDEN: debe importarse ANTES que gastos.js — goWire() lee MODULES a pelo en su
-// eval y resuelve vía window.MODULES (asignado aquí). Las entradas render son arrows
+// eval y resuelve vía MODULES (asignado aquí). Las entradas render son arrows
 // diferidos (lección #7); jamás referencias directas.
 
 // D1e · imports reales (regla lib-precede: solo de libs anteriores en main.js)
@@ -9,7 +9,7 @@ import { STATE } from './state.js';
 import { authPuedeVer } from './auth.js';
 import { sectionResponsableHTML } from './ui.js';
 
-import { gancho } from './ganchos.js';
+import { gancho, valor } from './ganchos.js';
 export function navigateToModule(moduleKey) {
   // V10.4.0 (Gate B): no navegar a módulos sin acceso; caer al primero visible
   if (!authPuedeVer(moduleKey)) {
@@ -45,7 +45,7 @@ export function navigateToModule(moduleKey) {
    conectan aquí. La arquitectura no cambia.
    ════════════════════════════════════════════════════════════════════ */
 
-export const MODULES = {   // window.MODULES se asigna al cierre de la definición (línea marcada A4)
+export const MODULES = {   // MODULES se asigna al cierre de la definición (línea marcada A4)
   'info-proyecto': {
     title: 'Info Proyecto',
     subtitle: 'Identidad del proyecto, cliente, equipo, fechas y resumen financiero.',
@@ -142,7 +142,7 @@ export const MODULES = {   // window.MODULES se asigna al cierre de la definici�
     eyebrow: 'Comunicación',
     layer: 'Implementado · V6.7 (experiencia final, envío vía backend)',
     scope: 'project',
-    render: function() { return window.renderNotificaciones(); },
+    render: function() { return gancho('renderNotificaciones')(); },
     description: 'Plantillas editables sin tocar código, variables dinámicas, multi-canal (mail + WhatsApp Business), sistema de confirmación de asistencia, recordatorios automáticos según el cronograma operativo definido en el PRD.'
   },
   'documentos': {

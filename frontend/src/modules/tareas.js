@@ -2,7 +2,7 @@
 // Incluye @menciones, adjuntos a Storage y el repositorio del Control Room.
 
 // D1c · imports reales. VETADOS: currentUser (window mutable), PROJECTS_SOURCE,
-// ORG_ID, closeModal (solo strings). Bridge window.MODULES INTOCABLE: el goWire
+// ORG_ID, closeModal (solo strings). Bridge MODULES INTOCABLE: el goWire
 // de gastos lo lee en eval. Ciclo nav⇄tareas: refreshSidebarTaskCounters queda
 // vía window hasta la tranche de nav.
 import { escapeHtml, showToast } from '../lib/helpers.js';
@@ -338,3 +338,7 @@ define('mentionInput', mentionInput);
 define('openTareasModal', openTareasModal);
 define('refreshSidebarTaskCounters', refreshSidebarTaskCounters);
 define('sectionTaskCount', sectionTaskCount);
+
+define('ensureTareas', ensureTareas);
+define('renderMisTareas', renderMisTareas);
+define('userSenales', userSenales);

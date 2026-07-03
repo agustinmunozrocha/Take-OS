@@ -1,7 +1,7 @@
 // Estado global compartido de TakeOS — Etapa 1.
 //
 // STATE es un OBJETO que se comparte por REFERENCIA: el codigo clasico y los
-// modulos apuntan al mismo objeto (window.STATE), asi que leer y mutar
+// modulos apuntan al mismo objeto (STATE), asi que leer y mutar
 // STATE.x (propiedades) propaga solo. Nunca se reasigna STATE entero (es
 // const), por eso basta con compartir la referencia via el puente en main.js.
 export const STATE = {
@@ -51,7 +51,7 @@ export let TAKEOS_ACCESO = null; window.TAKEOS_ACCESO = null;      // { modulo: 
 // se extraeran limpio en Etapa 2. Aqui dejamos el ESTADO coherente en state.js.
 window.DAL_SESSION_UID = null;
 window.DAL_SESSION_EMAIL = '';
-export let USUARIO_ACTUAL = ('USUARIO_ACTUAL' in window) ? window.USUARIO_ACTUAL : ''; window.USUARIO_ACTUAL = USUARIO_ACTUAL; // guard: una IIFE clásica lo restaura desde localStorage en parse-time, ANTES de este eval — no pisarlo (auditoría de cierre 2-jul)
+export let USUARIO_ACTUAL = ('USUARIO_ACTUAL' in window) ? USUARIO_ACTUAL : ''; window.USUARIO_ACTUAL = USUARIO_ACTUAL; // guard: una IIFE clásica lo restaura desde localStorage en parse-time, ANTES de este eval — no pisarlo (auditoría de cierre 2-jul)
 
 // Flags de origen de datos del DAL (Etapa B1). 'pending' → 'supabase' tras la
 // primera lectura exitosa (fail-safe: sin lectura confirmada NO se escribe).
@@ -181,7 +181,7 @@ export let EMPRESA_PERFIL = {
 /* V5.11 (Nota 1): undo básico de un nivel por acción. */
 // UNDO_STACK, UNDO_BASELINE, UNDO_MAX, REDO_STACK → movido a src/modules/persistencia-local.js (Etapa B2)
 
-/* STATE -> movido a src/lib/state.js (Etapa 1); mismo objeto compartido en window.STATE via src/main.js */
+/* STATE -> movido a src/lib/state.js (Etapa 1); mismo objeto compartido en STATE via src/main.js */
 
 /* ════════════════════════════════════════════════════════════════════
    CONSTANTES TRIBUTARIAS (Chile)

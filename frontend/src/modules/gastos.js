@@ -2,7 +2,7 @@
 // src/modules/gastos.js
 // Era el segundo <script id="go-cfo-script"> del monolito. goWire() se ejecuta al
 // evaluar el módulo (post script clásico, pre primer render) y registra Gastos/CFO
-// en window.MODULES.
+// en MODULES.
 
 // D1d · imports reales — MITAD SEGURA del ciclo duro gastos⇄presupu: solo la
 // dirección gastos→presupu; presupu sigue consumiendo renderGastos/renderCFO/
