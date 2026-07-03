@@ -8,7 +8,7 @@ import { BANCOS_CHILE, REGIONES_CHILE } from './data.js';
 import { _puedeEditarResponsables } from './auth.js';
 
 import { registrarAcciones, accionHTML } from './delegacion.js';
-import { gancho } from './ganchos.js';
+import { gancho, valor } from './ganchos.js';
 let _modalOnCancel;   // D4c: estado propio del módulo (antes window._modalOnCancel, era de los handlers inline)
 let _modalOnConfirm;   // D4c: estado propio del módulo (antes window._modalOnConfirm, era de los handlers inline)
 /* ─── PERSON SELECT (sustituye datalist+input bugeado) ──────────────
