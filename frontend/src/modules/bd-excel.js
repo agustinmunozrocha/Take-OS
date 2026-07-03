@@ -3,6 +3,16 @@
 // Incluye normalizadores (_normKey, _norm*BD), tablas SBIF de bancos y los
 // flujos de exportar/importar/plantilla de la BD. La UI de la BD vive en bd.js.
 
+// D1d · imports reales. DIFERIDA la arista a bd (renderBDPersonas queda vía
+// window): bd importará bd-excel — no cerrar el ciclo ESM.
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_PERSONAS, BD_TALENTOS, STATE } from '../lib/state.js';
+import { _buildPerfilPago, _buildPerfilTalento, _clearStore, _dedupKeys, _genId, ingestLegacyIntoContactos, syncLegacyFromContactos } from '../lib/modelo.js';
+import { comboboxAddEmpresaToBD, showModal } from '../lib/ui.js';
+import { getBDPresupuesto } from './presupuesto-cotizacion.js';
+import { dalFinishBulkImport } from './dal.js';
+import { autosaveNow, markDirty, pushSnapshot } from './persistencia-local.js';
+
 /* Helper para datalists: lista de nombres para autocompletar */
 /* ════════════════════════════════════════════════════════════════════
    V5.7 (Nota 4) · IMPORTACIÓN DE LA BD DESDE EXCEL (.xlsx)
@@ -97,7 +107,7 @@ const HEADERS_TALENTOS_V71 = [
 ];
 
 // Normalizadores espejo del build_bd.py
-function _normRutBD(rut) {
+export function _normRutBD(rut) {
   if (rut == null) return '';
   const clean = String(rut).replace(/[^\dkK]/g, '').toUpperCase();
   if (clean.length < 7) return '';
@@ -108,7 +118,7 @@ function _normRutBD(rut) {
   const bodyFmt = chunks.map(c => c.split('').reverse().join('')).reverse().join('.');
   return `${bodyFmt}-${dv}`;
 }
-function _normPhoneBD(p) {
+export function _normPhoneBD(p) {
   if (p == null) return '';
   let digits = String(p).replace(/\D/g, '');
   if (!digits) return '';
@@ -117,12 +127,12 @@ function _normPhoneBD(p) {
   if (digits.length === 8) return `+56 2 ${digits.slice(0,4)} ${digits.slice(4)}`;
   return digits ? `+${digits}` : '';
 }
-function _normEmailBD(e) {
+export function _normEmailBD(e) {
   if (e == null) return '';
   const s = String(e).toLowerCase().trim();
   return s.indexOf('@') === -1 ? '' : s;
 }
-function _normNameBD(n) {
+export function _normNameBD(n) {
   if (n == null) return '';
   const low = ['de','del','la','las','el','los','y','da','do'];
   return String(n).trim().split(/\s+/).map((w, i) => {
@@ -183,7 +193,7 @@ const _BANCO_ALIAS = {
   'mercado pago': '875', 'mercadopago': '875'
 };
 /* Devuelve el código SBIF a partir de un nombre de banco (cualquier variante). '' si no matchea. */
-function _codigoBancoSBIF(banco) {
+export function _codigoBancoSBIF(banco) {
   if (!banco) return '';
   const key = String(banco).trim().toLowerCase();
   if (_BANCO_ALIAS[key]) return _BANCO_ALIAS[key];

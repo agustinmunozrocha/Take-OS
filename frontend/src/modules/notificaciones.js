@@ -163,7 +163,7 @@ async function _rebindResolver(reqId, aprobar, correo) {
     Array.prototype.forEach.call(btns, function (b) { b.disabled = false; });
   }
 }
-async function _empCargarRebinds() {
+export async function _empCargarRebinds() {
   var box = document.getElementById('empRebindsBox'); if (!box || !window.sb) return;
   try {
     var r = await window.sb.from('invitation_rebind_requests').select('*').eq('estado', 'pendiente').order('requested_at', { ascending: false });

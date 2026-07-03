@@ -14,7 +14,7 @@ function _tipoDTEaCodigo(tipo) {
 }
 
 /* ── Construcción de bloques de perfil ────────────────────────────────── */
-function _buildPerfilPago(o) {
+export function _buildPerfilPago(o) {
   const banco = _norm(o.banco), codigoBanco = _norm(o.codigoBanco) || (typeof _codigoBancoSBIF === 'function' ? _codigoBancoSBIF(o.banco) : '');
   const tipoCuenta = _norm(o.tipoCuenta), nCuenta = _norm(o.nCuenta || o.numeroCuenta);
   const tipoDTE = _norm(o.tipoDTE), dteHabitual = o.dteHabitual || _tipoDTEaCodigo(tipoDTE) || null;
@@ -23,7 +23,7 @@ function _buildPerfilPago(o) {
   const bancoOf = banco && typeof _nombreBancoOficial === 'function' ? _nombreBancoOficial(banco) : banco;
   return { banco: bancoOf, codigoBanco, tipoCuenta, nCuenta, tipoDTE, dteHabitual, cuentaExtranjera, datosExtranjeros };
 }
-function _buildPerfilTalento(o) {
+export function _buildPerfilTalento(o) {
   const f = ['genero','fechaNacimiento','altura','apariencia','areas','tallaPolera','tallaPantalon','tallaCalzado','fotosLink','reelLink'];
   const out = {}; let any = false;
   f.forEach(k => { out[k] = _norm(o[k]); if (out[k]) any = true; });
@@ -48,7 +48,7 @@ function normalizeContacto(c) {
    Se usa al cargar un save VIEJO (sin bdContactos) o un .xlsx de 3 hojas.
    Espejo de migrate_bd.py. Dedup por RUT > email > nombre.
    ════════════════════════════════════════════════════════════════════ */
-function ingestLegacyIntoContactos() {
+export function ingestLegacyIntoContactos() {
   _clearStore(BD_CONTACTOS);
   _clearStore(BD_EMPRESAS_BYID);
   const index = {};                // dedupKey → contactId
@@ -176,7 +176,7 @@ function _legacyTalentoView(c) {
     fotosLink: t.fotosLink || '', reelLink: t.reelLink || '', notas: c.notas
   };
 }
-function syncLegacyFromContactos() {
+export function syncLegacyFromContactos() {
   _clearStore(BD_PERSONAS); _clearStore(BD_TALENTOS); _clearStore(BD_EMPRESAS);
   Object.keys(BD_CONTACTOS).forEach(id => {
     const c = BD_CONTACTOS[id];
@@ -229,7 +229,7 @@ function hydrateContactStore(obj) {
 /* _clientUuid: necesaria en startup (buildDefaultProjectData / DEMO_PROJECTS).
    El módulo presupuesto-cotizacion.js tiene su propia copia y puentea window._clientUuid
    al cargar, pero ese puente llega después del classic script — este stub cubre el gap. */
-function _clientUuid() {
+export function _clientUuid() {
   try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = (window.crypto && crypto.getRandomValues) ? (crypto.getRandomValues(new Uint8Array(1))[0] % 16) : Math.floor(Math.random() * 16);
@@ -377,7 +377,7 @@ export function buildDefaultProjectData() {
 }
 
 /* Helper para hidratar datos demo: aplica overrides sobre el default */
-function buildProjectData(overrides) {
+export function buildProjectData(overrides) {
   const data = buildDefaultProjectData();
   if (overrides.infoProyecto) Object.assign(data.infoProyecto, overrides.infoProyecto);
   if (overrides.finanzas) Object.assign(data.finanzas, overrides.finanzas);
@@ -426,7 +426,7 @@ window.ingestLegacyIntoContactos = ingestLegacyIntoContactos;
 window.syncLegacyFromContactos = syncLegacyFromContactos;
 
 // ═══ Helpers de stores + modelo de locaciones de proyecto (Etapa C6) ═══
-function normLocName(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' '); }
+export function normLocName(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' '); }
 // LOC_ESTADO_RANK → movido a src/lib/data.js (Etapa B3)
 function dedupeProjectLocaciones(project) {
   const d = project && project.data;
@@ -468,22 +468,22 @@ function migrateProjectLocaciones(project) {
   d._locMigrated = true;
   // hl.locaciones queda como campo legado (ya no se renderiza ni edita).
 }
-function ensureProjectLoc(project) { if (project && project.data) { if (!Array.isArray(project.data.locaciones)) project.data.locaciones = []; if (!project.data._locMigrated) migrateProjectLocaciones(project); dedupeProjectLocaciones(project); } return project ? project.data.locaciones : []; }
+export function ensureProjectLoc(project) { if (project && project.data) { if (!Array.isArray(project.data.locaciones)) project.data.locaciones = []; if (!project.data._locMigrated) migrateProjectLocaciones(project); dedupeProjectLocaciones(project); } return project ? project.data.locaciones : []; }
 
 /* V8.3 — BD DE LEGAL (transversal, canónica). Cuarta categoría de la BD,
    junto a Personas/Empresas/Locaciones. Los documentos legales no mueren
    con el proyecto: viven en este archivo global y consultable. Cada
    registro referencia un proyecto y una contraparte (persona o locación).
    El tab Legal de un proyecto es una vista filtrada de BD_LEGAL. */
-function _genId(prefix, store) {
+export function _genId(prefix, store) {
   let id;
   do { id = prefix + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4); }
   while (store[id]);
   return id;
 }
-function _clearStore(s) { Object.keys(s).forEach(k => delete s[k]); }
+export function _clearStore(s) { Object.keys(s).forEach(k => delete s[k]); }
 function _norm(v) { return (v == null) ? '' : String(v).trim(); }
-function _dedupKeys(rut, email, nombre) {
+export function _dedupKeys(rut, email, nombre) {
   const k = [];
   if (rut) k.push('rut::' + rut);
   if (email) k.push('email::' + email);

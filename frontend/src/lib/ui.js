@@ -94,7 +94,7 @@ function showTooltip(triggerEl) {
   _activeTooltip = tip;
 }
 
-function hideTooltip() {
+export function hideTooltip() {
   if (_activeTooltip) {
     _activeTooltip.remove();
     _activeTooltip = null;
@@ -145,7 +145,7 @@ function setupTooltipListeners() {
    </div>
    ════════════════════════════════════════════════════════════════════ */
 
-function comboboxAddToBD(btn) {
+export function comboboxAddToBD(btn) {
   const wrap = btn && btn.closest ? btn.closest('.combobox-wrap') : null;
   const inp = wrap ? wrap.querySelector('.combobox-input') : null;
   const nombre = inp ? (inp.value || '').trim() : '';
@@ -158,7 +158,7 @@ function comboboxAddToBD(btn) {
    del data-emp-rol del input. Si la empresa ya existe, NO se duplica: se le
    suma el rol que falta a su Tipo (p. ej. un Cliente pasa a "Cliente, Proveedor").
    Tras crear/actualizar, la deja seleccionada en el input. */
-function _empTieneRol(tipo, rol) {
+export function _empTieneRol(tipo, rol) {
   if (!rol) return true;
   return String(tipo || '').toLowerCase().split(',').map(s => s.trim()).indexOf(String(rol).toLowerCase()) !== -1;
 }
@@ -173,7 +173,7 @@ function _empAddRol(tipo, rolCap) {
   });
   return roles.join(', ');
 }
-function comboboxAddEmpresaToBD(btn) {
+export function comboboxAddEmpresaToBD(btn) {
   const wrap = btn && btn.closest ? btn.closest('.combobox-wrap') : null;
   const inp = wrap ? wrap.querySelector('.combobox-input') : null;
   if (!inp) return;
@@ -250,7 +250,7 @@ function comboboxFilter(inputEl) {
   else { positionComboboxDropdown(inputEl, dropdown); }
 }
 
-function positionComboboxDropdown(inputEl, dropdown) {
+export function positionComboboxDropdown(inputEl, dropdown) {
   // position:fixed + cálculo desde el rect del input para evitar clipping
   // por overflow de tablas o cualquier ancestor.
   const rect = inputEl.getBoundingClientRect();
@@ -306,7 +306,7 @@ function comboboxCloseDelayed(inputEl) {
 /* ═══ TEMA CLARO/OSCURO (V7.2) ═══════════════════════════════════════
    Persistido en localStorage. Por defecto: oscuro (la marca nació dark). */
 const THEME_KEY = 'takeos_theme';
-function getStoredTheme() {
+export function getStoredTheme() {
   try { return window.localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
 }
 function applyStoredTheme() {
@@ -321,7 +321,7 @@ export function toggleTheme() {
   applyStoredTheme();
   showToast({ kind: 'info', title: next === 'light' ? 'Modo claro activado' : 'Modo oscuro activado', body: 'Tu preferencia queda guardada en este navegador.' });
 }
-function updateThemeButton(theme) {
+export function updateThemeButton(theme) {
   const btn = document.getElementById('themeToggleBtn');
   if (!btn) return;
   // Sol cuando estás en oscuro (para pasar a claro); luna cuando estás en claro.
@@ -377,7 +377,7 @@ export function bancoSelectHTML(current, opts) {
   o += BANCOS_CHILE.map(b => '<option' + (cur === b.nombre ? ' selected' : '') + '>' + escapeHtml(b.nombre) + '</option>').join('');
   return '<select class="select"' + (opts.id ? ' id="' + opts.id + '"' : '') + (opts.onchange ? ' onchange="' + opts.onchange + '"' : '') + '>' + o + '</select>';
 }
-function pfBancoChange(nombre) { const cb = document.getElementById('pf_codigoBanco'); if (cb) cb.value = bancoCodigo(nombre); }
+export function pfBancoChange(nombre) { const cb = document.getElementById('pf_codigoBanco'); if (cb) cb.value = bancoCodigo(nombre); }
 
 export function _toISODate(v) {
   if (!v) return '';
@@ -387,7 +387,7 @@ export function _toISODate(v) {
   if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
   return '';
 }
-function _edadDesde(iso) {
+export function _edadDesde(iso) {
   if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
   const b = new Date(iso + 'T00:00:00'); if (isNaN(b.getTime())) return '';
   const now = new Date(); let age = now.getFullYear() - b.getFullYear();
@@ -443,7 +443,7 @@ function comboboxFilterEmpresas(inputEl) {
   else { positionComboboxDropdown(inputEl, dropdown); }
 }
 
-async function _locThumbAsync(locId, path) {
+export async function _locThumbAsync(locId, path) {
   try {
     if (!sb || !sb.storage) return;
     const { data, error } = await sb.storage.from('fotos-locaciones').createSignedUrl(path, 3600);
@@ -696,7 +696,7 @@ export function fireConfetti() {
    IDs HTML con tildes y espacios eran frágiles. Esta función genera
    slugs limpios para usar como sufijos de id/data-attributes. Se mantiene
    el texto original con tildes para la UI visible. */
-function slugify(str) {
+export function slugify(str) {
   return String(str)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quita diacríticos
     .toLowerCase()

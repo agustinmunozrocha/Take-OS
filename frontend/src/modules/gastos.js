@@ -4,6 +4,25 @@
 // evaluar el módulo (post script clásico, pre primer render) y registra Gastos/CFO
 // en window.MODULES.
 
+// D1d · imports reales — MITAD SEGURA del ciclo duro gastos⇄presupu: solo la
+// dirección gastos→presupu; presupu sigue consumiendo renderGastos/renderCFO/
+// _syncGastosCostoReal vía window hasta d1e. VETADO: currentUser (window).
+// goWire sigue leyendo MODULES en eval: nav (15) siempre antes que gastos.
+import { escapeHtml, safeUrl, showToast } from '../lib/helpers.js';
+import { BD_PERSONAS, EMPRESA_PERFIL, PROJECTS, STATE, STATES_WITH_REAL_COST } from '../lib/state.js';
+import { _clientUuid } from '../lib/modelo.js';
+import { montoNetoDesde } from '../lib/data.js';
+import { calcCostoEmpresa, fmtMoney } from '../lib/calc.js';
+import { closeModal, showModal } from '../lib/ui.js';
+import { MODULES, navigateToModule, renderModule } from '../lib/nav.js';
+import { STATES, navigateToProject } from './kanban.js';
+import { _fechaCorta } from './notificaciones.js';
+import { _budgetCaptureScroll, _budgetColGrip, _budgetColWGet, _budgetRestoreScroll, cotRealPresup, goCotizadoTotal } from './presupuesto-cotizacion.js';
+import { _codigoBancoSBIF } from './bd-excel.js';
+import { _dalPerfilSaveSoon, dalTouchProyecto } from './dal.js';
+import { markDirty } from './persistencia-local.js';
+import { manejarErrorPlan } from './plan-limites.js';
+
 /* ════════════════════════════════════════════════════════════════════
    MÓDULO GASTOS (proyecto) + MÓDULO CFO (global) + EXPORT CHIPAX  · V8.0.0
    ════════════════════════════════════════════════════════════════════
@@ -73,7 +92,7 @@ function goData(project) {
 }
 function goPresById(project, id) { return goData(project).presupuestos.find(p => p.id === id) || null; }
 function goPresList(project) { return goData(project).presupuestos; }
-function goMovs(project) { return goData(project).movimientos; }
+export function goMovs(project) { return goData(project).movimientos; }
 function goGastado(project, presId) { return goMovs(project).filter(m => m.pres === presId).reduce((s, m) => s + (m.monto || 0), 0); }
 function goLineaOf(project, m) { const e = goPresById(project, m.pres); return e ? e.linea : 'Otros'; }
 function goCuentaChipax(linea) { return CHIPAX_CUENTA[linea] || 'Otros Costos Operacionales'; }

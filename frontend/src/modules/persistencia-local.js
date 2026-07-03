@@ -254,7 +254,7 @@ function _writeSnapshots(list) {
   try { window.localStorage.setItem(SNAP_KEY, JSON.stringify(list)); }
   catch (e) { console.error('[snapshots] no se pudo escribir el snapshot de seguridad', e); _persisAvisarFallo('No se pudo guardar el snapshot de seguridad previo a la operación. Considera exportar un respaldo (.json) manualmente.'); }
 }
-function pushSnapshot(label) {
+export function pushSnapshot(label) {
   const snap = {
     label: label || 'Snapshot',
     createdAt: new Date().toISOString(),
@@ -507,7 +507,7 @@ function clearDirty() {
 }
 
 /* V5.11 (Nota 1) — Undo básico */
-function captureUndoBaseline() {
+export function captureUndoBaseline() {
   const p = STATE.currentProject;
   UNDO_STACK = [];
   UNDO_BASELINE = p ? { id: p.id, snap: JSON.stringify(p) } : null;

@@ -208,7 +208,7 @@ function dalApplyTanda1(data) {
 /* Orquestador de arranque: intenta leer de Supabase; si lo logra, reemplaza
    los contactos/empresas ya cargados y refresca la pantalla.
    Si falla, NO toca nada: la app sigue con el estado actual. */
-async function dalBootContactos() {
+export async function dalBootContactos() {
   const _ep = _dalEpoca();
   const data = await dalLoadTanda1();
   if (_ep !== _dalEpoca()) return false;   // cadena obsoleta: la org cambió durante la carga
@@ -304,7 +304,7 @@ function dalApplyLocaciones(locs) {
   locs.forEach(function(l){ DAL_KNOWN_LOC_IDS.add(l.locId); });
   window.LOCATIONS_SOURCE = 'supabase';
 }
-async function dalBootLocaciones(opts) {
+export async function dalBootLocaciones(opts) {
   const silent = opts && opts.silent;
   const _ep = _dalEpoca();
   const locs = await dalLoadLocaciones();
@@ -647,7 +647,7 @@ async function _dalReplaceChildren(table, fk, id, rows) {
 }
 
 /* --- Guardado de un contacto a Supabase --- */
-async function dalGuardarContacto(c) {
+export async function dalGuardarContacto(c) {
   if (!sb || CONTACTS_SOURCE !== 'supabase' || !c || !c.id) return { ok: false, skipped: true };
   const uid = DAL_SESSION_UID || null;
   const isNew = !DAL_KNOWN_CONTACT_IDS.has(c.id);
@@ -676,7 +676,7 @@ async function dalGuardarContacto(c) {
 }
 
 /* --- Guardado de una empresa a Supabase (campos núcleo + tipo) --- */
-async function dalGuardarEmpresa(e) {
+export async function dalGuardarEmpresa(e) {
   if (!sb || CONTACTS_SOURCE !== 'supabase' || !e || !e.id) return { ok: false, skipped: true };
   const uid = DAL_SESSION_UID || null;
   const isNew = !DAL_KNOWN_COMPANY_IDS.has(e.id);
@@ -722,7 +722,7 @@ async function dalBulkSyncBD(contactIds, companyIds) {
 
 /* Cierra una importación .xlsx en modo fusión sincronizando lo tocado a Supabase
    (si la fuente es Supabase). Avisa progreso y resultado. */
-async function dalFinishBulkImport(contactIds, companyIds) {
+export async function dalFinishBulkImport(contactIds, companyIds) {
   if (CONTACTS_SOURCE !== 'supabase') return;   // sin Supabase confirmado, basta el autosave local
   const nC = (contactIds || []).length, nE = (companyIds || []).length;
   if (!nC && !nE) return;
@@ -739,12 +739,12 @@ async function dalFinishBulkImport(contactIds, companyIds) {
 
 /* --- Guardado diferido (debounce) para la edición inline de empresas --- */
 const _dalSaveTimers = {};
-function _dalContactoSaveSoon(id) {
+export function _dalContactoSaveSoon(id) {
   if (CONTACTS_SOURCE !== 'supabase' || !id) return;
   clearTimeout(_dalSaveTimers['c:' + id]);
   _dalSaveTimers['c:' + id] = setTimeout(function(){ const c = BD_CONTACTOS[id]; if (c) dalGuardarContacto(c); }, 900);
 }
-function _dalEmpresaSaveSoon(id) {
+export function _dalEmpresaSaveSoon(id) {
   if (CONTACTS_SOURCE !== 'supabase' || !id) return;
   clearTimeout(_dalSaveTimers['e:' + id]);
   _dalSaveTimers['e:' + id] = setTimeout(function(){ const e = BD_EMPRESAS_BYID[id]; if (e) dalGuardarEmpresa(e); }, 900);
@@ -766,7 +766,7 @@ function _dalLocacionRowPayload(l) {
     updated_at: new Date().toISOString()
   };
 }
-async function dalGuardarLocacion(l) {
+export async function dalGuardarLocacion(l) {
   if (!sb || LOCATIONS_SOURCE !== 'supabase' || !l || !l.locId) return { ok: false, skipped: true };
   const isNew = !DAL_KNOWN_LOC_IDS.has(l.locId);
   const row = _dalLocacionRowPayload(l);
@@ -786,7 +786,7 @@ async function dalGuardarLocacion(l) {
     return { ok: false, error: e };
   }
 }
-function _dalLocacionSaveSoon(locId) {
+export function _dalLocacionSaveSoon(locId) {
   if (LOCATIONS_SOURCE !== 'supabase' || !locId) return;
   clearTimeout(_dalSaveTimers['loc:' + locId]);
   _dalSaveTimers['loc:' + locId] = setTimeout(function(){ const l = bdLocFind(locId); if (l) dalGuardarLocacion(l); }, 900);
@@ -890,7 +890,7 @@ async function dalGuardarPerfil() {
     return { ok: false, error: e };
   }
 }
-function _dalPerfilSaveSoon() {
+export function _dalPerfilSaveSoon() {
   if (PERFIL_SOURCE !== 'supabase') return;
   clearTimeout(_dalSaveTimers['perfil']);
   _dalSaveTimers['perfil'] = setTimeout(function(){ dalGuardarPerfil(); }, 900);

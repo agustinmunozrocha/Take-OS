@@ -2,6 +2,25 @@
 // src/modules/bd.js
 // El import/export XLSX de la BD vive en bd-excel.js (mismo dominio, archivo aparte).
 
+// D1d · imports reales. renderBDPersonas sigue saliendo vía window para
+// bd-excel/nav/dal (bridge intocable). Hoist: gastos 24→22 (goWire necesita
+// nav 15 — seguro).
+import { escapeHtml, safeUrl, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LOC, BD_PERSONAS, BD_TALENTOS, PROJECTS, STATE } from '../lib/state.js';
+import { _buildPerfilPago, _buildPerfilTalento, _genId, normLocName, syncLegacyFromContactos } from '../lib/modelo.js';
+import { DTE_LABEL, DTE_LABEL_SHORT, DTE_OPTIONS } from '../lib/data.js';
+import { authNivel } from '../lib/auth.js';
+import { fmtMoney, initials } from '../lib/calc.js';
+import { _edadDesde, _empTieneRol, _locThumbAsync, _toISODate, bancoSelectHTML, closeModal, comboboxAddToBD, pfBancoChange, regionSelectHTML, showModal } from '../lib/ui.js';
+import { renderModule } from '../lib/nav.js';
+import { STATES, _lastViewSave } from './kanban.js';
+import { calcSummaryFin } from './presupuesto-cotizacion.js';
+import { bdLocFind, ensureLocShape, locFullAddress, locPrimaryContact, nextLocIdBD, openLocDetail } from './locaciones.js';
+import { _normEmailBD, _normKey, _normNameBD, _normPhoneBD, _normRutBD } from './bd-excel.js';
+import { _dalContactoSaveSoon, _dalEmpresaSaveSoon, _dalLocacionSaveSoon, dalBootContactos, dalBootLocaciones, dalGuardarContacto, dalGuardarEmpresa } from './dal.js';
+import { goMovs } from './gastos.js';
+import { autosaveNow, markDirty } from './persistencia-local.js';
+
 /* ════════════════════════════════════════════════════════════════════
    V8.5 · TIPO DE CUENTA (desplegable estandarizado)
    ════════════════════════════════════════════════════════════════════ */
@@ -20,7 +39,7 @@ function tipoCuentaSelectHTML(current, opts) {
    V8.5 · CUMPLEAÑOS (solo día y mes; el año no se guarda)
    ════════════════════════════════════════════════════════════════════ */
 
-function openPersonaByName(nombre) {
+export function openPersonaByName(nombre) {
   if (!nombre) return;
   for (const id in BD_CONTACTOS) { if (BD_CONTACTOS[id] && BD_CONTACTOS[id].nombre === nombre) { openPersonaForm('edit', id); return; } }
   openPersonaForm('create', null); const el = document.getElementById('pf_nombre'); if (el) { el.value = nombre; el.focus(); }

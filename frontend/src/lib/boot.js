@@ -344,7 +344,7 @@ function _bootVeilOff() {
   v.style.opacity = '0'; v.style.pointerEvents = 'none';
   setTimeout(function () { try { v.remove(); } catch (e) {} }, 300);
 }
-async function cloudGate(onUnlock) {
+export async function cloudGate(onUnlock) {
   const client = supabaseInit();
   if (!client) { onUnlock(); return; }   // fallback: sin Supabase, no bloqueamos
 
