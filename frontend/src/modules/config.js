@@ -2128,7 +2128,6 @@ window._empLogoPrincipal = _empLogoPrincipal;
 window._empLogoQuitar = _empLogoQuitar;
 window._empShowSub = _empShowSub;
 window._empTipoQuitar = _empTipoQuitar;
-window._invAbrirDatos = _invAbrirDatos;
 window._orgLogos = _orgLogos;
 window._pdCkTouch = _pdCkTouch;
 window._pdIr = _pdIr;

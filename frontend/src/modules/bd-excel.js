@@ -754,7 +754,6 @@ window._nombreBancoOficial  = _nombreBancoOficial;
 window.exportBDExcelV71     = exportBDExcelV71;
 window.downloadBDPlantilla  = downloadBDPlantilla;
 window.importBDExcelV71     = importBDExcelV71;
-window.triggerBDExcelImport = triggerBDExcelImport;
 window.processBDRows        = processBDRows;
 window.showBDImportResult   = showBDImportResult;
 window.buildPersonasDatalist = buildPersonasDatalist; // presupuesto-cotizacion.js:296 e INFO PROYECTO (index) la llaman

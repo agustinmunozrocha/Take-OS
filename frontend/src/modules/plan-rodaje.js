@@ -1482,12 +1482,7 @@ window.printViaIframe        = printViaIframe;   // legal.js lo llama como globa
 window._callSheetSignature = _callSheetSignature;
 window._hashStr = _hashStr;
 window.getConfirmedCrew = getConfirmedCrew;
-window.prCompressImage = prCompressImage;
-window.prComputeTimes = prComputeTimes;
 window.prEffectiveStartMin = prEffectiveStartMin;
-window.prFmtClock = prFmtClock;
-window.prFmtDur = prFmtDur;
-window.prParseHM = prParseHM;
 
 // ── Bridge auditoría pre-B (botón «Exportar de todas formas» del modal HL) ──
 

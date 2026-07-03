@@ -421,9 +421,6 @@ function cargoQuitar(id) {
 }
 
 // ── Window bridges (3 barridos func+const) ──
-window._cargoContactIdPorNombre = _cargoContactIdPorNombre;
-window._cargosDerivarRECI = _cargosDerivarRECI;
-window._cargosKey = _cargosKey;
 window.renderCargos = renderCargos;
 
 // D2 · acciones delegadas (comboboxSelect/comboboxCloseDelayed vía window: ui)

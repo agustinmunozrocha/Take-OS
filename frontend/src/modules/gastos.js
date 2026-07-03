@@ -1617,7 +1617,6 @@ function goDescargarXlsx(projId) {
 window._syncGastosCostoReal = _syncGastosCostoReal;
 window.goDescargarXlsx = goDescargarXlsx;
 window.goGastoHint = goGastoHint;
-window.goLineaRealGastado = goLineaRealGastado;
 window.goLineaTieneCaja = goLineaTieneCaja;
 window.goSavePresup = goSavePresup;
 window.openGlobalCFO = openGlobalCFO;

@@ -612,7 +612,6 @@ function _hepConfirm() {
 }
 
 // ── Window bridges (3 barridos: externos, auto-consumo, nombre-string) ──
-window._heComputeCosto = _heComputeCosto;
 window.calcUpdate = calcUpdate;
 window.openCalculadoraTributaria = openCalculadoraTributaria;
 window.openCostoRealCalc = openCostoRealCalc;

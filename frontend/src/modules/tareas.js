@@ -309,9 +309,7 @@ window.marcarSenal = marcarSenal;
 window.mentionBlur = mentionBlur;
 window.mentionInput = mentionInput;
 window.openTareasModal = openTareasModal;
-window.refreshSidebarTaskCounters = refreshSidebarTaskCounters;
 window.renderMisTareas = renderMisTareas;
-window.sectionTaskCount = sectionTaskCount;
 window.userSenales = userSenales;
 
 // D2 · acciones delegadas
