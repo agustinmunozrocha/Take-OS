@@ -16,6 +16,7 @@ import { TAKEOS_MARCA, _ctaProdEvento, _ctaProdDescartado } from './plan-limites
 import { _setOrgActiva, _bootCoverShow, _bootCoverHide, arrancarTakeOS } from '../lib/boot.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { setTieneEmpresa } from '../lib/state.js';
 /* ── FRENTE C · C3 · Selector "Cambiar de espacio" (topbar) ──────────────────
    Cambia el contexto de organización activa desde la barra superior. Lista:
    Panel personal · tus productoras (Control Room, interno) · proyectos externos
@@ -76,7 +77,7 @@ function _swPanel() { _swCerrar(); try { irAlPanelPersonal(); } catch (e) {} }
 function _swControlRoom(orgId) {
   _swCerrar();
   try { if (orgId && typeof _setOrgActiva === 'function') _setOrgActiva(orgId); } catch (e) {}
-  try { _TIENE_EMPRESA = true; } catch (e) {}
+  try { setTieneEmpresa(true); } catch (e) {}
   try { if (typeof _bootCoverShow === 'function') _bootCoverShow('Cambiando de espacio…'); } catch (e) {}
   try { arrancarTakeOS(); } catch (e) {}
 }
@@ -187,7 +188,7 @@ function _espOnboarding(hayInternas, hayExternas){
 function _espEntrarInterna(demo, orgId){
   if (demo){ try{ showToast({kind:'info',title:'Vista de demostración',body:'En la app real entrarías a esta productora con tu rol. Esta es una vista de ejemplo.'}); }catch(e){} return; }
   if (orgId) _setOrgActiva(orgId);
-  _TIENE_EMPRESA = true;
+  setTieneEmpresa(true);
   _bootCoverShow('Entrando a tu productora…');
   const ov=document.getElementById('espacioUsuario'); if(ov) ov.remove();
   /* V11.15.0 · B2: limpiar ?espacio=1 de la URL para que F5 restaure la vista

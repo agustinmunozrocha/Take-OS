@@ -14,6 +14,7 @@ import { regionSelectHTML, bancoSelectHTML, bancoCodigo } from '../lib/ui.js';
 import { _DAL_TIPOCUENTA_LABEL, _dalBancoNombre } from './dal.js';
 import { aplicarUsuario } from '../lib/boot.js';
 
+import { setUserNombre, setUserApellido } from '../lib/state.js';
 /* ════════════════════════════════════════════════════════════════════
    V10.8.0 · PERFIL PERSONAL DEL USUARIO + ONBOARDING
    ─────────────────────────────────────────────────────────────────────
@@ -560,7 +561,7 @@ async function _perfilGuardar() {
     if (completo) prof.completado_at = new Date().toISOString();
     var up = await client.from('user_profiles').upsert(prof, { onConflict: 'user_id' });
     if (up.error) throw up.error;
-    USER_NOMBRE = prof.nombre || ''; USER_APELLIDO = prof.apellido || ''; try { aplicarUsuario(); } catch (e) {}
+    setUserNombre(prof.nombre || ''); setUserApellido(prof.apellido || ''); try { aplicarUsuario(); } catch (e) {}
 
     var extEl = document.getElementById('pf_ext'); var ext = extEl ? extEl.checked : false;
     var bancoNombre = g('perfilBanco'), tipo = g('pf_tipocuenta'), num = g('pf_ncuenta'), datosExtra = g('pf_extra');

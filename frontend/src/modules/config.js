@@ -8,7 +8,7 @@
 // espacio (verificado: renderEspacioUsuario lo consume boot, no config).
 // Hoists: boot 29→24, invitaciones 36→24, perfil-onboarding 29→24 (inertes).
 import { escapeHtml, safeUrl, showToast } from '../lib/helpers.js';
-import { BD_CONTACTOS, EMPRESA_PERFIL, PROJECTS, STATE } from '../lib/state.js';
+import { BD_CONTACTOS, EMPRESA_PERFIL, PROJECTS, STATE, setTieneEmpresa } from '../lib/state.js';
 import { authEsAdmin } from '../lib/auth.js';
 import { fmtMoney } from '../lib/calc.js';
 import { closeModal, getStoredTheme, showModal, slugify, updateThemeButton } from '../lib/ui.js';
@@ -1358,7 +1358,7 @@ function _cpEntrarProductora() {
   var ov = document.getElementById('crearProductora'); if (ov) ov.remove();
   _cpEstado = null;
   try { if (orgId && typeof _setOrgActiva === 'function') _setOrgActiva(orgId); } catch (x) {}
-  try { window._TIENE_EMPRESA = true; } catch (x) {}
+  try { setTieneEmpresa(true); } catch (x) {}
   try { _cpTourPendiente = true; } catch (x) {}   // A8: dispara el tour inicial al cargar el Control Room
   try { if (typeof _bootCoverShow === 'function') _bootCoverShow('Entrando a tu productora…'); } catch (x) {}
   try { if (typeof arrancarTakeOS === 'function') arrancarTakeOS(); } catch (x) {}

@@ -14,7 +14,7 @@
 // kanban (5), bd (2), cargos (3), gastos (goSavePresup), legal (renderLegal),
 // locaciones (2).
 import { escapeHtml, showToast } from '../lib/helpers.js';
-import { BD_CONTACTOS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, PROJECTS, STATE } from '../lib/state.js';
+import { BD_CONTACTOS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, EMPRESA_PERFIL, PROJECTS, STATE, setUsuarioActual, setTopeColab, setTopeColabOrg, setSource, setTakeosPerfil, setTakeosAcceso } from '../lib/state.js';
 import { _clearStore, _clientUuid, buildDefaultProjectData, syncLegacyFromContactos } from '../lib/modelo.js';
 import { BANCOS_CHILE, DTE_LABEL } from '../lib/data.js';
 import { _authBlockWriteToast, authPuedeGuardarOperaciones, authPuedeGuardarProyecto } from '../lib/auth.js';
@@ -93,8 +93,8 @@ export async function dalCargarTopeColaboradores() {
     if (!plan) return null;
     const { data: pc, error: e2 } = await sb.from('plan_catalog').select('max_colaboradores').eq('codigo', plan).single();
     if (e2) throw e2;
-    window._TOPE_COLAB = (pc && pc.max_colaboradores != null) ? pc.max_colaboradores : null;
-    window._TOPE_COLAB_ORG = ORG_ID;
+    setTopeColab((pc && pc.max_colaboradores != null) ? pc.max_colaboradores : null);
+    setTopeColabOrg(ORG_ID);
     return _TOPE_COLAB;
   } catch (e) {
     console.warn('[plan] no se pudo leer el tope de colaboradores', e);
@@ -212,7 +212,7 @@ function dalApplyTanda1(data) {
   syncLegacyFromContactos();
   DAL_KNOWN_CONTACT_IDS.clear(); Object.keys(data.contactos).forEach(function(id){ DAL_KNOWN_CONTACT_IDS.add(id); });
   DAL_KNOWN_COMPANY_IDS.clear(); Object.keys(data.empresas).forEach(function(id){ DAL_KNOWN_COMPANY_IDS.add(id); });
-  window.CONTACTS_SOURCE = 'supabase';
+  setSource('contacts', 'supabase');
 }
 
 /* V9.6.18 · Carga las tasas tributarias vigentes desde tax_rates (catálogo
@@ -320,7 +320,7 @@ function dalApplyLocaciones(locs) {
   locs.forEach(function(l){ BD_LOC.push(l); });
   DAL_KNOWN_LOC_IDS.clear();
   locs.forEach(function(l){ DAL_KNOWN_LOC_IDS.add(l.locId); });
-  window.LOCATIONS_SOURCE = 'supabase';
+  setSource('locations', 'supabase');
 }
 export async function dalBootLocaciones(opts) {
   const silent = opts && opts.silent;
@@ -380,7 +380,7 @@ function dalApplyLegal(data) {
   BD_LEGAL_TPL.length = 0; data.tpls.forEach(function(t){ BD_LEGAL_TPL.push(t); });
   DAL_KNOWN_LEGAL_DOC_IDS.clear(); data.docs.forEach(function(d){ DAL_KNOWN_LEGAL_DOC_IDS.add(d.docId); });
   DAL_KNOWN_LEGAL_TPL_IDS.clear(); data.tpls.forEach(function(t){ DAL_KNOWN_LEGAL_TPL_IDS.add(t.id); });
-  window.LEGAL_SOURCE = 'supabase';
+  setSource('legal', 'supabase');
 }
 export async function dalBootLegal(opts) {
   const silent = opts && opts.silent;
@@ -444,7 +444,7 @@ function dalApplyPerfil(profile, nombreCanonico) {
   /* Respaldo del nombre de fantasía: si el perfil no lo trae, usa el nombre
      canónico de la organización (organizations.nombre). */
   if (!(String(EMPRESA_PERFIL.nombreFicticio || '').trim()) && nombreCanonico) EMPRESA_PERFIL.nombreFicticio = nombreCanonico;
-  window.PERFIL_SOURCE = 'supabase';
+  setSource('perfil', 'supabase');
   try { aplicarMarcaOrg(); } catch (e) {}
 }
 export async function dalBootPerfil(opts) {
@@ -484,7 +484,7 @@ export async function dalResolveIdentidad() {
     try {
       const uidCache = localStorage.getItem('takeos_usuario_uid') || '';
       if (uidCache && uidCache !== DAL_SESSION_UID) {
-        USUARIO_ACTUAL = ''; window.__TAKEOS_USER = '';
+        setUsuarioActual(''); window.__TAKEOS_USER = '';
         try { localStorage.removeItem('takeos_usuario_actual'); } catch (e) {}
         try { renderTopbarUser(); } catch (e) {}
       }
@@ -547,7 +547,7 @@ export async function dalLoadPermisos() {
     if (e1) throw e1;
     if (!mem) { console.warn('[auth] sin membresía para el usuario (fail-open)'); return; }
     const pp = mem.permission_profiles || {};
-    TAKEOS_PERFIL = { codigo: pp.codigo || null, nombre: pp.nombre || '', tipo: mem.tipo || '', profileId: mem.profile_id || null, contactId: mem.contact_id || null };
+    setTakeosPerfil({ codigo: pp.codigo || null, nombre: pp.nombre || '', tipo: mem.tipo || '', profileId: mem.profile_id || null, contactId: mem.contact_id || null });
     // Nombre real desde el contacto vinculado (más confiable que el email)
     if (mem.contact_id && BD_CONTACTOS[mem.contact_id] && BD_CONTACTOS[mem.contact_id].nombre) {
       setCurrentUser(BD_CONTACTOS[mem.contact_id].nombre);
@@ -562,7 +562,7 @@ export async function dalLoadPermisos() {
     if (_ep !== _dalEpoca()) return;   // cadena obsoleta
     const acc = {};
     (perms || []).forEach(function (p) { acc[p.modulo] = p.nivel; });
-    TAKEOS_ACCESO = Object.keys(acc).length ? acc : null;
+    setTakeosAcceso(Object.keys(acc).length ? acc : null);
     renderTopbarUser();
     applyPermisosUI();
   } catch (e) {
@@ -1310,7 +1310,7 @@ export async function dalBootProyectos() {
   const rows = await dalLoadProyectos();
   if (_ep !== _dalEpoca()) return;                    // cadena obsoleta: no aplica ni toca el veil (la cadena vigente lo cierra)
   if (!rows) { try { renderMetrics(); renderKanban(); } catch (e) {} _bootCoverHide(); return; }   // error o sin red -> se pinta el estado actual (post-reset: tablero vacío honesto, no fantasmas de la org anterior)
-  if (!rows.length) { window.PROJECTS_SOURCE = 'supabase'; try { renderMetrics(); renderKanban(); } catch (e) {} _bootCoverHide(); return; }   // org sin proyectos: la nube respondió -> escritura habilitada y tablero vacío real (sin esto el flag quedaba 'pending' y nada sincronizaba)
+  if (!rows.length) { setSource('projects', 'supabase'); try { renderMetrics(); renderKanban(); } catch (e) {} _bootCoverHide(); return; }   // org sin proyectos: la nube respondió -> escritura habilitada y tablero vacío real (sin esto el flag quedaba 'pending' y nada sincronizaba)
   let aplicados = 0;
   rows.forEach(function(p){
     const partes = _dalProyectoPartes(p);
@@ -1323,7 +1323,7 @@ export async function dalBootProyectos() {
     DAL_KNOWN_PROJECT_IDS.add(p.id);
     aplicados++;
   });
-  window.PROJECTS_SOURCE = 'supabase';
+  setSource('projects', 'supabase');
   try { renderMetrics(); renderKanban(); } catch (e) {}
   /* V11.9.7 · salto directo a un proyecto (click desde el Panel Personal de un
      externo): entra al proyecto sin pasar por el Control Room. */

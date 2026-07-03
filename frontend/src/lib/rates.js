@@ -7,12 +7,20 @@
 //     no se puede reasignar un global "a secas").
 
 // Defaults (se setean al cargar el modulo, antes del arranque de la app):
-window.IMPUESTO_HONORARIOS = 0.1525;          // concepto 'honorarios' (BHE)
-window.IMPUESTO_BTE = 0.1525;                 // concepto 'retencion_bte' (BTE); default = BHE hasta tener dato
-window.IVA = 0.19;                            // concepto 'iva'
-window.FACTOR_BOLETA = 1 - window.IMPUESTO_HONORARIOS;
-window.FACTOR_BTE = 1 - window.IMPUESTO_BTE;
-window.TAX_RATES_SOURCE = 'default';          // pasa a 'supabase' si se cargaron las tasas
+// D3a · bindings de módulo (export let) como fuente canónica; el espejo window
+// se mantiene para los lectores aún no migrados (window.X explícitos).
+export let IMPUESTO_HONORARIOS = 0.1525;      // concepto 'honorarios' (BHE)
+export let IMPUESTO_BTE = 0.1525;             // concepto 'retencion_bte' (BTE); default = BHE hasta tener dato
+export let IVA = 0.19;                        // concepto 'iva'
+export let FACTOR_BOLETA = 1 - IMPUESTO_HONORARIOS;
+export let FACTOR_BTE = 1 - IMPUESTO_BTE;
+export let TAX_RATES_SOURCE = 'default';      // pasa a 'supabase' si se cargaron las tasas
+function _espejo() {
+  window.IMPUESTO_HONORARIOS = IMPUESTO_HONORARIOS; window.IMPUESTO_BTE = IMPUESTO_BTE;
+  window.IVA = IVA; window.FACTOR_BOLETA = FACTOR_BOLETA; window.FACTOR_BTE = FACTOR_BTE;
+  window.TAX_RATES_SOURCE = TAX_RATES_SOURCE;
+}
+_espejo();
 
 export async function dalBootTaxRates() {
   if (!sb) return false;
@@ -34,10 +42,11 @@ export async function dalBootTaxRates() {
     const iva = vigente['iva'] ? norm(vigente['iva'].tasa) : null;
     const hon = vigente['honorarios'] ? norm(vigente['honorarios'].tasa) : null;
     const bte = vigente['retencion_bte'] ? norm(vigente['retencion_bte'].tasa) : null;
-    if (iva != null) window.IVA = iva;
-    if (hon != null) { window.IMPUESTO_HONORARIOS = hon; window.FACTOR_BOLETA = 1 - hon; }
-    if (bte != null) { window.IMPUESTO_BTE = bte; window.FACTOR_BTE = 1 - bte; }
-    window.TAX_RATES_SOURCE = 'supabase';
+    if (iva != null) IVA = iva;
+    if (hon != null) { IMPUESTO_HONORARIOS = hon; FACTOR_BOLETA = 1 - hon; }
+    if (bte != null) { IMPUESTO_BTE = bte; FACTOR_BTE = 1 - bte; }
+    TAX_RATES_SOURCE = 'supabase';
+    _espejo();
     return true;
   } catch (e) {
     console.warn('[dal] tax_rates no disponible; se usan tasas por defecto', e);

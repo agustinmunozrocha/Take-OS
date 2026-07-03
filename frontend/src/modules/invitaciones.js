@@ -10,6 +10,7 @@ import { abrirPerfilUsuario } from './perfil-onboarding.js';
 import { _setOrgActiva, _bootCoverShow, arrancarTakeOS, resolverEspacioYArrancar } from '../lib/boot.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
+import { setTieneEmpresa } from '../lib/state.js';
 /* ════════════════════════════════════════════════════════════════════
    V11.3.0 · SISTEMA DE INVITACIONES (frontend)
    ════════════════════════════════════════════════════════════════════
@@ -74,7 +75,7 @@ async function abrirInvitacionRecibida(token) {
   }
   if (info.ya_miembro) {
     showToast({ kind: 'info', title: 'Ya eres parte', body: 'Tu cuenta ya pertenece a esta productora.' });
-    _TIENE_EMPRESA = true; _bootCoverShow('Entrando…'); _setOrgActiva(info.org_id); arrancarTakeOS(); return;
+    setTieneEmpresa(true); _bootCoverShow('Entrando…'); _setOrgActiva(info.org_id); arrancarTakeOS(); return;
   }
   /* V11.12.0 · regla única del servidor (handoff BD §5): `requisitos_faltantes`
      manda. Si falta algo, vamos DIRECTO a completar SOLO esas secciones, sin
