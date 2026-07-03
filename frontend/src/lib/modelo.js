@@ -201,7 +201,7 @@ export function syncLegacyFromContactos() {
 }
 
 /* Reconstruye el modelo canónico desde un objeto de save (nuevo o viejo). */
-function hydrateContactStore(obj) {
+export function hydrateContactStore(obj) {
   if (obj && obj.bdContactos && typeof obj.bdContactos === 'object') {
     _clearStore(BD_CONTACTOS); _clearStore(BD_EMPRESAS_BYID);
     Object.keys(obj.bdContactos).forEach(k => {

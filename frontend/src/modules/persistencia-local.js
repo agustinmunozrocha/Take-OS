@@ -5,6 +5,15 @@
 // vive en dal.js; las 2 costuras entre ambas: markDirty→dalTouchProyecto y
 // undo/redo→_conflictoBannerHide (vía window, bridgeadas en dal.js).
 
+// D1e · imports reales. DIFERIDOS anti-ciclo: dal (dalTouchProyecto,
+// _conflictoBannerHide — dal importa persistencia), kanban (3 renders — kanban
+// importa persistencia), admin (_puedeModoAdmin — arrastre por 1 símbolo).
+import { escapeHtml, showToast } from '../lib/helpers.js';
+import { BD_CONTACTOS, BD_EMPRESAS, BD_EMPRESAS_BYID, BD_LEGAL, BD_LEGAL_TPL, BD_LOC, BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, PROJECTS, STATE, TAKEOS_VERSION, TRASH } from '../lib/state.js';
+import { hydrateContactStore } from '../lib/modelo.js';
+import { showModal } from '../lib/ui.js';
+import { navigateToModule } from '../lib/nav.js';
+
 let UNDO_STACK = [];
 let UNDO_BASELINE = null;
 const UNDO_MAX = 30;
