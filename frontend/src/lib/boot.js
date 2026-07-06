@@ -290,12 +290,12 @@ function applyPermisosUI() {
         badge.remove();
       }
     });
-    const btnNuevo = document.querySelector('.cr-actions .btn-primary[onclick*="newProject"]');
+    const btnNuevo = document.querySelector('.cr-actions [data-accion="app.nuevoProyecto"]');
     if (btnNuevo) btnNuevo.style.display = (authNivel('crear_proyecto') === 'E') ? '' : 'none';
     // V10.5.1: importar proyecto reservado a perfiles con crear_proyecto = E (Administrador y Ejecutivo)
     const btnImport = document.getElementById('importProjectBtn');
     if (btnImport) btnImport.style.display = (authNivel('crear_proyecto') === 'E') ? '' : 'none';
-    const btnCFO = document.querySelector('.cr-actions [onclick*="openGlobalCFO"]');
+    const btnCFO = document.querySelector('.cr-actions [data-accion="app.cfo"]');
     if (btnCFO) btnCFO.style.display = (authNivel('finanzas_consolidada') !== 'none') ? '' : 'none';
   } catch (e) { console.warn('[auth] applyPermisosUI', e); }
 }
@@ -575,7 +575,7 @@ export function arrancarTakeOS() {
      jamás se entra al Control Room (se re-deriva la vista correcta). */
   var _pend = false; try { _pend = !!sessionStorage.getItem('takeos_ir_proyecto'); } catch (e) {}
   if (!_TIENE_EMPRESA && !_pend) { resolverEspacioYArrancar(); return; }
-  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootPersonasExternos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ return dalBootProyectos(); }).then(function(){ try { notifInit(); } catch (e) {} }).then(function(){ try { gancho('_cpTourInicialQuizas')(); } catch (e) {} }).then(function(){ try { setTimeout(_pdCookiesBootCheck, 1200); } catch (e) {} }).catch(function(e){ console.error('[boot] cadena dal interrumpida', e); try { _bootCoverHide(); } catch (_) {} });
+  dalBootTaxRates().then(function(){ return dalBootContactos(); }).then(function(){ return dalResolveIdentidad(); }).then(function(){ return dalLoadPermisos(); }).then(function(){ return dalBootPersonasExternos(); }).then(function(){ return dalBootLocaciones(); }).then(function(){ return dalBootLegal(); }).then(function(){ return dalBootPerfil(); }).then(function(){ return dalBootProyectos(); }).then(function(){ try { notifInit(); } catch (e) {} }).then(function(){ try { gancho('_cpTourInicialQuizas')(); } catch (e) {} }).then(function(){ try { setTimeout(gancho('_pdCookiesBootCheck'), 1200); } catch (e) {} }).catch(function(e){ console.error('[boot] cadena dal interrumpida', e); try { _bootCoverHide(); } catch (_) {} });
 }
 
 // _espIniciales, _espSello, _titleCaseNombre, valor('ESPACIO_DEMO'), _espConstruir, _espCargarConteos → movido a src/modules/espacio.js (Etapa C4)

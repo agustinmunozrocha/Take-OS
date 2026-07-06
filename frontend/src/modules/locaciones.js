@@ -11,7 +11,7 @@ import { LOC_ESTADOS, LOC_ORIENTACIONES } from '../lib/data.js';
 import { normalizeTime24 } from '../lib/calc.js';
 import { _locThumbAsync, closeModal, positionComboboxDropdown, regionSelectHTML, comboboxCloseDelayed, comboboxOpen, comboboxFilter, showModal } from '../lib/ui.js';
 import { CotPreview } from './presupuesto-cotizacion.js';
-import { openPersonaByName } from './bd.js';
+import { openPersonaByName, _bdPuedeArchivar } from './bd.js';
 import { _normKey } from './bd-excel.js';
 import { _dalLocacionSaveSoon, dalGuardarLocacion } from './dal.js';
 import { autosaveNow, markDirty } from './persistencia-local.js';
