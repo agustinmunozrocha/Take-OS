@@ -755,7 +755,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
         </td>`;
 
   return `
-    <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}" data-sec="${sectionKey}" data-dept="${sectionKey === 'servicios' ? escapeHtml(dept) : ''}" ondragstart="rowDragStart(event)" ondragover="rowDragOver(event)" ondrop="rowDrop(event)" ondragend="rowDragEnd(event)">
+    <tr class="${isConfirmed ? 'confirmed' : ''} ${isExtra ? 'is-extra' : ''} ${locked ? 'is-locked' : ''}" data-row-idx="${idx}" data-sec="${sectionKey}" data-dept="${sectionKey === 'servicios' ? escapeHtml(dept) : ''}" ${accionHTML('pre.rowDnD', { on: 'dragstart dragover drop dragend' })}>
       <td>
         <div class="cell-name-row">
           ${_dragHandle}
@@ -873,8 +873,8 @@ export function updateRowField(sectionKey, dept, idx, field, value) {
    con la selección de texto en los inputs. */
 let _budgetDrag = null;
 function rowHandleDown(el) { const tr = el.closest('tr'); if (tr) tr.setAttribute('draggable', 'true'); }
-function rowDragStart(ev) {
-  const tr = ev.currentTarget;
+function rowDragStart(ev, el) {
+  const tr = el;
   if (_budgetSortState(tr.dataset.sec, tr.dataset.dept || '')) { ev.preventDefault(); return; }  // V10.1.0: sin drag con sort activo
   _budgetDrag = { sec: tr.dataset.sec, dept: tr.dataset.dept || '', idx: Number(tr.dataset.rowIdx) };
   ev.dataTransfer.effectAllowed = 'move';
@@ -884,8 +884,8 @@ function rowDragStart(ev) {
 function _budgetDragMismatch(tr) {
   return !_budgetDrag || tr.dataset.sec !== _budgetDrag.sec || (tr.dataset.dept || '') !== _budgetDrag.dept;
 }
-function rowDragOver(ev) {
-  const tr = ev.currentTarget;
+function rowDragOver(ev, el) {
+  const tr = el;
   if (_budgetDragMismatch(tr)) return;   // sin cruce de departamento/sección
   ev.preventDefault();
   ev.dataTransfer.dropEffect = 'move';
@@ -896,8 +896,8 @@ function rowDragOver(ev) {
   const after = (ev.clientY - rect.top) > rect.height / 2;
   tr.classList.add(after ? 'row-drop-after' : 'row-drop-before');
 }
-function rowDrop(ev) {
-  const tr = ev.currentTarget;
+function rowDrop(ev, el) {
+  const tr = el;
   if (_budgetDragMismatch(tr)) { rowDragEnd(ev); return; }
   ev.preventDefault();
   const sec = _budgetDrag.sec;
@@ -2838,8 +2838,7 @@ function cotMetaCardHTML(project, c, ip, fechaVal) {
       </div>
       <textarea class="cot-input" id="cotDescTa" placeholder="Describe el proyecto (concepto, alcance general)…"
                 style="min-height:160px;${c.descAlto ? 'height:' + c.descAlto + 'px;' : ''}"
-                onmouseup="cotDescGuardarAlto(this)"
-                data-accion="pre.d" data-args="[&quot;cotSetMeta&quot;, &quot;descripcionProyecto&quot;, &quot;\u00a7v\u00a7&quot;]" data-on="change">${escapeHtml(c.descripcionProyecto || '')}</textarea>
+                ${accionHTML('pre.descTa', 'descripcionProyecto', { on: 'change mouseup' })}>${escapeHtml(c.descripcionProyecto || '')}</textarea>
     </div>
     <p style="font-size:11.5px;color:var(--ink-faint);margin:12px 0 0;line-height:1.5;">
       Cliente, proyecto y equipo se leen de <strong>Info Proyecto</strong> (fuente única de verdad). La Carta de Cotización en PDF (V6.1) tomará todo esto automáticamente.</p>
@@ -2999,8 +2998,8 @@ function cotBulletsHTML(ofId, listKey, title, arr, isNo, tip, action) {
   </div>`;
 }
 function cotBulletRowHTML(ofId, listKey, idx, v, isNo) {
-  return `<div class="bullet-row" ondragover="cotDragOver(event,'${ofId}','${listKey}',${idx})" ondragleave="cotDragLeave(event)" ondrop="cotDrop(event,'${ofId}','${listKey}',${idx})">
-    <span class="cot-drag-handle" draggable="true" ondragstart="cotDragStart(event,'${ofId}','${listKey}',${idx})" ondragend="cotDragEnd(event)" title="Arrastrar para reordenar" style="cursor:grab;color:var(--ink-faint);user-select:none;padding:0 3px;font-size:13px;">⠿</span>
+  return `<div class="bullet-row" ${accionHTML('pre.cotDnD', ofId, listKey, idx, { on: 'dragover dragleave drop' })}>
+    <span class="cot-drag-handle" draggable="true" ${accionHTML('pre.cotDrag', ofId, listKey, idx, { on: 'dragstart dragend' })} title="Arrastrar para reordenar" style="cursor:grab;color:var(--ink-faint);user-select:none;padding:0 3px;font-size:13px;">⠿</span>
     <span class="dot ${isNo ? 'no' : ''}">${isNo ? '✕' : '•'}</span>
     <input class="cot-input" value="${escapeHtml(v || '')}" placeholder="…"
            ${accionHTML('pre.d', 'cotBulletEdit', ofId, listKey, idx, '§v§', { on: 'change' })}>
@@ -3020,9 +3019,9 @@ function cotVideosHTML(ofId, videos) {
 }
 function cotVideoRowHTML(ofId, idx, v) {
   const vars = Array.isArray(v.variables) ? v.variables : [];
-  return `<div class="cot-video" ondragover="cotDragOver(event,'${ofId}','ent:videos',${idx})" ondragleave="cotDragLeave(event)" ondrop="cotDrop(event,'${ofId}','ent:videos',${idx})">
+  return `<div class="cot-video" ${accionHTML('pre.cotDnD', ofId, 'ent:videos', idx, { on: 'dragover dragleave drop' })}>
     <div class="bullet-row">
-      <span class="cot-drag-handle" draggable="true" ondragstart="cotDragStart(event,'${ofId}','ent:videos',${idx})" ondragend="cotDragEnd(event)" title="Arrastrar para reordenar" style="cursor:grab;color:var(--ink-faint);user-select:none;padding:0 3px;font-size:13px;">⠿</span>
+      <span class="cot-drag-handle" draggable="true" ${accionHTML('pre.cotDrag', ofId, 'ent:videos', idx, { on: 'dragstart dragend' })} title="Arrastrar para reordenar" style="cursor:grab;color:var(--ink-faint);user-select:none;padding:0 3px;font-size:13px;">⠿</span>
       <span class="dot">▸</span>
       <input class="cot-input" value="${escapeHtml(v.nombre || '')}" placeholder="Nombre del video (ej: Spot Madre)"
              ${accionHTML('pre.d', 'cotVideoName', ofId, idx, '§v§', { on: 'change' })}>
@@ -3220,8 +3219,8 @@ function cotDeleteOferta(ofId) {
 let COT_DRAG = null;
 function cotDragStart(ev, ofId, listKey, idx) { COT_DRAG = { ofId: ofId, listKey: listKey, idx: idx }; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(idx)); } catch (e) {} }
 function cotDragEnd(ev) { COT_DRAG = null; try { document.querySelectorAll('.cot-drag-over').forEach(el => el.classList.remove('cot-drag-over')); } catch (e) {} }
-function cotDragOver(ev, ofId, listKey, idx) { if (!COT_DRAG || COT_DRAG.ofId !== ofId || COT_DRAG.listKey !== listKey || COT_DRAG.idx === idx) return; ev.preventDefault(); const r = ev.currentTarget; if (r && r.classList) r.classList.add('cot-drag-over'); }
-function cotDragLeave(ev) { const r = ev.currentTarget; if (r && r.classList) r.classList.remove('cot-drag-over'); }
+function cotDragOver(ev, ofId, listKey, idx, el) { if (!COT_DRAG || COT_DRAG.ofId !== ofId || COT_DRAG.listKey !== listKey || COT_DRAG.idx === idx) return; ev.preventDefault(); const r = el; if (r && r.classList) r.classList.add('cot-drag-over'); }
+function cotDragLeave(ev, el) { const r = el; if (r && r.classList) r.classList.remove('cot-drag-over'); }
 function cotDrop(ev, ofId, listKey, idx) {
   if (!COT_DRAG || COT_DRAG.ofId !== ofId || COT_DRAG.listKey !== listKey) { COT_DRAG = null; return; }
   ev.preventDefault();
@@ -4442,6 +4441,25 @@ var _PRE_FN = {
 };
 function _preSent(x, el, ev) { return x === '§v§' ? el.value : x === '§c§' ? el.checked : x === '§el§' ? el : x === '§ev§' ? ev : x; }
 registrarAcciones('pre', {
+  rowDnD: function (a, el, ev) {
+    if (ev.type === 'dragstart') rowDragStart(ev, el);
+    else if (ev.type === 'dragover') rowDragOver(ev, el);
+    else if (ev.type === 'drop') rowDrop(ev, el);
+    else if (ev.type === 'dragend') rowDragEnd(ev);
+  },
+  descTa: function (a, el, ev) {
+    if (ev.type === 'mouseup') cotDescGuardarAlto(el);
+    else cotSetMeta(a[0], el.value);
+  },
+  cotDnD: function (a, el, ev) {
+    if (ev.type === 'dragover') cotDragOver(ev, a[0], a[1], a[2], el);
+    else if (ev.type === 'dragleave') cotDragLeave(ev, el);
+    else if (ev.type === 'drop') cotDrop(ev, a[0], a[1], a[2]);
+  },
+  cotDrag: function (a, el, ev) {
+    if (ev.type === 'dragstart') cotDragStart(ev, a[0], a[1], a[2]);
+    else if (ev.type === 'dragend') cotDragEnd(ev);
+  },
   d: function (a, el, ev) { var f = _PRE_FN[a[0]]; if (!f) { console.error('[pre] fn sin mapear:', a[0]); return; } f.apply(null, a.slice(1).map(function (x) { return _preSent(x, el, ev); })); },
   snap: function (a, el) { cotSnapEdit(el, a[0], a[1], a[2], a[3], a[4]); },
   rowMoney: function (a, el) { onMoneyInput(el, a[0], a[1], a[2], a[3]); afterRowChange(a[0], a[1], a[2]); },

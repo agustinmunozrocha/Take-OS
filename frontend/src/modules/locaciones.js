@@ -257,9 +257,7 @@ export function openLocDetail(locId) {
      proyecto y BD): se reordena por drag & drop (la primera es la portada). */
   /* V11.7.0 · galería con DRAG & DROP: arrastras para reordenar y la primera
      foto es el thumbnail. Sin estrella ni flechas (se eliminaron). */
-  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb" draggable="true"
-      ondragstart="locFotoDragStart(event,'${locId}',${i})" ondragend="locFotoDragEnd(event)"
-      ondragover="locFotoDragOver(event)" ondragleave="locFotoDragLeave(event)" ondrop="locFotoDrop(event,'${locId}',${i})">
+  const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb" draggable="true" ${accionHTML('loc.fotoDnD', locId, i, { on: 'dragstart dragend dragover dragleave drop' })}>
       <img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" ${accionHTML('loc.lightbox', locId, i)} style="pointer-events:none;">
       <button class="loc-thumb-x" ${accionHTML('loc.fotoDel', locId, i)} title="Quitar">×</button>
       ${i === 0 ? `<span style="position:absolute;left:5px;top:5px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.62);color:#ffd86b;border-radius:999px;padding:2px 8px;pointer-events:none;">★ Portada</span>` : ''}
@@ -404,12 +402,12 @@ async function locAddFotos(locId, inputEl) {
   openLocDetail(locId);
 }
 let _LOC_DRAG = null;
-function locFotoDragStart(ev, locId, i) { _LOC_DRAG = { locId: locId, i: i }; ev.currentTarget.classList.add('dragging'); try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(i)); } catch (e) {} }
-function locFotoDragEnd(ev) { ev.currentTarget.classList.remove('dragging'); document.querySelectorAll('.loc-thumb.dragover').forEach(function (el) { el.classList.remove('dragover'); }); }
-function locFotoDragOver(ev) { ev.preventDefault(); try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {} ev.currentTarget.classList.add('dragover'); }
-function locFotoDragLeave(ev) { ev.currentTarget.classList.remove('dragover'); }
-function locFotoDrop(ev, locId, destino) {
-  ev.preventDefault(); ev.currentTarget.classList.remove('dragover');
+function locFotoDragStart(ev, locId, i, el) { _LOC_DRAG = { locId: locId, i: i }; el.classList.add('dragging'); try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(i)); } catch (e) {} }
+function locFotoDragEnd(ev, el) { el.classList.remove('dragging'); document.querySelectorAll('.loc-thumb.dragover').forEach(function (el) { el.classList.remove('dragover'); }); }
+function locFotoDragOver(ev, el) { ev.preventDefault(); try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {} el.classList.add('dragover'); }
+function locFotoDragLeave(ev, el) { el.classList.remove('dragover'); }
+function locFotoDrop(ev, locId, destino, el) {
+  ev.preventDefault(); el.classList.remove('dragover');
   if (!_LOC_DRAG || _LOC_DRAG.locId !== locId) return;
   const origen = _LOC_DRAG.i; _LOC_DRAG = null;
   if (origen === destino) return;
@@ -625,10 +623,10 @@ function locScoutRutaEntera() {
    Rodaje). Se arrastran PARADAS por índice de parada; los traslados se mantienen
    y el array se reconstruye intercalado para conservar la alternancia. */
 let SCOUT_DRAG = null;
-function locScoutDragStart(ev, pIdx) { SCOUT_DRAG = pIdx; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(pIdx)); } catch (e) {} try { const node = ev.currentTarget.closest('.scout-node'); if (node) node.classList.add('scout-dragging'); } catch (e) {} }
+function locScoutDragStart(ev, pIdx, el) { SCOUT_DRAG = pIdx; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(pIdx)); } catch (e) {} try { const node = el.closest('.scout-node'); if (node) node.classList.add('scout-dragging'); } catch (e) {} }
 function locScoutDragEnd(ev) { SCOUT_DRAG = null; try { document.querySelectorAll('.scout-drag-over,.scout-dragging').forEach(el => el.classList.remove('scout-drag-over', 'scout-dragging')); } catch (e) {} }
-function locScoutDragOver(ev, pIdx) { if (SCOUT_DRAG == null || SCOUT_DRAG === pIdx) return; ev.preventDefault(); const node = ev.currentTarget; if (node && node.classList) node.classList.add('scout-drag-over'); }
-function locScoutDragLeave(ev) { const node = ev.currentTarget; if (node && node.classList) node.classList.remove('scout-drag-over'); }
+function locScoutDragOver(ev, pIdx, el) { if (SCOUT_DRAG == null || SCOUT_DRAG === pIdx) return; ev.preventDefault(); const node = el; if (node && node.classList) node.classList.add('scout-drag-over'); }
+function locScoutDragLeave(ev, el) { const node = el; if (node && node.classList) node.classList.remove('scout-drag-over'); }
 function locScoutDrop(ev, pIdx) { ev.preventDefault(); const from = SCOUT_DRAG; SCOUT_DRAG = null; try { document.querySelectorAll('.scout-drag-over,.scout-dragging').forEach(el => el.classList.remove('scout-drag-over', 'scout-dragging')); } catch (e) {} if (from == null || from === pIdx) return; locScoutMoverParada(from, pIdx); }
 function locScoutMoverParada(fromIdx, toIdx) {
   const s = locEnsureScout(STATE.currentProject);
@@ -716,12 +714,12 @@ function locScoutingHTML(project) {
     let respTel = f.respTel || '';
     if (!respTel) { respTel = _bdP ? (_bdP.telefono || '') : (!f.resp ? (_c0.tel || '') : ''); }   /* celular auto: de la BD si el nombre está, o de la locación por defecto */
     const dotNoBD = (f.resp && !_bdP) ? `<button type="button" title="No está en la Base de Datos · clic para agregarla" ${accionHTML('loc.scoutContactoBD', encodeURIComponent(f.resp))} style="border:none;background:none;cursor:pointer;color:var(--warning);font-weight:700;font-size:13px;padding:0 3px;">●</button>` : '';
-    return `<div class="scout-node" ondragover="locScoutDragOver(event,${pIdx})" ondragleave="locScoutDragLeave(event)" ondrop="locScoutDrop(event,${pIdx})">
+    return `<div class="scout-node" ${accionHTML('loc.scoutDnD', pIdx, { on: 'dragover dragleave drop' })}>
       <div class="scout-time">${horaCell}</div>
       <div class="scout-rail">${ln}<span class="dot"></span></div>
       <div class="scout-card">
         <div class="scout-p-top">
-          <button class="scout-drag" draggable="true" ondragstart="locScoutDragStart(event,${pIdx})" ondragend="locScoutDragEnd(event)" title="Arrastrar para reordenar">⠿</button>
+          <button class="scout-drag" draggable="true" ${accionHTML('loc.scoutDrag', pIdx, { on: 'dragstart dragend' })} title="Arrastrar para reordenar">⠿</button>
           <span class="combobox-wrap person-combobox" style="flex:1;min-width:0;"><input class="input combobox-input" value="${e(_nomParada)}" placeholder="Locación o texto libre…" autocomplete="off" style="font-weight:600;width:100%;" ${accionHTML('loc.scoutParada', i, { on: 'focus input blur change' })}><div class="combobox-dropdown" hidden></div></span>
           ${(esLibre && _nomParada) ? `<button type="button" title="No está en la BD de locaciones · clic para agregarla" ${accionHTML('loc.scoutLocBD', pIdx)} style="border:none;background:none;cursor:pointer;color:var(--warning);font-weight:700;font-size:14px;padding:0 2px;flex:0 0 auto;">●</button>` : ''}
           <span class="scout-badge ${esLibre ? 'libre' : 'loc'}">${esLibre ? 'Parada libre' : 'Locación'}</span>
@@ -849,6 +847,22 @@ window.locNombre             = locNombre;
 
 // D2 · acciones delegadas
 registrarAcciones('loc', {
+  fotoDnD: function (a, el, ev) {
+    if (ev.type === 'dragstart') locFotoDragStart(ev, a[0], a[1], el);
+    else if (ev.type === 'dragend') locFotoDragEnd(ev, el);
+    else if (ev.type === 'dragover') locFotoDragOver(ev, el);
+    else if (ev.type === 'dragleave') locFotoDragLeave(ev, el);
+    else if (ev.type === 'drop') locFotoDrop(ev, a[0], a[1], el);
+  },
+  scoutDnD: function (a, el, ev) {
+    if (ev.type === 'dragover') locScoutDragOver(ev, a[0], el);
+    else if (ev.type === 'dragleave') locScoutDragLeave(ev, el);
+    else if (ev.type === 'drop') locScoutDrop(ev, a[0]);
+  },
+  scoutDrag: function (a, el, ev) {
+    if (ev.type === 'dragstart') locScoutDragStart(ev, a[0], el);
+    else if (ev.type === 'dragend') locScoutDragEnd(ev);
+  },
   sub: function (a) { locSetSub(a[0]); },
   filtro: function (a) { locSetFiltro(a[0]); },
   add: function () { openLocAdd(); },
