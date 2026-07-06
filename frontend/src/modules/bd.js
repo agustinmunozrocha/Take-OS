@@ -692,7 +692,7 @@ function togglePersonExpand(nombre) {
    registro; "Archivados" lo lista (deleted_at NOT NULL) para restaurarlo. No
    borra: no rompe gastos/proyectos históricos. Talentos = contactos.
    ════════════════════════════════════════════════════════════════════ */
-function _bdPuedeArchivar() { return !!(STATE.adminMode && authNivel('eliminar_proyecto') === 'E'); }
+export function _bdPuedeArchivar() { return !!(STATE.adminMode && authNivel('eliminar_proyecto') === 'E'); }
 
 function archivarContactoModal(contactId) {
   const c = BD_CONTACTOS[contactId];

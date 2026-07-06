@@ -301,7 +301,7 @@ function prHeaderHTML(project, diaId) {
 function prRowToolsHTML(f, i, n) {
   const esBloque = (f.tipo === 'plano' || f.tipo === 'situacion');
   return `<span class="pr-tools">
-    <button class="pr-drag" draggable="true" ondragstart="prDragStart(event,'${f.id}')" ondragend="prDragEnd(event)" title="Arrastrar para reordenar">⠿</button>
+    <button class="pr-drag" draggable="true" ${accionHTML('pr.filaDrag', f.id, { on: 'dragstart dragend' })} title="Arrastrar para reordenar">⠿</button>
     <button class="pr-tool" ${accionHTML('pr.d', 'prMoveFila', f.id, -1)} title="Subir" ${i === 0 ? 'disabled' : ''}>⌃</button>
     <button class="pr-tool" ${accionHTML('pr.d', 'prMoveFila', f.id, 1)} title="Bajar" ${i === n - 1 ? 'disabled' : ''}>⌄</button>
     ${esBloque ? `<button class="pr-tool ${f.anchor != null ? 'is-on' : ''}" ${accionHTML('pr.d', 'prToggleAnchor', f.id)} title="Clavar a hora fija (ancla)">⚓</button>` : ''}
@@ -311,7 +311,7 @@ function prRowToolsHTML(f, i, n) {
 function prImgAttachHTML(id, imgKey, arr) {
   arr = arr || [];
   const thumbs = arr.map((src, k) => `<span class="pr-thumb"><img src="${safeUrl(src)}" alt=""><button class="pr-thumb-x" ${accionHTML('pr.d', 'prDelImagen', id, imgKey, k)} title="Quitar">✕</button></span>`).join('');
-  return `<div class="pr-imgrow" ondragover="prImgDragOver(event)" ondragleave="prImgDragLeave(event)" ondrop="prDropImagen(event,'${id}','${imgKey}')">${thumbs}${arr.length < 6 ? `<label class="pr-img-add" title="Agregar o arrastrar imagen aquí (se comprime sola)">+<input type="file" accept="image/*" multiple style="display:none" ${accionHTML('pr.d', 'prAddImagen', id, imgKey, '§el§', { on: 'change' })}></label>` : ''}</div>`;
+  return `<div class="pr-imgrow" ${accionHTML('pr.imgDnD', id, imgKey, { on: 'dragover dragleave drop' })}>${thumbs}${arr.length < 6 ? `<label class="pr-img-add" title="Agregar o arrastrar imagen aquí (se comprime sola)">+<input type="file" accept="image/*" multiple style="display:none" ${accionHTML('pr.d', 'prAddImagen', id, imgKey, '§el§', { on: 'change' })}></label>` : ''}</div>`;
 }
 function prTextareaHTML(id, key, value, ph) { return `<textarea class="pr-ta" rows="2" placeholder="${ph || ''}" ${accionHTML('pr.d', 'prSetFilaField', id, key, '§v§', { on: 'change' })}>${escapeHtml(value || '')}</textarea>`; }
 function prCellHTML(f, c) {
@@ -335,7 +335,7 @@ function prTimeCellHTML(f, c, t, isStart) {
 function prRowHTML(f, i, cols, t, n, isStart) {
   const ncols = cols.length;
   const sel = (f.id === STATE.prSelFila) ? ' pr-selected' : '';
-  const attrs = `data-fid="${f.id}" ${accionHTML('pr.d', 'prSelectFila', f.id)} ondragover="prDragOver(event,'${f.id}')" ondragleave="prDragLeave(event)" ondrop="prDrop(event,'${f.id}')"`;
+  const attrs = `data-fid="${f.id}" ${accionHTML('pr.fila', f.id, { on: 'click dragover dragleave drop' })}`;
   if (f.tipo === 'seccion') return `<tr class="pr-row pr-row-seccion${sel}" ${attrs}><td colspan="${ncols}"><input class="pr-seccion-in" value="${escapeHtml(f.accion || '')}" placeholder="NOMBRE DEL BLOQUE · LOCACIÓN" ${accionHTML('pr.d', 'prSetFilaField', f.id, 'accion', '§v§', { on: 'change' })}></td><td class="pr-cell-tools">${prRowToolsHTML(f, i, n)}</td></tr>`;
   if (f.tipo === 'marcador') {
     const clock = t.inicio != null ? prFmtClock(t.inicio) : '—';
@@ -372,7 +372,7 @@ function prTableHTML(project, plan) {
   times.forEach((t, i) => { const f = plan.filas[i]; if (t.collision) choques.push(lbl(f)); else if (t.gap > 0) huecos.push(lbl(f) + ' +' + prFmtDur(t.gap)); });
   const bChoque = choques.length ? `<div class="pr-warn pr-choque"><strong>⚠ CHOQUE DE TIEMPOS</strong> · uno o más bloques se pasan de una hora fija. Acorta las duraciones anteriores al ancla o desáncla la fila. Afecta: ${choques.join(' · ')}.</div>` : '';
   const bHueco = huecos.length ? `<div class="pr-warn pr-hueco"><strong>⧖ HUECO DE TIEMPOS</strong> · queda tiempo sin asignar antes de un ancla. Rellena esa sección o ajusta el ancla. Afecta: ${huecos.join(' · ')}.</div>` : '';
-  const dropEnd = n ? `<tr class="pr-drop-end" ondragover="prDragOver(event,'__end__')" ondragleave="prDragLeave(event)" ondrop="prDrop(event,'__end__')"><td colspan="${cols.length + 1}">soltar aquí para mover al final</td></tr>` : '';
+  const dropEnd = n ? `<tr class="pr-drop-end" ${accionHTML('pr.fila', '__end__', { on: 'dragover dragleave drop' })}><td colspan="${cols.length + 1}">soltar aquí para mover al final</td></tr>` : '';
   return `<div class="cot-card pr-table-card">${bChoque}${bHueco}
     <div class="pr-toolbar">
       <div class="pr-add-group"><span class="pr-add-label">Agregar fila${STATE.prSelFila ? ' (bajo la seleccionada)' : ''}:</span>
@@ -494,8 +494,8 @@ function prSetResponsable(nombre) {
 
 function prDragStart(ev, id) { PR_DRAG_ID = id; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', id); } catch (e) {} try { const tr = document.querySelector('tr[data-fid="' + id + '"]'); if (tr) tr.classList.add('pr-dragging'); } catch (e) {} }
 function prDragEnd(ev) { PR_DRAG_ID = null; try { document.querySelectorAll('.pr-drag-over,.pr-dragging').forEach(el => el.classList.remove('pr-drag-over', 'pr-dragging')); } catch (e) {} }
-function prDragOver(ev, id) { if (!PR_DRAG_ID || PR_DRAG_ID === id) return; ev.preventDefault(); const tr = ev.currentTarget; if (tr && tr.classList) tr.classList.add('pr-drag-over'); }
-function prDragLeave(ev) { const tr = ev.currentTarget; if (tr && tr.classList) tr.classList.remove('pr-drag-over'); }
+function prDragOver(ev, id, el) { if (!PR_DRAG_ID || PR_DRAG_ID === id) return; ev.preventDefault(); const tr = el; if (tr && tr.classList) tr.classList.add('pr-drag-over'); }
+function prDragLeave(ev, el) { const tr = el; if (tr && tr.classList) tr.classList.remove('pr-drag-over'); }
 function prDrop(ev, id) {
   ev.preventDefault(); const plan = prCurrentPlan(); const from = PR_DRAG_ID; PR_DRAG_ID = null;
   try { document.querySelectorAll('.pr-drag-over,.pr-dragging').forEach(el => el.classList.remove('pr-drag-over', 'pr-dragging')); } catch (e) {}
@@ -508,11 +508,11 @@ function prDrop(ev, id) {
 }
 
 /* ── Imágenes ── */
-function prImgDragOver(ev) { ev.preventDefault(); ev.stopPropagation(); const z = ev.currentTarget; if (z && z.classList) z.classList.add('pr-img-drop'); }
-function prImgDragLeave(ev) { const z = ev.currentTarget; if (z && z.classList) z.classList.remove('pr-img-drop'); }
-function prDropImagen(ev, id, imgKey) {
-  ev.preventDefault(); ev.stopPropagation();
-  const z = ev.currentTarget; if (z && z.classList) z.classList.remove('pr-img-drop');
+function prImgDragOver(ev, el) { ev.preventDefault(); const z = el; if (z && z.classList) z.classList.add('pr-img-drop'); }
+function prImgDragLeave(ev, el) { const z = el; if (z && z.classList) z.classList.remove('pr-img-drop'); }
+function prDropImagen(ev, id, imgKey, el) {
+  ev.preventDefault();
+  const z = el; if (z && z.classList) z.classList.remove('pr-img-drop');
   const files = (ev.dataTransfer && ev.dataTransfer.files) ? Array.prototype.slice.call(ev.dataTransfer.files) : [];
   const imgs = files.filter(f => /^image\//.test(f.type)); if (!imgs.length) return;
   prAddImagenFiles(id, imgKey, imgs);
@@ -751,8 +751,8 @@ function renderHojaLlamado() {
                   const nomOrig = c.nombre || '';
                   const nomEd = (ov.nombre != null && String(ov.nombre) !== '' && ov.nombre !== nomOrig);
                   return `
-                  <tr class="${presente ? '' : 'crew-no-citado'}" ondragover="hlDragOver(event)" ondragleave="hlDragLeave(event)" ondrop="hlDrop(event,'crew',${_vi})">
-                    <td class="hl-drag-cell"><button class="hl-drag" draggable="true" ondragstart="hlDragStart(event,'crew',${_vi})" ondragend="hlDragEnd(event)" title="Arrastrar para reordenar">⠿</button></td>
+                  <tr class="${presente ? '' : 'crew-no-citado'}" ${accionHTML('pr.hlDnD', 'crew', _vi, { on: 'dragover dragleave drop' })}>
+                    <td class="hl-drag-cell"><button class="hl-drag" draggable="true" ${accionHTML('pr.hlDrag', 'crew', _vi, { on: 'dragstart dragend' })} title="Arrastrar para reordenar">⠿</button></td>
                     <td class="ctr"><input type="checkbox" ${presente ? 'checked' : ''} title="Citar a esta persona este día" ${accionHTML('pr.d', 'toggleCrewPresente', sel, nm, '§c§', { on: 'change' })}></td>
                     <td><div class="hl-ovwrap"><input class="cell-input" value="${escapeHtml(_hlOvVal(ov.rol, rolOrig))}" placeholder="${escapeHtml(rolOrig || 'Rol')}" ${presente ? '' : 'disabled'} ${accionHTML('pr.d', 'updateCrewOverride', sel, nm, 'rol', '§v§', { on: 'change' })}>${rolEd ? `<button class="hl-revert" data-tip="Restablecer al valor del Presupuesto${rolOrig ? ' («' + escapeHtml(rolOrig) + '»)' : ''}" ${accionHTML('pr.d', 'revertCrewOverride', sel, nm, 'rol')}>↺</button>` : ''}</div></td>
                     <td><div class="hl-ovwrap"><input class="cell-input hl-name-input" value="${escapeHtml(_hlOvVal(ov.nombre, nomOrig))}" placeholder="${escapeHtml(nomOrig)}" ${presente ? '' : 'disabled'} ${accionHTML('pr.d', 'updateCrewOverride', sel, nm, 'nombre', '§v§', { on: 'change' })}>${bd ? '' : '<span class="cell-name-warn" data-tip="No está en la BD: escribe el número a mano en la columna Número.">●</span>'}${nomEd ? `<button class="hl-revert" data-tip="Restablecer al valor del Presupuesto${nomOrig ? ' («' + escapeHtml(nomOrig) + '»)' : ''}" ${accionHTML('pr.d', 'revertCrewOverride', sel, nm, 'nombre')}>↺</button>` : ''}</div></td>
@@ -784,8 +784,8 @@ function renderHojaLlamado() {
               </thead>
               <tbody>
                 ${dia.citacionesExternas.map((e, idx) => `
-                  <tr ondragover="hlDragOver(event)" ondragleave="hlDragLeave(event)" ondrop="hlDrop(event,'ext',${idx})">
-                    <td class="hl-drag-cell"><button class="hl-drag" draggable="true" ondragstart="hlDragStart(event,'ext',${idx})" ondragend="hlDragEnd(event)" title="Arrastrar para reordenar">⠿</button></td>
+                  <tr ${accionHTML('pr.hlDnD', 'ext', idx, { on: 'dragover dragleave drop' })}>
+                    <td class="hl-drag-cell"><button class="hl-drag" draggable="true" ${accionHTML('pr.hlDrag', 'ext', idx, { on: 'dragstart dragend' })} title="Arrastrar para reordenar">⠿</button></td>
                     <td><input class="cell-input" value="${escapeHtml(e.rol || '')}" placeholder="Cargo / Rol" ${accionHTML('pr.d', 'updateCitExterna', sel, idx, 'rol', '§v§', { on: 'change' })}></td>
                     <td><input class="cell-input" value="${escapeHtml(e.nombre || '')}" placeholder="Nombre" ${accionHTML('pr.d', 'updateCitExterna', sel, idx, 'nombre', '§v§', { on: 'change' })}></td>
                     <td><input class="cell-input" value="${escapeHtml(e.numero || '')}" placeholder="+56 9…" ${accionHTML('pr.d', 'updateCitExterna', sel, idx, 'numero', '§v§', { on: 'change' })}></td>
@@ -863,10 +863,10 @@ function hlMoverExterna(diaId, from, to) {
   arr.splice(to, 0, moved);
   renderHojaLlamado();
 }
-function hlDragStart(ev, tabla, idx) { HL_DRAG = { tabla: tabla, idx: idx }; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(idx)); } catch (e) {} try { const tr = ev.currentTarget.closest('tr'); if (tr) tr.classList.add('hl-dragging'); } catch (e) {} }
+function hlDragStart(ev, tabla, idx, el) { HL_DRAG = { tabla: tabla, idx: idx }; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', String(idx)); } catch (e) {} try { const tr = el.closest('tr'); if (tr) tr.classList.add('hl-dragging'); } catch (e) {} }
 function hlDragEnd(ev) { HL_DRAG = null; try { document.querySelectorAll('.hl-drag-over,.hl-dragging').forEach(el => el.classList.remove('hl-drag-over', 'hl-dragging')); } catch (e) {} }
-function hlDragOver(ev) { if (!HL_DRAG) return; ev.preventDefault(); const tr = ev.currentTarget; if (tr && tr.classList) tr.classList.add('hl-drag-over'); }
-function hlDragLeave(ev) { const tr = ev.currentTarget; if (tr && tr.classList) tr.classList.remove('hl-drag-over'); }
+function hlDragOver(ev, el) { if (!HL_DRAG) return; ev.preventDefault(); const tr = el; if (tr && tr.classList) tr.classList.add('hl-drag-over'); }
+function hlDragLeave(ev, el) { const tr = el; if (tr && tr.classList) tr.classList.remove('hl-drag-over'); }
 function hlDrop(ev, tabla, idx) {
   ev.preventDefault();
   const d = HL_DRAG; HL_DRAG = null;
@@ -1461,6 +1461,30 @@ var _PR_FN = {
 };
 function _prSent(x, el, ev) { return x === '§v§' ? el.value : x === '§c§' ? el.checked : x === '§el§' ? el : x === '§ev§' ? ev : x; }
 registrarAcciones('pr', {
+  fila: function (a, el, ev) {
+    if (ev.type === 'click') prSelectFila(a[0]);
+    else if (ev.type === 'dragover') prDragOver(ev, a[0], el);
+    else if (ev.type === 'dragleave') prDragLeave(ev, el);
+    else if (ev.type === 'drop') prDrop(ev, a[0]);
+  },
+  filaDrag: function (a, el, ev) {
+    if (ev.type === 'dragstart') prDragStart(ev, a[0]);
+    else if (ev.type === 'dragend') prDragEnd(ev);
+  },
+  imgDnD: function (a, el, ev) {
+    if (ev.type === 'dragover') prImgDragOver(ev, el);
+    else if (ev.type === 'dragleave') prImgDragLeave(ev, el);
+    else if (ev.type === 'drop') prDropImagen(ev, a[0], a[1], el);
+  },
+  hlDnD: function (a, el, ev) {
+    if (ev.type === 'dragover') hlDragOver(ev, el);
+    else if (ev.type === 'dragleave') hlDragLeave(ev, el);
+    else if (ev.type === 'drop') hlDrop(ev, a[0], a[1]);
+  },
+  hlDrag: function (a, el, ev) {
+    if (ev.type === 'dragstart') hlDragStart(ev, a[0], a[1], el);
+    else if (ev.type === 'dragend') hlDragEnd(ev);
+  },
   d: function (a, el, ev) { var f = _PR_FN[a[0]]; if (!f) { console.error('[pr] fn sin mapear:', a[0]); return; } f.apply(null, a.slice(1).map(function (x) { return _prSent(x, el, ev); })); },
   respCombo: function (a, el, ev) {
     if (ev.type === 'focus') comboboxOpen(el);

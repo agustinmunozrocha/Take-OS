@@ -1555,7 +1555,7 @@ function goOpenExport(projId) {
   const body = rows.length ? rows.map(r => `<tr><td>${escapeHtml(r.Fecha)}</td><td>${escapeHtml(r.Periodo)}</td><td class="go-cuenta">${escapeHtml(r.Cuenta)}</td><td>${escapeHtml(r.Linea)}</td><td>${escapeHtml(r.Responsable)}</td><td>${escapeHtml(r.TipoDoc)}</td><td>${escapeHtml(r.Proveedor)}</td><td></td><td>${escapeHtml(r.Descripcion)}</td><td class="go-num">${r.Monto}</td><td>${r.Moneda}</td></tr>`).join('') : '<tr><td colspan="11" class="go-faint" style="padding:18px;">No hay gastos validados para exportar. Valida gastos en la pestaña Validación de Finanzas.</td></tr>';
   goModal(`<div class="go-mc wide"><div class="go-mh"><h3>${escapeHtml(title)}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
-      <div class="go-expbar"><button class="btn btn-primary" onclick='goDescargarXlsx(${projId ? ('"' + projId + '"') : 'null'})' ${rows.length ? '' : 'disabled'}>⬇ Descargar .xlsx</button>
+      <div class="go-expbar"><button class="btn btn-primary" ${accionHTML('go.descargarXlsx', projId || null)} ${rows.length ? '' : 'disabled'}>⬇ Descargar .xlsx</button>
         <span class="go-batchnote">${rows.length} gastos validados · ${lotes} ${lotes > 1 ? 'lotes de 100' : 'lote'} · formato de importación masiva de Chipax</span></div>
       <div class="go-help" style="margin-bottom:10px;">Solo gastos <b>validados</b>. <b>Línea de Negocio</b> = “${escapeHtml(project ? goLineaNegocio(project) : 'Proyecto de Cliente')}”. <b>Tipo Doc</b>: Factura/Exenta→Invoice · Boleta/Honorario→Boleta · Otro→Recibo. Montos sin formato.</div>
       <div class="go-expscroll"><table class="go-tbl"><thead><tr><th>Fecha</th><th>Periodo</th><th>Cuenta</th><th>Línea de Negocio</th><th>Responsable</th><th>Tipo Doc</th><th>Proveedor</th><th>N° Doc</th><th>Descripción</th><th class="go-num">Monto</th><th>Moneda</th></tr></thead><tbody>${body}</tbody></table></div>
@@ -1626,6 +1626,7 @@ window.goCfoVer         = goCfoVer;
 
 // D2 · acciones delegadas (ppArgs y goCompCell: args con comillas → JSON)
 registrarAcciones('go', {
+  descargarXlsx: function (a) { goDescargarXlsx(a[0]); },
   crearPresup: function () { goOpenPresup(); },
   regFiltro: function (a, el) { goRegFilter(el.value); },
   exportChipax: function (a) { goOpenExport(a[0]); },

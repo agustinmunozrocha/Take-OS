@@ -51,7 +51,7 @@ export let TAKEOS_ACCESO = null;
 // se extraeran limpio en Etapa 2. Aqui dejamos el ESTADO coherente en state.js.
 window.DAL_SESSION_UID = null;
 window.DAL_SESSION_EMAIL = '';
-export let USUARIO_ACTUAL = ('USUARIO_ACTUAL' in window) ? USUARIO_ACTUAL : '';
+export let USUARIO_ACTUAL = ('USUARIO_ACTUAL' in window) ? window.USUARIO_ACTUAL : '';
 
 // Flags de origen de datos del DAL (Etapa B1). 'pending' → 'supabase' tras la
 // primera lectura exitosa (fail-safe: sin lectura confirmada NO se escribe).
