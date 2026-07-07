@@ -1,5 +1,17 @@
 # Changelog — TakeOS
 
+## V11.32.0 — 7 de julio de 2026
+### Login: el error "no puedes crear cuenta" deja de ser un rebote mudo
+
+Rama `fix/oauth-error-signup-legible`. Solo **frontend**. Bugfix de la pantalla de inicio de sesión.
+
+Cuando un invitado nuevo (sin cuenta) apretaba "Iniciar sesión con Google", elegía su cuenta y **volvía al login sin ninguna explicación**. La causa está en la configuración de Auth de Supabase —el registro de usuarios nuevos está deshabilitado, así que Google rechaza la creación de la cuenta con un error `422: Signups not allowed`—, pero el frontend **se tragaba ese error en silencio**: solo reconocía el retorno *exitoso* de Google, y cualquier retorno con error lo trataba como "no hay sesión" y reabría el login. Nadie —ni el invitado ni quien lo invitó— entendía qué había pasado.
+
+- La app ahora **detecta el retorno de Google con error** (`#error=…&error_code=…&error_description=…`) y le muestra al invitado un **mensaje claro** en la pantalla de login en vez de rebotarlo mudo: *"Tu acceso a TakeOS aún no está habilitado. Pídele a quien te invitó que active tu cuenta y vuelve a entrar."* para el caso del registro cerrado, o un mensaje genérico con el detalle para cualquier otro error de login.
+- Se limpia el `#error=…` de la barra de dirección para que un refresco no lo repita.
+- Se corrige el texto que le **prometía** al invitado que "tu cuenta se crea sola" (y el equivalente en el modal de "Invitación creada"): ahora dice que verá su invitación al entrar y que, si su acceso aún no está activo, se le avisará ahí mismo.
+- **Sin cambios de base de datos.** El *ingreso efectivo* del invitado se destraba aparte (activando el registro en la config de Auth de Supabase, y —como paso durable— provisionando la cuenta del invitado desde el servidor). Este cambio hace que, mientras tanto, el fallo deje de ser invisible.
+
 ## V11.31.0 — 30 de junio de 2026
 ### Finanzas (CFO): validar gastos y las acciones de la cola ahora SÍ persisten
 
