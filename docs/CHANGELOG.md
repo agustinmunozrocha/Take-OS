@@ -1,5 +1,16 @@
 # Changelog — TakeOS
 
+## V11.33.0 — 7 de julio de 2026
+### Login: mensaje de error neutral (TakeOS es de registro abierto)
+
+Rama `fix/login-copy-registro-abierto`. Solo **frontend**. Ajuste del copy introducido en V11.32.0.
+
+Se confirmó la dirección de producto: el registro de TakeOS es **abierto** — cualquiera puede crearse una cuenta y usar el software, esté o no invitado a una productora. El mensaje de error de login que había quedado en V11.32.0 asumía un modelo "solo invitados" (*"tu acceso aún no está habilitado; pídele a quien te invitó…"*), que ya no aplica.
+
+- El error de login (cuando Google/Auth devuelve un `#error=…`) **se sigue mostrando** en vez de rebotar sin mensaje, pero ahora con un texto **neutral**: *"No se pudo iniciar sesión (…). Reintenta."*, sin referencias a invitaciones.
+- Se **restauró el copy original** del recuadro de invitación (*"Entra con Google y tu cuenta se crea sola; al entrar verás la invitación"*) y del modal "Invitación creada" — ambos correctos con el registro abierto.
+- **Sin cambios de base de datos.** El registro sigue abierto (Auth con "allow new users to sign up" activo).
+
 ## V11.32.0 — 7 de julio de 2026
 ### Login: el error "no puedes crear cuenta" deja de ser un rebote mudo
 
