@@ -4,7 +4,8 @@
 >
 > **Versión:** borrador 0.3 · **Mantiene:** Agustín (arbitra) / Redactor (consolida). Cuando suban de versión los canónicos, actualizar las referencias de abajo.
 >
-> **v0.3 (jul 2026):** el frontend modular está **DESACOPLADO Y COMPLETO en staging** (Desacople D0-D4 + FASE HF: delegación de eventos, ganchos, estado con dueños, CSP estricta sin `unsafe-inline`, cero `on*=` inline). Producción sigue en el monolito hasta el corte (Lote 4). Actualizado §2 (stack real modular), §6 (se edita `frontend/src/`, no el HTML; compuerta `npm run gate`), §8 (14 migraciones, deuda del informe de arquitectura). Referencias canónicas a ADR v1.10 y Arquitectura v1.6. Informe técnico completo: [ARQUITECTURA.md](ARQUITECTURA.md).
+> **v0.3 (jul 2026):** el frontend modular está **DESACOPLADO Y COMPLETO en staging** (Desacople D0-D4 + FASE HF: delegación de eventos, ganchos, estado con dueños, CSP estricta sin `unsafe-inline`, cero `on*=` inline). Producción sigue en el monolito hasta el corte (Lote 4). Actualizado §2 (stack real modular), §6 (se edita `frontend/src/`, no el HTML; compuerta `npm run gate`), §8 (14 migraciones, deuda del informe de arquitectura). Referencias canónicas a ADR v1.12 y Arquitectura v1.8. Informe técnico completo: [ARQUITECTURA.md](ARQUITECTURA.md).
+> **v0.3.1 (jul 2026):** los cinco canónicos se movieron a `docs/canonicos/` y subieron de versión (ADR v1.12, Arquitectura y Flujo v1.8, Roadmap v1.10, Seguridad v1.5; PRD v3.6 sin cambio de versión). Actualizadas las referencias de §3.
 > **v0.2 (jun 2026):** flujo «BD en código» (Orden A, *merge = deploy* por Branching de Supabase), equipo de dos con Juan de la Cuadra (CTO) y trabajo en ramas + PR.
 
 ---
@@ -28,16 +29,16 @@ Lo construye **Agustín Muñoz Rocha** (Primate Films / La Hectárea SpA), funda
 
 La verdad del proyecto vive en tres documentos. **Léelos antes de proponer cambios de fondo.** Si un cambio contradice uno de ellos, **levanta la contradicción, no la resuelvas en silencio.**
 
-- **PRD** (`TakeOS_PRD_V3_6.md`) — qué es TakeOS y por qué. **Manda en producto y dominio.**
-- **ADR** (`TakeOS_ADR_Backend_v1_10.md`) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
-- **Roadmap** (`TakeOS_Roadmap_Operativo_v1_8.md`) — en qué orden, cuándo y quién. **Manda en ejecución.**
+- **PRD** ([`canonicos/TakeOS_PRD_V3_6.md`](canonicos/TakeOS_PRD_V3_6.md)) — qué es TakeOS y por qué. **Manda en producto y dominio.**
+- **ADR** ([`canonicos/TakeOS_ADR_Backend_v1_12.md`](canonicos/TakeOS_ADR_Backend_v1_12.md)) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
+- **Roadmap** ([`canonicos/TakeOS_Roadmap_Operativo_v1_10.md`](canonicos/TakeOS_Roadmap_Operativo_v1_10.md)) — en qué orden, cuándo y quién. **Manda en ejecución.**
 
 Ante choque: PRD en producto → ADR en técnica → **Agustín arbitra.**
 
 > **Documentos relacionados (no son del trío de autoridad):**
-> - `TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_6.md` — la **infraestructura** (BD en código, entornos producción/staging, despliegue, modularización del frontend con Vite) y el **flujo de equipo** (Git, ramas, Pull Requests, quién hace qué). Consúltalo para *cómo* se construye y se publica.
+> - [`canonicos/TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_8.md`](canonicos/TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_8.md) — la **infraestructura** (BD en código, entornos producción/staging, despliegue, modularización del frontend con Vite) y el **flujo de equipo** (Git, ramas, Pull Requests, quién hace qué). Consúltalo para *cómo* se construye y se publica.
 > - `ARQUITECTURA.md` (+ carpeta `arquitectura/`) — **informe técnico del cliente modular** (topología, arranque, intercomunicación, estado, persistencia, grafo de dependencias, seguridad/CSP, censo, y el registro de los 4 bugs de regresión ya reparados). Es la foto de *cómo está construido* hoy `frontend/src/`.
-> - `TakeOS_Seguridad_OWASP_Top_10_2025_v1_3.md` — **hub de seguridad**: mapea las 10 categorías OWASP 2025 al stack de TakeOS y deja veredicto. Subordinado al PRD (producto) y al ADR (técnica); alimenta el Gate C y el pentest.
+> - [`canonicos/TakeOS_Seguridad_OWASP_Top_10_2025_v1_5.md`](canonicos/TakeOS_Seguridad_OWASP_Top_10_2025_v1_5.md) — **hub de seguridad**: mapea las 10 categorías OWASP 2025 al stack de TakeOS y deja veredicto. Subordinado al PRD (producto) y al ADR (técnica); alimenta el Gate C y el pentest.
 >
 > Ninguno de estos manda sobre producto/técnica/ejecución (eso sigue siendo PRD/ADR/Roadmap).
 
