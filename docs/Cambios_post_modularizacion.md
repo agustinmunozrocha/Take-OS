@@ -18,7 +18,8 @@
 | # | Fecha | Commits en `main` | Versión | Qué es | Dónde vive en el monolito | Portado |
 |:-:|-------|-------------------|---------|--------|----------------------------|:-------:|
 | 1 | 30-jun-2026 | `082c501` (fix) · `fa008d5` (merge) | V11.31.0 | **Finanzas (CFO):** validar gastos y las acciones de la cola ahora SÍ persisten (encolan `dalTouchProyecto` tras marcar el cambio). Sin cambios de BD. | `goValidar`, `goPagarReemb`, `goPagarTodos`, `goSetFechaPago`, `goSetObjetivo` | ☐ |
-| 2 | 07-jul-2026 | `73ea781` (fix) · `bf76ca6` (merge) | V11.32.0 | **Login:** el error de OAuth (signup deshabilitado / rechazo de Google) deja de ser un rebote mudo; se muestra un mensaje claro al invitado, se limpia el `#error` de la URL y se corrige el copy que prometía "tu cuenta se crea sola". Sin cambios de BD. | `AUTH_ERROR_OAUTH` (junto a `AUTH_RETORNO_OAUTH`), `cloudGate`, hint `#cgInvHint`, modal "Invitación creada" (`_invMostrarResultado`) | ☐ |
+| 2 | 07-jul-2026 | `73ea781` (fix) · `bf76ca6` (merge) | V11.32.0 | **Login:** el error de OAuth deja de ser un rebote mudo; se muestra un mensaje y se limpia el `#error` de la URL. (El copy de este commit se **ajustó en el #3** — portar el net #2+#3.) Sin cambios de BD. | `AUTH_ERROR_OAUTH` (junto a `AUTH_RETORNO_OAUTH`), `cloudGate`, hint `#cgInvHint`, modal "Invitación creada" (`_invMostrarResultado`) | ☐ |
+| 3 | 07-jul-2026 | `c2ef3f3` (fix) · `7d6c6c0` (merge) | V11.33.0 | **Login (ajuste del #2):** TakeOS es de **registro abierto** (cualquiera puede crearse cuenta). Se conserva la detección de error de login pero con mensaje **neutro** (*"No se pudo iniciar sesión…"*) y se **revierte** el copy invitado-céntrico del #2 (se restaura *"tu cuenta se crea sola"* y el modal). **El net del login a portar = #2 + #3.** Sin cambios de BD. | `AUTH_ERROR_OAUTH`/`cloudGate` (mensaje), hint `#cgInvHint`, modal `_invMostrarResultado` | ☐ |
 
 ## Cómo usar este registro
 
