@@ -16,6 +16,15 @@
 >
 > **Sigue abierto** (no tocado por HF): todos los hallazgos P1 de seguridad (RLS soft-delete, aislamiento de externos), P2 (tests/lint completos, red async, comentarios fósiles, changelog en index.html, airbag, rendimiento, a11y, lock-in) y la deuda de las 11 guardas `typeof` sobre bridges window. Ver §4–§5.
 
+> ### ⚑ Addendum 2 — Lote de fixes de finanzas + bug de departamentos (7–8 jul, ramas `fix-bugs-etapa4*`)
+> Post-HF, sobre reportes de Agustín en el módulo de presupuesto. Cada fix pasó `npm run gate` verde (0 `on*=`, 0 identificadores libres) y no creció la superficie `window` (sigue en 73):
+> - **Panel de finanzas muerto** (`0249155`): los dispatchers de 2.º nivel `pre.finMoney/finPct/finLbl/finModo/finVal/finR` resuelven `a[0]` contra el mapa local `_PRE_FN`, pero **las 12 funciones de finanzas nunca se registraron ahí** → `_PRE_FN[a[0]]` = undefined → TypeError tragado por la delegación → editar Presupuesto Cliente, comisiones, riesgos o extras no hacía nada. Fix: registrar las 12 con thunks perezosos (lección #13).
+> - **`fin.presupCliente` — campo inexistente** (`9ad49b7`): 3 funciones (captura de versión de cotización, comparador de ofertas, resumen histórico) leían un nombre corto que nadie escribe (canónico: `presupuestoCliente`, nace en `modelo.js:285`, se persiste en `dal.js`) → capturaban el presupuesto cliente en **cero**. Fix: unificar al nombre canónico.
+> - **Fila "Presupuesto Cliente Efectivo"** (`59aa7df`): mostraba `s.presupCliente` (neto) en vez de `s.presupClienteEfectivo` (neto + ampliaciones) → el total post-ampliación no reflejaba los extras.
+> - **Departamentos de servicios que se pierden al recargar** (ABIERTO, fix coordinado frontend+backend): las filas de servicios guardan su departamento **por nombre**; el RPC `guardar_proyecto` lo mapea a `department_id` y da NULL si el nombre no está en la tabla `departments`. `_dalBudgetRow` (`dal.js:937`) descarta el `department_id` en memoria — el departamento vive **solo como la clave del grupo `d.servicios`**. Departamentos personalizados/renombrados nunca se insertan en `departments` → sus filas caen a NULL. Diagnóstico adjudicado con el BD Expert (mi primera hipótesis —upsert por nombre— fue **refutada**: ensuciaría el catálogo). Fix de fondo acordado: **mandar `department_id` (entero), no el nombre** + creación explícita de departamentos + ajuste del RPC para aceptar id. Coordinación pendiente; la decisión de diseño (departamentos por-productora) la arbitra Agustín.
+>
+> **Nota de arquitectura (el panel de finanzas la expuso):** la biyección de acciones de **1.er nivel** (`registrarAcciones` ≡ `accionHTML`, 364/364) está verificada, pero los **mapas de despacho de 2.º nivel** (`_PRE_FN`/`_PR_FN`/`_CFG_FN`) **no tienen compuerta** — un nombre despachado sin entrada en el mapa es exactamente el bug `0249155`, y `npm run gate` no lo habría atrapado. **Candidato a tercer checker** (todo nombre despachado a un `_*_FN` debe existir en el mapa) — extiende R2.
+
 ---
 
 ## 1 · Qué es TakeOS, técnicamente
@@ -175,3 +184,69 @@ Selección de los ~90 hallazgos de los capítulos (cada uno con evidencia `archi
 | [15 · Rendimiento](arquitectura/15-rendimiento.md) | Presupuesto de carga, xlsx duplicado, markDirty, fuentes |
 | [16 · Accesibilidad](arquitectura/16-accesibilidad.md) | Línea base cuantitativa (4 aria-), foco, teclado, contraste, reduced-motion |
 | [17 · Límites de producto](arquitectura/17-limites-de-producto.md) | i18n/lock-in Chile, versionado de saves, compatibilidad de formatos |
+
+---
+
+## 7 · Mapa de módulos (carpetas modularizadas)
+
+Todo el frontend modular vive bajo `frontend/src/`. Dos carpetas de código + entrada + estilos + las compuertas:
+
+```
+frontend/src/
+├── main.js          manifiesto de imports (11 lib + 25 módulos, boot.js último)
+├── styles.css       hoja de estilos externa (3.230 líneas)
+├── lib/             infraestructura — el "motor" (14 archivos, 3.313 líneas)
+└── modules/         dominio — la lógica de negocio (25 archivos, 22.041 líneas)
+frontend/scripts/    compuertas de `npm run gate` (check-inline-handlers.mjs, check-free-idents.mjs)
+```
+
+### `lib/` — infraestructura (evalúa temprano; los módulos dependen de ella)
+
+| Archivo | Líneas | Rol |
+|---|---:|---|
+| `supabase.js` | 25 | Cliente Supabase (`sb`) y `supabaseInit`; centinela `window.sb`. |
+| `ganchos.js` | 34 | Inversión de dependencias — `define`/`gancho`/`valor` (registro por nombre). |
+| `rates.js` | 54 | Las 6 tasas tributarias (IVA/FACTOR_*), pobladas por `dalBootTaxRates` desde `tax_rates`. |
+| `helpers.js` | 63 | Utilidades puras — `escapeHtml`, `safeUrl`, `showToast`. |
+| `delegacion.js` | 64 | Bus de eventos — un listener por tipo, `registrarAcciones`/`accionHTML`, despacho con ascenso. |
+| `data.js` | 70 | Re-exporta catálogos + constantes de dominio (BANCOS_CHILE, REGIONES, DTE_*). |
+| `auth.js` | 82 | Niveles de permiso — `authNivel`, `applyModuleReadonly`, `_puedeEditarResponsables` (solo UX). |
+| `catalogos.js` | 93 | Constantes compartidas sin ciclo — DEFAULT_DEPARTAMENTOS/EQUIPOS/GASTOS/TALENTOS, LOC_ESTADO_RANK. |
+| `state.js` | 246 | **Dueño del estado global** — STATE, PROJECTS, BD_*, ORG_ID, flags; setters = única escritura. |
+| `nav.js` | 249 | Registro `MODULES` + `renderModule` (dispatcher de navegación) + sidebar/contadores. |
+| `calc.js` | 263 | Fórmulas y formatos financieros — `fmtMoney`, IVA/retención, `initials`. |
+| `modelo.js` | 531 | Fábrica de proyectos (`buildProjectData`), normalizadores de contactos, `_genId`/`_clientUuid`. |
+| `boot.js` | 737 | Arranque (`arrancarTakeOS`, cadena DAL), registros `app`/`boot`, época multi-org. |
+| `ui.js` | 802 | Librería UI transversal — modales, toasts, comboboxes, `sectionResponsableHTML`. |
+
+### `modules/` — dominio (evalúan tardío; consumen `lib/`)
+
+| Archivo | Líneas | Rol |
+|---|---:|---|
+| `presupuesto-cotizacion.js` | 4.514 | Presupuesto (grid editable, resumen financiero, HE) + cotización (versiones, comparador, PDF). |
+| `config.js` | 2.171 | Configuración de la OS — snapshots, tema, admin, perfil de empresa, wizard crear-productora. |
+| `dal.js` | 1.899 | **Capa de acceso a Supabase** — familia `dalGuardar*`, RPC `guardar_proyecto`, carga/fusión, época. |
+| `gastos.js` | 1.696 | Gastos/CFO — captura, validación, caja, reembolsos, export Chipax/Santander. |
+| `plan-rodaje.js` | 1.514 | Plan de rodaje (días/unidades) + hoja de llamado (crew/externos, PDF). |
+| `bd.js` | 1.195 | Base de datos de contactos — personas/empresas/talentos, roles, vinculación, archivado. |
+| `legal.js` | 925 | Documentos legales — plantillas, variables, estados, editor. |
+| `locaciones.js` | 923 | Locaciones — fichas, fotos/storage, estados, scouting (paradas, ruta). |
+| `bd-excel.js` | 759 | Import/export Excel de la BD (xlsx/exceljs desde CDN). |
+| `notificaciones.js` | 734 | Notificaciones — campanita, canales (email/WhatsApp), plantillas, programación. |
+| `calculadoras.js` | 655 | Calculadoras tributarias/financieras. |
+| `persistencia-local.js` | 636 | localStorage — autosave, snapshots, undo (⌘Z), airbag. |
+| `perfil-onboarding.js` | 606 | Onboarding y perfil de usuario. |
+| `info-proyecto.js` | 593 | Ficha de información del proyecto. |
+| `espacio.js` | 450 | Espacio de usuario multi-productora (cambiar org, CTA). |
+| `cargos.js` | 450 | Cargos/funciones del proyecto. |
+| `admin.js` | 396 | Herramientas de administración. |
+| `crew.js` | 362 | Crew — PDFs, transporte. |
+| `kanban.js` | 360 | Tablero de proyectos (crear/eliminar, navegación, KPIs). |
+| `tareas.js` | 338 | Tareas por sección, @menciones, comentarios. |
+| `rodajes.js` | 226 | KPI de rodajes. |
+| `documentos.js` | 224 | Documentos del proyecto (drag & drop). |
+| `invitaciones.js` | 215 | Invitaciones a la organización. |
+| `plan-limites.js` | 107 | Límites del plan contratado (colaboradores, etc.). |
+| `buscador.js` | 93 | Buscador global. |
+
+**Estratificación:** `lib/` no depende de `modules/` salvo 7 aristas deliberadas desde `boot.js` (orquestador). El grueso de las aristas es `modules → lib` (189) y `modules → modules` (101). Detalle del grafo en [cap. 6](arquitectura/06-grafo-de-dependencias.md).
