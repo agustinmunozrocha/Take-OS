@@ -2,9 +2,9 @@
 
 > Este archivo son las **instrucciones permanentes** para Claude Code en este repositorio. Vive en la raíz del proyecto; Claude Code lo lee solo al iniciar cada sesión. Es la "biblia de producción" del agente. Mantenerlo corto y de alta señal.
 >
-> **Versión:** borrador 0.2 · **Mantiene:** Agustín (arbitra) / Redactor (consolida). Cuando suban de versión los canónicos, actualizar las referencias de abajo.
+> **Versión:** borrador 0.3 · **Mantiene:** Agustín (arbitra) / Redactor (consolida). Cuando suban de versión los canónicos, actualizar las referencias de abajo. Los canónicos ahora viven en `docs/canonicos/`.
 >
-> **v0.2 (jun 2026):** alineado a los canónicos vigentes (PRD V3.6 · ADR v1.9 · Roadmap v1.8 · Arquitectura v1.5 · + hub de Seguridad OWASP v1.3). Cambios de fondo: nuevo flujo «BD en código» (Orden A, *merge = deploy* por Branching de Supabase; se retira el `supabase db push` manual a producción), equipo de dos con Juan de la Cuadra (CTO) y trabajo en ramas + PR, modularización del frontend con Vite (en curso, hoy en el repo de staging) y estado de deuda actualizado.
+> **v0.3 (jul 2026):** alineado a los canónicos vigentes (PRD V3.6 · ADR v1.12 · Roadmap v1.10 · Arquitectura v1.8 · + hub de Seguridad OWASP v1.5). **Cambio de fondo desde v0.2 — producción ≠ staging:** los dos remotos del repo divergieron **189 commits**. **Producción corre el monolito** (marca visible ahora **Rizora**, build **V11.34.0**; el nombre interno/canónico sigue siendo *TakeOS* — las docs `.md` aún no rebrandeadas). **Staging tiene la arquitectura modular esencialmente completa** (40 archivos, delegación de eventos, ganchos, época multi-org, CSP sin `unsafe-inline`). La modularización ya **no** es "88% pendiente": lo que queda es el **corte a producción**. También cambia el patrón de intercomunicación (delegación/ganchos, **no** «puente a `window`») y entran nuevos huecos de seguridad A01/A03. *(v0.2 (jun 2026): flujo «BD en código» —Orden A, merge = deploy—, equipo de dos con Juan de la Cuadra (CTO) y trabajo en ramas + PR. Sigue vigente.)*
 
 ---
 
@@ -16,7 +16,10 @@ Lo construye **Agustín Muñoz Rocha** (Primate Films / La Hectárea SpA), funda
 
 ## 2. Stack técnico
 
-- **Frontend:** **JavaScript puro** (sin framework), hoy un monolito de ~23.000 líneas. **En producción corre el monolito**: `index.html` vive en la **raíz** del repo y GitHub Pages publica desde ahí (la carpeta `frontend/` de producción solo tiene un `.gitkeep`). **La modularización con Vite está EN CURSO, y vive en el repo de staging**: Etapas 0 y 1 hechas (CSS extraído + un «cimiento» de 12 funciones en `frontend/src/lib/`); el grueso —la **Etapa 2**, los módulos de negocio, ~88% del trabajo— sigue pendiente, y el **corte de producción** a la build de Vite también. Patrón de migración: cada función movida a un módulo se **puentea a `window`** para no romper los `onclick` inline. *No reescribir el monolito de golpe: se extrae un módulo a la vez. Detalle en Arquitectura §3.4 y §7.*
+- **Frontend:** **JavaScript puro** (sin framework). **Producción ≠ staging — leer toda cifra de frontend etiquetada por rama:**
+  - **Producción (`origin/main`) = el monolito.** `index.html` de ~28.600 líneas (549 handlers `onclick` inline, CSP con `'unsafe-inline'`) vive en la **raíz** del repo y GitHub Pages publica desde ahí (la carpeta `frontend/` de producción solo tiene un `.gitkeep`). Es lo que hoy usa la operación; marca visible **Rizora**, build **V11.34.0**.
+  - **Staging (`staging/main`) = la arquitectura modular, esencialmente completa.** El monolito ya quedó reemplazado por **40 archivos ES Modules / ~25.300 líneas** (14 en `frontend/src/lib/` + 25 módulos de negocio). Ya **no** hay «puente a `window`»: toda intercomunicación va por **imports ESM**, **ganchos** (inversión de control) y **delegación de eventos** (`data-accion` reemplaza los `onclick` inline — eso es lo que habilita el CSP **sin `'unsafe-inline'`** en `script-src`), con setters como única escritura de estado y aislamiento multi-org por **época** (`_ORG_EPOCA`). *(ADR-026.)*
+  - **Lo que queda no es modularizar: es el corte a producción** (pasar producción de monolito a la build modular). Los dos remotos divergieron **189 commits** y cada cambio nuevo al monolito de prod se anota en `Cambios_post_modularizacion.md` para portarlo. Ese corte + la divergencia son el **riesgo abierto principal**. *Detalle en Arquitectura §2.4/§3/§7 y ADR-015/ADR-026.*
 - **Backend:** **Supabase** — PostgreSQL (base), Supabase Auth (identidad), Supabase Storage (archivos), RLS + GRANT (acceso) y **RPCs / Edge Functions para la lógica crítica**.
 - **Multi-tenant:** `organization_id` en toda tabla de negocio.
 
@@ -24,15 +27,15 @@ Lo construye **Agustín Muñoz Rocha** (Primate Films / La Hectárea SpA), funda
 
 La verdad del proyecto vive en tres documentos. **Léelos antes de proponer cambios de fondo.** Si un cambio contradice uno de ellos, **levanta la contradicción, no la resuelvas en silencio.**
 
-- **PRD** (`TakeOS_PRD_V3_6.md`) — qué es TakeOS y por qué. **Manda en producto y dominio.**
-- **ADR** (`TakeOS_ADR_Backend_v1_9.md`) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
-- **Roadmap** (`TakeOS_Roadmap_Operativo_v1_8.md`) — en qué orden, cuándo y quién. **Manda en ejecución.**
+- **PRD** (`canonicos/TakeOS_PRD_V3_6.md`) — qué es TakeOS y por qué. **Manda en producto y dominio.**
+- **ADR** (`canonicos/TakeOS_ADR_Backend_v1_12.md`) — cómo se construye técnicamente y por qué. **Manda en lo técnico.**
+- **Roadmap** (`canonicos/TakeOS_Roadmap_Operativo_v1_10.md`) — en qué orden, cuándo y quién. **Manda en ejecución.**
 
 Ante choque: PRD en producto → ADR en técnica → **Agustín arbitra.**
 
 > **Documentos relacionados (no son del trío de autoridad):**
-> - `TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_5.md` — la **infraestructura** (BD en código, entornos producción/staging, despliegue, modularización del frontend con Vite) y el **flujo de equipo** (Git, ramas, Pull Requests, quién hace qué). Consúltalo para *cómo* se construye y se publica.
-> - `TakeOS_Seguridad_OWASP_Top_10_2025_v1_3.md` — **hub de seguridad**: mapea las 10 categorías OWASP 2025 al stack de TakeOS y deja veredicto. Subordinado al PRD (producto) y al ADR (técnica); alimenta el Gate C y el pentest.
+> - `canonicos/TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_8.md` — la **infraestructura** (BD en código, entornos producción/staging, despliegue, modularización del frontend con Vite) y el **flujo de equipo** (Git, ramas, Pull Requests, quién hace qué). Consúltalo para *cómo* se construye y se publica.
+> - `canonicos/TakeOS_Seguridad_OWASP_Top_10_2025_v1_5.md` — **hub de seguridad**: mapea las 10 categorías OWASP 2025 al stack de TakeOS y deja veredicto. Subordinado al PRD (producto) y al ADR (técnica); alimenta el Gate C y el pentest.
 >
 > Ninguno de estos manda sobre producto/técnica/ejecución (eso sigue siendo PRD/ADR/Roadmap).
 
@@ -81,14 +84,16 @@ Estas no se negocian. Si una tarea te empuja a romper una, **detente y avisa**.
 
 ## 8. Estado actual y deuda técnica conocida
 
-(Lista móvil — confirmar contra el estado real antes de actuar. Build de producción: **V11.16.0** (monolito). Base: **7 migraciones**, 77 tablas, todas con RLS.)
+(Lista móvil — confirmar contra el estado real antes de actuar, y **etiquetar toda cifra por rama** (prod ≠ staging, 189 commits de divergencia).
+**Producción** (monolito): build **V11.34.0**, marca visible **Rizora**; base **8→9 migraciones**, **77 tablas / 147 policies**, todas con RLS.
+**Staging** (modular): **14 migraciones · 72 tablas · 157 policies · 76 funciones `SECURITY DEFINER`**. ⚠ El censo tiene dos puntos a verificar: las tablas *bajan* 77→72, y hay ~5 migraciones entre la 9.ª y la 14.ª sin handoff, aún sin enumerar.)
 
 - **Gate A — CERRADO:** Firebase apagado y retirado (V10), Supabase Pro con backups validados, `currentUser()` conectado a la sesión real.
 - **Gate B — casi cerrado:** motor de organización activa construido (`_setOrgActiva`). Falta el **RLS real por organización y rol** (reemplazar las políticas `mvp_`) y su **validación con varias organizaciones** (tests de cruce de tenant que deben fallar).
-- **Gate C — por delante (crítico antes del beta):** hoy es sobre todo **legal** —los cinco flujos de derechos del titular ya están **construidos en UI**; faltan los **textos aprobados** por abogado (Ley 21.719, deadline 1-dic-2026)— más el header `frame-ancestors` del hosting y el endurecimiento del aislamiento multi-tenant. *(Mapa de seguridad: hub OWASP.)*
-- **Ya resuelto — NO reabrir:** refresco vuelve a donde estabas (V11.15.0); `authNivelModulo` **falla cerrado** (V11.15.0); validación de RUT; lectura de IVA/tasas desde `tax_rates` (en `frontend/src/lib/rates.js`); backlog de endurecimiento (REVOKE `anon`, `search_path`, policy `app_config`) entró por migración. *(Excepción deliberada, NO “arreglar”: los guardas de **escritura** del cliente siguen fail-open a propósito — la cerradura real es el RPC `SECURITY DEFINER`.)*
-- **Deuda puntual abierta:** normalización de teléfono `+56` en `_perfilGuardar` (hoy guarda en crudo); validación server-side de cuentas bancarias por tipo; mover la generación de IDs (`ctk_`, `emp_`) a server-side; deuda de reportería (RPC `cerrar_proyecto` que congele totales server-side; `reporte_cierre` recalcula desde las líneas, **nunca** confía en `frozen` ni en snapshots).
+- **Gate C — por delante (crítico antes del beta):** hoy es sobre todo **legal** —los cinco flujos de derechos del titular ya están **construidos en UI**; faltan los **textos aprobados** por abogado (Ley 21.719, deadline 1-dic-2026)— más el header `frame-ancestors` del hosting y el endurecimiento del aislamiento multi-tenant. **Dos huecos nuevos de control de acceso (A01), bloqueantes del beta:** (1) el **borrado blando** de proyectos hace `UPDATE deleted_at` directo por PostgREST (`kanban.js`) y **elude el permiso `eliminar_proyecto`** —las RPC endurecidas existen y el frontend no las llama—; (2) **"el externo no lee `contacts`" es convención, no invariante** —ninguna policy mira `memberships.tipo`—; además, snapshots/airbag no segregan por organización. *(Mapa de seguridad: hub OWASP v1.5, A01.)*
+- **Ya resuelto — NO reabrir:** refresco vuelve a donde estabas (V11.15.0); `authNivelModulo` **falla cerrado** (V11.15.0); validación de RUT; lectura de IVA/tasas desde `tax_rates` (en `frontend/src/lib/rates.js`); backlog de endurecimiento (REVOKE `anon`/`service_role`, `search_path`, policy `app_config`) entró por migración; en staging, el CSP `script-src` quedó **sin `'unsafe-inline'`** (delegación de eventos). *(Excepción deliberada, NO “arreglar”: los guardas de **escritura** del cliente siguen fail-open a propósito — la cerradura real es el RPC `SECURITY DEFINER`.)*
+- **Deuda puntual abierta:** ⚠ **bug de departamentos de servicios por productora (ADR-F)** — se guardan por nombre y `guardar_proyecto` da NULL si no están en `departments` → los personalizados se pierden al recargar (fix técnico acordado con el BD Expert; la decisión de diseño la arbitra Agustín); `showToast` inyecta su `body` **sin escapar** con 13 call-sites que le pasan `e.message` del servidor (A03, sanear con `escapeHtml`); **cadena de suministro** (A03): cero SRI en los 3 CDN, `supabase-js@2` con major flotante, `xlsx` cargado dos veces; `npm run gate` (cero `on*=`, cero identificadores libres) existe pero **se corre a mano** —falta atarlo a pre-push/CI—; **red async sin fondo** (A10): fire-and-forget y `.then` sin `.catch`, sin `unhandledrejection` global; normalización de teléfono `+56` en `_perfilGuardar` (hoy guarda en crudo); validación server-side de cuentas bancarias por tipo; mover la generación de IDs (`ctk_`, `emp_`) a server-side; deuda de reportería (RPC `cerrar_proyecto` que congele totales server-side; `reporte_cierre` recalcula desde las líneas, **nunca** confía en `frozen` ni en snapshots).
 
 ---
 
-*Borrador 0.1 · No es canónico — es el manual de operación del agente. Se versiona y consolida como el resto. Primate Films / La Hectárea SpA.*
+*Borrador 0.3 · No es canónico — es el manual de operación del agente. Se versiona y consolida como el resto. Primate Films / La Hectárea SpA.*
