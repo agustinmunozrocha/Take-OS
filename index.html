@@ -24137,7 +24137,7 @@ function _invMostrarResultado(res) {
     + '<div class="modal-header"><div class="modal-title">Invitación creada</div></div>'
     + '<div class="modal-body">'
     +   '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-secondary);line-height:1.55;">Invitación para <strong>' + escapeHtml(res.email || '') + '</strong>'
-    +   (registrado ? ' — esa cuenta ya existe en TakeOS, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link e iniciar sesión entrará y verá la invitación.')
+    +   (registrado ? ' — esa cuenta ya existe en TakeOS, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link creará su cuenta y verá la invitación.')
     +   '</p>'
     +   '<div style="display:flex;gap:8px;align-items:center;">'
     +     '<input class="input" id="invLinkOut" readonly value="' + escapeHtml(link) + '" style="flex:1;font-size:12px;">'
@@ -25215,7 +25215,7 @@ async function cloudGate(onUnlock) {
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
       <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
       <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después TakeOS vuelve a pedir autenticación.</div>
-        <div id="cgInvHint" style="display:none;border:1px solid #4a7;border-radius:8px;padding:10px 12px;margin-bottom:18px;font-size:12.5px;color:#9c8;line-height:1.5;">Te invitaron a colaborar. Entra con Google y verás tu invitación. Si tu acceso aún no está activo, te avisaremos aquí.</div>
+        <div id="cgInvHint" style="display:none;border:1px solid #4a7;border-radius:8px;padding:10px 12px;margin-bottom:18px;font-size:12.5px;color:#9c8;line-height:1.5;">Te invitaron a colaborar. Entra con Google y tu <strong>cuenta se crea sola</strong>; al entrar verás la invitación.</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style="flex:0 0 auto;">
@@ -25239,18 +25239,13 @@ async function cloudGate(onUnlock) {
     </div>`;
   document.body.appendChild(ov);
   const err = ov.querySelector('#cloudGateErr');
-  /* V11.32.0 · si volvimos de Google con un ERROR (típicamente el signup
-     deshabilitado para un invitado nuevo), explicárselo en vez de reabrir el
-     login mudo. Limpiamos el #error de la URL para que un refresh no lo repita. */
+  /* V11.33.0 · si volvimos de un login con error (p.ej. el usuario canceló en
+     Google, o un error transitorio), mostrarlo en vez de reabrir el login mudo.
+     Limpiamos el #error de la URL para que un refresh no lo repita. */
   if (AUTH_ERROR_OAUTH) {
     try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
-    const c = (AUTH_ERROR_OAUTH.code || '').toLowerCase();
-    const d =  AUTH_ERROR_OAUTH.desc || '';
-    err.textContent =
-      (/signup.*disabled|not.*allowed/i.test(c) || /signups?\s+not\s+allowed/i.test(d))
-        ? 'Tu acceso a TakeOS aún no está habilitado. Pídele a quien te invitó que active tu cuenta y vuelve a entrar.'
-        : ('No se pudo iniciar sesión' + (d ? ' (' + d + ')' : '') + '. Reintenta o avísale a quien te invitó.');
-    try { if (sessionStorage.getItem('takeos_inv_pendiente')) { const h = ov.querySelector('#cgInvHint'); if (h) h.style.display = 'block'; } } catch (e) {}
+    const d = AUTH_ERROR_OAUTH.desc || AUTH_ERROR_OAUTH.code || '';
+    err.textContent = 'No se pudo iniciar sesión' + (d ? ' (' + d + ')' : '') + '. Reintenta.';
   }
   const gBtn = ov.querySelector('#cloudGateGoogle');
   const gLbl = ov.querySelector('#cloudGateGoogleLbl');
