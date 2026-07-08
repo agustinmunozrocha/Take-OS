@@ -2176,7 +2176,7 @@ export function renderSummaryFin() {
             <span class="tt" data-tip="Presupuesto Cliente original + suma de extras / ampliaciones. Es la base real (en neto, sin IVA) sobre la que se calcula la ganancia y los márgenes.">?</span>
           </td>
           <td class="pct">100%</td>
-          <td class="num"><strong>${fmtMoney(s.presupCliente)}</strong></td>
+          <td class="num"><strong>${fmtMoney(s.presupClienteEfectivo)}</strong></td>
           ${showReal ? `<td class="num"><strong>${fmtMoney(s.presupClienteEfectivo)}</strong></td>` : ''}
           ${showReal ? '<td class="pct">—</td>' : ''}
           ${showReal ? '<td class="num">—</td>' : ''}
