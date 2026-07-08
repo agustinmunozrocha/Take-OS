@@ -2172,14 +2172,14 @@ export function renderSummaryFin() {
           </tr>
         `).join('')}
 
-        <tr class="extra-ingreso-add-row">
-          <td colspan="${showReal ? 6 : 3}">
+        ${showReal ? `<tr class="extra-ingreso-add-row">
+          <td colspan="6">
             <button class="row-add-extra-ingreso" data-accion="pre.finR" data-args="[&quot;addExtraIngreso&quot;]">
               + Agregar extra / ampliación al cliente
             </button>
             <span class="tt" data-tip="Ingresos adicionales que se le cobran al cliente DESPUÉS de aprobar (ampliaciones de alcance, días extra de rodaje, entregables adicionales, etc.).&#10;&#10;No tocan la cotización original (que queda congelada): se suman aparte para mantener la trazabilidad de cuánto creció el proyecto." style="margin-left: 6px;">?</span>
           </td>
-        </tr>
+        </tr>` : ''}
 
         ${s.totalExtras > 0 ? `
         <tr class="summary-row efectivo-row">
