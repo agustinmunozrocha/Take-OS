@@ -34,11 +34,11 @@
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TakeOS</title>
+<title>Rizora</title>
 
 <!--
   ════════════════════════════════════════════════════════════════════
-  TakeOS — Sistema operativo de producción audiovisual
+  Rizora — Sistema operativo de producción audiovisual
   ════════════════════════════════════════════════════════════════════
 
   Versión:        V8.6.0 — Sistema de Tareas, comentarios y responsabilidades: botón «Tareas» por sección (asignar, adjuntar, comentar, completar) · @menciones (incl. notas de Presupuesto) · mega-repositorio «Mis tareas» en el Control Room · «Requieren atención» por usuario (tareas + señales) · señal del guion técnico → AD · sesión simulada hasta tener auth
@@ -494,7 +494,7 @@
     muestra solo «+ Agregar a la BD» al pasar el cursor y es clickeable: lleva a
     crear el contacto (mismo flujo de Crew). Versión estática y dinámica.
   VERSIÓN VISIBLE BAJO EL LOGO (punto 6)
-  - Debajo de «TakeOS / Primate Films» (arriba a la izquierda) ahora se muestra
+  - Debajo de «Rizora / Primate Films» (arriba a la izquierda) ahora se muestra
     la versión, ej. «v8.4.4». Se lee automáticamente de TAKEOS_VERSION, así que
     se actualiza sola en cada versión.
   DECISIONES ESTRUCTURALES
@@ -897,7 +897,7 @@
   - Cesión de derechos / modelaje: VALIDADA (basada en el contrato real de
     Primate).
   - Contrato de servicios, NDA, Arriendo de locación: BORRADOR redactado
-    por TakeOS — DEBEN validarse con un abogado antes de producción. El
+    por Rizora — DEBEN validarse con un abogado antes de producción. El
     generador y la pestaña Plantillas muestran la advertencia.
   - En V1 las plantillas son fijas (se rellenan, no se editan). Editar o
     agregar advierte sobre validación legal; a futuro será solo Admin.
@@ -4371,7 +4371,7 @@ textarea.cot-input { resize: vertical; min-height: 64px; line-height: 1.5; }
 </style>
 <style id="go-cfo-styles">
 /* ════════ MÓDULO GASTOS + CFO (V8) · estilos namespaced .go-* ════════
-   Mapea a los tokens de TakeOS → respeta tema claro y oscuro. */
+   Mapea a los tokens de Rizora → respeta tema claro y oscuro. */
 .go-wrap{font-size:13.5px;}
 .go-note{font-size:11.5px;color:var(--ink-faint);border:1px dashed var(--rule-strong);border-radius:8px;padding:8px 12px;margin-bottom:16px;line-height:1.5;}
 .go-empty{padding:40px;text-align:center;color:var(--ink-muted);}
@@ -4525,7 +4525,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
       <div class="brand" onclick="navigateToControlRoom()">
         <div class="brand-logo" id="brandLogo">T</div>
         <div>
-          <span class="brand-name">TakeOS</span>
+          <span class="brand-name">Rizora</span>
           <span class="brand-sub" id="brandSub"></span>
           <span class="brand-ver" id="brandVer"></span>
         </div>
@@ -4576,7 +4576,7 @@ select.go-inp{cursor:pointer;} textarea.go-inp{resize:vertical;min-height:54px;}
         <span class="user-name" id="userName">Mi cuenta</span>
         <svg class="config-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
-      <button class="topbar-save-btn" id="logoutBtn" onclick="confirmLogout()" title="Cerrar sesión en TakeOS">
+      <button class="topbar-save-btn" id="logoutBtn" onclick="confirmLogout()" title="Cerrar sesión en Rizora">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Salir
       </button>
@@ -6892,7 +6892,7 @@ const MODULES = {
     layer: 'Visión estratégica · V6+',
     scope: 'project',
     render: null,
-    description: 'PDF de business intelligence generado automáticamente al cerrar un proyecto. Métricas, gráficos, conclusiones por IA. Diferenciador estratégico de TakeOS como SaaS. Ver sección 14 del PRD V2.'
+    description: 'PDF de business intelligence generado automáticamente al cerrar un proyecto. Métricas, gráficos, conclusiones por IA. Diferenciador estratégico de Rizora como SaaS. Ver sección 14 del PRD V2.'
   }
 };
 
@@ -8525,7 +8525,7 @@ async function exportBDExcelV71() {   // nombre conservado por compat con el bot
   XLSX.utils.book_append_sheet(wb, wsE, 'EMPRESAS');
 
   const now = new Date(), pad = n => String(n).padStart(2, '0');
-  const fname = `TakeOS_BD_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.xlsx`;
+  const fname = `Rizora_BD_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast({ kind: 'success', title: 'BD exportada',
     body: `${Object.keys(BD_CONTACTOS).length} contactos · ${Object.keys(BD_EMPRESAS_BYID).length} empresas en <strong>${escapeHtml(fname)}</strong>.` });
@@ -8560,7 +8560,7 @@ async function downloadBDPlantilla() {
 
   // Hoja Instrucciones
   const instr = [
-    ['Planilla de migración — Base de Datos · TakeOS'],
+    ['Planilla de migración — Base de Datos · Rizora'],
     [''],
     ['Cómo usarla:'],
     ['1. Llena la pestaña CONTACTOS (una fila por persona) y, si corresponde, EMPRESAS.'],
@@ -8583,7 +8583,7 @@ async function downloadBDPlantilla() {
   wi['!cols'] = [{ wch: 92 }];
   XLSX.utils.book_append_sheet(wb, wi, 'Instrucciones');
 
-  XLSX.writeFile(wb, 'TakeOS_Planilla_BD.xlsx');
+  XLSX.writeFile(wb, 'Rizora_Planilla_BD.xlsx');
   showToast({ kind: 'success', title: 'Planilla descargada', body: 'Llénala (pestañas CONTACTOS y EMPRESAS) y vuelve a "Importar BD".' });
 }
 
@@ -8837,7 +8837,7 @@ async function downloadBDTemplate() {
   ws['!cols'] = BD_IMPORT_HEADERS.map(h => ({ wch: Math.max(14, h.length + 4) }));
   XLSX.utils.book_append_sheet(wb, ws, 'Personas');
   const instr = [
-    ['Plantilla de importación — Base de Datos de Personas · TakeOS'],
+    ['Plantilla de importación — Base de Datos de Personas · Rizora'],
     [''],
     ['1. Completa una fila por persona en la hoja "Personas", desde la fila 2.'],
     ['2. Guarda como .xlsx y súbela en Base de Datos → "Importar desde Excel".'],
@@ -8855,7 +8855,7 @@ async function downloadBDTemplate() {
   const wi = XLSX.utils.aoa_to_sheet(instr);
   wi['!cols'] = [{ wch: 90 }];
   XLSX.utils.book_append_sheet(wb, wi, 'Instrucciones');
-  XLSX.writeFile(wb, 'TakeOS_Plantilla_BD_Personas.xlsx');
+  XLSX.writeFile(wb, 'Rizora_Plantilla_BD_Personas.xlsx');
   showToast({ kind: 'success', title: 'Plantilla descargada', body: 'Llénala y vuelve a "Importar desde Excel".' });
 }
 
@@ -10258,7 +10258,7 @@ function renderPresupuestoHistorico(project, version) {
   let detalle;
   if (!snap) {
     const r = version.resumen;
-    detalle = `<div class="cot-card" style="margin-bottom:12px;"><p style="margin:0;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;">Esta versión se creó antes de que TakeOS guardara el detalle completo del presupuesto por versión, así que solo se conserva su <strong>resumen</strong>. Las versiones que crees de ahora en adelante guardarán el detalle bloqueado.</p></div>` + (r ? presupHistSummaryHTML({ presupCliente: r.valor || 0, costoProd: { cot: r.costo || 0 }, gananciaFinal: { cot: r.ganancia || 0 } }) : '');
+    detalle = `<div class="cot-card" style="margin-bottom:12px;"><p style="margin:0;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;">Esta versión se creó antes de que Rizora guardara el detalle completo del presupuesto por versión, así que solo se conserva su <strong>resumen</strong>. Las versiones que crees de ahora en adelante guardarán el detalle bloqueado.</p></div>` + (r ? presupHistSummaryHTML({ presupCliente: r.valor || 0, costoProd: { cot: r.costo || 0 }, gananciaFinal: { cot: r.ganancia || 0 } }) : '');
   } else {
     let fin = null;
     try { fin = calcSummaryFin({ state: 'venta', data: { servicios: snap.servicios || {}, gastos: snap.gastos || [], equipos: snap.equipos || [], talentos: snap.talentos || [], finanzas: snap.finanzas || {} } }); } catch (e) { fin = null; }
@@ -11839,7 +11839,7 @@ async function exportPresupuestoExcel() {
   const versiones = (cs.versiones || []).slice().sort((a, b) => (a.numero || 0) - (b.numero || 0));
 
   const wb = new ExcelJSlib.Workbook();
-  wb.creator = 'TakeOS';
+  wb.creator = 'Rizora';
   const usados = {};
   const nombreHoja = (v) => {
     let base = ('Presupuesto V' + (v.numero || '?')).slice(0, 28);
@@ -11867,7 +11867,7 @@ async function exportPresupuestoExcel() {
       ws.columns = [{ width: 28 }, { width: 18 }];
       ws.getCell('A1').value = 'PRESUPUESTO · ' + nombreProy; ws.getCell('A1').font = { bold: true, size: 15 };
       ws.getCell('A2').value = `${verLabel}   ·   ${estado}   ·   Exportado: ${fecha}`; ws.getCell('A2').font = { size: 10, color: { argb: _XL.faint } };
-      ws.getCell('A4').value = 'Esta versión se creó antes de que TakeOS guardara el detalle completo del presupuesto. Solo se conserva su resumen.';
+      ws.getCell('A4').value = 'Esta versión se creó antes de que Rizora guardara el detalle completo del presupuesto. Solo se conserva su resumen.';
       ws.getCell('A4').font = { italic: true, color: { argb: _XL.faint } };
       const rsum = v.resumen || {};
       let rr = 6;
@@ -13704,7 +13704,7 @@ function cotCondRestaurar() {
   markDirty(); _dalPerfilSaveSoon();
   const ta = document.getElementById('cotCondTa'); if (ta) ta.value = cotCondTplDefault();
   cotCondPreviewVivo();
-  showToast({ kind: 'info', title: 'Texto original restaurado', body: 'Las condiciones vuelven al estándar de TakeOS.' });
+  showToast({ kind: 'info', title: 'Texto original restaurado', body: 'Las condiciones vuelven al estándar de Rizora.' });
 }
 function cotCondInsertarVar(v) {
   const ta = document.getElementById('cotCondTa'); if (!ta) return;
@@ -14462,7 +14462,7 @@ function _renderNotificacionesLegacy() {
   content.innerHTML = `
     <div class="alert alert-info" style="margin-bottom:var(--space-4);">
       <span class="alert-icon">ℹ</span>
-      <div>Envío <strong>semi-automático</strong> por mail-merge: TakeOS arma los correos personalizados y te guía para mandarlos en lote desde tu Gmail. El envío 100% automático llega con el backend. (El envío masivo de Hoja de Llamado se construye en la próxima versión.)</div>
+      <div>Envío <strong>semi-automático</strong> por mail-merge: Rizora arma los correos personalizados y te guía para mandarlos en lote desde tu Gmail. El envío 100% automático llega con el backend. (El envío masivo de Hoja de Llamado se construye en la próxima versión.)</div>
     </div>
 
     <!-- CONFIG -->
@@ -14754,7 +14754,7 @@ function docSet(id, field, val) {
 }
 function docDelete(id) {
   showModal({
-    title: 'Eliminar documento', body: '¿Quitar este documento del registro? No borra el archivo original (vive en su link), solo la referencia en TakeOS.',
+    title: 'Eliminar documento', body: '¿Quitar este documento del registro? No borra el archivo original (vive en su link), solo la referencia en Rizora.',
     confirmLabel: 'Eliminar', cancelLabel: 'Cancelar', danger: true,
     onConfirm: () => { const docs = ensureDocs(STATE.currentProject); const i = docs.items.findIndex(x => x.id === id); if (i >= 0) { docs.items.splice(i, 1); markDirty(); renderDocumentos(); } }
   });
@@ -16893,7 +16893,7 @@ function renderLegal() {
   const project = STATE.currentProject; if (!project) return;
   const st = _legalState();
   const content = document.getElementById('moduleContent');
-  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de TakeOS sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en un contrato real de referencia). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
+  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de Rizora sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en un contrato real de referencia). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
   const subtabs = `<div class="lgl-subtabs">
     <button class="lgl-subtab ${st.sub === 'docs' ? 'on' : ''}" onclick="legalSetSub('docs')">Documentos</button>
     <button class="lgl-subtab ${st.sub === 'tpl' ? 'on' : ''}" onclick="legalSetSub('tpl')">Plantillas</button>
@@ -17174,7 +17174,7 @@ function drawLegalGen() {
   const body = `<div class="modal-backdrop"><div class="modal" onclick="event.stopPropagation()" style="max-width:960px;width:96vw;max-height:90vh;overflow:auto;">
     <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><div><div class="modal-title">${g.docId ? 'Ver / editar documento' : 'Generar documento'}</div><div style="font-size:12px;color:var(--ink-mut);margin-top:3px;">Variables autollenadas desde el sistema · exporta a PDF con marca</div></div><button class="go-x" onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);line-height:1;">×</button></div>
     <div class="modal-body">
-      ${t.draft ? `<div class="lgl-warn">⚠ <div>Esta plantilla es un <b>borrador redactado por TakeOS</b>. Antes de usarla en producción, valídala con un abogado. El contenido legal es responsabilidad del usuario.</div></div>` : ''}
+      ${t.draft ? `<div class="lgl-warn">⚠ <div>Esta plantilla es un <b>borrador redactado por Rizora</b>. Antes de usarla en producción, valídala con un abogado. El contenido legal es responsabilidad del usuario.</div></div>` : ''}
       <div class="lgl-gen-grid">
         <div>
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:7px;">Plantilla</div>
@@ -18341,7 +18341,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
     <div class="ph-total">Total rodaje: ${span != null ? prFmtDur(span) : '—'}</div>
     <table><thead>${head}</thead><tbody>${body || `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;padding:14px;">Plan sin filas.</td></tr>`}</tbody></table>
     ${bancoTable}
-    <div class="pfoot"><span>${footLeft}</span><span>Generado ${e(new Date().toLocaleString('es-CL'))} · TakeOS</span></div>
+    <div class="pfoot"><span>${footLeft}</span><span>Generado ${e(new Date().toLocaleString('es-CL'))} · Rizora</span></div>
   </body></html>`;
 }
 function exportPlanRodajePDF() {
@@ -18550,7 +18550,7 @@ function _swControlRoom(orgId) {
   try { if (orgId && typeof _setOrgActiva === 'function') _setOrgActiva(orgId); } catch (e) {}
   try { _TIENE_EMPRESA = true; } catch (e) {}
   try { if (typeof _bootCoverShow === 'function') _bootCoverShow('Cambiando de espacio…'); } catch (e) {}
-  try { arrancarTakeOS(); } catch (e) {}
+  try { arrancarRizora(); } catch (e) {}
 }
 function _swProyecto(orgId, projId) {
   _swCerrar();
@@ -18576,7 +18576,7 @@ function openConfigPanel() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><polyline points="9 15 12 12 15 15"/></svg>
                 Cargar OS
               </button>
-              <button class="topbar-save-btn" id="snapshotsBtn" onclick="openSnapshotsModal();" title="Historial de snapshots automáticos. Antes de cualquier carga destructiva, TakeOS guarda uno — puedes revertir.">
+              <button class="topbar-save-btn" id="snapshotsBtn" onclick="openSnapshotsModal();" title="Historial de snapshots automáticos. Antes de cualquier carga destructiva, Rizora guarda uno — puedes revertir.">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Snapshots
               </button>
@@ -18715,7 +18715,7 @@ async function exportSupabaseBackup() {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const now = new Date(), pad = n => String(n).padStart(2, '0');
-    const fname = `TakeOS_Supabase_Backup_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.json`;
+    const fname = `Rizora_Supabase_Backup_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.json`;
     const a = document.createElement('a'); a.href = url; a.download = fname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -18860,7 +18860,7 @@ function openEmpresaPerfil(subInicial) {
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--ink-primary);">
                   <input type="checkbox" id="cfgUsaChipax" ${E.usaChipax ? 'checked' : ''} onchange="cfgSetUsaChipax(this.checked)"> Usamos Chipax
                 </label>
-                <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.5;">Chipax es un sistema de gestión financiera y conciliación bancaria. Al activarlo, TakeOS habilita la <strong>exportación masiva de gastos validados</strong> en el formato que Chipax importa, para registrar la contabilidad sin digitar gasto por gasto.</div>
+                <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.5;">Chipax es un sistema de gestión financiera y conciliación bancaria. Al activarlo, Rizora habilita la <strong>exportación masiva de gastos validados</strong> en el formato que Chipax importa, para registrar la contabilidad sin digitar gasto por gasto.</div>
               </div>
             </div>
             ${field('googleCalendarId','ID Google Calendar', E.googleCalendarId, 'xxxx@group.calendar.google.com')}
@@ -19060,7 +19060,7 @@ function _empAbrirInvitar() {
     document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">'
       + '<div class="modal-header"><div class="modal-title">Incorporar a alguien al equipo</div></div>'
       + '<div class="modal-body">'
-      +   '<div class="emp-field" style="margin-bottom:12px;"><label>Correo</label><input class="input" id="empInvEmail" type="email" placeholder="persona@correo.cl"><span class="hint" style="font-size:11.5px;color:var(--ink-faint);">Solo el correo: por privacidad no se busca entre los usuarios de TakeOS. Si ya tiene cuenta, la invitación le aparece adentro; si no, el link la lleva a crearla.</span></div>'
+      +   '<div class="emp-field" style="margin-bottom:12px;"><label>Correo</label><input class="input" id="empInvEmail" type="email" placeholder="persona@correo.cl"><span class="hint" style="font-size:11.5px;color:var(--ink-faint);">Solo el correo: por privacidad no se busca entre los usuarios de Rizora. Si ya tiene cuenta, la invitación le aparece adentro; si no, el link la lleva a crearla.</span></div>'
       +   '<div class="emp-field"><label>Perfil de acceso</label><select class="select" id="empInvPerfil">' + opts + '</select></div>'
       + '</div>'
       + '<div class="modal-footer"><button class="btn" onclick="openConfigPanel()">Cancelar</button><button class="btn btn-primary" onclick="_empEnviarInvitacion()">Crear invitación</button></div>'
@@ -21343,7 +21343,7 @@ function renderUnidadCellInput(sectionKey, dept, idx, currentUnidad) {
    ════════════════════════════════════════════════════════════════════
    Modelo: el HTML es la "consola"; el .json exportado es el "cartucho de
    guardado". Desacopla DATOS de CÓDIGO: puedes recibir versiones nuevas
-   del TakeOS y volver a cargar el mismo .json sin perder el proyecto.
+   del Rizora y volver a cargar el mismo .json sin perder el proyecto.
 
    Capas:
    1. Export/Import .json  → mecanismo DURABLE y portable (el respaldo serio).
@@ -21368,7 +21368,7 @@ function hasLS() {
 /* Construye el objeto serializable del estado completo. */
 function buildSaveObject() {
   return {
-    app: 'TakeOS',
+    app: 'Rizora',
     format: 'takeos-save',
     version: SAVE_FORMAT_VERSION,
     savedAt: new Date().toISOString(),
@@ -21430,7 +21430,7 @@ function restoreLocalLocPhotos() {
 
 /* Valida la forma mínima de un save antes de aplicarlo. */
 function validateSaveObject(obj) {
-  if (!obj || obj.format !== 'takeos-save') return 'No parece un archivo de guardado de TakeOS.';
+  if (!obj || obj.format !== 'takeos-save') return 'No parece un archivo de guardado de Rizora.';
   if (!Array.isArray(obj.projects)) return 'El archivo no contiene proyectos válidos.';
   for (const p of obj.projects) {
     if (!p || typeof p.id !== 'string' || !p.data) return 'Hay proyectos con estructura inválida.';
@@ -21533,7 +21533,7 @@ function importSaveFromInput(input) {
     const err = validateSaveObject(obj);
     if (err) { showToast({ kind: 'error', title: 'Archivo inválido', body: escapeHtml(err) }); return; }
     if (obj.version > SAVE_FORMAT_VERSION) {
-      showToast({ kind: 'warning', title: 'Guardado más nuevo', body: 'Este archivo fue creado por una versión más nueva de TakeOS. Se intentará cargar igual.' });
+      showToast({ kind: 'warning', title: 'Guardado más nuevo', body: 'Este archivo fue creado por una versión más nueva de Rizora. Se intentará cargar igual.' });
     }
     const savedWhen = obj.savedAt ? new Date(obj.savedAt).toLocaleString('es-CL') : 'fecha desconocida';
     const idsActuales = new Set(PROJECTS.map(p => p && p.id).filter(Boolean));
@@ -21570,7 +21570,7 @@ function importSaveFromInput(input) {
    SNAPSHOTS ANTI-DESTRUCCIÓN  (V7.1)
    ─────────────────────────────────────────────────────────────────────
    Antes de cualquier operación destructiva (cargar respaldo "todo el OS"
-   que reemplaza PROJECTS+BD), TakeOS guarda un snapshot del estado actual.
+   que reemplaza PROJECTS+BD), Rizora guarda un snapshot del estado actual.
    El usuario puede revertir desde el menú "Snapshots".
 
    Almacenamiento: localStorage clave 'takeos_snapshots' = JSON array.
@@ -21621,7 +21621,7 @@ function restoreSnapshot(index) {
     danger: true,
     title: 'Revertir al snapshot',
     body: `Vas a reemplazar el estado actual por el snapshot <strong>${escapeHtml(snap.label)}</strong> (${escapeHtml(new Date(snap.createdAt).toLocaleString('es-CL'))}).<br><br>
-      TakeOS va a crear otro snapshot antes de revertir, por si te arrepientes de revertir también. Operación segura, pero confirmá.`,
+      Rizora va a crear otro snapshot antes de revertir, por si te arrepientes de revertir también. Operación segura, pero confirmá.`,
     confirmLabel: 'Sí, revertir',
     cancelLabel: 'Cancelar',
     onConfirm: () => {
@@ -21687,7 +21687,7 @@ function deleteSnapshotFromModal(index) {
    ─────────────────────────────────────────────────────────────────────
    Permite guardar y cargar UN solo proyecto sin tocar la BD ni los demás
    proyectos. Formato distinto del save "todo el OS":
-     { app: 'TakeOS', format: 'takeos-project', version: 1, ... }
+     { app: 'Rizora', format: 'takeos-project', version: 1, ... }
    ═══════════════════════════════════════════════════════════════════════ */
 const PROJECT_FORMAT_VERSION = 1;
 
@@ -21699,7 +21699,7 @@ function exportSingleProject(projectId) {
   }
   try {
     const data = {
-      app: 'TakeOS',
+      app: 'Rizora',
       format: 'takeos-project',
       version: PROJECT_FORMAT_VERSION,
       savedAt: new Date().toISOString(),
@@ -21750,7 +21750,7 @@ function importSingleProjectFromInput(input) {
       return;
     }
     if (!obj || obj.format !== 'takeos-project' || !obj.project || typeof obj.project.id !== 'string') {
-      showToast({ kind: 'error', title: 'Archivo inválido', body: 'No parece un archivo de proyecto de TakeOS.' });
+      showToast({ kind: 'error', title: 'Archivo inválido', body: 'No parece un archivo de proyecto de Rizora.' });
       return;
     }
 
@@ -21969,7 +21969,7 @@ function offerAutosaveRestore() {
    V6.10 — CAPA DE NUBE (histórica)
    Esta capa fue la sincronización en la nube original. Quedó retirada: la
    persistencia es 100% Supabase. Se conserva el contexto para referencia. Si la nube no
-   carga o no está configurado, TakeOS sigue funcionando en modo local
+   carga o no está configurado, Rizora sigue funcionando en modo local
    (localStorage) — FAIL-SAFE, nunca se rompe.
 
    v1 deliberadamente simple: estado completo en un solo documento
@@ -22031,9 +22031,9 @@ function supabaseInit() {
     return sb;
   } catch (e) { console.error('[supabase] init falló', e); return null; }
 }
-/* Cerrar sesión. Por ahora se llama desde la consola: logoutTakeOS()
+/* Cerrar sesión. Por ahora se llama desde la consola: logoutRizora()
    Próximo paso: un botón "Salir" en la barra superior. */
-window.logoutTakeOS = async function () {
+window.logoutRizora = async function () {
   try { if (sb) await sb.auth.signOut(); } catch (e) {}
   try { localStorage.removeItem('takeos_auth_at'); localStorage.removeItem('takeos_auth_uid'); localStorage.removeItem('takeos_usuario_actual'); localStorage.removeItem('takeos_usuario_uid'); } catch (e) {}
   location.reload();
@@ -22043,10 +22043,10 @@ window.confirmLogout = function () {
   showModal({
     danger: false,
     title: 'Cerrar sesion',
-    body: 'Vas a cerrar tu sesion de TakeOS en este navegador. \u00bfContinuar?',
+    body: 'Vas a cerrar tu sesion de Rizora en este navegador. \u00bfContinuar?',
     confirmLabel: 'Cerrar sesion',
     cancelLabel: 'Cancelar',
-    onConfirm: () => { logoutTakeOS(); },
+    onConfirm: () => { logoutRizora(); },
     onCancel: () => {}
   });
 };
@@ -22462,7 +22462,7 @@ function orgNombre() {
 }
 function aplicarMarcaOrg() {
   var nom = orgNombre();
-  try { document.title = nom ? ('TakeOS · ' + nom) : 'TakeOS'; } catch (e) {}
+  try { document.title = nom ? ('Rizora · ' + nom) : 'Rizora'; } catch (e) {}
   try { var bs = document.getElementById('brandSub'); if (bs) bs.textContent = nom; } catch (e) {}
   try { var bl = document.getElementById('brandLogo'); if (bl) bl.textContent = (nom ? nom.charAt(0).toUpperCase() : 'T'); } catch (e) {}
   try {
@@ -24089,7 +24089,7 @@ function dalBannerHTML() {
     + 'Esta Base de Datos se carga desde la base relacional. La <strong>edici\u00f3n est\u00e1 en pausa</strong> hasta la V9.1.1; evita editar contactos o empresas mientras tanto.'
     + '</div>';
 }
-const TAKEOS_VERSION = 'V11.14.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+const TAKEOS_VERSION = 'V11.34.0';   // Versión actual del cliente Rizora. El historial de cambios vive en los changelogs (.md), no aquí.
 
 /* V10.6.0 · Capa de nube anterior retirada por completo. La persistencia es
    100% Supabase (markDirty -> dalTouchProyecto / _dal*SaveSoon) más el airbag en
@@ -24137,7 +24137,7 @@ function _invMostrarResultado(res) {
     + '<div class="modal-header"><div class="modal-title">Invitación creada</div></div>'
     + '<div class="modal-body">'
     +   '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-secondary);line-height:1.55;">Invitación para <strong>' + escapeHtml(res.email || '') + '</strong>'
-    +   (registrado ? ' — esa cuenta ya existe en TakeOS, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link creará su cuenta y verá la invitación.')
+    +   (registrado ? ' — esa cuenta ya existe en Rizora, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link creará su cuenta y verá la invitación.')
     +   '</p>'
     +   '<div style="display:flex;gap:8px;align-items:center;">'
     +     '<input class="input" id="invLinkOut" readonly value="' + escapeHtml(link) + '" style="flex:1;font-size:12px;">'
@@ -24170,7 +24170,7 @@ async function abrirInvitacionRecibida(token) {
   }
   if (info.ya_miembro) {
     showToast({ kind: 'info', title: 'Ya eres parte', body: 'Tu cuenta ya pertenece a esta productora.' });
-    _TIENE_EMPRESA = true; _bootCoverShow('Entrando…'); _setOrgActiva(info.org_id); arrancarTakeOS(); return;
+    _TIENE_EMPRESA = true; _bootCoverShow('Entrando…'); _setOrgActiva(info.org_id); arrancarRizora(); return;
   }
   /* V11.12.0 · regla única del servidor (handoff BD §5): `requisitos_faltantes`
      manda. Si falta algo, vamos DIRECTO a completar SOLO esas secciones, sin
@@ -24213,7 +24213,7 @@ async function abrirInvitacionRecibida(token) {
     + '#invitacionRecibida .iwarn{border:1px solid var(--warning);border-radius:8px;padding:11px 13px;margin:14px 0 0;background:rgba(234,179,8,.08);font-size:12.5px;color:var(--ink-secondary);line-height:1.55;}'
     + '</style>'
     + '<div class="iw">'
-    +   '<div class="ibrand"><div class="imk">T</div><b>TakeOS</b></div>'
+    +   '<div class="ibrand"><div class="imk">T</div><b>Rizora</b></div>'
     +   '<div class="icard">'
     +     '<div class="ifrom">' + escapeHtml(info.org_nombre || 'Una productora') + ' te invitó a colaborar</div>'
     +     (info.proyecto ? '<h2>' + escapeHtml(info.proyecto) + '</h2>' : '<h2>Únete al equipo</h2>')
@@ -24300,7 +24300,7 @@ async function invRechazar(token) {
    pestaña nueva (NO a crear cuenta ni a precios). Anti-cortisol: discreto,
    descartable por sesión, sin pop-up. Medición vía analytics_events.
    ════════════════════════════════════════════════════════════════════ */
-const TAKEOS_MARCA = 'TakeOS';                          // placeholder configurable (marca en standby)
+const TAKEOS_MARCA = 'Rizora';                          // placeholder configurable (marca en standby)
 const TAKEOS_LANDING_URL = 'https://agustinmunozrocha.github.io/takeos-landing/';   // landing real (Agustín, jun 2026)
 const _CTA_PROD_DISMISS_KEY = 'takeos_cta_prod_dismissed';   // por sesión
 async function _ctaProdEvento(nombre, props) {
@@ -24427,7 +24427,7 @@ function _espInyectarHerramientas() {
       + card('Guion Técnico', 'En construcción')
       + card('Hoja de Llamado', 'Próximamente en tu cuenta personal')
       + '</div>'
-      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de TakeOS, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
+      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de Rizora, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
     cont.appendChild(sec);
   } catch (e) {}
 }
@@ -24518,7 +24518,7 @@ function _cpEstadoInicial(planId) {
 /* Secuencia de pasos. 'pago' solo aparece en planes de pago (la org nace
    'free' de todos modos). El paso 'datos' ya tiene contenido (A2); el resto
    son placeholders por ahora. No hay paso de cuenta: el login y el perfil ya
-   ocurren ANTES de abrir el flujo (cloudGate + iniciarSesionTakeOS). */
+   ocurren ANTES de abrir el flujo (cloudGate + iniciarSesionRizora). */
 function _cpPasos() {
   const dePago = !!(_cpEstado && _cpEstado.plan && _cpEstado.plan !== 'gratis');
   const pasos = [
@@ -24755,12 +24755,12 @@ function _cpGuardarDatos() {
 
 /* ── A3 · Paso «Términos y condiciones» ────────────────────────────────────
    Contrato de prestación de servicios entre la sociedad desarrolladora de
-   TakeOS y la productora. TEXTO PROVISIONAL (v0): el área legal fija el
+   Rizora y la productora. TEXTO PROVISIONAL (v0): el área legal fija el
    definitivo cuando la sociedad esté constituida; aquí NO se redactan cláusulas
    reales. No se avanza sin marcar el checkbox. El registro/versionado del
    consentimiento es server-side y se verá en el cableado (A7), no acá. */
 const _CP_TYC_TEXTO = [
-  ['1. Objeto', 'La sociedad desarrolladora pone a disposición de la productora la plataforma TakeOS para la gestión de su producción audiovisual, según el plan contratado.'],
+  ['1. Objeto', 'La sociedad desarrolladora pone a disposición de la productora la plataforma Rizora para la gestión de su producción audiovisual, según el plan contratado.'],
   ['2. Plan y pago', 'La productora contrata el plan seleccionado y autoriza su cobro según el ciclo elegido. Los precios se expresan en pesos chilenos más IVA.'],
   ['3. Datos y privacidad', 'El tratamiento de datos personales se rige por la normativa vigente, incluida la Ley 21.719. La productora es responsable de los datos que carga a la plataforma.'],
   ['4. Administración', 'Quien crea la productora queda como administrador. La productora no puede quedar sin al menos un administrador.'],
@@ -24773,7 +24773,7 @@ function _cpTerminosHTML() {
   var cuerpo = _CP_TYC_TEXTO.map(function (s) { return '<h4>' + s[0] + '</h4><p>' + s[1] + '</p>'; }).join('');
   return ''
     + '<h3 class="cp-h">Términos y condiciones de servicio</h3>'
-    + '<p class="cp-sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de TakeOS y tu productora.</p>'
+    + '<p class="cp-sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de Rizora y tu productora.</p>'
     + '<div class="cp-provisional">Texto provisional, solo para demostrar el flujo. El definitivo lo define el área legal cuando la sociedad desarrolladora esté constituida.</div>'
     + '<div class="cp-tyc">' + cuerpo + '</div>'
     + '<label class="cp-check">'
@@ -24954,14 +24954,14 @@ function _cpEntrarProductora() {
   try { _TIENE_EMPRESA = true; } catch (x) {}
   try { _cpTourPendiente = true; } catch (x) {}   // A8: dispara el tour inicial al cargar el Control Room
   try { if (typeof _bootCoverShow === 'function') _bootCoverShow('Entrando a tu productora…'); } catch (x) {}
-  try { if (typeof arrancarTakeOS === 'function') arrancarTakeOS(); } catch (x) {}
+  try { if (typeof arrancarRizora === 'function') arrancarRizora(); } catch (x) {}
 }
 
 /* ── A8 · Tour inicial sobre el Control Room real ───────────────────────────
    Tras crear la productora y entrar (_cpEntrarProductora), un recorrido breve
    resalta las piezas clave del Control Room REAL. Se dispara UNA vez, justo
    después de crear: _cpEntrarProductora enciende _cpTourPendiente y la cadena de
-   arrancarTakeOS la consume al terminar de cargar. Robusto: si un elemento no
+   arrancarRizora la consume al terminar de cargar. Robusto: si un elemento no
    está, salta ese paso; si no hay ninguno, no muestra nada. */
 var _cpTourPendiente = false;
 var _cpTourPaso = 0;
@@ -25120,7 +25120,7 @@ function _bootVeil(msg) {
     v.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--bg-page,#111);display:grid;place-items:center;color:var(--ink-faint,#888);font-family:var(--font-sans),system-ui,sans-serif;transition:opacity .25s;';
     document.body.appendChild(v);
   }
-  v.innerHTML = '<div style="text-align:center;"><div style="font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink-primary,#eee);margin-bottom:10px;">TakeOS</div><div style="font-size:13px;">' + (msg || '') + '</div></div>';
+  v.innerHTML = '<div style="text-align:center;"><div style="font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink-primary,#eee);margin-bottom:10px;">Rizora</div><div style="font-size:13px;">' + (msg || '') + '</div></div>';
   v.style.opacity = '1'; v.style.pointerEvents = 'auto';
   clearTimeout(v._t);
   v._t = setTimeout(_bootVeilOff, 1300);   // se quita sola: cortina, no muro
@@ -25141,7 +25141,7 @@ async function cloudGate(onUnlock) {
      se descarta y se vuelve a pedir login. Esto cierra el bug de sesión
      cruzada (una sesión ajena guardada en el navegador entraba sola, sin
      pasar por Google) y aplica la política de Agustín: imposible entrar a
-     TakeOS sin autenticarse, como Chipax. */
+     Rizora sin autenticarse, como Chipax. */
   try {
     if (AUTH_RETORNO_OAUTH) {
       // Regreso fresco de Google: la sesión puede tardar un instante en quedar lista.
@@ -25213,8 +25213,8 @@ async function cloudGate(onUnlock) {
   ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0e0f13;';
   ov.innerHTML = `
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
-      <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
-      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después TakeOS vuelve a pedir autenticación.</div>
+      <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">Rizora</div>
+      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después Rizora vuelve a pedir autenticación.</div>
         <div id="cgInvHint" style="display:none;border:1px solid #4a7;border-radius:8px;padding:10px 12px;margin-bottom:18px;font-size:12.5px;color:#9c8;line-height:1.5;">Te invitaron a colaborar. Entra con Google y tu <strong>cuenta se crea sola</strong>; al entrar verás la invitación.</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
@@ -25361,7 +25361,7 @@ function updateThemeButton(theme) {
    Tras el login, si la persona pertenece a MÁS DE UNA organización (o se
    fuerza con ?espacio=1), se muestra su espacio personal para elegir a dónde
    entrar. Si pertenece a una sola, entra directo (sin cambio para el equipo
-   actual de Primate). DEFENSIVO: ante cualquier error, arranca TakeOS normal.
+   actual de Primate). DEFENSIVO: ante cualquier error, arranca Rizora normal.
    Modo demostración: ?espacio=demo pinta la pantalla con datos ficticios
    (Game of Thrones) para evaluar la estética integrada sin depender de datos.
 
@@ -25372,7 +25372,7 @@ function updateThemeButton(theme) {
    ════════════════════════════════════════════════════════════════════ */
 const PERFIL_NOMBRES = {1:'Administrador',2:'Ejecutivo',3:'Producción',4:'Asistencia de Producción',5:'Coordinación',6:'Creativo',7:'Invitado',8:'Finanzas'};
 
-function arrancarTakeOS() {
+function arrancarRizora() {
   /* V11.13.0 · invariante: sin empresa confirmada y sin un proyecto destino,
      jamás se entra al Control Room (se re-deriva la vista correcta). */
   var _pend = false; try { _pend = !!sessionStorage.getItem('takeos_ir_proyecto'); } catch (e) {}
@@ -25449,7 +25449,7 @@ async function _espCargarConteos(internas){
 async function resolverEspacioYArrancar(){
   const forzar = /[?&]espacio=1\b/.test(window.location.search);
   const demo   = /[?&]espacio=demo\b/.test(window.location.search);
-  if (demo) { try { renderEspacioUsuario(ESPACIO_DEMO); return; } catch(e){ arrancarTakeOS(); return; } }
+  if (demo) { try { renderEspacioUsuario(ESPACIO_DEMO); return; } catch(e){ arrancarRizora(); return; } }
   /* FRENTE A · A1 · disparador del flujo de creación de productora:
      ?plan=<gratis|rodaje|produccion>. El plan llega ya elegido desde la landing.
      Se limpia de la URL para que cerrar/cancelar el flujo no lo vuelva a disparar.
@@ -25489,7 +25489,7 @@ async function resolverEspacioYArrancar(){
     let _invs = [];
     try { const ir = await client.rpc('mis_invitaciones'); if (!ir.error && Array.isArray(ir.data)) _invs = ir.data; } catch (e) {}
     if (rows.length === 0) { renderEspacioUsuario(_espConstruir([], email)); _espInyectarInvitaciones(_invs); _espInyectarHerramientas(); _espInyectarCtaProductora(); return; }  // cuenta sin productora aún (land-and-expand)
-    if (rows.length === 1 && !forzar && _invs.length === 0 && rows[0].tipo !== 'externo') { _TIENE_EMPRESA = true; _bootCoverShow('Entrando a tu productora…'); _setOrgActiva(rows[0].organization_id); arrancarTakeOS(); return; }   // un interno único entra directo a su productora
+    if (rows.length === 1 && !forzar && _invs.length === 0 && rows[0].tipo !== 'externo') { _TIENE_EMPRESA = true; _bootCoverShow('Entrando a tu productora…'); _setOrgActiva(rows[0].organization_id); arrancarRizora(); return; }   // un interno único entra directo a su productora
     /* V11.9.7 · un externo opera desde su Panel Personal: ve sus proyectos y
        entra directo a ellos. Nunca aterriza en el Control Room de la productora. */
     renderEspacioUsuario(_espConstruir(rows, email));
@@ -25534,7 +25534,7 @@ function _espEntrarInterna(demo, orgId){
   /* V11.15.0 · B2: limpiar ?espacio=1 de la URL para que F5 restaure la vista
      en lugar de volver al Panel Personal. */
   try { history.replaceState(null, '', window.location.pathname); } catch(e) {}
-  arrancarTakeOS();
+  arrancarRizora();
 }
 function _espAbrirProyecto(orgId, projId){
   /* V11.9.7 · entra DIRECTO al proyecto, sin pasar por el Control Room: fija la
@@ -25546,7 +25546,7 @@ function _espAbrirProyecto(orgId, projId){
   _bootCoverShow('Abriendo proyecto…');
   const ov = document.getElementById('espacioUsuario'); if (ov) ov.remove();
   try { history.replaceState(null, '', window.location.pathname); } catch(e) {}   // V11.15.0 · B2
-  arrancarTakeOS();
+  arrancarRizora();
 }
 async function _espCargarProyectosExternos(externas){
   /* Llena las cards de proyectos del externo en su Panel Personal. La RLS de
@@ -25681,7 +25681,7 @@ function abrirPrivacidadDatos() {
   var prev = document.getElementById('privacidadDatos'); if (prev) prev.remove();
   var ov = document.createElement('div'); ov.id = 'privacidadDatos';
   ov.innerHTML = '<style>' + _PD_CSS + '</style>'
-    + '<div class="pd-top"><button class="pd-back" onclick="_pdCerrar()">← Volver</button><span class="pd-brand">TakeOS · Privacidad y datos</span></div>'
+    + '<div class="pd-top"><button class="pd-back" onclick="_pdCerrar()">← Volver</button><span class="pd-brand">Rizora · Privacidad y datos</span></div>'
     + '<div class="pd-wrap" id="pdWrap"></div>';
   document.body.appendChild(ov);
   _pdRender();
@@ -25728,7 +25728,7 @@ function _pdHubHTML() {
     +   card('', '🏢', 'Productoras con acceso a tus datos', 'Revisa quién tiene tus datos y revoca tu consentimiento cuando quieras.', 'Revocación', '', 'consentimientos')
     +   card('', '🪪', 'Verificación de edad', 'Declara tu mayoría de edad, por si algún flujo lo requiere.', 'Si aplica', ' warn', 'edad')
     +   card('', '🍪', 'Cookies y analítica', 'Decide qué datos de navegación permites recolectar.', 'Consentimiento', '', 'cookies')
-    +   card(' full', '🗑️', 'Eliminar mi cuenta', 'Elimina tu cuenta de TakeOS y suprime tus datos personales. Esta acción es irreversible.', 'Supresión', ' danger', 'eliminar')
+    +   card(' full', '🗑️', 'Eliminar mi cuenta', 'Elimina tu cuenta de Rizora y suprime tus datos personales. Esta acción es irreversible.', 'Supresión', ' danger', 'eliminar')
     + '</div>';
 }
 function _pdIr(v) { _pdVista = v; _pdRender(); var o = document.getElementById('privacidadDatos'); if (o && o.scrollTo) { try { o.scrollTo(0, 0); } catch (e) {} } }
@@ -26133,7 +26133,7 @@ function _pdEdadHTML() {
   }
   return back + '<div class="pd-flow">'
     + '<h3>Verificación de edad</h3>'
-    + '<div class="pd-legal"><b>Si aplica.</b> Los titulares de cuenta de TakeOS son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal, todavía abierta — por ahora es opcional y no bloquea nada.</div>'
+    + '<div class="pd-legal"><b>Si aplica.</b> Los titulares de cuenta de Rizora son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal, todavía abierta — por ahora es opcional y no bloquea nada.</div>'
     + '<div class="pd-field"><label class="pd-flabel" for="pdEdadFecha">Fecha de nacimiento</label><input class="input" type="date" id="pdEdadFecha"><div class="pd-ferr" id="pdEdadErr">Ingresa tu fecha de nacimiento; debes ser mayor de 18 años.</div></div>'
     + '<label class="pd-check"><input type="checkbox" id="pdEdadChk"> <span>Declaro que soy mayor de 18 años.</span></label>'
     + '<div class="pd-acts"><button class="btn" onclick="_pdIr(\'hub\')">Cancelar</button><button class="btn btn-primary" onclick="_pdEdadConfirmar()">Confirmar</button></div>'
@@ -26250,10 +26250,10 @@ function renderEspacioUsuario(data){
       }
     </style>
       <div class="esp-top"><div class="esp-top-in">
-        <div class="esp-brand"><div class="esp-mark">T</div><span class="esp-bname">TakeOS</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
+        <div class="esp-brand"><div class="esp-mark">T</div><span class="esp-bname">Rizora</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
         <div class="esp-right">
           <div class="esp-acct" onclick="_espPerfil()"><div class="who"><b>${u.nombre||'tu cuenta'}</b><span>${u.email||''}</span></div><div class="esp-av">${u.iniciales||'U'}</div></div>
-          <button class="esp-logout" onclick="confirmLogout()" title="Cerrar sesión en TakeOS"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Salir</button>
+          <button class="esp-logout" onclick="confirmLogout()" title="Cerrar sesión en Rizora"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Salir</button>
         </div>
       </div></div>
       <div class="esp-wrap">
@@ -26377,7 +26377,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       ? bancoSelectHTML(bancoNombre, { id: 'perfilBanco' })
       : '<input class="input" id="perfilBanco" value="' + v(bancoNombre) + '">';
     var ov = document.createElement('div'); ov.id = 'perfilUsuario';
-    var pubChip = '<span class="pf-chip pub" tabindex="0" role="note" aria-label="Información pública">Público<span class="pf-chip-tip">Público dentro de TakeOS: solo tu nombre y tu rol pueden ser visibles para otras productoras. Todo lo demás es privado.</span></span>';
+    var pubChip = '<span class="pf-chip pub" tabindex="0" role="note" aria-label="Información pública">Público<span class="pf-chip-tip">Público dentro de Rizora: solo tu nombre y tu rol pueden ser visibles para otras productoras. Todo lo demás es privado.</span></span>';
     var privChip = '<span class="pf-chip priv" tabindex="0" role="note" aria-label="Información privada">Privado<span class="pf-chip-tip">Privado: solo tú ves estos datos. Otra productora puede verlos únicamente si tú lo autorizas de forma explícita al aceptar una invitación. Mientras tanto quedan completamente protegidos, y puedes revocar ese acceso cuando quieras.</span></span>';
     ov.innerHTML = `<style>
       #perfilUsuario{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
@@ -26412,7 +26412,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       @media (max-width:640px){ #perfilUsuario .pf-grid{grid-template-columns:1fr;} #perfilUsuario .pf-top-in,#perfilUsuario .pf-wrap,#perfilUsuario .pf-bar-in{padding-left:16px;padding-right:16px;} }
     </style>
       <div class="pf-top"><div class="pf-top-in">
-        <div class="pf-brand"><div class="pf-mark">T</div><span>TakeOS</span></div>
+        <div class="pf-brand"><div class="pf-mark">T</div><span>Rizora</span></div>
         <span class="pf-eyebrow">${modoOnboarding ? 'Bienvenida/o' : 'Tu perfil'}</span>
       </div></div>
       <div class="pf-wrap">
@@ -26434,7 +26434,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <div class="pf-grid">
             <div class="pf-f"><label>Nombre <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
             <div class="pf-f"><label>Apellidos <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
-            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="${v(prof.rol_publico)}" placeholder="Ej: Director de Fotografía, Productora, Gaffer…"><span style="font-size:11px;color:var(--ink-faint);">Tu carta de presentación dentro de TakeOS.</span></div>
+            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="${v(prof.rol_publico)}" placeholder="Ej: Director de Fotografía, Productora, Gaffer…"><span style="font-size:11px;color:var(--ink-faint);">Tu carta de presentación dentro de Rizora.</span></div>
           </div>
         </div>
 
@@ -26443,7 +26443,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <div class="pf-grid">
             <div class="pf-f" id="pf_rutWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>RUT${astPerfil}</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9" inputmode="text"><span id="pf_rutErr" style="display:none;font-size:11px;color:var(--negative,#c0392b);">RUT inválido: revisa el dígito verificador.</span></div>
             <div class="pf-f" id="pf_docWrap" style="${EXTRANJERO ? '' : 'display:none;'}"><label>Documento de identidad / pasaporte</label><input class="input" id="pf_doc" value="" disabled placeholder="Pasaporte u otro documento"><span style="font-size:11px;color:var(--ink-faint);">Se habilita con la próxima extensión de la base.</span></div>
-            <div class="pf-f"><label>Correo${astPerfil}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
+            <div class="pf-f"><label>Correo${astPerfil}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a Rizora, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
             <div class="pf-f"><label>Celular${astPerfil}</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
             <div class="pf-f"><label>Fecha de nacimiento${astEdad}</label><input class="input" id="pf_fnac" type="date" value="${v(prof.fecha_nacimiento)}"></div>
           </div>
@@ -26853,7 +26853,7 @@ async function _perfilGuardar() {
 
 /* Onboarding: si la persona aún no tiene perfil, se lo ofrecemos antes de
    entrar. Cualquier fallo continúa al arranque normal (no bloquea). */
-async function iniciarSesionTakeOS() {
+async function iniciarSesionRizora() {
   _bootCoverShow('Cargando tu espacio…');
   try {
     var client = (typeof sb !== 'undefined' && sb) ? sb : (typeof supabaseInit === 'function' ? supabaseInit() : null);
@@ -26893,7 +26893,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Gate A cerrado: el login es Supabase Auth (cloudGate) y la carga es 100% Supabase.
   // V10.7.0: tras el login pasamos por el espacio de usuario (multi-organización).
   // V10.8.0: y antes, por el onboarding si la persona aún no tiene perfil personal.
-  cloudGate(() => { iniciarSesionTakeOS(); });
+  cloudGate(() => { iniciarSesionRizora(); });
 });
 
 </script>
@@ -26905,7 +26905,7 @@ document.addEventListener('DOMContentLoaded', () => {
    Internaliza la función de Rinde Gastos, 100% proyecto-céntrico.
    - Espacio "Gastos del proyecto" (scope project) → renderGastos()
    - Módulo CFO (scope global, consolida todos los proyectos) → renderCFO()
-   - Exportación a Chipax (.xlsx con SheetJS, ya cargado en TakeOS)
+   - Exportación a Chipax (.xlsx con SheetJS, ya cargado en Rizora)
 
    MODELO (project.data.gastosOp):
      { cajaProd, presupuestos:[{id,nombre,linea,resp,asignado}],
@@ -27011,7 +27011,7 @@ function goJefeProd(project) {
   return { nombre: nom, rut: rut, pass: pass };
 }
 
-/* ---------- modal propio (usa #modalRoot + closeModal de TakeOS) ---------- */
+/* ---------- modal propio (usa #modalRoot + closeModal de Rizora) ---------- */
 function goModal(html) { document.getElementById('modalRoot').innerHTML = '<div class="go-modal" onclick="if(event.target===this)closeModal()">' + html + '</div>'; }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -28644,7 +28644,7 @@ function goDescargarXlsx(projId) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   WIRING: conectar al sistema de módulos de TakeOS
+   WIRING: conectar al sistema de módulos de Rizora
    ════════════════════════════════════════════════════════════════════ */
 (function goWire() {
   try {

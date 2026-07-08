@@ -1,5 +1,17 @@
 # Changelog — TakeOS
 
+## V11.34.0 — 7 de julio de 2026
+### Rebrand: TakeOS → Rizora (nuevo nombre oficial) + versión in-app al día
+
+Rama `chore/rebrand-rizora`. Solo **frontend** (`index.html`).
+
+**Rizora** es el nuevo nombre oficial del software; se reemplazó la **marca visible** en toda la app.
+
+- Todos los textos, títulos, la pantalla de login, el `<title>` de la pestaña y la constante de marca pasan de "TakeOS" a **"Rizora"** (80 ocurrencias). No queda ningún "TakeOS" a la vista.
+- La **versión in-app** (debajo del nombre en el login) se actualizó a **V11.34.0** — estaba en V11.14.0, desincronizada del changelog.
+- **No se tocaron** los identificadores internos ni las claves de almacenamiento del navegador (`takeos_*`), el string de protocolo `TAKEOS_REQUISITOS` (compartido con la base), ni la URL del landing: son código invisible y cambiarlos rompería sesiones, el contrato con la base o los links. El usuario ve 100% Rizora sin que nada se rompa.
+- **Sin cambios de base de datos.** El rebrand de los documentos (.md) queda pendiente para una pasada aparte.
+
 ## V11.33.0 — 7 de julio de 2026
 ### Login: mensaje de error neutral (TakeOS es de registro abierto)
 
