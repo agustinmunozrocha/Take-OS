@@ -2,7 +2,7 @@
 
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `calculadoras.js`, `lib/calc.js`, `lib/data.js`, `dal.js` (persistencia), `gastos.js` (sync Costo Real).
-Cobertura: 20/36 ✅ · 2 🔁 (P23, P27) · 4 ❌ abiertos (P19, P20, P21, P22 — ver cierres: van por BD o repro en vivo). Resto ⬜.
+Cobertura: 24/36 ✅ · 2 🔁 (P23, P27) · 0 ❌. Resto ⬜.
 
 > **Cómo leer este catálogo.** Las pruebas marcadas **⭐** en "Qué probar" son
 > donde el cruce monolito↔modular levantó sospecha de que la migración pudo
@@ -43,15 +43,15 @@ Cobertura: 20/36 ✅ · 2 🔁 (P23, P27) · 4 ❌ abiertos (P19, P20, P21, P22 
 | P16 | Redimensionar columna | Arrastrar el grip de una columna; recargar | El ancho cambia y **persiste** (localStorage por navegador). Doble clic en el grip restablece | ✅ |
 | P17 | Ordenar por columna (transitorio) | Click en encabezado de una columna | Ordena **solo en pantalla**; desactiva el drag de filas; "↺ Restaurar orden" limpia; NO persiste al recargar | ✅ |
 | P18 | Reordenar filas (drag ⋮⋮) | Arrastrar una fila por el grip dentro del mismo depto | El nuevo orden **persiste** al recargar (vive en el array) | ✅ |
-| P19 | Renombrar sub-sección (Servicios) | ✎ de un sub-departamento (no de fábrica) → nuevo nombre | Se renombra y **persiste**; migra la llave con sus filas | ❌ |
-| P20 | Mover sub-sección (Servicios) | Panel Visualización → mover un sub-depto | El orden de sub-deptos **persiste** | ❌ |
+| P19 | Renombrar sub-sección (Servicios) | ✎ de un sub-departamento (no de fábrica) → nuevo nombre | Se renombra y **persiste**; migra la llave con sus filas | ✅ |
+| P20 | Mover sub-sección (Servicios) | Panel Visualización → mover un sub-depto | El orden de sub-deptos **persiste** | ✅ |
 
 ## D. Persistencia de estado
 
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| P21 | Estado general sobrevive a recargar | Editar nombre, valor, cant., unidad, DTE, confirmado, costo real, HE; recargar (Cmd+Shift+R) | Todo sigue guardado tal cual | ❌ |
-| P22 | ⭐ **Nota por fila** persiste | Poner una nota en una fila; recargar | La nota debe seguir ahí. *(Sospecha fuerte: en la modular la nota se envía pero el SELECT no la relee → se perdería al recargar. En `main` sí persiste.)* | ❌ |
+| P21 | Estado general sobrevive a recargar | Editar nombre, valor, cant., unidad, DTE, confirmado, costo real, HE; recargar (Cmd+Shift+R) | Todo sigue guardado tal cual | ✅ |
+| P22 | ⭐ **Nota por fila** persiste | Poner una nota en una fila; recargar | La nota debe seguir ahí. *(Sospecha fuerte: en la modular la nota se envía pero el SELECT no la relee → se perdería al recargar. En `main` sí persiste.)* | ✅ |
 | P23 | ⭐ **DTE real** persiste | Cambiar DTE real de una fila; recargar | Verificar contra `main`: en el monolito el DTE real **tampoco persiste** (gap conocido) → si en la modular vuelve al DTE cotizado, **coincide con main** (no es bug); anotar el hallazgo | 🔁 |
 | P24 | Borrar fila no reaparece | Eliminar una fila ya guardada; recargar | La fila queda eliminada (baja encolada al servidor), no reaparece | ✅ |
 | P25 | Concurrencia por fila | Editar una fila, guardar; editar otra | Cada fila guarda por su cuenta (upsert diff por `clientUuid`/version); sin pisar cambios ajenos ni conflictos falsos | ✅ |
@@ -180,3 +180,31 @@ delegación de eventos → el clic subía al `<th>` y ordenaba.
 departamentos), P21b (columna `no_rodaje` en `budget_line_items`). **Solo
 frontend:** P22 (releer `nota`, la columna ya existe). **Pendiente de repro:**
 P21a (Nombre elegido del listado).
+
+### Cierre vuelta `fix/presupuesto-persistencia-bd` (2026-07-09, merge `0be93c6`)
+Los 4 pendientes de BD + P21a, resueltos. Migración
+`20260709120000_presupuesto_no_rodaje_reordenar_shadow.sql` aplicada a staging
+(a producción se aplica en el merge final de Etapa 4).
+- **P22 → ✅** la nota persiste al recargar. La columna `nota` y su guardado ya
+  existían; faltaba releerla (SELECT + mapeo en `dal.js`). Corrige el dato viejo
+  del catálogo, que decía "sin columna".
+- **P21 → ✅** todo el estado de fila sobrevive a recargar, incluidos **Nombre**
+  (P21a) y el check **"NO Rodaje"** (P21b).
+  - **P21b (NO Rodaje):** nueva columna `budget_line_items.no_rodaje`;
+    `guardar_proyecto` la lee/escribe; cableada en `dal.js` (upsert + SELECT + lectura).
+  - **P21a (Nombre):** `_dalResolveContactId` conserva el vínculo de contacto solo
+    si su nombre aún coincide → elegir otra persona (o escribir un nombre libre) ya
+    no revierte al nombre anterior. Bug compartido con `main` (no era regresión);
+    se arregló como mejora deliberada.
+- **P19 → ✅** renombrar sub-sección funciona y persiste. **P19a** resuelto:
+  `renombrar_departamento` valida unicidad SOLO por proyecto → un proyecto puede
+  sombrear un nombre de fábrica (ej "Producción"), sin el falso "ya existe". (P19b,
+  el lápiz en fábrica, ya se cerró en la vuelta anterior.)
+- **P20 → ✅** reordenar sub-departamentos persiste. Nuevo RPC
+  `reordenar_departamentos`; `moveServiceDept` lo llama con los ids en el nuevo
+  orden. Decisión de Agustín: reordena **todos** (el `orden` de un depto de fábrica
+  es compartido por la organización → afecta a todos los proyectos).
+
+**Nota de despliegue (para el cierre de Etapa 4):** el frontend ya lee `no_rodaje`;
+la migración `20260709120000` debe aplicarse a producción **junto con** el merge del
+frontend (merge = deploy), o el SELECT fallaría por columna inexistente.
