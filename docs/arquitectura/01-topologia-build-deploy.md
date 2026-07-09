@@ -16,7 +16,7 @@ Rama analizada: `etapa4-integracion` (HEAD `4c8067b`, 2026-07-03). Todo lo conta
 │   ├── TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_6.md · TakeOS_PRD_V3_6.md
 │   ├── TakeOS_Roadmap_Operativo_v1_8.md · TakeOS_Seguridad_OWASP_Top_10_2025_v1_3.md
 │   ├── Marketing/Landing_Preliminar_Software_v3.html
-│   ├── Planes/   (6 .md: HANDOFF_Code_PlanG…, PENDIENTES_Migracion_Vite, Plan_Macro_Frentes…, Plan_Modularizacion_Juan_v7, Plan_Modularizacion_Vite, RESUMEN_Sesion_Modularizacion)
+│   ├── Planes/   (5 .md: HANDOFF_Code_PlanG…, PENDIENTES_Migracion_Vite, Plan_Macro_Frentes…, Plan_Modularizacion_Vite, RESUMEN_Sesion_Modularizacion)
 │   └── mockups/  (4 .html + Handoff_Code_Integracion_Mockups.md)
 ├── frontend/                  (49 archivos trackeados; ver §2)
 │   ├── index.html · package.json · package-lock.json · vite.config.js

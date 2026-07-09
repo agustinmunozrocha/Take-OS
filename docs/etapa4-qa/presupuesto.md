@@ -2,7 +2,7 @@
 
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `calculadoras.js`, `lib/calc.js`, `lib/data.js`, `dal.js` (persistencia), `gastos.js` (sync Costo Real).
-Cobertura: 20/36 ✅ · 2 🔁 (P23, P27) · 4 ❌ abiertos (P19, P20, P21, P22 — ver cierres: van por BD/Juan o repro en vivo). Resto ⬜.
+Cobertura: 20/36 ✅ · 2 🔁 (P23, P27) · 4 ❌ abiertos (P19, P20, P21, P22 — ver cierres: van por BD o repro en vivo). Resto ⬜.
 
 > **Cómo leer este catálogo.** Las pruebas marcadas **⭐** en "Qué probar" son
 > donde el cruce monolito↔modular levantó sospecha de que la migración pudo
@@ -123,9 +123,8 @@ Causa raíz única: el `dept` viajaba con comillas por la delegación (herencia 
 - **P22 → ❌ (abierto, parcial):** la nota ya guarda y se muestra **dentro de la
   sesión** (regresión corregida, igual que main). Falta **persistir al recargar**:
   no hay columna en la BD (`budget_line_items`) y main tampoco la persiste →
-  **NO es de esta migración**; es una función nueva que va por el **flujo de
-  migraciones** (BD/Juan), fuera de la Etapa 4 frontend. Pendiente registrado en
-  memoria de proyecto.
+  **NO es de esta migración**; va por el **flujo de migraciones** (BD), fuera de
+  la Etapa 4 frontend. Pendiente registrado en memoria de proyecto.
 
 ### Cierre vuelta `feat/presupuesto-dte-real-recalcula-he` (2026-07-08)
 Grupo A completo (P1–P8 ✅) y grupo B menos lo ya aprobado (P9, P12–P15 ✅). Al
@@ -159,23 +158,25 @@ delegación de eventos → el clic subía al `<th>` y ordenaba.
   "ya existe". Causa: el RPC `renombrar_departamento` valida la unicidad contra la
   tabla `departments` de toda la organización (incluye los de fábrica ocultos).
   **Es regresión de la migración, pero el fix vive en la BD/RPC → va por el flujo
-  de migraciones (Juan), no por esta etapa.**
+  de migraciones, no por esta etapa.**
 - **P20 → ❌ (fuera de Etapa 4)** mover un sub-departamento no persiste. **No es
   regresión**: `main` tampoco persiste un reorden puro. La modular hizo de
   `departments.orden` la fuente del orden, pero no hay RPC para escribirlo →
   persistirlo es **feature nueva de BD** (RPC `reordenar_departamentos`), va por
-  Juan.
+  el flujo de migraciones.
 - **P21 → ❌ (parcial; ninguno es regresión limpia)** al recargar **sí** persisten
   Pronto Pago, Unidad, Costo Real, DTE Real, HE y "Confirmado". Fallan: **Nombre**
   (P21a) — el cableado es idéntico a `main` (no es rotura de la mudanza); Agustín
   lo cargó eligiéndolo del listado → probable `contact_id` pegajoso (que también
   falla en `main`). **Pendiente de repro en vivo**, no se tocó. **NO Rodaje**
-  (P21b) — nunca se persistió (sin columna en BD; `main` igual) → feature de BD
-  (Juan). **Nota de fila** (P22) — igual, sin columna → BD (ya registrado).
+  (P21b) — nunca se persistió (sin columna en BD; `main` igual) → feature de BD.
+  **Nota de fila** (P22) — la columna sí existe y el servidor sí la guarda; falta
+  releerla en el frontend (arreglo de esta tanda).
 - **UI (aparte):** el botón "Visualización" se movió junto al título "Servicios —
   Personal contratado" (pedido de Agustín; no es bug).
 
-**Pendientes para Juan (BD, fuera de Etapa 4 frontend):** P19a (unicidad de
+**Pendientes de BD (migración, fuera de Etapa 4 frontend):** P19a (unicidad de
 `renombrar_departamento` por proyecto, no org-wide), P20 (RPC de reordenar
-departamentos), P21b/P22 (columnas `no_rodaje` y `nota` en `budget_line_items`).
-**Pendiente de repro:** P21a (Nombre elegido del listado).
+departamentos), P21b (columna `no_rodaje` en `budget_line_items`). **Solo
+frontend:** P22 (releer `nota`, la columna ya existe). **Pendiente de repro:**
+P21a (Nombre elegido del listado).

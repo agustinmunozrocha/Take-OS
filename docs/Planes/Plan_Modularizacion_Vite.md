@@ -1,7 +1,6 @@
 # Plan de Modularización con Vite — Arquitectura y Diseño
 
-> **Versión viva.** Reemplaza al `Plan_Modularizacion_Juan.md` original (que era un
-> borrador de proceso). Este documento se enfoca en el **contexto arquitectónico,
+> **Versión viva.** Reemplaza a un borrador de proceso anterior. Este documento se enfoca en el **contexto arquitectónico,
 > de diseño y de desarrollo**. El **flujo de trabajo** (ramas, PRs, reparto,
 > tiempos) se define/ajusta en los chats especializados de flujo — aquí solo se
 > menciona lo mínimo necesario y se marca como _sujeto a cambios_.
