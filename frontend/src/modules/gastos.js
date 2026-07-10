@@ -565,6 +565,37 @@ function goLineaRealGastado(project, lineName) {
   const ln = _normLinea(lineName); if (!ln) return 0;
   return goMovs(project).filter(m => _normLinea(goLineaOf(project, m)) === ln).reduce((s, m) => s + (m.monto || 0), 0);
 }
+/* P36 · ¿asignar un gasto a esta caja sobrescribiría un Costo Real cargado a
+   mano? Devuelve { linea, costoReal } si hay choque, o null si no. OJO: `presId`
+   es el ID de la caja/presupuesto, no el nombre de la línea → hay que resolver
+   la línea primero (el bug previo comparaba el ID contra nombres de línea y
+   nunca calzaba, así que el aviso jamás salía). */
+function _conflictoCostoReal(project, presId) {
+  if (!presId) return null;
+  const ent = goPresById(project, presId);
+  const linea = ent ? ent.linea : null;
+  if (!linea) return null;
+  const filaPres = (project.data.gastos || []).find(r => _normLinea(r.item) === _normLinea(linea));
+  if (filaPres && (filaPres.costoReal || 0) > 0 && goLineaTieneCaja(project, linea) && goLineaRealGastado(project, linea) === 0) {
+    return { linea: linea, costoReal: filaPres.costoReal };
+  }
+  return null;
+}
+/* P36 · guarda de choque de Costo Real: si hay choque, avisa con el modal propio
+   del software (no el confirm nativo del navegador) y ejecuta `onProceed` solo si
+   el usuario confirma; si no hay choque, ejecuta `onProceed` de inmediato. */
+function _guardCostoReal(project, presId, onProceed) {
+  const c = _conflictoCostoReal(project, presId);
+  if (!c) { onProceed(); return; }
+  showModal({
+    title: 'El Costo Real cargado a mano se reemplazará',
+    body: 'La línea <b>«' + escapeHtml(c.linea) + '»</b> ya tiene un Costo Real de <b>' + fmtMoney(c.costoReal) + '</b> cargado a mano.<br><br>Al asignar este gasto, el Costo Real pasará a calcularse automáticamente desde los gastos registrados y ese valor manual se reemplazará.',
+    confirmLabel: 'Sí, reemplazar',
+    cancelLabel: 'Cancelar',
+    danger: true,
+    onConfirm: onProceed
+  });
+}
 /* V11.3.0 · crear presupuestos en Gastos es facultad de Administrador (1),
    Ejecutivo (2) y Producción (3). Fail-open coherente con Gate B. */
 function _puedeCrearPresupuestoGastos() {
@@ -579,12 +610,12 @@ function goOpenPresup() {
 
   goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Crear presupuesto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
-      <div class="go-field"><label>Nombre del presupuesto</label><input class="go-inp" id="pp_nombre" placeholder="ej. Compras Súper día 3"></div>
       <div class="go-field"><label>Asociar a línea del Presupuesto</label>
         <select class="go-inp" id="pp_linea" data-accion="go.ppLinea" data-on="change"><option value="">— elige una línea —</option>${lineas.map(l => '<option>' + escapeHtml(l) + '</option>').join('')}<option value="__new__">+ Crear nueva línea (parte en $0)…</option></select>
-        <div class="go-field" id="pp_newWrap" style="display:none;margin-top:10px;"><label>Nombre de la nueva línea</label><input class="go-inp" id="pp_newName" placeholder="ej. Maquillaje"></div>
+        <div class="go-field" id="pp_newWrap" style="display:none;margin-top:10px;"><label>Nombre de la nueva línea</label><input class="go-inp" id="pp_newName" data-accion="go.ppNewName" data-on="input" placeholder="ej. Maquillaje"></div>
         <div class="go-help">Estas son las filas de <b>Gastos de producción</b> del Presupuesto. Si falta una, crea una nueva: se agrega al Presupuesto (parte en $0, marcada como EXTRA) y verás cuánto se pasa el proyecto.</div>
       </div>
+      <div class="go-field"><label>Nombre del presupuesto</label><input class="go-inp" id="pp_nombre" placeholder="Se completa con la línea; puedes cambiarlo"></div>
       <div class="go-frow">
         <div class="go-field half"><label>Responsable</label><input class="go-inp" id="pp_resp" list="go_dl_contactos" placeholder="nombre"></div>
         <div class="go-field half"><label>Monto asignado (CLP)</label><input class="go-inp" id="pp_monto" placeholder="0" inputmode="numeric"></div>
@@ -604,11 +635,22 @@ function goPpLineaChange() {
      línea, para no tener que retipear el mismo número. Queda editable. */
   const igu = document.getElementById('pp_iguala');
   const montoEl = document.getElementById('pp_monto');
+  const nombreEl = document.getElementById('pp_nombre');
   if (v && v !== '__new__') {
     const cot = goLineaCotizado(STATE.currentProject, v);
     if (montoEl) montoEl.value = cot ? String(cot) : '';
+    // Mejora · el nombre del presupuesto parte por defecto con el de la línea
+    // (igual que el monto se iguala al cotizado). Queda editable.
+    if (nombreEl) nombreEl.value = v;
     if (igu) { igu.style.display = 'block'; igu.innerHTML = 'Monto igualado al cotizado de la línea <b>“' + escapeHtml(v) + '”</b>: <b>' + fmtMoney(cot) + '</b>. Puedes ajustarlo.'; }
   } else if (igu) { igu.style.display = 'none'; }
+}
+/* Mejora · al crear una línea nueva, el nombre del presupuesto sigue por defecto
+   lo que se va escribiendo como nombre de la línea (editable). */
+function goPpNewName() {
+  const nw = document.getElementById('pp_newName');
+  const nombreEl = document.getElementById('pp_nombre');
+  if (nw && nombreEl) nombreEl.value = nw.value;
 }
 function goSavePresup() {
   const project = STATE.currentProject; const d = goData(project); const jp = goJefeProd(project);
@@ -772,19 +814,14 @@ function goSaveGasto() {
     showToast({ kind: 'success', title: 'Gasto actualizado', body: completo ? 'Como cambió, vuelve a la cola de validación de Finanzas.' : 'Quedó Pendiente: falta info por completar.' });
     return;
   }
-  /* #1 · aviso de choque de Costo Real: si la línea de "Gastos" del Presupuesto
-     tiene un Costo Real cargado a mano (línea con caja y aún sin movimientos),
-     asignar este gasto lo vuelve un valor DERIVADO y reemplaza el manual. Avisamos
-     antes de sobrescribir (confirm nativo, coherente con prDelUnidad/prDelPlan). */
-  if (pres) {
-    const filaPres = (project.data.gastos || []).find(r => _normLinea(r.item) === _normLinea(pres));
-    if (filaPres && (filaPres.costoReal || 0) > 0 && goLineaTieneCaja(project, pres) && goLineaRealGastado(project, pres) === 0) {
-      if (!window.confirm('La línea «' + pres + '» ya tiene un Costo Real de ' + fmtMoney(filaPres.costoReal) + ' cargado a mano.\n\nAl asignar este gasto, el Costo Real pasará a calcularse automáticamente desde los gastos y ese valor manual se reemplazará.\n\n¿Quieres continuar?')) return;
-    }
-  }
-  const m = Object.assign({ id: goNewId('m') }, campos, { fechaPago: null, objetivo: null, datosPago: datosPago });
-  d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
-  showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola de Finanzas.' : 'Falta info: complétalo y marca “listo”.' });
+  /* P36 · aviso de choque de Costo Real (modal propio) antes de sobrescribir el
+     valor manual. El guardado ocurre dentro del callback: directo si no hay
+     choque, o al confirmar el aviso si lo hay. */
+  _guardCostoReal(project, pres, () => {
+    const m = Object.assign({ id: goNewId('m') }, campos, { fechaPago: null, objetivo: null, datosPago: datosPago });
+    d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
+    showToast({ kind: 'success', title: completo ? 'Gasto agregado · Por revisar' : 'Gasto agregado · queda Pendiente', body: completo ? 'Pasó a la cola de Finanzas.' : 'Falta info: complétalo y marca “listo”.' });
+  });
 }
 /* Pasada 4 (#2) · eliminar un gasto desde el modal de edición, con confirmación
    (modal propio del software). Borra también el comprobante del Storage. */
@@ -845,14 +882,18 @@ function goSaveQuick() {
   const project = STATE.currentProject; const d = goData(project);
   const monto = parseInt((document.getElementById('q_monto').value || '0').replace(/\D/g, '')) || 0;
   const pres = (document.getElementById('q_pres') || {}).value || (goPresList(project)[0] ? goPresList(project)[0].id : '');
-  const m = {
-    id: goNewId('m'), pres: pres, fecha: goToday(), quien: '—', registra: '—',
-    concepto: '(completar)', prov: '—', monto: monto, medio: 'Tarjeta empresa (débito)', tipo: 'Boleta',
-    comp: !!GO_DRAFT.filePath, estado: 'pendiente', coment: '', fechaPago: null, objetivo: null,
-    fileName: GO_DRAFT.fileName, filePath: GO_DRAFT.filePath || null, datosPago: null
-  };
-  d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
-  showToast({ kind: 'success', title: 'Capturado · queda Pendiente', body: 'Complétalo más tarde y márcalo listo.' });
+  /* P36 · mismo aviso de choque de Costo Real (modal propio) que en el
+     formulario completo. El guardado va dentro del callback. */
+  _guardCostoReal(project, pres, () => {
+    const m = {
+      id: goNewId('m'), pres: pres, fecha: goToday(), quien: '—', registra: '—',
+      concepto: '(completar)', prov: '—', monto: monto, medio: 'Tarjeta empresa (débito)', tipo: 'Boleta',
+      comp: !!GO_DRAFT.filePath, estado: 'pendiente', coment: '', fechaPago: null, objetivo: null,
+      fileName: GO_DRAFT.fileName, filePath: GO_DRAFT.filePath || null, datosPago: null
+    };
+    d.movimientos.push(m); markDirty(); closeModal(); renderGastos();
+    showToast({ kind: 'success', title: 'Capturado · queda Pendiente', body: 'Complétalo más tarde y márcalo listo.' });
+  });
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1645,6 +1686,7 @@ registrarAcciones('go', {
   comp: function (a) { var f = { goVerComprobante: goVerComprobante, goCfoVer: goCfoVer }[a[0]]; if (f) f(a[1]); },
   reAdjuntar: function (a) { closeModal(); goOpenGasto(a[0]); },
   ppLinea: function () { goPpLineaChange(); },
+  ppNewName: function () { goPpNewName(); },
   guardarPresup: function () { goSavePresup(); },
   hint: function () { goGastoHint(); },
   quienCombo: function (a, el, ev) {
