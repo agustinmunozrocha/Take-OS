@@ -1,5 +1,24 @@
 # Changelog — TakeOS
 
+## V11.35.0 — 9 de julio de 2026
+### Scouting: tiempo de visita por parada · Gastos: editar y eliminar presupuestos
+
+Rama `feat/scouting-visita-y-gastos-editar-presupuesto`. Solo **frontend** (`index.html`). Dos cambios pedidos por Agustín.
+
+**1. Plan de Scouting — cada parada puede tener tiempo de visita.** Hasta ahora la parada era solo un punto en el tiempo (solo el traslado aportaba minutos); no se podía estimar cuánto dura la visita en el lugar.
+
+- Cada parada tiene ahora un campo **⏱ visita** (formato HHMM: `30` = 30 min, `130` = 1 h 30). Es **opcional**: una parada sin duración no mueve el reloj (igual que antes, compatible con planes viejos).
+- Al poner una duración, la **cascada de horas** la respeta: el traslado y las paradas siguientes arrancan más tarde, y el **"término aprox."** del resumen incluye la visita de la última parada.
+- El **PDF exportado** muestra el tiempo de visita en la columna "Dur." de cada parada.
+- **Persistencia:** el Plan de Scouting hoy se guarda solo en el **respaldo local** del navegador; **aún no sincroniza a la base**. Este cambio hereda esa persistencia (no la empeora). Dejar el scouting en la base es una tarea de BD aparte (tabla + RPC), pendiente y previa a este cambio.
+
+**2. Gastos — editar y eliminar un presupuesto (sobre) ya creado.** Antes solo se podía crear; una vez creado no había forma de corregir nombre/línea/responsable/monto ni de borrarlo.
+
+- Cada tarjeta de presupuesto tiene ahora **✎ (editar)** y **× (eliminar)** arriba a la derecha. Editar reusa el mismo modal, precargado, con botón "Guardar cambios".
+- **Eliminar con guarda:** si el presupuesto **tiene gastos cargados**, no se borra y avisa cuántos hay, para reasignarlos o eliminarlos primero (no se dejan gastos huérfanos). Si no tiene gastos, pide confirmación y lo borra.
+- Editar y eliminar quedan bajo la **misma facultad** que crear (Administrador, Ejecutivo, Producción).
+- **Persistencia:** los presupuestos de Gastos **sí sincronizan a la base** (tabla `project_op_budgets`, vía la RPC `guardar_operaciones_4b`, que manda el estado completo y reemplaza). Editar y eliminar viajan por esa misma vía: **no requiere ningún cambio de base de datos.**
+
 ## V11.34.0 — 7 de julio de 2026
 ### Rebrand: TakeOS → Rizora (nuevo nombre oficial) + versión in-app al día
 
