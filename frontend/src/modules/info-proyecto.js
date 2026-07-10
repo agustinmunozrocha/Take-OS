@@ -118,6 +118,22 @@ function infoContactoChanged(field, value) {
 }
 function infoVincularEmpresa(id) { updateInfoField('clienteEmpresaId', id); renderInfoProyecto(); }
 
+/* I7 · Servicio como desplegable con opción libre. Servicios por defecto +
+   "Otro (especificar)"; si el proyecto ya traía un servicio que no es de la
+   lista, se muestra como "Otro" con ese texto. (Guardar un "Otro" como servicio
+   por defecto y el reporte anual por servicio van por el flujo de BD, aparte.) */
+const SERVICIOS_DEFAULT = ['Producción', 'Postproducción'];
+function _servicioFieldHTML(ip) {
+  const val = ip.servicio || '';
+  const esOtro = !!val && SERVICIOS_DEFAULT.indexOf(val) === -1;
+  const opts = ['<option value="">— Elige —</option>']
+    .concat(SERVICIOS_DEFAULT.map(s => `<option value="${escapeHtml(s)}" ${val === s ? 'selected' : ''}>${escapeHtml(s)}</option>`))
+    .concat([`<option value="__otro" ${esOtro ? 'selected' : ''}>Otro (especificar)…</option>`])
+    .join('');
+  return `<select class="select" data-accion="info.servicioSel" data-on="change">${opts}</select>
+    <input class="input" id="servicio-otro" style="margin-top:8px;display:${esOtro ? 'block' : 'none'};" value="${escapeHtml(esOtro ? val : '')}" placeholder="Escribe el servicio" ${accionHTML('info.servicioOtro', { on: 'input' })}>`;
+}
+
 export function renderInfoProyecto() {
   const project = STATE.currentProject;
   if (!project) return;
@@ -165,17 +181,13 @@ export function renderInfoProyecto() {
           </span>
           <div id="bdwarn-agencia" style="display:${(ip.agencia && ip.agencia.trim() && !BD_EMPRESAS[ip.agencia.trim()]) ? 'flex' : 'none'};align-items:center;gap:6px;font-size:10.5px;color:var(--warning);margin-top:6px;">⚠ No está en la BD de empresas — puedes seguir igual. <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;" data-accion="info.irBD">+ Agregarla a la BD</button></div>
         </div>
-        <div class="field">
-          <label class="field-label">Productora</label>
-          <input class="input" value="${escapeHtml(ip.productora)}" ${accionHTML('info.campo', 'productora', { on: 'input' })}>
-        </div>
         <div class="field" style="grid-column: span 2;">
           <label class="field-label">Nombre del proyecto</label>
           <input class="input" value="${escapeHtml(ip.nombreProyecto)}" ${accionHTML('info.nombre', { on: 'input' })} placeholder="Nombre comercial / interno">
         </div>
         <div class="field">
           <label class="field-label">Servicio</label>
-          <input class="input" value="${escapeHtml(ip.servicio)}" ${accionHTML('info.campo', 'servicio', { on: 'input' })} placeholder="Ej: Spot + RRSS">
+          ${_servicioFieldHTML(ip)}
         </div>
       </div>
     </div>
@@ -579,6 +591,12 @@ registrarAcciones('info', {
     else infoContactoChanged(a[0], el.value);
   },
   campo: function (a, el) { updateInfoField(a[0], el.value); },
+  servicioSel: function (a, el) {
+    const otro = document.getElementById('servicio-otro');
+    if (el.value === '__otro') { updateInfoField('servicio', ''); if (otro) { otro.value = ''; otro.style.display = 'block'; otro.focus(); } }
+    else { if (otro) { otro.value = ''; otro.style.display = 'none'; } updateInfoField('servicio', el.value); }
+  },
+  servicioOtro: function (a, el) { updateInfoField('servicio', el.value); },
   nombre: function (a, el) { updateInfoField('nombreProyecto', el.value); updateProjectHeader(); },
   derechos: function (a, el) { updateDerechos(a[0], el.value); },
   irCargos: function () { navigateToModule('cargos'); },
