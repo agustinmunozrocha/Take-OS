@@ -735,8 +735,15 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
       deltaInitClass = deltaClassCosto(deltaInit);
     }
   }
-  const disabledAttr = locked ? 'disabled' : '';
   const readonlyAttr = locked ? 'readonly' : '';
+  // P34 · En una fila EXTRA (agregada post-aprobación) el detalle cotizado
+  // (DTE, Valor y Cantidad) queda de solo lectura, para que el extra no mueva
+  // el cotizado aprobado. El costo del extra se carga por «Costo real».
+  // (Rol/Ítem y el resto de la fila siguen editables: el extra es editable en
+  // lo demás.) `cotDetailReadonly` para los <input>; `cotDetailDisabled` para
+  // el <select> del DTE.
+  const cotDetailReadonly = (locked || isExtra) ? 'readonly' : '';
+  const cotDetailDisabled = (locked || isExtra) ? 'disabled' : '';
   // V10.5.0: estado de Horas Extra de la fila (heConfig persistido).
   const heCfg = item.heConfig || null;
   const hePlana = !!(heCfg && heCfg.usaProyecto === false && heCfg.modo === 'plana');
@@ -789,7 +796,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
           </div>
           <div class="cell-name-meta">
             ${nameNotInBD ? `<span class="cell-name-warn" data-tip="+ Agregar a la BD" style="cursor:pointer;" ${accionHTML('pre.d', 'crewAddToBD', escapeHtml(item.nombre || ''))}>●</span>` : ''}
-            ${isExtra ? '<span class="extra-badge" data-tip="Ítem agregado después de la aprobación del proyecto. Editable libremente. No afecta la cotización original.">EXTRA</span>' : ''}
+            ${isExtra ? '<span class="extra-badge" data-tip="Ítem agregado después de aprobar el proyecto. Su costo se carga en «Costo real»; el Valor y la Cantidad cotizados quedan bloqueados para no mover el cotizado aprobado.">EXTRA</span>' : ''}
             <button type="button" class="row-note-btn ${item.nota ? 'has-note' : ''}" data-tip="${item.nota ? escapeHtml(_noteTip(item.nota, item.notaFecha, item.notaAutor)) : 'Agregar nota a esta fila (contexto interno, no aparece en cotización)'}" ${accionHTML('pre.d', 'openRowNote', ...refA)}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/></svg></button>
             <label class="row-pp" data-tip="Pronto pago negociado para esta fila"><input type="checkbox" ${item.prontoPago ? 'checked' : ''} ${accionHTML('pre.rowCk', ...refA, 'prontoPago', { on: 'change' })}>PP</label>
           </div>
@@ -805,7 +812,7 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
       </td>
       <td class="col-cot-detail">
         <select class="cell-select ${item.dte ? '' : (sectionKey === 'servicios' || sectionKey === 'talentos' ? 'is-empty' : '')}"
-                ${disabledAttr}
+                ${cotDetailDisabled}
                 ${accionHTML('pre.rowDte', ...refA, 'dte', { on: 'change' })}>
           <option value="">${sectionKey === 'gastos' || sectionKey === 'equipos' ? '— Opcional —' : '— DTE —'}</option>
           ${DTE_OPTIONS.map(o =>
@@ -817,14 +824,14 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
         <input type="text" inputmode="numeric" class="cell-input num"
                value="${displayMoneyInputValue(item.valor)}"
                placeholder="—"
-               ${readonlyAttr}
+               ${cotDetailReadonly}
                ${accionHTML('pre.rowMoney', ...refA, 'valor', { on: 'change' })}>
       </td>
       <td class="num col-cot-detail">
         <input type="number" step="0.5" class="cell-input num"
                value="${item.cantidad ?? ''}"
                placeholder="0"
-               ${readonlyAttr}
+               ${cotDetailReadonly}
                ${accionHTML('pre.rowNum', ...refA, 'cantidad', { on: 'change' })}>
       </td>
       <td>
@@ -2253,7 +2260,7 @@ export function renderSummaryFin() {
         `}
 
         <tr class="final-row">
-          <td>GANANCIA FINAL PRIMATE (NETO)</td>
+          <td>GANANCIA FINAL (NETO)</td>
           <td class="pct">${(margenPctCot * 100).toFixed(1)}%</td>
           <td class="num">${fmtMoney(s.gananciaFinal.cot)}</td>
           ${showReal ? `<td class="num">${s.anyReal ? fmtMoney(s.gananciaFinal.real) : '—'}</td>` : ''}
