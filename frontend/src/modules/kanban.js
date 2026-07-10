@@ -279,7 +279,10 @@ export function newProject() {
       const id = 'P-' + Date.now();
       // I11b · cargos reales para los responsables asignados al crear (los nombres
       // de cargo calzan con la derivación RECI: PE / Director / Jefe de Producción).
-      const _mkCargo = function (cargoName, persona) { return persona ? { id: 'CG-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cargo: cargoName, custom: false, personaNombre: persona, tipo: 'interno', perfil: '', estado: 'activo' } : null; };
+      // Los responsables asignados al crear quedan como EXTERNOS (un PE/Director/JP
+      // puede ser un freelance); nunca se auto-invitan como internos de la
+      // productora. Sin email → no se dispara ninguna invitación.
+      const _mkCargo = function (cargoName, persona) { return persona ? { id: 'CG-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cargo: cargoName, custom: false, personaNombre: persona, tipo: 'externo', perfil: '', estado: 'activo' } : null; };
       const cargosNuevos = [_mkCargo('Productor/a Ejecutivo/a', pe), _mkCargo('Director/a', director), _mkCargo('Jefe/a de Producción', jp)].filter(Boolean);
       const nuevo = {
         id, client: cliente, name: nombre, state: 'venta',

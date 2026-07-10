@@ -263,17 +263,17 @@ export function renderInfoProyecto() {
         <div class="field">
           <label class="field-label">Productor Ejecutivo <span class="tt" data-tip="R — Responsable final del proyecto.">R</span></label>
           <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.productorEjecutivo || '—')}</div>
-          ${renderPersonContactSub(peData)}
+          ${renderPersonContactSub(peData, ip.productorEjecutivo)}
         </div>
         <div class="field">
           <label class="field-label">Director <span class="tt" data-tip="E — Ejecutor de la visión creativa.">E</span></label>
           <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.director || '—')}</div>
-          ${renderPersonContactSub(dirData)}
+          ${renderPersonContactSub(dirData, ip.director)}
         </div>
         <div class="field">
           <label class="field-label">Jefe de Producción <span class="tt" data-tip="E — Ejecutor operacional.">E</span></label>
           <div class="input" style="background:var(--bg-surface);cursor:default;">${escapeHtml(ip.jefeProduccion || '—')}</div>
-          ${renderPersonContactSub(jpData)}
+          ${renderPersonContactSub(jpData, ip.jefeProduccion)}
         </div>
       </div>
       <div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" data-accion="info.irCargos">Gestionar en Cargos →</button></div>
@@ -360,9 +360,13 @@ export function renderInfoProyecto() {
 }
 
 /* Mini-bloque debajo del select de persona: muestra mail y teléfono */
-function renderPersonContactSub(personData) {
-  if (!personData.mail && !personData.telefono) {
-    return `<div class="field-value muted" style="font-size: 11px;">— Sin datos en BD</div>`;
+function renderPersonContactSub(personData, nombre) {
+  const nom = (nombre || '').trim();
+  if (!nom) return '';   // sin responsable asignado: no hay sub-línea
+  // I11b · un responsable debe estar en la BD con mail y teléfono. Si falta,
+  // se ofrece "Agregar a la BD" (abre su ficha para completar/crear).
+  if (!personData.mail || !personData.telefono) {
+    return `<div style="margin-top:2px;"><button class="btn btn-ghost btn-sm" style="font-size:10px;padding:1px 7px;color:var(--warning);" ${accionHTML('info.agregarPersonaBD', nom)} title="Para asignar un responsable, la persona debe estar en la BD con mail y teléfono.">+ Agregar a la BD</button></div>`;
   }
   return `
     <div style="font-size: 11px; color: var(--ink-muted); line-height: 1.5; margin-top: 2px;">
@@ -613,6 +617,7 @@ registrarAcciones('info', {
   nombre: function (a, el) { updateInfoField('nombreProyecto', el.value); updateProjectHeader(); },
   derechos: function (a, el) { updateDerechos(a[0], el.value); },
   irCargos: function () { navigateToModule('cargos'); },
+  agregarPersonaBD: function (a) { gancho('openPersonaByName')(a[0]); },   // I11b · abre la ficha de la persona para completar/crear (un responsable debe estar en la BD)
   estado: function (a, el) { gancho('updateProjectState')(el.value); },
   borrarProy: function (a) { deleteProjectFlow(a[0]); },
   restaurar: function (a) { restoreFromTrash(a[0]); },

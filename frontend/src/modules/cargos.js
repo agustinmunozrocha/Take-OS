@@ -18,7 +18,7 @@ import { invitacionLink, dalInvitar, _invMostrarResultado, PERFIL_CODIGO_POR_NOM
 import { _planModalVenta, manejarErrorPlan } from './plan-limites.js';
 
 import { registrarAcciones, accionHTML } from '../lib/delegacion.js';
-import { define } from '../lib/ganchos.js';
+import { define, gancho } from '../lib/ganchos.js';
 /* ════════════════════════════════════════════════════════════════════
    V11.2.0 · CARGOS DEL PROYECTO
    ════════════════════════════════════════════════════════════════════
@@ -133,9 +133,11 @@ function renderCargos() {
       + td(sinPersona ? '<span style="color:var(--ink-faint);">— Sin asignar —</span>' : escapeHtml(c.personaNombre))
       + td(sinPersona ? '—' : _cargoPill(c.tipo === 'externo' ? 'Externo' : 'Interno', c.tipo === 'externo' ? 'ext' : 'int'))
       + td(sinPersona ? '—' : escapeHtml(c.perfil || '—'))
-      + td(sinPersona ? '—' : (c.estado === 'pendiente'
-          ? '<a style="cursor:pointer;text-decoration:none;" title="Copiar el link de invitación de esta persona" ' + accionHTML('cargo.copiarInv', c.id) + '>' + _cargoPill(estLabel + ' ⧉', estTone) + '</a>'
-          : _cargoPill(estLabel, estTone)))
+      + td(sinPersona ? '—' : ((!(BD_PERSONAS[c.personaNombre] && BD_PERSONAS[c.personaNombre].mail && BD_PERSONAS[c.personaNombre].telefono))
+          ? '<button class="btn btn-ghost btn-sm" style="color:var(--warning);" ' + accionHTML('cargo.agregarBD', c.personaNombre) + ' title="Para tener un cargo, la persona debe estar en la BD con mail y teléfono.">Agregar a la BD</button>'
+          : (c.estado === 'pendiente'
+              ? '<a style="cursor:pointer;text-decoration:none;" title="Copiar el link de invitación de esta persona" ' + accionHTML('cargo.copiarInv', c.id) + '>' + _cargoPill(estLabel + ' ⧉', estTone) + '</a>'
+              : _cargoPill(estLabel, estTone))))
       + '<td style="padding:9px 10px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap;">' + acciones + '</td>'
       + '</tr>';
   });
@@ -443,6 +445,7 @@ registrarAcciones('cargo', {
   guardar: function () { cargoGuardarModal(); },
   cbSel: function (a, el) { comboboxSelect(el, a[0]); },
   invitar: function (a, el, ev) { ev.preventDefault(); cargoIrAInvitar(); },
+  agregarBD: function (a) { gancho('openPersonaByName')(a[0]); },   // I11b · un cargo exige que la persona esté en la BD (con mail y teléfono)
 });
 
 // D4b · ganchos definidos por este módulo (consumidos por módulos más tempranos)
