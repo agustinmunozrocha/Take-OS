@@ -2,7 +2,7 @@
 
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `calculadoras.js`, `lib/calc.js`, `lib/data.js`, `dal.js` (persistencia), `gastos.js` (sync Costo Real).
-Cobertura: 24/36 ✅ · 2 🔁 (P23, P27) · 0 ❌. Resto ⬜.
+Cobertura: 32/36 ✅ · 4 🔁 (P23, P27, P31, P34) · 0 ❌. Todo cubierto.
 
 > **Cómo leer este catálogo.** Las pruebas marcadas **⭐** en "Qué probar" son
 > donde el cruce monolito↔modular levantó sospecha de que la migración pudo
@@ -60,32 +60,32 @@ Cobertura: 24/36 ✅ · 2 🔁 (P23, P27) · 0 ❌. Resto ⬜.
 
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| P26 | Cambiar **DTE cotizado** recalcula | Cambiar DTE de Factura a Boleta en una fila | Recalcula el costo cotizado al instante (aplica/quita retención) y recomputa HE si la fila usa cálculo de proyecto | ⬜ |
+| P26 | Cambiar **DTE cotizado** recalcula | Cambiar DTE de Factura a Boleta en una fila | Recalcula el costo cotizado al instante (aplica/quita retención) y recomputa HE si la fila usa cálculo de proyecto | ✅ |
 | P27 | ⭐ Cambiar **DTE real** | Cambiar el DTE real de una fila con HE | El costo real no cambia (es literal). La HE (que usa DTE real como efectivo) **se recomputa en vivo** al cambiar el DTE real. *(Mejora deliberada sobre `main`: en el monolito no recomputaba hasta empujar la fila.)* | 🔁 |
 
 ## F. Panel de Finanzas (Resumen financiero)
 
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| P28 | Cadena financiera completa | Con datos en las 4 secciones + Presupuesto Cliente | Subtotal → Gastos Admin (5% def) → Riesgos → Costo Producción → Ganancia Parcial → Comisiones → **Ganancia Final**; márgenes % en el header. Cada campo % editable recalcula todo | ⬜ |
-| P29 | Extras de ingreso (ampliaciones) | Agregar un extra de ingreso al cliente | Se suma a **Presupuesto Cliente Efectivo**; afecta solo el lado real/efectivo; editable **incluso** con proyecto aprobado | ⬜ |
-| P30 | Riesgos y comisiones ($ vs %) | Agregar un riesgo modo % y una comisión modo $ | % se aplica sobre subtotal/ganancia; $ es monto fijo; se pueden agregar/eliminar | ⬜ |
-| P31 | Visibilidad por perfil + label final | Ver el resumen; revisar la fila de total | Se oculta entero a perfiles Producción (3) y Asistencia (4). **Cosmético:** la fila final dice "GANANCIA FINAL PRIMATE (NETO)" en `main` y en la modular; con el rebranding a Rizora quizá deba decir otra cosa — anotar, no es bug de migración | ⬜ |
+| P28 | Cadena financiera completa | Con datos en las 4 secciones + Presupuesto Cliente | Subtotal → Gastos Admin (5% def) → Riesgos → Costo Producción → Ganancia Parcial → Comisiones → **Ganancia Final**; márgenes % en el header. Cada campo % editable recalcula todo | ✅ |
+| P29 | Extras de ingreso (ampliaciones) | Agregar un extra de ingreso al cliente | Se suma a **Presupuesto Cliente Efectivo**; afecta solo el lado real/efectivo; editable **incluso** con proyecto aprobado | ✅ |
+| P30 | Riesgos y comisiones ($ vs %) | Agregar un riesgo modo % y una comisión modo $ | % se aplica sobre subtotal/ganancia; $ es monto fijo; se pueden agregar/eliminar | ✅ |
+| P31 | Visibilidad por perfil + label final | Ver el resumen; revisar la fila de total | Se oculta entero a perfiles Producción (3) y Asistencia (4). La fila final decía "GANANCIA FINAL PRIMATE (NETO)" (resabio de la marca anterior, igual que en `main`). **Cambio a propósito:** pasa a "GANANCIA FINAL (NETO)" — se saca "PRIMATE" (decisión de Agustín, divergencia deliberada de `main`) | 🔁 |
 
 ## G. Etapas y bloqueo del cotizado
 
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| P32 | Modo Venta (solo cotización) | Proyecto en Venta | Sin columnas Costo real / DTE real / Horas extra / Confirmado; todo editable; header "Modo: Solo cotización" | ⬜ |
-| P33 | Bloqueo al aprobar (Preproducción+) | Pasar el proyecto a Preproducción | Rol/Ítem, DTE, Valor, Cant. de filas no-extra quedan readonly; aparecen columnas reales + Confirmado; Presupuesto Cliente y Gastos Admin/Riesgos se congelan (🔒); botón × desaparece en filas bloqueadas | ⬜ |
-| P34 | Agregar fila post-aprobación = EXTRA | Con proyecto aprobado, "+ Agregar rol" | La fila nueva nace como **EXTRA** (badge, siempre editable, no toca el cotizado) con toast | ⬜ |
+| P32 | Modo Venta (solo cotización) | Proyecto en Venta | Sin columnas Costo real / DTE real / Horas extra / Confirmado; todo editable; header "Modo: Solo cotización" | ✅ |
+| P33 | Bloqueo al aprobar (Preproducción+) | Pasar el proyecto a Preproducción | Rol/Ítem, DTE, Valor, Cant. de filas no-extra quedan readonly; aparecen columnas reales + Confirmado; Presupuesto Cliente y Gastos Admin/Riesgos se congelan (🔒); botón × desaparece en filas bloqueadas | ✅ |
+| P34 | Agregar fila post-aprobación = EXTRA | Con proyecto aprobado, "+ Agregar rol" | La fila nueva nace como **EXTRA** (badge + toast). **Cambio a propósito:** en `main` el EXTRA era 100% editable (su Valor/Cantidad movían el cotizado); ahora el detalle cotizado (DTE, Valor, Cantidad) queda **bloqueado** y el costo del extra se carga por "Costo real", para no mover el cotizado aprobado (decisión de Agustín, divergencia deliberada de `main`) | 🔁 |
 
 ## H. Comboboxes / Gastos ↔ Presupuesto
 
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| P35 | Combobox de Nombre contra BD | Escribir un nombre en la columna Nombre | Filtra contra la BD de personas; nombre no existente muestra "● no en BD" con acción "+ Agregar a la BD" | ⬜ |
-| P36 | Costo Real derivado de Gastos | Fila de Gastos con caja vinculada y movimientos > 0 | El Costo Real es **derivado** (solo lectura, suma de movimientos), con link a la pestaña Gastos. Sin caja o con $0, editable a mano | ⬜ |
+| P35 | Combobox de Nombre contra BD | Escribir un nombre en la columna Nombre | Filtra contra la BD de personas; nombre no existente muestra "● no en BD" con acción "+ Agregar a la BD" | ✅ |
+| P36 | Costo Real derivado de Gastos | Fila de Gastos con caja vinculada y movimientos > 0 | El Costo Real es **derivado** (solo lectura, suma de movimientos), con link a la pestaña Gastos. Sin caja o con $0, editable a mano | ✅ |
 
 **Estados:** ⬜ pendiente · 🔄 probando · ✅ pasó (no re-probar) · ❌ falló (bug abierto) · 🔁 cambió a propósito.
 
@@ -208,3 +208,25 @@ Los 4 pendientes de BD + P21a, resueltos. Migración
 **Nota de despliegue (para el cierre de Etapa 4):** el frontend ya lee `no_rodaje`;
 la migración `20260709120000` debe aplicarse a producción **junto con** el merge del
 frontend (merge = deploy), o el SELECT fallaría por columna inexistente.
+
+### Cierre vuelta `fix/presupuesto-extra-primate-aviso-gasto` (2026-07-10)
+Se cubrieron los 10 pendientes (P26, P28–P36). Solo frontend, sin BD.
+- **P26, P28, P29, P30, P32, P33, P35 → ✅** todos pasaron limpios contra `main`
+  (DTE cotizado recalcula, cadena financiera completa, extras de ingreso, riesgos
+  y comisiones $/%, Modo Venta, bloqueo al aprobar, combobox de Nombre).
+- **P36 (Costo Real derivado) → ✅.** Además, Agustín notó que faltaba el **aviso**
+  al vincular un gasto que sobrescribe un Costo Real cargado a mano. El aviso
+  existía pero estaba **muerto**: comparaba el ID de la caja contra el nombre de
+  la línea (bug compartido con `main`), así que nunca calzaba. Se arregló
+  (`_conflictoCostoReal` resuelve la línea desde el ID) y pasó a usar el **modal
+  propio del software** (`showModal`) en vez del `confirm` nativo del navegador,
+  en las **dos** rutas de guardado (formulario completo y captura rápida ⚡).
+- **P31 → 🔁** se saca "PRIMATE": el label pasa a "GANANCIA FINAL (NETO)"
+  (divergencia deliberada de `main`, no bug de migración).
+- **P34 → 🔁** en las filas EXTRA, el detalle cotizado (DTE, Valor, Cantidad)
+  queda de solo lectura para no mover el cotizado aprobado; el costo del extra se
+  carga por "Costo real". En `main` el EXTRA era 100% editable → divergencia
+  deliberada (decisión de Agustín).
+- **Mejora (formulario "Crear presupuesto" en Gastos):** "Asociar a línea" va
+  primero y "Nombre del presupuesto" después; el nombre se rellena por defecto con
+  la línea elegida (o con el nombre de la línea nueva mientras se escribe).

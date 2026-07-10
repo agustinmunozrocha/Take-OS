@@ -7,7 +7,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 
 | Módulo | Archivo | Catálogo | Cobertura |
 |--------|---------|----------|-----------|
-| Presupuesto / Cotización | `presupuesto-cotizacion.js` | [presupuesto.md](presupuesto.md) | 🔄 24/36 ✅ · 2 🔁 · 0 ❌ |
+| Presupuesto / Cotización | `presupuesto-cotizacion.js` | [presupuesto.md](presupuesto.md) | ✅ 32/36 ✅ · 4 🔁 · 0 ❌ (todo cubierto) |
 | Gastos | `gastos.js` | — | ⬜ |
 | Crew | `crew.js` | — | ⬜ |
 | Cargos | `cargos.js` | — | ⬜ |
