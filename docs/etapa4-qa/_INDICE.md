@@ -24,7 +24,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Configuración | `config.js` | — | ⬜ |
 | Admin | `admin.js` | — | ⬜ |
 | Espacio | `espacio.js` | — | ⬜ |
-| Info proyecto | `info-proyecto.js` | [info-proyecto.md](info-proyecto.md) | ✅ 19/19 ✅ (mejoras Grupo 2 + 1 pend. BD) |
+| Info proyecto | `info-proyecto.js` | [info-proyecto.md](info-proyecto.md) | ✅ 19/19 ✅ · Grupo 1 y 2 cerrados (2 pend. BD) |
 | Invitaciones | `invitaciones.js` | — | ⬜ |
 | Notificaciones | `notificaciones.js` | — | ⬜ |
 | Perfil / Onboarding | `perfil-onboarding.js` | — | ⬜ |

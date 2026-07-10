@@ -105,18 +105,31 @@ mudanza (comportamiento compartido con `main`).
 - **I17 → ✅** (fix) el Modo Admin re-renderiza el módulo abierto al instante.
 - **I1 → ✅** (fix I1b) el aviso "no está en la BD" persiste al re-render.
 
-**Pendiente · Grupo 2 (próxima vuelta de mejoras, frontend):**
-- **I1a** · el botón "+ Agregar a la BD" debe abrir una **ficha inline** de empresa
-  (hoy navega al módulo BD).
-- **I7** · sacar el campo **Productora**; **Servicio** pasa a desplegable
-  (Producción / Postproducción / Otro especificar). El "guardar Otro como default"
-  + reporte anual por servicio = BD, después del merge.
-- **I11b** · al crear un proyecto, PE/Director/JP como desplegables de internos y
-  **crear el cargo real en Cargos** (decisión de Agustín).
-- **Cargos** · quitar el cargo **"Productor"** del catálogo (dejar solo
-  "Jefe/a de Producción"; son lo mismo).
+### Cierre vuelta `feat/info-proyecto-grupo2-mejoras` (2026-07-10) — Grupo 2
+Las 4 mejoras probadas y aprobadas por Agustín (varias sub-vueltas):
+- **Cargos** · se quitó el cargo **"Productor/a"** del catálogo (queda "Jefe/a de
+  Producción").
+- **I7** · se sacó el campo **Productora**; **Servicio** pasó a desplegable
+  (Producción / Postproducción / Otro especificar).
+- **I1a** · el botón "+ Agregar a la BD" abre la **ficha de empresa inline** (reusa
+  el editor) en vez de navegar; deja la empresa vinculada.
+- **I11b** · al crear proyecto se asignan PE/Director/JP con el **combobox estrella**
+  (personas de la BD); quedan como responsables **y como cargo real** en Cargos.
+  Ajustes: tipo **interno/externo según los internos reales** (no auto-interno);
+  **perfil de acceso por defecto** (PE→Ejecutivo, Director→Creativo, JP→Producción);
+  **estado** interno→activo / externo→pendiente; si la persona no está en la BD
+  (con correo) el cargo muestra **"Agregar a la BD"** y oculta "Cambiar" (en Cargos
+  e Info Proyecto); guardar una persona ahora exige **nombre + correo**; el correo
+  del externo se **pre-rellena** al editar el cargo; botón "Gestionar en Cargos"
+  en **ámbar**.
+  - Dato de base confirmado: la RPC `guardar_cargos` solo hace DELETE+INSERT en
+    `project_cargos`, **no crea membresías ni invitaciones**.
 
 **Pendiente · flujo de BD (DESPUÉS de cerrar Info Proyecto, NO en esta skill):**
-asignar **contacto principal a una empresa no persiste** (teoría: sin columna en
-`companies`; frontend y RLS están ok, hay 18 vínculos guardados). Va por el flujo
-de migraciones. Registrado también en memoria de proyecto.
+- Asignar **contacto principal a una empresa no persiste** (teoría: sin columna en
+  `companies`; frontend y RLS ok, hay 18 vínculos guardados). Memoria de proyecto
+  [[takeos-bd-pendiente-empresa-contacto]].
+- **I7 · Servicios configurables:** guardar un servicio "Otro" como **predeterminado**
+  y poder gestionarlos en una **pestaña "Servicios"** del perfil de empresa (junto a
+  Datos de la empresa / Equipo / Diseño), más el reporte anual por tipo de servicio.
+  Todo eso necesita BD → va por el flujo de migraciones.
