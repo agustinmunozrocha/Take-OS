@@ -14,7 +14,7 @@ import { fmtMoney } from '../lib/calc.js';
 import { closeModal, getStoredTheme, showModal, slugify, updateThemeButton, toggleTheme } from '../lib/ui.js';
 import { STATES } from './kanban.js';
 import { _empCargarRebinds } from './notificaciones.js';
-import { _dalPerfilSaveSoon, dalCargarCargos, dalGuardarServicio, dalBorrarServicio } from './dal.js';
+import { _dalPerfilSaveSoon, dalCargarCargos, dalGuardarServicio, dalBorrarServicio, dalRenombrarServicio } from './dal.js';
 import { markDirty } from './persistencia-local.js';
 import { _rutValido, abrirPerfilUsuario } from './perfil-onboarding.js';
 import { PERFIL_NOMBRE_POR_CODIGO, _invMostrarResultado, dalInvitar, invitacionLink } from './invitaciones.js';
@@ -265,7 +265,8 @@ function _empServiciosRefresh() {
   box.innerHTML = items.map(function (s) {
     return '<div style="display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;">'
       + (esAdmin
-          ? '<input class="cot-input" style="flex:1;" value="' + escapeHtml(s.nombre) + '" ' + accionHTML('cfg.servicioRename', s.id, { on: 'change' }) + '>'
+          ? '<input class="cot-input" style="flex:1;" id="svc-in-' + escapeHtml(s.id) + '" value="' + escapeHtml(s.nombre) + '" data-orig="' + escapeHtml(s.nombre) + '" ' + accionHTML('cfg.servicioEdit', s.id, { on: 'input' }) + '>'
+            + '<button class="btn btn-primary btn-sm" id="svc-save-' + escapeHtml(s.id) + '" style="display:none;" ' + accionHTML('cfg.servicioGuardar', s.id) + '>Guardar</button>'
             + '<button class="btn btn-ghost btn-sm" ' + accionHTML('cfg.servicioDel', s.id, s.nombre) + ' title="Quitar servicio">Quitar</button>'
           : '<div style="flex:1;font-size:13px;color:var(--ink-secondary);">' + escapeHtml(s.nombre) + '</div>')
       + '</div>';
@@ -279,13 +280,38 @@ function _empServicioAgregar() {
     if (r && r.ok) { ORG_SERVICIOS.push({ id: r.id, nombre: nombre, orden: ORG_SERVICIOS.length }); el.value = ''; _empServiciosRefresh(); showToast({ kind: 'success', title: 'Servicio agregado', body: '«' + nombre + '» quedó en tus servicios.' }); }
   });
 }
-function _empServicioRenombrar(id, nombre) {
-  nombre = String(nombre || '').trim();
+/* Renombrar tiene fricción: aparece "Guardar" al editar, y al guardar se avisa
+   que TODOS los proyectos con ese servicio se renombran (coherencia del reporte).
+   El RPC renombra + propaga a los proyectos, atómico. */
+function _empServicioEditToggle(id, el) {
+  const btn = document.getElementById('svc-save-' + id); if (!btn) return;
+  const v = String(el.value || '').trim();
+  btn.style.display = (v && v !== (el.dataset.orig || '')) ? '' : 'none';
+}
+function _empServicioGuardarNombre(id) {
+  const inp = document.getElementById('svc-in-' + id); if (!inp) return;
+  const nombre = String(inp.value || '').trim();
   const s = ORG_SERVICIOS.find(function (x) { return x.id === id; });
   if (!s) return;
-  if (!nombre || s.nombre === nombre) { _empServiciosRefresh(); return; }
-  const prev = s.nombre; s.nombre = nombre;
-  dalGuardarServicio({ id: id, nombre: nombre, orden: s.orden }).then(function (r) { if (!r || !r.ok) { s.nombre = prev; } _empServiciosRefresh(); });
+  if (!nombre || nombre === s.nombre) { _empServiciosRefresh(); return; }
+  if (ORG_SERVICIOS.some(function (x) { return x.id !== id && String(x.nombre).toLowerCase() === nombre.toLowerCase(); })) { showToast({ kind: 'warning', title: 'Ya existe', body: 'Ya tienes un servicio con ese nombre.' }); return; }
+  const old = s.nombre;
+  const nProy = PROJECTS.filter(function (p) { return p && p.data && p.data.infoProyecto && p.data.infoProyecto.servicio === old; }).length;
+  showModal({
+    title: 'Renombrar servicio', danger: true,
+    body: 'Vas a renombrar «<b>' + escapeHtml(old) + '</b>» a «<b>' + escapeHtml(nombre) + '</b>».<br><br>Se actualizarán <b>' + nProy + ' proyecto(s)</b> que hoy usan «' + escapeHtml(old) + '»: su servicio pasará al nombre nuevo. Esto mantiene la coherencia para el reporte por tipo de servicio.',
+    confirmLabel: 'Sí, renombrar', cancelLabel: 'Cancelar',
+    onConfirm: function () {
+      dalRenombrarServicio(id, nombre).then(function (r) {
+        if (r && r.ok) {
+          s.nombre = nombre;
+          PROJECTS.forEach(function (p) { if (p && p.data && p.data.infoProyecto && p.data.infoProyecto.servicio === old) p.data.infoProyecto.servicio = nombre; });
+          _empServiciosRefresh();
+          showToast({ kind: 'success', title: 'Servicio renombrado', body: (r.count != null ? r.count : nProy) + ' proyecto(s) actualizados.' });
+        } else { _empServiciosRefresh(); }
+      });
+    }
+  });
 }
 function _empServicioBorrar(id, nombre) {
   showModal({
@@ -2198,7 +2224,8 @@ var _CFG_FN = {
 registrarAcciones('cfg', {
   fn: function (a) { var f = _CFG_FN[a[0]]; if (f) f.apply(null, a.slice(1)); else console.error('[cfg] fn sin mapear:', a[0]); },
   volver: function () { openConfigPanel(); },
-  servicioRename: function (a, el) { _empServicioRenombrar(a[0], el.value); },
+  servicioEdit: function (a, el) { _empServicioEditToggle(a[0], el); },
+  servicioGuardar: function (a) { _empServicioGuardarNombre(a[0]); },
   servicioDel: function (a) { _empServicioBorrar(a[0], a[1]); },
   guardarOS: function () { closeConfigPanel(); gancho('exportSave')(); },
   cargarOS: function () { closeConfigPanel(); document.getElementById('loadFileInput').click(); },

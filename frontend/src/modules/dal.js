@@ -284,6 +284,20 @@ export async function dalGuardarServicio(s) {
     return { ok: false, error: e };
   }
 }
+export async function dalRenombrarServicio(id, nombre) {
+  // Renombra el servicio y propaga el nuevo nombre a los proyectos que lo usan
+  // (RPC atómico, solo Administrador). Devuelve la cantidad de proyectos tocados.
+  if (!sb || !id) return { ok: false };
+  try {
+    const { data, error } = await sb.rpc('renombrar_servicio', { p_id: id, p_nombre: String(nombre || '').trim() });
+    if (error) throw error;
+    return { ok: true, count: (typeof data === 'number' ? data : null) };
+  } catch (e) {
+    console.error('[dal] renombrar servicio', e);
+    try { showToast({ kind: 'warning', title: 'No se pudo renombrar', body: (e && e.message) ? String(e.message) : 'Reintenta.' }); } catch (x) {}
+    return { ok: false, error: e };
+  }
+}
 export async function dalBorrarServicio(id) {
   if (!sb || !id) return { ok: false };
   try {
