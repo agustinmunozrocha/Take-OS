@@ -1,5 +1,17 @@
 # Changelog — TakeOS
 
+## V11.36.0 — 9 de julio de 2026
+### Plan de Scouting: ahora se guarda en la base (sincroniza entre dispositivos)
+
+Rama `feat/scouting-persistencia-bd`. **Frontend + base de datos** (migración).
+
+Hasta ahora el Plan de Scouting (fecha, paradas, traslados, tiempos de visita, quiénes van) vivía **solo en el respaldo local del navegador**: no sincronizaba a la base, no viajaba entre computadores ni entre usuarios, y un refresco que recargara desde la base podía perderlo. Ahora se guarda de verdad en Supabase.
+
+- **Base de datos (migración `20260709120000_scouting_persistencia_bd.sql`):** tabla nueva `project_scouting` (un documento JSONB por proyecto, mismo patrón que `project_shooting_plan` / `project_call_sheet`), con FK a `projects` (borrado en cascada), RLS activado y las mismas dos políticas de permiso que el Plan de Rodaje (módulo `operacion_creatividad`). Se engancha a la RPC `guardar_operaciones_4a`, que ya persiste los otros "planes" del proyecto. Cambio **aditivo y reversible**: no toca datos ni tablas existentes.
+- **Frontend (`index.html`):** el Plan de Scouting se suma al guardado (payload 4a), a la lectura del proyecto (`select`), a la hidratación y a la fusión desde Supabase. Se manda solo cuando tiene contenido real (paradas, fecha o gente); si está vacío, no crea registro.
+- **Migración de lo existente:** los planes de scouting que hoy están en un navegador se suben a la base la **primera vez que se abre y guarda** ese proyecto en ese navegador (no se pierden). Verificado contra el esquema real de producción con una prueba en transacción revertida (sin tocar prod).
+- **Sin cambios visibles** en la pantalla de Scouting: es la misma; lo que cambia es que ahora persiste de verdad.
+
 ## V11.35.0 — 9 de julio de 2026
 ### Scouting: tiempo de visita por parada · Gastos: editar y eliminar presupuestos
 
