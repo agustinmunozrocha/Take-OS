@@ -225,9 +225,14 @@ export function navigateToProject(projectId) {
 
 // ── Crear proyecto ───────────────────────────────────────────────────────────
 
-export function newProject() {
+export async function newProject() {
   if (authNivel('crear_proyecto') !== 'E') { _authBlockWriteToast(); return; }
   _npDraft = { nombre: '', cliente: '', pe: '', director: '', jp: '' };
+  // I11b · lista REAL de internos de la productora (memberships) para decidir, al
+  // crear, si cada responsable es interno o externo (no forzar todos a externo).
+  let _internos = [];
+  try { _internos = (await gancho('_cargoCargarInternos')()) || []; } catch (e) {}
+  const _internSet = new Set(_internos.map(function (n) { return String(n).trim().toLowerCase(); }));
   showModal({
     title: 'Nuevo proyecto',
     body: `
@@ -279,10 +284,12 @@ export function newProject() {
       const id = 'P-' + Date.now();
       // I11b · cargos reales para los responsables asignados al crear (los nombres
       // de cargo calzan con la derivación RECI: PE / Director / Jefe de Producción).
-      // Los responsables asignados al crear quedan como EXTERNOS (un PE/Director/JP
-      // puede ser un freelance); nunca se auto-invitan como internos de la
-      // productora. Sin email → no se dispara ninguna invitación.
-      const _mkCargo = function (cargoName, persona) { return persona ? { id: 'CG-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cargo: cargoName, custom: false, personaNombre: persona, tipo: 'externo', perfil: '', estado: 'activo' } : null; };
+      // El tipo se decide según los internos REALES: si la persona es interna de
+      // la productora queda 'interno', si no 'externo' (un PE/Director/JP puede ser
+      // freelance). No se crea ninguna invitación (guardar_cargos solo escribe el
+      // cargo; marcar 'interno' a un miembro ya existente no lo re-invita).
+      const _esInterno = function (persona) { return _internSet.has(String(persona || '').trim().toLowerCase()); };
+      const _mkCargo = function (cargoName, persona) { return persona ? { id: 'CG-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cargo: cargoName, custom: false, personaNombre: persona, tipo: _esInterno(persona) ? 'interno' : 'externo', perfil: '', estado: 'activo' } : null; };
       const cargosNuevos = [_mkCargo('Productor/a Ejecutivo/a', pe), _mkCargo('Director/a', director), _mkCargo('Jefe/a de Producción', jp)].filter(Boolean);
       const nuevo = {
         id, client: cliente, name: nombre, state: 'venta',
