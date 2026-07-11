@@ -1098,7 +1098,8 @@ function _dalOperaciones4aPartes(p) {
   const dias = p.project_shoot_days || [];
   const plan = _dal1to1(p.project_shooting_plan);
   const hoja = _dal1to1(p.project_call_sheet);
-  if (!dias.length && !plan && !hoja) return null;
+  const scout = _dal1to1(p.project_scouting);
+  if (!dias.length && !plan && !hoja && !scout) return null;
   let rodajes = null;
   if (dias.length) {
     rodajes = dias.slice().sort(function(a,b){ return (a.posicion||0)-(b.posicion||0); }).map(function(d){
@@ -1108,7 +1109,8 @@ function _dalOperaciones4aPartes(p) {
   return {
     rodajes: rodajes,
     planRodaje: (plan && plan.plan != null) ? plan.plan : null,
-    hojaLlamado: (hoja && hoja.data != null) ? hoja.data : null
+    hojaLlamado: (hoja && hoja.data != null) ? hoja.data : null,
+    scouting: (scout && scout.scouting != null) ? scout.scouting : null
   };
 }
 
@@ -1330,6 +1332,7 @@ export function _dalFusionarProyecto(target, partes) {
     if (o4.rodajes) d.rodajes = o4.rodajes;
     if (o4.planRodaje) d.planRodaje = o4.planRodaje;
     if (o4.hojaLlamado) d.hojaLlamado = o4.hojaLlamado;
+    if (o4.scouting) d.scouting = o4.scouting;
   }
   if (partes.operaciones4b) {                                       // V9.4.2: operaciones 4b desde Supabase
     const ob = partes.operaciones4b;
@@ -1374,6 +1377,7 @@ function _dalProyectoSelect() {
     + 'project_shoot_days(dia_id,fecha,activo,descripcion,posicion),'
     + 'project_shooting_plan(plan),'
     + 'project_call_sheet(data),'
+    + 'project_scouting(scouting),'
     + 'project_locations(loc_id,estado,costo,contratacion,notas_proy,posicion),'
     + 'project_crew_extra(nombre,contact_id,medio_transporte),'
     + 'project_external_crew(tipo,nombre,rol,telefono,restriccion,direccion,comuna,posicion),'
@@ -1819,7 +1823,17 @@ function _dalOperaciones4aPayload(project) {
   });
   const plan = (d.planRodaje && typeof d.planRodaje === 'object' && Object.keys(d.planRodaje).length) ? d.planRodaje : null;
   const hoja = (d.hojaLlamado && typeof d.hojaLlamado === 'object' && Object.keys(d.hojaLlamado).length) ? d.hojaLlamado : null;
-  return { id: project.id, rodajes: rodajes, planRodaje: plan, hojaLlamado: hoja };
+  // Plan de Scouting: se manda como documento JSONB si tiene contenido real
+  // (paradas, fecha o gente). Si está vacío/default, va null y la RPC borra el
+  // documento del proyecto (mismo trato que plan de rodaje / hoja de llamado).
+  const sc = d.scouting;
+  const scoutTieneContenido = !!(sc && typeof sc === 'object' && (
+    (Array.isArray(sc.filas) && sc.filas.length) ||
+    (sc.fecha && String(sc.fecha).trim()) ||
+    (Array.isArray(sc.quienes) && sc.quienes.some(function (q) { return q && String(q).trim(); }))
+  ));
+  const scouting = scoutTieneContenido ? sc : null;
+  return { id: project.id, rodajes: rodajes, planRodaje: plan, hojaLlamado: hoja, scouting: scouting };
 }
 
 async function dalGuardarOperaciones4a(project) {
