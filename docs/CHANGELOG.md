@@ -1,5 +1,17 @@
 # Changelog — TakeOS
 
+## V11.38.0 — 13 de julio de 2026
+### Base de Datos: la pantalla solo la ven los perfiles con edición
+
+Rama `feat/bd-esconder-pantalla-lectores-main`. Solo **frontend**.
+
+Hasta ahora la pantalla de Base de Datos (contactos) también se les mostraba a los perfiles de solo-lectura, en modo lectura. Ahora **solo la ven y la abren los perfiles con edición** de la base (Administrador, Ejecutivo, Producción, Finanzas, Asistencia); los de solo-lectura (Coordinación, Creativo) ya no la ven.
+
+- La entrada "Base de Datos" del menú lateral **desaparece** para los perfiles de solo-lectura.
+- Los otros accesos a esa pantalla (botón del panel de configuración, buscador ⌘K y la restauración de la última vista al entrar) quedan **bloqueados** para ellos: si intentan entrar, ven un aviso "Sin acceso" y se les manda al Control Room, sin pantalla en blanco.
+- **No afecta los comboboxes:** en Presupuesto, Gastos, Cargos y Legal los contactos siguen apareciendo y se pueden elegir con normalidad (esos datos se cargan al iniciar sesión, por otra vía).
+- **Sin cambios de base de datos** (el permiso ya estaba definido; esto solo esconde la pantalla en el frontend). Mismo cambio ya aplicado en la versión modular de staging.
+
 ## V11.37.0 — 13 de julio de 2026
 ### Base de Datos: el guardado de un contacto ya no dice "guardado" en falso
 
