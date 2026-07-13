@@ -13,7 +13,7 @@ import { authNivel } from '../lib/auth.js';
 import { fmtMoney, initials } from '../lib/calc.js';
 import { _edadDesde, _empTieneRol, _locThumbAsync, _toISODate, bancoSelectHTML, closeModal, comboboxAddToBD, pfBancoChange, regionSelectHTML, showModal, comboboxCloseDelayed, comboboxFilter, comboboxFilterEmpresas, comboboxOpen, togglePfCrew, togglePfExtranjera } from '../lib/ui.js';
 import { renderModule } from '../lib/nav.js';
-import { STATES, _lastViewSave } from './kanban.js';
+import { STATES, _lastViewSave, navigateToControlRoom } from './kanban.js';
 import { calcSummaryFin } from './presupuesto-cotizacion.js';
 import { bdLocFind, ensureLocShape, locFullAddress, locPrimaryContact, nextLocIdBD, openLocDetail } from './locaciones.js';
 import { _normEmailBD, _normKey, _normNameBD, _normPhoneBD, _normRutBD } from './bd-excel.js';
@@ -841,6 +841,15 @@ async function restaurarLocacionBD(locId) {
    dos elementos con el mismo ID. Ahora #bdGlobalMain es un container
    DEDICADO que vive separado en el DOM desde el inicio. */
 export function openGlobalBDPersonas() {
+  // Opción A: la BD global solo se abre para EDITORES del módulo 'bd'. Cubre los
+  // accesos que NO pasan por navigateToModule (botón de Config, buscador global y
+  // la restauración de la última vista 'bd-global' al bootear). El redirect evita
+  // dejar al lector en pantalla en blanco en el caso del deep-link.
+  if (authNivel('bd') !== 'E') {
+    showToast({ kind: 'warning', title: 'Sin acceso', body: 'La Base de Datos está disponible solo para perfiles con edición.' });
+    try { navigateToControlRoom(); } catch (e) {}
+    return;
+  }
   STATE.currentView = 'bd-global';
   STATE.currentProject = null;
   STATE.currentModule = 'bd-personas';

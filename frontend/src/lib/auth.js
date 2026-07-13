@@ -47,7 +47,15 @@ export function authNivelModulo(appKey) {
   if (!code) return 'none';
   return authNivel(code);
 }
-export function authPuedeVer(appKey) { return authNivelModulo(appKey) !== 'none'; }
+export function authPuedeVer(appKey) {
+  const n = authNivelModulo(appKey);
+  // Opción A: la PANTALLA de Base de Datos (contactos) es visible solo para
+  // EDITORES ('E'). Un LECTOR ('L') no la ve en la nav ni puede navegar a ella.
+  // NO afecta los comboboxes: leen BD_CONTACTOS/BD_PERSONAS poblados en el boot
+  // por dalBootContactos (la RLS permite SELECT a E y L), sin pasar por aquí.
+  if (appKey === 'bd-personas') return n === 'E';
+  return n !== 'none';
+}
 export function authEsAdmin() { return TAKEOS_PERFIL && (TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.nombre === 'Administrador'); }
 /* V10.5.2: editar responsables de sección es exclusivo de Administrador (1) y Ejecutivo (2).
    El servidor (RPC 4b) ya ignora los responsables para el resto; esto alinea la UI.
