@@ -74,6 +74,7 @@ const GO_ESTADOS = { pendiente: 'Pendiente', por_revisar: 'Por revisar', validad
 const GO_STATE = { cfoTab: 'validacion' };
 let GO_DRAFT = {};
 let GO_EDIT_ID = null;   // V11.x · id del gasto en edición (null = se está creando uno nuevo)
+let GO_PRES_EDIT_ID = null;   // id del presupuesto (sobre/caja) en edición (null = creando uno nuevo)
 let GO_SEQ = 0;
 function goNewId(prefix) { GO_SEQ++; return prefix + Date.now().toString(36) + GO_SEQ.toString(36); }
 
@@ -163,9 +164,13 @@ function renderGastos() {
     const rest = (e.asignado || 0) - gastado;
     const pct = e.asignado ? gastado / e.asignado * 100 : (gastado > 0 ? 101 : 0);
     const cls = pct > 100 ? 'over' : (pct >= 85 ? 'mid' : '');
-    return `<div class="go-pcard">
-      <div class="go-pl">→ ${escapeHtml(e.linea)}</div>
-      <div class="go-pn">${escapeHtml(e.nombre)}</div>
+    return `<div class="go-pcard" style="position:relative;">
+      <div class="go-pcard-acts" style="position:absolute;top:6px;right:6px;display:flex;gap:2px;">
+        <button title="Editar presupuesto" ${accionHTML('go.editPresup', e.id)} style="border:none;background:none;cursor:pointer;color:var(--ink-faint);font-size:12px;padding:2px 4px;line-height:1;border-radius:5px;">✎</button>
+        <button title="Eliminar presupuesto" ${accionHTML('go.delPresup', e.id)} style="border:none;background:none;cursor:pointer;color:var(--ink-faint);font-size:14px;padding:2px 4px;line-height:1;border-radius:5px;">×</button>
+      </div>
+      <div class="go-pl" style="padding-right:40px;">→ ${escapeHtml(e.linea)}</div>
+      <div class="go-pn" style="padding-right:40px;">${escapeHtml(e.nombre)}</div>
       <div class="go-pr">resp · ${escapeHtml(e.resp || '—')}</div>
       <div class="go-pq ${rest < 0 ? 'neg' : ''}">${fmtMoney(rest)}</div>
       <div class="go-pr">disponible de ${fmtMoney(e.asignado || 0)}</div>
@@ -602,29 +607,34 @@ function _puedeCrearPresupuestoGastos() {
   if (!TAKEOS_PERFIL) return true;
   return TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.codigo === 2 || TAKEOS_PERFIL.codigo === 3;
 }
-function goOpenPresup() {
-  if (!_puedeCrearPresupuestoGastos()) { showToast({ kind: 'warning', title: 'Sin permiso', body: 'Crear presupuestos es facultad de Administrador, Ejecutivo y Producción.' }); return; }
+function goOpenPresup(editId) {
+  if (!_puedeCrearPresupuestoGastos()) { showToast({ kind: 'warning', title: 'Sin permiso', body: 'Crear y editar presupuestos es facultad de Administrador, Ejecutivo y Producción.' }); return; }
   const project = STATE.currentProject; const jp = goJefeProd(project);
   const lineas = goGastosLineas(project);
   const contactos = goContactos(project);
+  // Si viene editId, editamos un presupuesto existente (mismo modal); si no, se
+  // crea uno nuevo (comportamiento de siempre).
+  GO_PRES_EDIT_ID = editId || null;
+  const ed = editId ? goPresList(project).find(p => p.id === editId) : null;
+  const _selLinea = (l) => (ed && ed.linea === l) ? ' selected' : '';
 
-  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Crear presupuesto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>${ed ? 'Editar' : 'Crear'} presupuesto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
       <div class="go-field"><label>Asociar a línea del Presupuesto</label>
-        <select class="go-inp" id="pp_linea" data-accion="go.ppLinea" data-on="change"><option value="">— elige una línea —</option>${lineas.map(l => '<option>' + escapeHtml(l) + '</option>').join('')}<option value="__new__">+ Crear nueva línea (parte en $0)…</option></select>
+        <select class="go-inp" id="pp_linea" data-accion="go.ppLinea" data-on="change"><option value="">— elige una línea —</option>${lineas.map(l => '<option' + _selLinea(l) + '>' + escapeHtml(l) + '</option>').join('')}<option value="__new__">+ Crear nueva línea (parte en $0)…</option></select>
         <div class="go-field" id="pp_newWrap" style="display:none;margin-top:10px;"><label>Nombre de la nueva línea</label><input class="go-inp" id="pp_newName" data-accion="go.ppNewName" data-on="input" placeholder="ej. Maquillaje"></div>
         <div class="go-help">Estas son las filas de <b>Gastos de producción</b> del Presupuesto. Si falta una, crea una nueva: se agrega al Presupuesto (parte en $0, marcada como EXTRA) y verás cuánto se pasa el proyecto.</div>
       </div>
-      <div class="go-field"><label>Nombre del presupuesto</label><input class="go-inp" id="pp_nombre" placeholder="Se completa con la línea; puedes cambiarlo"></div>
+      <div class="go-field"><label>Nombre del presupuesto</label><input class="go-inp" id="pp_nombre" placeholder="Se completa con la línea; puedes cambiarlo" value="${ed ? escapeHtml(ed.nombre) : ''}"></div>
       <div class="go-frow">
-        <div class="go-field half"><label>Responsable</label><input class="go-inp" id="pp_resp" list="go_dl_contactos" placeholder="nombre"></div>
-        <div class="go-field half"><label>Monto asignado (CLP)</label><input class="go-inp" id="pp_monto" placeholder="0" inputmode="numeric"></div>
+        <div class="go-field half"><label>Responsable</label><input class="go-inp" id="pp_resp" list="go_dl_contactos" placeholder="nombre" value="${ed && ed.resp && ed.resp !== '—' ? escapeHtml(ed.resp) : ''}"></div>
+        <div class="go-field half"><label>Monto asignado (CLP)</label><input class="go-inp" id="pp_monto" placeholder="0" inputmode="numeric" value="${ed && ed.asignado ? String(ed.asignado) : ''}"></div>
       </div>
       <div class="go-help" id="pp_iguala" style="display:none;margin-top:2px;color:var(--ink-secondary);"></div>
-      <div class="go-help" style="margin-top:2px;">Crear presupuestos es facultad de los perfiles Administrador, Ejecutivo y Producción${jp.nombre ? (' · Jefe de producción del proyecto: <b>' + escapeHtml(jp.nombre) + '</b>') : ''}.</div>
+      <div class="go-help" style="margin-top:2px;">${ed ? 'Editar' : 'Crear'} presupuestos es facultad de los perfiles Administrador, Ejecutivo y Producción${jp.nombre ? (' · Jefe de producción del proyecto: <b>' + escapeHtml(jp.nombre) + '</b>') : ''}.</div>
       <datalist id="go_dl_contactos">${contactos.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
-    <div class="go-mf"><button class="btn btn-secondary" data-accion="ui.cerrar">Cancelar</button><button class="btn btn-primary" data-accion="go.guardarPresup">Crear presupuesto</button></div></div>`);
+    <div class="go-mf">${ed ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-deep);margin-right:auto;" ${accionHTML('go.delPresup', ed.id)}>Eliminar presupuesto</button>` : ''}<button class="btn btn-secondary" data-accion="ui.cerrar">Cancelar</button><button class="btn btn-primary" data-accion="go.guardarPresup">${ed ? 'Guardar cambios' : 'Crear presupuesto'}</button></div></div>`);
 }
 function goPpLineaChange() {
   const el = document.getElementById('pp_linea'); if (!el) return;
@@ -657,7 +667,9 @@ function goSavePresup() {
   const val = id => (document.getElementById(id) || {}).value || '';
   // V11.3.0: la clave por RUT del jefe de producción fue eliminada. La
   // autorización depende del perfil de acceso (Administrador/Ejecutivo/Producción).
-  if (!_puedeCrearPresupuestoGastos()) { showToast({ kind: 'error', title: 'Sin permiso', body: 'Crear presupuestos es facultad de Administrador, Ejecutivo y Producción.' }); return; }
+  if (!_puedeCrearPresupuestoGastos()) { showToast({ kind: 'error', title: 'Sin permiso', body: 'Crear y editar presupuestos es facultad de Administrador, Ejecutivo y Producción.' }); return; }
+  const ed = GO_PRES_EDIT_ID ? d.presupuestos.find(p => p.id === GO_PRES_EDIT_ID) : null;
+  if (GO_PRES_EDIT_ID && !ed) { GO_PRES_EDIT_ID = null; showToast({ kind: 'error', title: 'No encontrado', body: 'Ese presupuesto ya no existe.' }); closeModal(); renderGastos(); return; }
   let linea = val('pp_linea');
   if (linea === '__new__') {
     linea = (val('pp_newName') || '').trim() || 'Nueva línea';
@@ -673,9 +685,43 @@ function goSavePresup() {
   }
   if (!linea) { showToast({ kind: 'warning', title: 'Elige o crea una línea', body: 'Cada presupuesto se asocia a una línea del Presupuesto.' }); return; }
   const monto = parseInt((val('pp_monto') || '0').replace(/\D/g, '')) || 0;
-  d.presupuestos.push({ id: goNewId('e'), nombre: (val('pp_nombre') || '').trim() || '(sin nombre)', linea: linea, resp: (val('pp_resp') || '').trim() || '—', asignado: monto });
-  markDirty(); closeModal(); renderGastos();
-  showToast({ kind: 'success', title: 'Presupuesto creado', body: 'Asociado a la línea “' + linea + '”.' });
+  const nombre = (val('pp_nombre') || '').trim() || '(sin nombre)';
+  const resp = (val('pp_resp') || '').trim() || '—';
+  if (ed) {
+    ed.nombre = nombre; ed.linea = linea; ed.resp = resp; ed.asignado = monto;
+    GO_PRES_EDIT_ID = null;
+    markDirty(); closeModal(); renderGastos();
+    showToast({ kind: 'success', title: 'Presupuesto actualizado', body: 'Cambios guardados.' });
+  } else {
+    d.presupuestos.push({ id: goNewId('e'), nombre: nombre, linea: linea, resp: resp, asignado: monto });
+    markDirty(); closeModal(); renderGastos();
+    showToast({ kind: 'success', title: 'Presupuesto creado', body: 'Asociado a la línea “' + linea + '”.' });
+  }
+}
+/* Eliminar un presupuesto (sobre/caja). Si tiene gastos cargados no se borra:
+   habría que reasignarlos o eliminarlos primero (no se orfanan registros de plata
+   en silencio). Misma facultad que crear/editar. */
+function goDeletePresup(id) {
+  if (!_puedeCrearPresupuestoGastos()) { showToast({ kind: 'error', title: 'Sin permiso', body: 'Eliminar presupuestos es facultad de Administrador, Ejecutivo y Producción.' }); return; }
+  const project = STATE.currentProject; if (!project) return;
+  const d = goData(project);
+  const e = d.presupuestos.find(p => p.id === id); if (!e) return;
+  const ligados = goMovs(project).filter(m => m.pres === id);
+  if (ligados.length) {
+    showToast({ kind: 'warning', title: 'Tiene gastos cargados', body: 'Este presupuesto tiene <b>' + ligados.length + '</b> gasto(s) asociado(s). Reasígnalos a otro presupuesto o elimínalos antes de borrarlo.' });
+    return;
+  }
+  showModal({
+    title: 'Eliminar presupuesto',
+    body: '¿Estás seguro de que quieres eliminar este presupuesto?<br><br><b>' + escapeHtml(e.nombre) + '</b> · → ' + escapeHtml(e.linea) + '<br><br>No tiene gastos cargados. Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar presupuesto', cancelLabel: 'Cancelar', danger: true,
+    onConfirm: function () {
+      const i = d.presupuestos.findIndex(p => p.id === id);
+      if (i >= 0) d.presupuestos.splice(i, 1);
+      markDirty(); closeModal(); renderGastos();
+      showToast({ kind: 'success', title: 'Presupuesto eliminado', body: 'Se quitó de la lista.' });
+    }
+  });
 }
 
 /* ---------- modal: agregar gasto ---------- */
@@ -1688,6 +1734,8 @@ registrarAcciones('go', {
   ppLinea: function () { goPpLineaChange(); },
   ppNewName: function () { goPpNewName(); },
   guardarPresup: function () { goSavePresup(); },
+  editPresup: function (a) { goOpenPresup(a[0]); },
+  delPresup: function (a) { goDeletePresup(a[0]); },
   hint: function () { goGastoHint(); },
   quienCombo: function (a, el, ev) {
     if (ev.type === 'focus') comboboxOpen(el);
