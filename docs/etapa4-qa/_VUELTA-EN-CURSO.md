@@ -3,6 +3,17 @@
 **Estado: ninguna vuelta en curso.**
 
 <!--
+CERRADO 2026-07-13 — branch fix/contactos-persistencia-guardado (merge 7ec4011 →
+etapa4-integracion): el guardado de la ficha de persona verifica que la base haya
+recibido la escritura (dal.js con .select()) y bd.js espera la confirmación,
+revierte y avisa si la base rechaza; se acabó el "guardado" en falso. Mismo fix
+aplicado al monolito en main. Aprobado por Agustín en local. Pendiente aparte:
+migraciones de validación de cuenta y anti-duplicados de RUT (rama
+chore/bd-validacion-cuenta-y-antidup-rut) y alineación de permisos por perfil,
+para la sesión conjunta de BD.
+-->
+
+<!--
 Info Proyecto: cerrado (Grupo 1 + Grupo 2). Detalle en info-proyecto.md.
 Servicios configurables (I7): cerrado — tabla organization_services + RPC renombrar_servicio.
 
