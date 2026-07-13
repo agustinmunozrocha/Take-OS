@@ -556,10 +556,10 @@ function saveLocAdd() {
 /* ── Plan de Scouting ── motor de tiempos del Plan de Rodaje (cascada) ── */
 function locScoutTimes(project) {
   const s = locEnsureScout(project);
-  // V11.24 (Pasada 5): solo los traslados aportan tiempo; la parada ya no tiene
-  // duración (se ignora aunque venga en datos antiguos). La cascada calcula las
-  // horas con los traslados y el "término aprox." sigue funcionando.
-  const filas = s.filas.map(f => ({ tipo: f.tipo, dur: f.tipo === 'traslado' ? f.dur : null, anchor: null }));
+  // Traslados y paradas aportan tiempo: el traslado suma el viaje y la parada suma
+  // su tiempo de visita (f.dur), empujando las horas de las paradas siguientes; el
+  // "término aprox." incluye la visita de la última parada. (Paridad con main.)
+  const filas = s.filas.map(f => ({ tipo: f.tipo, dur: f.dur, anchor: null }));
   return gancho('prComputeTimes')(filas, gancho('prParseHM')(s.inicio));
 }
 function locScoutSet(field, value) { const s = locEnsureScout(STATE.currentProject); s[field] = (field === 'inicio') ? (normalizeTime24 ? normalizeTime24(value) : value) : value; markDirty(); if (field === 'inicio') renderLocaciones(); }
@@ -722,6 +722,7 @@ function locScoutingHTML(project) {
           <button class="scout-drag" draggable="true" ${accionHTML('loc.scoutDrag', pIdx, { on: 'dragstart dragend' })} title="Arrastrar para reordenar">⠿</button>
           <span class="combobox-wrap person-combobox" style="flex:1;min-width:0;"><input class="input combobox-input" value="${e(_nomParada)}" placeholder="Locación o texto libre…" autocomplete="off" style="font-weight:600;width:100%;" ${accionHTML('loc.scoutParada', i, { on: 'focus input blur change' })}><div class="combobox-dropdown" hidden></div></span>
           ${(esLibre && _nomParada) ? `<button type="button" title="No está en la BD de locaciones · clic para agregarla" ${accionHTML('loc.scoutLocBD', pIdx)} style="border:none;background:none;cursor:pointer;color:var(--warning);font-weight:700;font-size:14px;padding:0 2px;flex:0 0 auto;">●</button>` : ''}
+          <span title="Tiempo de visita en el lugar (HHMM: 30 = 30 min · 130 = 1 h 30). Opcional; empuja las horas de las paradas siguientes." style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-faint);white-space:nowrap;flex:0 0 auto;">⏱ <input class="scout-dur-in" value="${e(f.dur || '')}" placeholder="0:30" inputmode="numeric" ${accionHTML('loc.scoutFila', i, 'dur', true, { on: 'change' })}>visita</span>
           <span class="scout-badge ${esLibre ? 'libre' : 'loc'}">${esLibre ? 'Parada libre' : 'Locación'}</span>
           <button class="scout-del" ${accionHTML('loc.scoutParadaDel', i)} title="Quitar parada (y su traslado)">×</button>
         </div>
@@ -773,7 +774,8 @@ function scoutBuildPDFHTML(project) {
     const _nomP = f.locId ? (l.nombre || '—') : (f.nombreLibre || '—');
     const _mapsP = f.maps || (f.locId ? (l.maps || '') : '');
     const _mapsLink = _mapsP ? `<br><a href="${safeUrl(_mapsP)}" style="color:#1a5fb4;font-size:11px;">Ver en Maps</a>` : '';
-    return `<tr><td>${clock}</td><td></td><td><b>${e(_nomP)}</b><br><span class="mut">${e(l.direccion || '')}</span>${_mapsLink}</td><td>${e(_contacto)}</td><td>${e(f.revisar || '')}</td></tr>`;
+    const _durVisita = gancho('prParseHM')(f.dur);
+    return `<tr><td>${clock}</td><td>${_durVisita != null ? e(gancho('prFmtDur')(_durVisita)) : ''}</td><td><b>${e(_nomP)}</b><br><span class="mut">${e(l.direccion || '')}</span>${_mapsLink}</td><td>${e(_contacto)}</td><td>${e(f.revisar || '')}</td></tr>`;
   }).join('');
   const fin = times.length ? gancho('prFmtClock')(times[times.length - 1].termino != null ? times[times.length - 1].termino : times[times.length - 1].inicio) : '';
   const _ptsRuta = s.filas.filter(x => x.tipo === 'parada').map(x => { if (x.locId) { const ll = bdLocFind(x.locId) || {}; return String(ll.direccion || ll.nombre || locNombre(x.locId) || '').trim(); } return String(x.nombreLibre || '').trim(); }).filter(Boolean);
