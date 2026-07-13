@@ -6,7 +6,7 @@ Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 entregables, presupuesto alternativo costeable, versiones/comparador y la Carta de
 Cotización en PDF. **NO** cubre el grid de Presupuesto (`renderPresupuesto`), que
 ya está aprobado en [presupuesto.md](presupuesto.md) (P1–P36).
-Cobertura: 0/25 ✅ (catálogo nuevo).
+Cobertura: 3/25 ✅ (3 verificadas por Agustín).
 
 > **Cómo leer este catálogo.** Las pruebas **⭐** son donde el cruce
 > monolito↔modular levantó bug; **pruébalas primero**. El juez final eres tú en
@@ -48,15 +48,15 @@ Cobertura: 0/25 ✅ (catálogo nuevo).
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
 | C12 ⭐ | Agregar rol al snapshot (sub-sección normal) | En oferta alt → "+ Agregar rol a Dirección" | Fila nueva aparece y el costeo recalcula | ⬜ |
-| C13 ⭐ | **Sub-sección con apóstrofo** (BUG-COT-2) | Renombrar una sub-sección a p. ej. `D'Arte`, ir a la oferta alternativa, agregar/editar/borrar una fila en ese bloque | Debe agregar/editar/borrar (antes **fallaba en silencio**). Arreglado en esta tanda | ⬜ |
+| C13 ⭐ | **Sub-sección con apóstrofo** (BUG-COT-2) | Renombrar una sub-sección a p. ej. `D'Arte`, ir a la oferta alternativa, agregar/editar/borrar una fila en ese bloque | Debe agregar/editar/borrar (antes **fallaba en silencio**). Arreglado en esta tanda | ✅ |
 | C14 | Editar valor/cant/DTE/unidad del snapshot | Cambiar celdas | Costo por fila y costeo de la oferta se actualizan | ⬜ |
 | C15 | Ganancia y % | Verificar la fila "Ganancia" del costeo | = valor − costo − comisiones; % = ganancia/valor | ⬜ |
 
 ## F. Versiones / Comparador
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
-| C16 ⭐ | **Subtítulo de los chips de versión** (BUG-COT-1) | Abrir Cotización con ≥1 versión | Cada chip debe mostrar `<valor real> · <margen real>` (antes salía **`$0 · 0,0%`**). Arreglado | ⬜ |
-| C17 ⭐ | **Comparador con versión histórica** (BUG-COT-1) | Crear v2, comparar la oferta base v1 vs v2 | Valor/Margen de la base histórica deben ser reales (antes **$0 / 0** y el Δ salía falso). Arreglado | ⬜ |
+| C16 ⭐ | **Subtítulo de los chips de versión** (BUG-COT-1) | Abrir Cotización con ≥1 versión | Cada chip debe mostrar `<valor real> · <margen real>` (antes salía **`$0 · 0,0%`**). Arreglado | ✅ |
+| C17 ⭐ | **Comparador con versión histórica** (BUG-COT-1) | Crear v2, comparar la oferta base v1 vs v2 | Valor/Margen de la base histórica deben ser reales (antes **$0 / 0** y el Δ salía falso). Arreglado | ✅ |
 | C18 | Crear/activar versión | "+ Nueva versión", cambiar de chip | Copia la anterior; la previa queda como histórica de solo lectura | ⬜ |
 
 ## G. PDF Carta

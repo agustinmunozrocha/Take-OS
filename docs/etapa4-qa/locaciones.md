@@ -3,7 +3,7 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouting`
 + RPC `guardar_operaciones_4a`), `plan-rodaje.js` (motor de tiempos del scouting),
-`lib/delegacion.js`. Cobertura: 0/23 ✅ (catálogo nuevo).
+`lib/delegacion.js`. Cobertura: 4/25 ✅ (4 verificadas por Agustín).
 
 > **Bugs encontrados y arreglados en esta tanda** (branch
 > `fix/locaciones-scouting-persistencia-visita`): BUG-LOC-1 (🔴 el Plan de Scouting
@@ -50,10 +50,10 @@ Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouti
 | LOC-17 | Agregar/borrar parada | + Parada varias veces; borrar una | Inserta traslado conector automático; nunca dos paradas ni dos traslados seguidos; borrar parada se lleva su traslado | ⬜ |
 | LOC-18 | Vincular parada a locación / parada libre | Combobox → elegir de la BD; o texto libre → bola naranja | Vincula (muestra dirección/maps) o crea la locación y la vincula | ⬜ |
 | LOC-19 | Traslado: tiempo de viaje | Editar el input del traslado | Normaliza y recalcula las horas en cascada | ⬜ |
-| LOC-20 ⭐ | **Parada: tiempo de VISITA (BUG-LOC-2)** | En una parada, fijar el input "⏱ visita" (p. ej. `030`) | El input **existe**; empuja las horas de las paradas siguientes y el "término aprox." (antes no existía y se ignoraba). Arreglado | ⬜ |
-| LOC-21 ⭐ | **Cascada con visita + PDF (BUG-LOC-2)** | Con visitas fijadas: revisar la hora de cada parada, el "término aprox." y exportar el PDF de Scouting | Las horas y el término **incluyen** las visitas; la columna "Dur." del PDF muestra la visita de cada parada (antes salía vacía). Arreglado | ⬜ |
-| LOC-22 ⭐ | **Persistencia del Scouting en la nube (BUG-LOC-1)** | Armar un plan de scouting, guardar, recargar desde Supabase (o abrir en otro dispositivo) | El plan **reaparece** (antes solo vivía en el navegador y se perdía). Arreglado | ⬜ |
-| LOC-23 ⭐ | **No destruir scouting existente (BUG-LOC-1)** | Proyecto con scouting guardado; editar algo que dispare un guardado; recargar | El scouting **se conserva** (antes cada guardado podía borrarlo en la nube). Arreglado | ⬜ |
+| LOC-20 ⭐ | **Parada: tiempo de VISITA (BUG-LOC-2)** | En una parada, fijar el input "⏱ visita" (p. ej. `030`) | El input **existe**; empuja las horas de las paradas siguientes y el "término aprox." (antes no existía y se ignoraba). Arreglado | ✅ |
+| LOC-21 ⭐ | **Cascada con visita + PDF (BUG-LOC-2)** | Con visitas fijadas: revisar la hora de cada parada, el "término aprox." y exportar el PDF de Scouting | Las horas y el término **incluyen** las visitas; la columna "Dur." del PDF muestra la visita de cada parada (antes salía vacía). Arreglado | ✅ |
+| LOC-22 ⭐ | **Persistencia del Scouting en la nube (BUG-LOC-1)** | Armar un plan de scouting, guardar, recargar desde Supabase (o abrir en otro dispositivo) | El plan **reaparece** (antes solo vivía en el navegador y se perdía). Arreglado | ✅ |
+| LOC-23 ⭐ | **No destruir scouting existente (BUG-LOC-1)** | Proyecto con scouting guardado; editar algo que dispare un guardado; recargar | El scouting **se conserva** (antes cada guardado podía borrarlo en la nube). Arreglado | ✅ |
 | LOC-24 | Quiénes van / contacto de parada | + Persona (combobox); contacto y celular de la parada | Chips con typeahead; celular auto desde la BD; bola ● si no está en la BD | ⬜ |
 | LOC-25 | Hora de inicio / Ruta en Maps | Editar hora de inicio; "Crear ruta en Maps" | Recalcula la cascada; la ruta requiere ≥2 paradas con nombre/dirección | ⬜ |
 

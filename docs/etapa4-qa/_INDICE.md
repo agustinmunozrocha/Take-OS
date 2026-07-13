@@ -7,18 +7,20 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 
 | Módulo | Archivo | Catálogo | Cobertura |
 |--------|---------|----------|-----------|
-| Presupuesto / Cotización | `presupuesto-cotizacion.js` | [presupuesto.md](presupuesto.md) | ✅ 32/36 ✅ · 4 🔁 · 0 ❌ (todo cubierto) |
-| Gastos | `gastos.js` | — | ⬜ |
-| Crew | `crew.js` | — | ⬜ |
-| Cargos | `cargos.js` | — | ⬜ |
-| Rodajes | `rodajes.js` | — | ⬜ |
-| Plan de rodaje | `plan-rodaje.js` | — | ⬜ |
+| Presupuesto (grilla) | `presupuesto-cotizacion.js` | [presupuesto.md](presupuesto.md) | ✅ 32/36 ✅ · 4 🔁 · 0 ❌ (todo cubierto) |
+| Cotización (ofertas) | `presupuesto-cotizacion.js` · renderCotizacion | [cotizacion.md](cotizacion.md) | 🔄 3/25 ✅ (BUG-COT-1/2 arreglados) |
+| Gastos | `gastos.js` | [gastos.md](gastos.md) | 🔄 3/42 ✅ (BUG-GAS-1 arreglado) |
+| Crew | `crew.js` | [crew.md](crew.md) | 🔄 0/18 (limpio, 0 bugs) |
+| Cargos | `cargos.js` | [cargos.md](cargos.md) | 🔄 0/17 (limpio, 0 bugs) |
+| Rodajes | `rodajes.js` | [rodajes.md](rodajes.md) | 🔄 0/22 (limpio, 0 bugs) |
+| Plan de rodaje | `plan-rodaje.js` | [plan-rodaje.md](plan-rodaje.md) | 🔄 0/50 (limpio, 0 bugs) |
+| Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | 🔄 1/33 ✅ (BUG-HL-1 arreglado) |
 | Kanban | `kanban.js` | — | ⬜ |
 | Tareas | `tareas.js` | — | ⬜ |
-| Locaciones | `locaciones.js` | — | ⬜ |
-| Documentos | `documentos.js` | — | ⬜ |
+| Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | 🔄 4/25 ✅ (BUG-LOC-1/2 arreglados) |
+| Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 0/20 (limpio, 0 bugs) |
 | Legal | `legal.js` | — | ⬜ |
-| Base de datos | `bd.js` / `bd-excel.js` | — | ⬜ |
+| Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 1/35 ✅ (BUG-BD-1 arreglado) |
 | Buscador | `buscador.js` | — | ⬜ |
 | Calculadoras | `calculadoras.js` | — | ⬜ |
 | Configuración | `config.js` | — | ⬜ |

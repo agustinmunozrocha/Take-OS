@@ -3,7 +3,7 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `crew.js` (getCrewForExport), `rodajes.js` (días/fechas),
 `locaciones.js` (confirmadas), `dal.js` (persistencia blob JSONB), `lib/delegacion.js`.
-Cobertura: 0/33 ✅ (catálogo nuevo).
+Cobertura: 1/33 ✅ (1 verificada por Agustín).
 
 > **Nota:** Hoja de Llamado y Plan de Rodaje comparten el archivo `plan-rodaje.js`.
 > Este catálogo cubre solo Hoja de Llamado. **Bug encontrado y arreglado en esta
@@ -44,7 +44,7 @@ Cobertura: 0/33 ✅ (catálogo nuevo).
 | HL-15 | Call por persona | Escribe `800` en Call de una persona | Se normaliza a `08:00`; call vacío usa el llamado general | ⬜ |
 | HL-16 | Locación por persona | Elige locación en el desplegable de una fila | Persiste; en PDF muestra "ID · nombre" | ⬜ |
 | HL-17 | Reordenar crew (drag) | Arrastra la manija ⠿ de una fila a otra posición | Reordena y persiste el orden por día | ⬜ |
-| HL-18 ⭐ | **Nombre con `&` / apóstrofo (BUG-HL-1)** | Ten un confirmado cuyo nombre tenga `&` o `'` (ej. "Juan & Media" u "O'Higgins"). Edita su Rol/Número/Call, sal del campo, mira tras el re-render; luego recarga | El override debe **mantenerse** visible y salir en el PDF (antes desaparecía al re-render). Arreglado en esta tanda | ⬜ |
+| HL-18 ⭐ | **Nombre con `&` / apóstrofo (BUG-HL-1)** | Ten un confirmado cuyo nombre tenga `&` o `'` (ej. "Juan & Media" u "O'Higgins"). Edita su Rol/Número/Call, sal del campo, mira tras el re-render; luego recarga | El override debe **mantenerse** visible y salir en el PDF (antes desaparecía al re-render). Arreglado en esta tanda | ✅ |
 | HL-19 ⭐ | Persistencia override tras recarga | Edita varios overrides (nombres normales), guarda, recarga | Todos los overrides vuelven | ⬜ |
 
 ### E. Citaciones externas (manual)

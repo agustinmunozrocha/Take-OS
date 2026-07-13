@@ -3,7 +3,7 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia, RPC 4b/CFO), `presupuesto-cotizacion.js`
 (sync Costo Real, ver P36 ya aprobado), `lib/ui.js` (showModal), `lib/delegacion.js`.
-Cobertura: 0/42 ✅ (catálogo nuevo).
+Cobertura: 3/42 ✅ (3 verificadas por Agustín).
 
 > **Bug encontrado y arreglado en esta tanda** (branch
 > `fix/gastos-editar-borrar-presupuesto`): BUG-GAS-1 — se había perdido editar y
@@ -17,9 +17,9 @@ Cobertura: 0/42 ✅ (catálogo nuevo).
 |----|-----------|-------|-----------------------|--------|
 | GAS-1 | Crear presupuesto (línea existente) | Gastos → + Crear presupuesto → elegir línea → monto → Crear | Nueva tarjeta con nombre/línea/resp/asignado; el monto se autollena con el cotizado de la línea | ⬜ |
 | GAS-2 | Crear con línea nueva | + Crear presupuesto → "+ Crear nueva línea" → nombre → Crear | Se crea la caja **y** una fila EXTRA ($0) en Gastos del Presupuesto | ⬜ |
-| GAS-3 ⭐ | **EDITAR un presupuesto (BUG-GAS-1)** | Click en el lápiz ✎ de una tarjeta del strip | Abre el modal en modo edición con los datos precargados y "Guardar cambios" (antes **no existía** el ✎). Arreglado | ⬜ |
-| GAS-4 ⭐ | **ELIMINAR un presupuesto sin gastos (BUG-GAS-1)** | Click en la × de una tarjeta sin movimientos → confirmar | Pide confirmación y elimina la caja (antes **no existía** la ×). Arreglado | ⬜ |
-| GAS-5 ⭐ | **Eliminar presupuesto CON gastos ligados** | Intentar borrar una caja que tiene movimientos | Se niega con "Tiene gastos cargados" y NO borra (no orfana movimientos de plata) | ⬜ |
+| GAS-3 ⭐ | **EDITAR un presupuesto (BUG-GAS-1)** | Click en el lápiz ✎ de una tarjeta del strip | Abre el modal en modo edición con los datos precargados y "Guardar cambios" (antes **no existía** el ✎). Arreglado | ✅ |
+| GAS-4 ⭐ | **ELIMINAR un presupuesto sin gastos (BUG-GAS-1)** | Click en la × de una tarjeta sin movimientos → confirmar | Pide confirmación y elimina la caja (antes **no existía** la ×). Arreglado | ✅ |
+| GAS-5 ⭐ | **Eliminar presupuesto CON gastos ligados** | Intentar borrar una caja que tiene movimientos | Se niega con "Tiene gastos cargados" y NO borra (no orfana movimientos de plata) | ✅ |
 | GAS-6 | Permiso de crear/editar/borrar | Con perfil ≠ Admin/Ejecutivo/Producción | Toast "Sin permiso"; con perfil nulo, permite (fail-open) | ⬜ |
 | GAS-7 | Barra y "disponible" de la tarjeta | Cargar gastos hasta pasar el asignado | "disponible" se vuelve negativo (rojo), barra >100% | ⬜ |
 

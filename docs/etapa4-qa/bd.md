@@ -2,7 +2,7 @@
 
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia), `lib/state.js`, `lib/delegacion.js`.
-Cobertura: 0/35 ✅ (catálogo nuevo — nada probado aún).
+Cobertura: 1/35 ✅ (1 verificada por Agustín).
 
 > **Cómo leer este catálogo.** Las pruebas **⭐** son donde el cruce
 > monolito↔modular levantó sospecha; **pruébalas primero**. El resto es
@@ -30,7 +30,7 @@ Cobertura: 0/35 ✅ (catálogo nuevo — nada probado aún).
 | ID | Qué probar | Pasos | Esperado (según `main`) | Estado |
 |----|-----------|-------|-------------------------|--------|
 | BD10 | Alta rápida empresa | + Nueva empresa → nombre+RUT+tipo+giro → Crear | Aparece con badges de tipo; sincroniza a Supabase | ⬜ |
-| BD11 ⭐ | **Observaciones de empresa** (BUG-BD-1) | Editar empresa → escribir en Observaciones → agregar un dueño (re-render del modal) → cerrar y reabrir | El texto escrito debe **permanecer** (antes, si la empresa arrastraba un valor legado, "revertía"). Arreglado en esta tanda | ⬜ |
+| BD11 ⭐ | **Observaciones de empresa** (BUG-BD-1) | Editar empresa → escribir en Observaciones → agregar un dueño (re-render del modal) → cerrar y reabrir | El texto escrito debe **permanecer** (antes, si la empresa arrastraba un valor legado, "revertía"). Arreglado en esta tanda | ✅ |
 | BD12 ⭐ | Persistencia Representante/Dueños | Editar empresa → Representante + 2 Dueños → Guardar cambios → recargar app | Deben volver tras recarga desde Supabase (depende de columnas en la BD — ver Notas / cola de BD) | ⬜ |
 | BD13 | Dueños: combobox nombre | En un dueño, elegir persona de la BD | El nombre se fija; teléfono/mail quedan editables aparte | ⬜ |
 | BD14 | Quitar/agregar dueño | + Agregar dueño / Quitar | La lista se actualiza y persiste | ⬜ |
