@@ -20204,6 +20204,15 @@ function _hepConfirm() {
    dos elementos con el mismo ID. Ahora #bdGlobalMain es un container
    DEDICADO que vive separado en el DOM desde el inicio. */
 function openGlobalBDPersonas() {
+  // Opción A: la BD global solo se abre para EDITORES del módulo 'bd'. Cubre los
+  // accesos que NO pasan por navigateToModule (botón de Config, buscador global y
+  // la restauración de la última vista 'bd-global' al bootear). El redirect evita
+  // dejar al lector en pantalla en blanco en el caso del deep-link.
+  if (authNivel('bd') !== 'E') {
+    showToast({ kind: 'warning', title: 'Sin acceso', body: 'La Base de Datos está disponible solo para perfiles con edición.' });
+    try { navigateToControlRoom(); } catch (e) {}
+    return;
+  }
   STATE.currentView = 'bd-global';
   STATE.currentProject = null;
   STATE.currentModule = 'bd-personas';
@@ -22669,7 +22678,14 @@ function authNivelModulo(appKey) {
   if (!code) return 'none';
   return authNivel(code);
 }
-function authPuedeVer(appKey) { return authNivelModulo(appKey) !== 'none'; }
+function authPuedeVer(appKey) {
+  const n = authNivelModulo(appKey);
+  // Opción A: la PANTALLA de Base de Datos (contactos) es visible solo para
+  // EDITORES ('E'). Un LECTOR ('L') no la ve en la nav ni puede navegar a ella.
+  // NO afecta los comboboxes: leen BD_PERSONAS/BD_CONTACTOS del boot (RLS E|L).
+  if (appKey === 'bd-personas') return n === 'E';
+  return n !== 'none';
+}
 function authPuedeEditar(appKey) { return authNivelModulo(appKey) === 'E'; }
 function authEsAdmin() { return TAKEOS_PERFIL && (TAKEOS_PERFIL.codigo === 1 || TAKEOS_PERFIL.nombre === 'Administrador'); }
 /* V10.5.2: editar responsables de sección es exclusivo de Administrador (1) y Ejecutivo (2).
