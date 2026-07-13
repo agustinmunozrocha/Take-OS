@@ -1,5 +1,16 @@
 # Changelog — TakeOS
 
+## V11.37.0 — 13 de julio de 2026
+### Base de Datos: el guardado de un contacto ya no dice "guardado" en falso
+
+Rama `fix/contactos-persistencia-guardado-main`. Solo **frontend**. Bugfix de persistencia grave (afecta datos bancarios).
+
+Al editar la ficha de una persona (incluidos los datos bancarios) la app mostraba "guardado" aunque el cambio no llegara a la base: al refrescar volvía el valor viejo. Pasaba sobre todo con usuarios **sin permiso de edición** sobre la base de contactos: la base rechaza el cambio **sin devolver error** (cero filas afectadas) y la app lo tomaba como éxito. Con datos bancarios de por medio, el operador creía haber corregido una cuenta y la transferencia se armaba con el número viejo.
+
+- El guardado ahora **espera la confirmación de la base y verifica que la fila se haya modificado** (`.select()` en el UPDATE/INSERT); cero filas se trata como error.
+- Si la base rechaza, la app **revierte el cambio local y muestra un aviso rojo claro** ("No se guardó — el cambio NO quedó") en vez del cartel verde de éxito, y deja el modal abierto para reintentar.
+- **Sin cambios de base de datos** (el mismo fix ya quedó en la rama modular de staging).
+
 ## V11.36.0 — 9 de julio de 2026
 ### Plan de Scouting: ahora se guarda en la base (sincroniza entre dispositivos)
 
