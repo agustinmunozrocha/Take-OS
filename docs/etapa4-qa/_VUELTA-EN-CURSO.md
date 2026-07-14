@@ -3,6 +3,18 @@
 **Estado: ninguna vuelta en curso.**
 
 <!--
+CERRADO 2026-07-14 — branch fix/cotizacion-solo-editorial (merge → etapa4-integracion):
+Carta formal y Manifiesto DESCONECTADAS del selector de la carta PDF de Cotización
+(quedan en el código, solo ocultas); solo Editorial activa. COTPREV_PLANTILLAS (solo
+editorial) + cotPrevSettings fuerza plantilla='editorial'. Motivo: la Carta no muestra
+el domicilio de la productora (falló C20) y ambas arman el "qué incluye" crudo desde el
+Presupuesto con filas vacías; no es prioridad de beta. Arreglo de fondo anotado en
+cotizacion.md (Notas) para reimplementar. En el mismo cierre viajan los ✅ del QA
+automatizado de Cotización (C1–C18, C22–C25, 0 bugs) + C19/C21 por Agustín + C20 🔁.
+Aprobado por Agustín en local. Cotización queda 24/25 ✅ + 1 🔁 (cerrada).
+-->
+
+<!--
 CERRADO 2026-07-13 — branch feat/bd-esconder-pantalla-lectores (merge → etapa4-integracion):
 la pantalla de Base de Datos ahora solo la ven/abren los editores del módulo 'bd';
 Coordinación y Creativo (lectores) ya no la ven. auth.js (authPuedeVer caso
