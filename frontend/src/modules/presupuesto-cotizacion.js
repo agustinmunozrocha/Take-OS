@@ -3810,9 +3810,15 @@ function cotPrevFontLink(id) {
 }
 
 const COTPREV_PLANTILLAS = [
-  { id: 'editorial', n: 'Editorial', d: 'Portada de ficha + descripción; una plana por oferta con incluye/no incluye.' },
-  { id: 'carta', n: 'Carta formal', d: 'Membrete y carta firmada; presupuesto desglosado por departamento.' },
-  { id: 'manifiesto', n: 'Manifiesto', d: 'Portada statement con franja de color; el valor protagonista.' }
+  { id: 'editorial', n: 'Editorial', d: 'Portada de ficha + descripción; una plana por oferta con incluye/no incluye.' }
+  // DESCONECTADAS de la UI (jul-2026) hasta reimplementarlas: la Carta formal y el
+  // Manifiesto arman el "qué incluye" crudo desde el Presupuesto (por departamento,
+  // arrastrando incluso las filas vacías) en vez de leer el editor de la cotización,
+  // y la Carta no muestra el domicilio/web/teléfono/email de la productora. Su render
+  // (cotTplCarta / cotTplManifiesto) sigue en el código; solo se ocultan del selector.
+  // Para reactivarlas: descomentar estas dos líneas y revertir el force de cotPrevSettings.
+  // , { id: 'carta', n: 'Carta formal', d: 'Membrete y carta firmada; presupuesto desglosado por departamento.' }
+  // , { id: 'manifiesto', n: 'Manifiesto', d: 'Portada statement con franja de color; el valor protagonista.' }
 ];
 /* V11.11.0 · los colores de énfasis salen de la paleta de marca definida en
    Configuración → Diseño (EMPRESA_PERFIL.coloresMarca). Si la productora aún
@@ -3836,7 +3842,10 @@ function cotPrevSettings() {
   try { s = (typeof EMPRESA_PERFIL !== 'undefined' && EMPRESA_PERFIL && EMPRESA_PERFIL.cotDoc) ? EMPRESA_PERFIL.cotDoc : {}; } catch (e) { s = {}; }
   let pl = s.plantilla;
   if (!pl) { try { pl = EMPRESA_PERFIL && EMPRESA_PERFIL.cotPlantilla; } catch (e) {} }   // migra el viejo cotPlantilla (clasica/sobria/bloque → editorial)
-  if (pl !== 'editorial' && pl !== 'carta' && pl !== 'manifiesto') pl = 'editorial';
+  // Carta/Manifiesto desconectadas (jul-2026): la plantilla efectiva es SIEMPRE Editorial,
+  // aunque una productora tenga 'carta'/'manifiesto' guardada de antes. Al reactivarlas,
+  // restaurar: if (pl !== 'editorial' && pl !== 'carta' && pl !== 'manifiesto') pl = 'editorial';
+  if (pl !== 'editorial') pl = 'editorial';
   return {
     plantilla: pl,
     acc: s.acc || '#B03A2F',
