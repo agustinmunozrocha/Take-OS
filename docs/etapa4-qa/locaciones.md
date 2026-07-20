@@ -3,7 +3,18 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouting`
 + RPC `guardar_operaciones_4a`), `plan-rodaje.js` (motor de tiempos del scouting),
-`lib/delegacion.js`. Cobertura: 24/25 ✅ · 1 pendiente 👁 (LOC-16 lightbox/descarga).
+`lib/delegacion.js`. Cobertura: 24/25 ✅ · 1 ❌ abierto (LOC-16 lightbox + descargar todo).
+
+> **LOC-16 ❌ (bug encontrado por Agustín 2026-07-20):** (1) hacer clic en una foto
+> NO abre el lightbox (no se agranda). Causa: el `<img>` de la miniatura lleva
+> `style="pointer-events:none;"`, así el clic nunca llega a su acción `loc.lightbox`
+> (la función `locLightbox` sí está bien: trae flechas ‹ ›, contador y Esc).
+> (2) "Descargar todo" baja una sola foto (Chrome bloquea las descargas múltiples
+> seguidas de `locDescargarFotos`) y la que baja es la primera del arreglo, no la
+> portada re-ordenada. **Ambos existen IGUAL en el monolito de `main` (producción)**
+> — no son regresiones de la migración; el `pointer-events:none` y el bucle de
+> descargas están idénticos en main (L16126-16130, L16290). Decisión de arreglo y
+> alcance (¿también producción?) pendiente de Agustín.
 
 > **QA automatizado 2026-07-20 (Chrome MCP, localhost:5173 / etapa4-integracion):**
 > las 20 pruebas 🤖 restantes (alta/reutilizar/dedup, estados+KPIs+filtros, quitar
@@ -53,7 +64,7 @@ Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouti
 | LOC-13 | Subir fotos | Ficha → + varias imágenes | Comprime y sube al bucket (o cae a local si no hay nube); toast con conteo | ✅ |
 | LOC-14 | Preview inmediato | Tras subir | Se ve al toque sin esperar la URL firmada | ✅ |
 | LOC-15 | Reordenar (drag) | Arrastrar miniaturas | Reordena; la primera es la Portada; persiste | ✅ |
-| LOC-16 👁 | Borrar / Lightbox / Descargar todo | × en foto; click para lightbox (←/→/Esc); ⬇ Descargar todo | Borra de la nube (✅ verificado); el lightbox navega; descarga todas con nombre base_NN.jpg | ⬜ 👁 (borrar ✅) |
+| LOC-16 ⭐ | Borrar / Lightbox / Descargar todo | × en foto; click para lightbox (←/→/Esc); ⬇ Descargar todo | Borra de la nube (✅ verificado); el lightbox navega; descarga todas con nombre base_NN.jpg | ❌ (borrar ✅; lightbox NO abre; "Descargar todo" baja solo una) |
 
 ### E. Plan de Scouting
 | ID | Qué probar | Pasos | Esperado (según main) | Estado |

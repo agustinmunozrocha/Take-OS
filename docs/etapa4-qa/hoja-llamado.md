@@ -3,7 +3,7 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `crew.js` (getCrewForExport), `rodajes.js` (días/fechas),
 `locaciones.js` (confirmadas), `dal.js` (persistencia blob JSONB), `lib/delegacion.js`.
-Cobertura: 32/33 ✅ (🤖) · 1 pendiente 👁 (HL-27, preview visual, falta tu vista).
+Cobertura: 33/33 ✅. MÓDULO CERRADO (HL-27 aprobada por Agustín 2026-07-20).
 
 > **QA automatizado 2026-07-20 (Chrome MCP, localhost:5173 / etapa4-integracion):**
 > las 31 pruebas 🤖 restantes (selección de día/versionado, horarios y aislamiento
@@ -72,7 +72,7 @@ Cobertura: 32/33 ✅ (🤖) · 1 pendiente 👁 (HL-27, preview visual, falta tu
 |----|-----------|-------|-----------------------|--------|
 | HL-25 | Aviso de datos faltantes | Exporta sin PE/Director/JefeProd/Cliente/Productora/Llamado/Hospital | Modal "Faltan datos" NO bloqueante; "Corregir" cierra, "Exportar de todas formas" sigue | ✅ |
 | HL-26 | Backdrop del modal | Click en el fondo del modal de faltantes | Cierra solo si el click cae en el fondo | ✅ |
-| HL-27 👁 | Preview + márgenes | Abre "Exportar PDF" (preview) → mueve el slider de márgenes | El preview recarga con el nuevo margen; zoom +/- y Ajustar/Ancho funcionan | ⬜ 👁 |
+| HL-27 👁 | Preview + márgenes | Abre "Exportar PDF" (preview) → mueve el slider de márgenes | El preview recarga con el nuevo margen; zoom +/- y Ajustar/Ancho funcionan | ✅ |
 | HL-28 | Versión no sube sin cambios | Exporta (V.1) → sin cambiar nada re-exporta | NO sube versión (toast "Sin cambios"); sigue V.1 | ✅ |
 | HL-29 | Versión sube tras editar | Exporta (V.1) → cambia un horario/override/locación → exporta | Sube a V.2 | ✅ |
 | HL-30 | La firma capta crew | Exporta → confirma otra persona en Presupuesto → exporta | Sube versión (el crew entra en la firma) | ✅ |

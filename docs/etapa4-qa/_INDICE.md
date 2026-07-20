@@ -14,10 +14,10 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Cargos | `cargos.js` | [cargos.md](cargos.md) | 🔄 0/17 (limpio, 0 bugs) |
 | Rodajes | `rodajes.js` | [rodajes.md](rodajes.md) | 🔄 0/22 (limpio, 0 bugs) |
 | Plan de rodaje | `plan-rodaje.js` | [plan-rodaje.md](plan-rodaje.md) | ✅ 50/50 ✅ (0 bugs, cerrado) |
-| Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | 🔄 32/33 ✅ (🤖 auto, 0 bugs) · 1 👁 pend. |
+| Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | ✅ 33/33 ✅ (0 bugs, cerrado) |
 | Kanban | `kanban.js` | — | ⬜ |
 | Tareas | `tareas.js` | — | ⬜ |
-| Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | 🔄 24/25 ✅ (🤖 auto, 0 bugs) · 1 👁 pend. |
+| Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | 🔄 24/25 ✅ · 1 ❌ (LOC-16 lightbox/descarga, bug pre-existente en main) |
 | Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 0/20 (limpio, 0 bugs) |
 | Legal | `legal.js` | — | ⬜ |
 | Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 1/35 ✅ (BUG-BD-1 arreglado) |
