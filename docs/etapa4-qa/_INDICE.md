@@ -17,7 +17,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | ✅ 33/33 ✅ (0 bugs, cerrado) |
 | Kanban | `kanban.js` | — | ⬜ |
 | Tareas | `tareas.js` | — | ⬜ |
-| Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | 🔄 24/25 ✅ · 1 ❌ (LOC-16 lightbox/descarga, bug pre-existente en main) |
+| Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | ✅ 25/25 ✅ (0 bugs abiertos; LOC-16 arreglado) |
 | Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 0/20 (limpio, 0 bugs) |
 | Legal | `legal.js` | — | ⬜ |
 | Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 1/35 ✅ (BUG-BD-1 arreglado) |

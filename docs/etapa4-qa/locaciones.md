@@ -3,18 +3,20 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouting`
 + RPC `guardar_operaciones_4a`), `plan-rodaje.js` (motor de tiempos del scouting),
-`lib/delegacion.js`. Cobertura: 24/25 ✅ · 1 ❌ abierto (LOC-16 lightbox + descargar todo).
+`lib/delegacion.js`. Cobertura: 25/25 ✅ (LOC-16 arreglado). MÓDULO CERRADO.
 
-> **LOC-16 ❌ (bug encontrado por Agustín 2026-07-20):** (1) hacer clic en una foto
-> NO abre el lightbox (no se agranda). Causa: el `<img>` de la miniatura lleva
-> `style="pointer-events:none;"`, así el clic nunca llega a su acción `loc.lightbox`
-> (la función `locLightbox` sí está bien: trae flechas ‹ ›, contador y Esc).
-> (2) "Descargar todo" baja una sola foto (Chrome bloquea las descargas múltiples
-> seguidas de `locDescargarFotos`) y la que baja es la primera del arreglo, no la
-> portada re-ordenada. **Ambos existen IGUAL en el monolito de `main` (producción)**
-> — no son regresiones de la migración; el `pointer-events:none` y el bucle de
-> descargas están idénticos en main (L16126-16130, L16290). Decisión de arreglo y
-> alcance (¿también producción?) pendiente de Agustín.
+> **LOC-16 — bug encontrado por Agustín (2026-07-20) y ARREGLADO** (branch
+> `fix/locaciones-lightbox-descargar`): (1) el clic en la foto no abría el lightbox
+> porque el `<img>` llevaba `pointer-events:none`, que bloqueaba el clic hacia
+> `loc.lightbox`. Fix: se quita `pointer-events:none` y se marca la `<img>` como
+> `draggable="false"` (el arrastre-para-reordenar sigue funcionando desde la
+> `.loc-thumb`). Verificado: abre, navega con ‹ ›/contador, cierra con Esc, y el
+> reordenar sigue OK. (2) "Descargar todo" bajaba una sola foto (Chrome bloquea
+> descargas múltiples): **se retiró el botón** hasta implementar la descarga en un
+> solo ZIP; `locDescargarFotos()`/`loc.fotosZip` quedan latentes.
+> **Nota:** ambos existían IGUAL en el monolito de `main` — no eran regresiones de
+> la migración. Por decisión de Agustín, el arreglo va **solo a la versión modular
+> (etapa4); producción NO se tocó.**
 
 > **QA automatizado 2026-07-20 (Chrome MCP, localhost:5173 / etapa4-integracion):**
 > las 20 pruebas 🤖 restantes (alta/reutilizar/dedup, estados+KPIs+filtros, quitar
@@ -64,7 +66,7 @@ Módulos de apoyo: `dal.js` (persistencia; Plan de Scouting vía `project_scouti
 | LOC-13 | Subir fotos | Ficha → + varias imágenes | Comprime y sube al bucket (o cae a local si no hay nube); toast con conteo | ✅ |
 | LOC-14 | Preview inmediato | Tras subir | Se ve al toque sin esperar la URL firmada | ✅ |
 | LOC-15 | Reordenar (drag) | Arrastrar miniaturas | Reordena; la primera es la Portada; persiste | ✅ |
-| LOC-16 ⭐ | Borrar / Lightbox / Descargar todo | × en foto; click para lightbox (←/→/Esc); ⬇ Descargar todo | Borra de la nube (✅ verificado); el lightbox navega; descarga todas con nombre base_NN.jpg | ❌ (borrar ✅; lightbox NO abre; "Descargar todo" baja solo una) |
+| LOC-16 ⭐ | Borrar / Lightbox | × en foto; click para lightbox (←/→/Esc) | Borra de la nube; el lightbox abre, navega con flechas/contador y cierra con Esc. ("Descargar todo" retirado hasta implementar ZIP.) | ✅ (arreglado) |
 
 ### E. Plan de Scouting
 | ID | Qué probar | Pasos | Esperado (según main) | Estado |
