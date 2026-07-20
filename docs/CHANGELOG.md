@@ -1,5 +1,20 @@
 # Changelog — TakeOS
 
+## V11.40.0 — 19 de julio de 2026
+### Presupuesto: el "documento real" ya no se pierde al recargar · Pronto pago con factura muestra el bruto
+
+Rama `fix/presupuesto-dte-real-y-pp-factura-bruto`. Solo **frontend**. Bugfix de persistencia + criterio tributario.
+
+**Documento real (DTE real) en Presupuesto**
+- Al cambiar el "documento real" de una fila (por ejemplo, de Boleta a Factura), el cambio se guardaba en la base pero **al recargar volvía al valor anterior**. La causa: al leer el proyecto desde la base, ese campo no se pedía ni se cargaba (un comentario antiguo decía que la columna no existía, pero sí existe y ya se guardaba). Ahora **se lee bien y se conserva** tras refrescar.
+- Efecto: los cálculos que dependen del documento real (retención de boletas, IVA de facturas, monto del pronto pago) ahora usan el **documento real** guardado, no el cotizado. Puede cambiar montos en filas donde ambos difieren; es el comportamiento correcto.
+
+**Pronto pago con factura → monto bruto**
+- En Finanzas, el monto a transferir de un pronto pago con **factura** ahora muestra el **bruto** (neto + IVA; por ejemplo $200.000 → $238.000), que es lo que se le transfiere a un proveedor con factura. Las boletas siguen mostrando el líquido (con retención) y las facturas exentas el neto, sin cambios.
+- La columna pasa a llamarse **"Monto a transferir"** (antes "Monto neto"). Usa la tasa de IVA de la base (`tax_rates`), no un valor fijo.
+
+**Sin cambios de base de datos.** La persistencia de "marcar pagado" de un pronto pago queda para un cambio aparte que sí toca la base.
+
 ## V11.39.0 — 19 de julio de 2026
 ### Presupuesto: renombrar a una persona ya no revierte al valor anterior
 
