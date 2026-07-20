@@ -23212,7 +23212,7 @@ function _dalBudgetRow(r, esServicio) {
     cantidad: (r.cantidad != null ? Number(r.cantidad) : 0),
     unidad: r.unidad || '',
     dte: r.dte || null,
-    dteReal: null,                         // gap: el esquema Tanda 3 no tiene columna de DTE real
+    dteReal: r.dte_real || null,           // V11.x: la columna dte_real SÍ existe y se persiste; leerla al recargar
     confirmado: !!r.confirmado,
     costoReal: _dalNum(r.costo_real),
     extra: !!r.es_extra,
@@ -23531,7 +23531,7 @@ function _dalProyectoSelect() {
     + 'project_commissions(label,mode,value,posicion),'
     + 'project_risks(label,mode,value,posicion),'
     + 'project_income_extras(label,monto,posicion),'
-    + 'budget_line_items(client_uuid,version,section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,confirmado,costo_real,es_extra,es_pp,hora_extra,he_config,posicion,departments(nombre)),'
+    + 'budget_line_items(client_uuid,version,section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,dte_real,confirmado,costo_real,es_extra,es_pp,hora_extra,he_config,posicion,departments(nombre)),'
     + 'project_quotation(fecha_emision,representante_cliente,condiciones,descripcion_proyecto,jornadas_rodaje,meta),'
     + 'quotation_offers(id_externo,es_base,nombre,valor_cliente,descripcion,incluye,no_incluye,entregables,presupuesto_alt,posicion),'
     + 'quotation_versions(numero,es_activa,snapshot,nota),'
@@ -28402,9 +28402,9 @@ function goExportSantander() {
    el mismo formato Office Banking de Santander (13 columnas) que los reembolsos.
    ════════════════════════════════════════════════════════════════════ */
 function goPPPend() {
-  // El monto a transferir es el NETO del COSTO REAL según el DTE REAL (misma
-  // lógica tributaria que los contratos: boleta retiene, factura no), NUNCA el
-  // cotizado. Si una fila aún no tiene costo real, queda como Proforma.
+  // El monto a transferir sale del COSTO REAL según el DTE REAL (misma lógica
+  // tributaria que los contratos): factura suma IVA (bruto a transferir), boleta
+  // retiene (líquido). NUNCA el cotizado. Sin costo real → Proforma.
   const out = [];
   PROJECTS.forEach(p => {
     const d = p.data || {}; const byName = {};
@@ -28414,7 +28414,9 @@ function goPPPend() {
       const real = Number(costoReal) || 0;
       if (real > 0) {
         const dteR = (dteReal != null && dteReal !== '') ? dteReal : dte;
-        byName[nombre].monto += montoNetoDesde(real, dteR);
+        // Factura: el costo real es NETO (sin IVA); se transfiere el BRUTO = neto × (1+IVA).
+        // Boleta/BTE: montoNetoDesde da el líquido (retención). Exenta / s/d: sin cambio.
+        byName[nombre].monto += (dteR === 'factura') ? Math.round(real * (1 + IVA)) : montoNetoDesde(real, dteR);
         byName[nombre].conReal++;
       } else { byName[nombre].sinReal++; }
     };
@@ -28557,11 +28559,11 @@ function goCfoProntosPagos() {
   pend.forEach(o => { const k = o.project.id; (byProj[k] = byProj[k] || { project: o.project, items: [] }).items.push(o); });
   const projKeys = Object.keys(byProj);
 
-  const head = '<div class="go-card"><div class="go-card-h"><h3>Prontos pagos pendientes <span class="go-faint">· filas del Presupuesto marcadas con PP (confirmadas) · separados por proyecto · monto = neto del costo real según DTE real</span></h3>' +
+  const head = '<div class="go-card"><div class="go-card-h"><h3>Prontos pagos pendientes <span class="go-faint">· filas del Presupuesto marcadas con PP (confirmadas) · separados por proyecto · monto a transferir según el costo real y su DTE (factura +IVA, boleta retiene)</span></h3>' +
     (pend.length ? '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm" onclick="goExportSantanderPP()">⬇ Exportar TODOS (Santander)</button><button class="btn btn-secondary btn-sm" onclick="goExportSantanderConsolidado()">⬇ Consolidado (reembolsos + prontos pagos)</button></div>' : '') + '</div>' +
-    '<div class="go-card-b"><div class="go-help" style="margin:0;">El <b>monto neto</b> sale del costo real de cada fila y su DTE real (boleta retiene; factura no), no del cotizado. <b>Proforma</b> = aún sin costo real (no se exporta). Cada proyecto tiene su propio botón para exportar la nómina Santander solo de ese proyecto. Revisa la <b>fecha de rodaje</b>: no transfieras antes de que la persona trabaje.</div></div></div>';
+    '<div class="go-card-b"><div class="go-help" style="margin:0;">El <b>monto a transferir</b> sale del costo real de cada fila y su DTE real (factura suma IVA; boleta retiene), no del cotizado. <b>Proforma</b> = aún sin costo real (no se exporta). Cada proyecto tiene su propio botón para exportar la nómina Santander solo de ese proyecto. Revisa la <b>fecha de rodaje</b>: no transfieras antes de que la persona trabaje.</div></div></div>';
 
-  const thead = '<thead><tr><th>A quién pagar</th><th class="go-num">Monto neto</th><th>Fecha de rodaje</th><th>Datos de transferencia</th><th>Marcar pagado</th></tr></thead>';
+  const thead = '<thead><tr><th>A quién pagar</th><th class="go-num">Monto a transferir</th><th>Fecha de rodaje</th><th>Datos de transferencia</th><th>Marcar pagado</th></tr></thead>';
   const secciones = projKeys.length ? projKeys.map(k => {
     const g = byProj[k];
     return '<div class="go-card"><div class="go-card-h"><h3 class="go-sm">' + escapeHtml(goProjName(g.project)) + ' <span class="go-faint">· ' + g.items.length + ' por pagar</span></h3>' +
@@ -28570,7 +28572,7 @@ function goCfoProntosPagos() {
   }).join('') : '<div class="go-card"><div class="go-card-b go-faint" style="padding:18px;">Sin prontos pagos pendientes. Marca la píldora <b>PP</b> en las filas del Presupuesto (confirmadas) para que aparezcan aquí.</div></div>';
 
   const pagBlock = pagados.length ? '<div class="go-card"><div class="go-card-h"><h3 class="go-sm">Pagados <span class="go-faint">· fecha editable · para conciliar</span></h3></div>' +
-    '<div class="go-card-b go-tablewrap"><table class="go-tbl"><thead><tr><th>Fecha pago</th><th>A quién</th><th>Proyecto</th><th class="go-num">Monto neto</th><th></th></tr></thead><tbody>' +
+    '<div class="go-card-b go-tablewrap"><table class="go-tbl"><thead><tr><th>Fecha pago</th><th>A quién</th><th>Proyecto</th><th class="go-num">Monto a transferir</th><th></th></tr></thead><tbody>' +
     pagados.map(pagRow).join('') + '</tbody></table></div></div>' : '';
 
   return head + secciones + pagBlock;
