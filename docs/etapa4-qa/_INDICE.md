@@ -11,7 +11,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Cotización (ofertas) | `presupuesto-cotizacion.js` · renderCotizacion | [cotizacion.md](cotizacion.md) | ✅ 24/25 ✅ · 1 🔁 (BUG-COT-1/2 arreglados · C1–C18/C22–C25 QA automatizado 14-jul, 0 bugs · C19/C21 por Agustín · C20 🔁 Carta/Manifiesto desconectadas) |
 | Gastos | `gastos.js` | [gastos.md](gastos.md) | ✅ 41/42 ✅ · 1 🔁 · 0 bugs (CERRADO 14-jul; QA automatizado + Agustín; buckets de Storage staging resueltos) |
 | Crew | `crew.js` | [crew.md](crew.md) | 🔄 8/18 ✅ · 0 bugs (QA auto 20-jul; 5 pend·espejo presupuesto, 3 👁 PDF) |
-| Cargos | `cargos.js` | [cargos.md](cargos.md) | 🔄 15/17 ✅ · 0 bugs (QA auto 20-jul; CG16 tope, CG17 permiso) |
+| Cargos | `cargos.js` | [cargos.md](cargos.md) | 🔄 16/17 ✅ · 0 bugs (QA auto 20-jul; solo falta CG16·tope de 12) |
 | Rodajes | `rodajes.js` | [rodajes.md](rodajes.md) | ✅ 22/22 ✅ · 0 bugs (QA auto 20-jul, cerrado) |
 | Plan de rodaje | `plan-rodaje.js` | [plan-rodaje.md](plan-rodaje.md) | ✅ 50/50 ✅ (0 bugs, cerrado) |
 | Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | ✅ 33/33 ✅ (0 bugs, cerrado) |
@@ -20,7 +20,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | ✅ 25/25 ✅ (0 bugs abiertos; LOC-16 arreglado) |
 | Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 13/20 ✅ · 0 bugs (QA auto 20-jul; D8 tope, D9-D13/D15 infra/dnd) |
 | Legal | `legal.js` | — | ⬜ |
-| Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 12/35 ✅ · 0 bugs (QA auto 20-jul; resto Excel/permisos/detalles → sesión dedicada) |
+| Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 14/35 ✅ · 0 bugs (QA auto 20-jul; permisos BD3/BD4 verificados; resto Excel/detalles → sesión dedicada) |
 | Buscador | `buscador.js` | — | ⬜ |
 | Calculadoras | `calculadoras.js` | — | ⬜ |
 | Configuración | `config.js` | — | ⬜ |

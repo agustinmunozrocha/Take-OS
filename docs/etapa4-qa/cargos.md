@@ -3,8 +3,8 @@
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (dalCargarCargos/dalGuardarCargos, RPC `guardar_cargos`),
 `invitaciones.js`, `info-proyecto.js` (re-render RECI), `lib/delegacion.js`.
-Cobertura: 15/17 ✅ (QA automatizado 2026-07-20, 0 bugs) · CG16 incompleto (requiere
-tope) · CG17 pendiente (permiso con otro perfil).
+Cobertura: 16/17 ✅ (QA automatizado 2026-07-20, 0 bugs) · CG16 incompleto (requiere
+tope de 12 colaboradores). CG17 verificado en la pasada de permisos.
 
 > **Resultado del cruce:** la migración de Cargos es **limpia** (0 bugs). Ojo:
 > commits recientes (I11b) ya arreglaron varias cosas de Cargos — no se re-reportan
@@ -32,7 +32,7 @@ tope) · CG17 pendiente (permiso con otro perfil).
 | CG14 | "Agregar a la BD" / ocultar "Cambiar" | Cargo con persona que NO está en la BD con correo | Estado muestra "Agregar a la BD"; no aparece "Cambiar" (solo "Quitar") | ✅ |
 | CG15 | Quitar cargo | Click "Quitar" → confirmar | Desaparece la fila; se guarda y se re-deriva RECI | ✅ |
 | CG16 | Tope de colaboradores | Con la org en su tope, "+ Asignar un cargo" | Modal de venta "Tope de colaboradores"; contador N/Max en rojo | ⬜ (incompleto: requiere sembrar 12 colaboradores para llegar al tope) |
-| CG17 | Permiso de asignar | Entrar con perfil ≠ Administrador/Ejecutivo | No aparece "+ Asignar un cargo"; texto explicativo | ⬜ (pendiente: requiere login con otro perfil — pasada de permisos) |
+| CG17 | Permiso de asignar | Entrar con perfil ≠ Administrador/Ejecutivo | No aparece "+ Asignar un cargo"; texto explicativo | ✅ (QA auto 2026-07-20, pasada de permisos: Ejecutivo SÍ ve el botón; Producción y Creativo NO lo ven y muestran "Asignar cargos es facultad de Administrador y Ejecutivo". Como Ejecutivo sí y Producción no, queda probado que el permiso se resuelve de verdad, no por fail-open) |
 
 **Estados:** ⬜ pendiente · 🔄 probando · ✅ pasó (no re-probar) · ❌ falló (bug abierto) · 🔁 cambió a propósito.
 

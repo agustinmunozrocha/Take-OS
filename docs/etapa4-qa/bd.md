@@ -2,11 +2,11 @@
 
 Referencia de comportamiento: monolito en `main` (`git show main:index.html`).
 Módulos de apoyo: `dal.js` (persistencia), `lib/state.js`, `lib/delegacion.js`.
-Cobertura: 12/35 ✅ (QA automatizado 2026-07-20, 0 bugs; persistencia confirmada en
-la base — contacts / contact_bank_accounts / companies incl. representante/duenos JSONB).
-Pendientes de una sesión dedicada de BD: BD3/BD4 (permisos, requieren otro perfil),
-BD5/BD6/BD8, BD13–BD18, BD20/BD21, BD24, BD25–BD31 (Excel, requieren archivos),
-BD33, BD35 (archivar, requiere Modo administrador).
+Cobertura: 14/35 ✅ (QA automatizado 2026-07-20, 0 bugs; persistencia confirmada en
+la base — contacts / contact_bank_accounts / companies incl. representante/duenos JSONB;
+BD3/BD4 de permisos verificados en la pasada de permisos).
+Pendientes de una sesión dedicada de BD: BD5/BD6/BD8, BD13–BD18, BD20/BD21, BD24,
+BD25–BD31 (Excel, requieren archivos), BD33, BD35 (archivar, requiere Modo administrador).
 Nota: quedaron 4 registros de prueba en staging (Persona/Empresa/Talento/Locación
 "QA Test") — desechables; archivar si estorban.
 
@@ -24,8 +24,8 @@ Nota: quedaron 4 registros de prueba en staging (Persona/Empresa/Talento/Locaci�
 |----|-----------|-------|-------------------------|--------|
 | BD1 | Alta persona completa | + Nueva persona → llenar todo (RUT, tel, email, roles, empresa, dirección, pago, talento) → Crear | Aparece en lista; expandible muestra RUT/DTE/banco/cuenta; persiste tras recargar | ✅ (persiste en contacts + contact_bank_accounts; vuelve tras hard refresh) |
 | BD2 ⭐ | Guardar persona sin email | + Nueva persona → solo nombre → Crear | La modular **bloquea** ("Falta el correo"); en `main` sí permitía. Confirmar si el bloqueo es deseado (decisión de producto) | ✅ (bloquea con "Falta el correo"; decisión de producto confirmada) |
-| BD3 | Editar ficha (con permiso) | Expandir persona → ✎ Editar ficha (perfil con `bd`=E) | Abre editor con datos cargados; guarda y refleja en todos los proyectos | ⬜ (pendiente: sesión dedicada) |
-| BD4 | Editar sin permiso | Con perfil sin `bd`=E → ✎ Editar | Modal "Sin permiso para editar fichas" | ⬜ (pendiente: requiere login con otro perfil) |
+| BD3 | Editar ficha (con permiso) | Expandir persona → ✎ Editar ficha (perfil con `bd`=E) | Abre editor con datos cargados; guarda y refleja en todos los proyectos | ✅ (QA auto 2026-07-20, pasada de permisos: Producción, con bd=E, expande y abre el editor de ficha sin bloqueo) |
+| BD4 | Editar sin permiso | Con perfil sin `bd`=E → ✎ Editar | Modal "Sin permiso para editar fichas" | ✅ (QA auto 2026-07-20: Creativo/Finanzas con bd=L ni siquiera abren la pantalla de Base de Datos — clic en el nav → toast "Sin acceso · Tu perfil no tiene acceso a este módulo" y redirige. El gate de editar ficha también falla cerrado en el código: `authNivel('bd')!=='E'`) |
 | BD5 | Toggle secciones Crew/Talento | Marcar/desmarcar rol Crew y Talento | Muestra/oculta sección Rol habitual+DTE y Perfil de talento | ⬜ (pendiente) |
 | BD6 | Cuenta extranjera | Marcar "Cuenta extranjera" → datos libres → guardar | Oculta bloque Chile, guarda `datosExtranjeros`; round-trip OK | ⬜ (pendiente) |
 | BD7 | Autocompletar código banco | Elegir banco en el desplegable | `pf_codigoBanco` se llena solo (SBIF) y es readonly | ✅ (Banco BCI → código 016 auto y readonly) |

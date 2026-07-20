@@ -41,6 +41,21 @@
   BD3/BD4, detalles BD5/6/8/13-18/20/21/24/33, archivar BD35) → sesión dedicada. Quedan
   4 registros "QA Test" en la BD de staging (desechables).
 
+## Pasada de permisos (2026-07-20)
+Matriz real sacada de `permission_profiles`/`profile_permissions`. Gates del código:
+"+ Asignar un cargo" = código 1/2 (`_puedeAsignarCargos`); pantalla BD y editar ficha
+= `authNivel('bd')==='E'`. Verificado con 3 perfiles (login mail+clave):
+- **Ejecutivo (2):** ve pantalla BD ✅ y SÍ tiene "+ Asignar un cargo" ✅.
+- **Producción (3):** ve pantalla BD ✅, edita ficha ✅, y NO ve "+ Asignar un cargo"
+  (muestra "facultad de Administrador y Ejecutivo") ✅. Como Ejecutivo sí y Producción
+  no, queda probado que el permiso se resuelve de verdad (no fail-open).
+- **Creativo (6, bd=L):** NO abre la pantalla BD — clic en el nav → toast "Sin acceso"
+  y redirige (falla cerrado) ✅; NO ve "+ Asignar un cargo" ✅.
+Cierra **CG17** (Cargos) y **BD3/BD4** (BD). 0 bugs.
+Nota UX menor (no bug): el ítem de nav "Base de Datos" se muestra a todos; a los
+lectores (bd=L) el bloqueo ocurre al abrir, con mensaje claro. Se puede evaluar
+ocultar el nav a lectores, pero es cosmético.
+
 ## Estado final de la corrida
 - **5 módulos corridos, 0 bugs en total.** Cargos 15/17, Crew 8/18, Rodajes 22/22,
   Documentos 13/20, BD 12/35. Commits locales: 11e74ee, 7ae05ce, 498a64a, 33afb48
