@@ -258,7 +258,7 @@ export function openLocDetail(locId) {
   /* V11.7.0 · galería con DRAG & DROP: arrastras para reordenar y la primera
      foto es el thumbnail. Sin estrella ni flechas (se eliminaron). */
   const galeria = (l.fotos || []).map((f, i) => `<div class="loc-thumb" draggable="true" ${accionHTML('loc.fotoDnD', locId, i, { on: 'dragstart dragend dragover dragleave drop' })}>
-      <img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" ${accionHTML('loc.lightbox', locId, i)} style="pointer-events:none;">
+      <img id="lf_${locId}_${i}" src="${safeUrl(f.url || f._signedUrl || _LOC_FOTO_PLACEHOLDER)}" draggable="false" ${accionHTML('loc.lightbox', locId, i)} style="cursor:zoom-in;">
       <button class="loc-thumb-x" ${accionHTML('loc.fotoDel', locId, i)} title="Quitar">×</button>
       ${i === 0 ? `<span style="position:absolute;left:5px;top:5px;font-size:9.5px;font-weight:700;background:rgba(0,0,0,.62);color:#ffd86b;border-radius:999px;padding:2px 8px;pointer-events:none;">★ Portada</span>` : ''}
     </div>`).join('');
@@ -300,7 +300,9 @@ export function openLocDetail(locId) {
             <div class="loc-gallery">${galeria}<label class="loc-foto-add" title="Agregar fotos (se comprimen solas)">+<input type="file" accept="image/*" multiple style="display:none" ${accionHTML('loc.fotos', locId, { on: 'change' })}></label></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap;">
               <div style="font-size:11px;color:var(--ink-faint);">Arrastra para reordenar · la primera foto es la portada · máx. 1280 px · click para ampliar.</div>
-              ${(l.fotos || []).length ? `<button class="btn btn-secondary btn-sm" ${accionHTML('loc.fotosZip', locId)}>⬇ Descargar todo</button>` : ''}
+              <!-- Etapa 4: "Descargar todo" retirado hasta implementar la descarga en un solo ZIP.
+                   Chrome bloquea las descargas múltiples seguidas, así que bajaba solo una foto y confundía.
+                   locDescargarFotos() y la acción loc.fotosZip quedan latentes para reactivar cuando exista el ZIP. -->
             </div>
           </div>
           ${uso ? `<div class="loc-block">
