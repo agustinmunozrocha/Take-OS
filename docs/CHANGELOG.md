@@ -1,5 +1,18 @@
 # Changelog — TakeOS
 
+## V11.39.0 — 19 de julio de 2026
+### Presupuesto: renombrar a una persona ya no revierte al valor anterior
+
+Rama `fix/presupuesto-nombre-vinculo-pegajoso`. Solo **frontend**. Bugfix de persistencia.
+
+En el Presupuesto, al cambiar el **nombre de una persona** en una fila que estaba vinculada a un contacto de la Base de Datos, el cambio "parecía" guardarse pero al **refrescar volvía el nombre anterior**. Lo reportó Hugo (perfil Producción, con permiso de escritura), así que **no era un tema de permisos**: cualquier perfil que pueda editar presupuesto lo sufría.
+
+La causa: al renombrar, la fila **conservaba el vínculo con el contacto viejo** aunque el nombre ya no coincidiera. Como al recargar el nombre que se muestra se toma del contacto vinculado, se volvía a ver el nombre viejo (el del contacto), tapando el texto recién escrito.
+
+- Ahora el vínculo con el contacto anterior **solo se conserva si su nombre sigue coincidiendo** con lo escrito. Si pusiste otro nombre, la fila se re-vincula a la persona correcta (si existe en la Base de Datos) o queda como texto libre sin vínculo — pero ya **no revierte**.
+- Cambio de una sola función (`_dalResolveContactId`): es el mismo arreglo ya probado y aprobado en la versión modular de staging (marca "P21a"), portado ahora al monolito de producción.
+- **No toca la base de datos.** Las filas que ya quedaron con el nombre cruzado desde antes (una fila que muestra una persona distinta a la escrita) **no se reparan solas**: hay que corregirlas a mano en la app. Este fix evita que siga pasando de aquí en adelante.
+
 ## V11.38.0 — 13 de julio de 2026
 ### Base de Datos: la pantalla solo la ven los perfiles con edición
 
