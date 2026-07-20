@@ -7,8 +7,8 @@
 | # | Módulo | Pruebas | Estado |
 |---|--------|---------|--------|
 | 1 | Cargos | 17 | ✅ 15/17 · 0 bugs (CG16 incompleto·tope, CG17 pendiente·permiso) |
-| 2 | Crew | 18 | 🔄 en curso |
-| 3 | Rodajes | 22 | ⬜ pendiente |
+| 2 | Crew | 18 | ✅ 8/18 · 0 bugs (5 pend·espejo presupuesto, 2 incompl·proyecto vacío, 3 👁 PDF) |
+| 3 | Rodajes | 22 | 🔄 en curso |
 | 4 | Documentos | 20 | ⬜ pendiente |
 | 5 | Base de datos | 34 | ⬜ pendiente |
 
