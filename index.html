@@ -23647,10 +23647,13 @@ async function dalBootProyectos() {
    filas hijas, atómico). El id del cliente se preserva como projects.id.
    ════════════════════════════════════════════════════════════════════ */
 
-/* contactId: usa el hint si existe en BD; si no, resuelve por nombre; si no, ''. */
+/* contactId: usa el hint solo si su nombre AÚN coincide; si no, resuelve por nombre; si no, ''. */
 function _dalResolveContactId(nombre, hintId) {
-  if (hintId && BD_CONTACTOS[hintId]) return hintId;
   const n = (nombre || '').trim().toLowerCase();
+  // P21a · el hint (vínculo previo) solo vale si su nombre AÚN coincide con el
+  // nombre actual. Si el usuario eligió otra persona del listado o escribió un
+  // nombre distinto, no se conserva el vínculo viejo (antes revertía al anterior).
+  if (hintId && BD_CONTACTOS[hintId] && (BD_CONTACTOS[hintId].nombre || '').trim().toLowerCase() === n) return hintId;
   if (!n) return '';
   for (const id in BD_CONTACTOS) { const c = BD_CONTACTOS[id]; if (c && (c.nombre || '').trim().toLowerCase() === n) return id; }
   return '';
