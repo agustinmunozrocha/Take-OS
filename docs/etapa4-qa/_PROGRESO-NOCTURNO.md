@@ -41,6 +41,14 @@
   BD3/BD4, detalles BD5/6/8/13-18/20/21/24/33, archivar BD35) → sesión dedicada. Quedan
   4 registros "QA Test" en la BD de staging (desechables).
 
+## Cierre TOTAL de la depuración (2026-07-20 madrugada)
+**Todos los módulos tienen catálogo.** Se agregaron Legal (2/8🤖 + 6👁) y Admin (4/6✅)
++ el fix de persistencia (proyecto nuevo + rodajes) mergeado local (ffc75e2). Hallazgo:
+**Modo administrador NO pide clave** (V11.3.0) → KB6/KB7 verificados, CFG3/BD35 testeables.
+Commits locales de este bloque: 965ecbf (fix), ffc75e2 (merge), a93ea08 (legal+admin),
++ los 10 del Lote 2. **Nada pusheado** — espera OK de Agustín. Los 2 fixes también van
+al monolito de producción por su flujo aparte.
+
 ## Pasada de permisos (2026-07-20)
 Matriz real sacada de `permission_profiles`/`profile_permissions`. Gates del código:
 "+ Asignar un cargo" = código 1/2 (`_puedeAsignarCargos`); pantalla BD y editar ficha
