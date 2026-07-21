@@ -3,6 +3,25 @@
 **Estado: ninguna vuelta en curso.**
 
 <!--
+CERRADO 2026-07-20 — branch fix/persistencia-proyectos-crear-y-estado (merge 965ecbf →
+etapa4-integracion): DOS bugs de persistencia de proyectos (ambos pre-existentes en el
+monolito/producción, NO regresiones de Etapa 4):
+1) Crear proyecto (kanban.js): markDirty() corría antes de navigateToProject(id); un
+   proyecto creado sin PE/Director/JP y no editado se perdía al recargar. Fix:
+   dalTouchProyecto(nuevo) tras navigate → se guarda siempre apenas se crea.
+2) Agregar/borrar día de rodaje (rodajes.js): addRodaje/deleteRodaje no llamaban
+   markDirty() (acciones de botón, no disparan el listener global de change); el día no
+   se guardaba hasta editar un campo. Como Rodajes es el módulo de la etapa Producción,
+   se percibía como "no persiste en Producción". Fix: markDirty() en ambas. Los demás
+   módulos operacionales ya lo llamaban.
+Ambos verificados en la base + hard refresh. PENDIENTE: aplicar los mismos dos fixes al
+monolito de producción (main) por el flujo de producción. Merge LOCAL a
+etapa4-integracion; el push a origin/staging espera el OK de Agustín.
+-->
+
+<!-- histórico:
+
+<!--
 CERRADO 2026-07-14 — branch fix/cotizacion-solo-editorial (merge → etapa4-integracion):
 Carta formal y Manifiesto DESCONECTADAS del selector de la carta PDF de Cotización
 (quedan en el código, solo ocultas); solo Editorial activa. COTPREV_PLANTILLAS (solo
