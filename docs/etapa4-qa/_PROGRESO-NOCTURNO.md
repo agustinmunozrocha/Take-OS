@@ -76,3 +76,17 @@ Escribir catálogo (Modo QA) + correr 🤖 por módulo. Orden y estado:
 | 10 | Kanban | ✅ 6/10 · 0 bugs migración (⚠ KB8 proyecto nuevo sin cargos no persiste = pre-existente/main) |
 Fuera: Legal (👁/PDF), Admin (destructivo) → con Agustín.
 Commits locales por módulo; push lo hace Agustín. 👁 se acumulan para el resumen final.
+
+### Cierre Lote 2 (2026-07-20 noche) — 10 módulos, 0 bugs de migración
+Commits locales: f879cbd (tareas), 1ead4b2 (calculadoras), 1f958cb (notificaciones),
+c187d39 (buscador), efff5e0 (perfil), e13dbaf (plan-limites), a0d09a1 (invitaciones),
+0d2f891 (espacio), 99c01e6 (config), ab3b5a4 (kanban). Nada pusheado (espera OK de Agustín).
+**2 hallazgos pre-existentes (NO regresiones de Etapa 4, iguales en `main`), para decidir:**
+1. **Notificaciones:** las reglas de envío programado no persisten (columna sin cablear).
+2. **Kanban:** un proyecto creado sin PE/Director/JP y no editado no persiste al recargar
+   (markDirty corre antes de navigateToProject; el monolito igual).
+**Fuera del lote:** Legal (👁/PDF, Gate C) y Admin (destructivo) → con Agustín.
+**Datos de prueba que quedaron (staging, desechables):** 3 tareas "QA" (sin borrado por
+UI) + 4 fichas "QA Test" en BD (Lote 1) + 1 día DIA-01 en Rodajes (Lote 1) + perfil admin
+con datos de prueba (RUT 18207937-5, +56912345678) + 1 invitación pendiente
+invitadoqa@correo.test. El "QA Kanban Test" no persistió (no quedó).
