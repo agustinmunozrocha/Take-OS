@@ -30,7 +30,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Invitaciones | `invitaciones.js` | — | ⬜ |
 | Notificaciones | `notificaciones.js` | [notificaciones.md](notificaciones.md) | 🔄 5/10 ✅ + 5 👁 · 0 bugs migración (QA auto 20-jul; ⚠ reglas no persisten = pre-existente/main) |
 | Perfil / Onboarding | `perfil-onboarding.js` | [perfil-onboarding.md](perfil-onboarding.md) | 🔄 6/8 ✅ · 0 bugs (QA auto 20-jul; PF7/PF8 👁·invitación/banca) |
-| Plan / Límites | `plan-limites.js` | — | ⬜ |
+| Plan / Límites | `plan-limites.js` | [plan-limites.md](plan-limites.md) | 🔄 4/6 (por código, port fiel) + 2 👁 · 0 bugs (QA auto 20-jul) |
 
 Al crear un catálogo, cambia el "—" por `[<modulo>.md](<modulo>.md)` y actualiza
 la cobertura.
