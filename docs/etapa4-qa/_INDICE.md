@@ -16,7 +16,7 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Plan de rodaje | `plan-rodaje.js` | [plan-rodaje.md](plan-rodaje.md) | ✅ 50/50 ✅ (0 bugs, cerrado) |
 | Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | ✅ 33/33 ✅ (0 bugs, cerrado) |
 | Kanban | `kanban.js` | — | ⬜ |
-| Tareas | `tareas.js` | — | ⬜ |
+| Tareas | `tareas.js` | [tareas.md](tareas.md) | 🔄 12/13 ✅ · 0 bugs (QA auto 20-jul; TM13 permiso·Invitado) |
 | Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | ✅ 25/25 ✅ (0 bugs abiertos; LOC-16 arreglado) |
 | Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 13/20 ✅ · 0 bugs (QA auto 20-jul; D8 tope, D9-D13/D15 infra/dnd) |
 | Legal | `legal.js` | — | ⬜ |

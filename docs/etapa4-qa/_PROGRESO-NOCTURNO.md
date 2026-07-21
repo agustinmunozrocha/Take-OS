@@ -56,7 +56,20 @@ Nota UX menor (no bug): el ítem de nav "Base de Datos" se muestra a todos; a lo
 lectores (bd=L) el bloqueo ocurre al abrir, con mensaje claro. Se puede evaluar
 ocultar el nav a lectores, pero es cosmético.
 
-## Estado final de la corrida
-- **5 módulos corridos, 0 bugs en total.** Cargos 15/17, Crew 8/18, Rodajes 22/22,
-  Documentos 13/20, BD 12/35. Commits locales: 11e74ee, 7ae05ce, 498a64a, 33afb48
-  (+ el de BD). Nada pusheado (espera OK de Agustín).
+## Estado Lote 1 (cerrado, pusheado por Agustín)
+- **5 módulos + permisos, 0 bugs.** Cargos 16/17, Crew 8/18, Rodajes 22/22,
+  Documentos 13/20, BD 14/35. Pusheado a origin + staging (commit e8d9810).
+
+## Lote 2 — módulos SIN catálogo (en curso, 2026-07-20 noche)
+Escribir catálogo (Modo QA) + correr 🤖 por módulo. Orden y estado:
+| # | Módulo | Estado |
+|---|--------|--------|
+| 1 | Tareas | ✅ 12/13 · 0 bugs (TM13 permiso·Invitado). 3 tareas de prueba quedan en la QA (sin borrado por UI) |
+| 2 | Calculadoras | 🔄 en curso |
+| 3 | Notificaciones | ⬜ |
+| 4 | Buscador | ⬜ |
+| 5 | Perfil/Onboarding | ⬜ |
+| 6 | Plan/Límites | ⬜ |
+| 7-10 | Invitaciones, Config, Espacio, Kanban | ⬜ (tanda B) |
+Fuera: Legal (👁/PDF), Admin (destructivo) → con Agustín.
+Commits locales por módulo; push lo hace Agustín. 👁 se acumulan para el resumen final.
