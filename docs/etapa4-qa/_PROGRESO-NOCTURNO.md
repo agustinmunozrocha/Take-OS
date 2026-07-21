@@ -73,6 +73,6 @@ Escribir catálogo (Modo QA) + correr 🤖 por módulo. Orden y estado:
 | 7 | Invitaciones | ✅ 4/9 + 5 👁 · 0 bugs (aceptar/rechazar 👁·destructivo; INV9 👁 revisar bandeja del emisor) |
 | 8 | Espacio | ✅ 7/8 · 0 bugs (ESP8 👁·derechos Gate C) |
 | 9 | Config | ✅ rebanada 4/7 + gates · 0 bugs (datos empresa/equipo tras Modo admin = 👁) |
-| 10 | Kanban | 🔄 en curso (tanda B) |
+| 10 | Kanban | ✅ 6/10 · 0 bugs migración (⚠ KB8 proyecto nuevo sin cargos no persiste = pre-existente/main) |
 Fuera: Legal (👁/PDF), Admin (destructivo) → con Agustín.
 Commits locales por módulo; push lo hace Agustín. 👁 se acumulan para el resumen final.
