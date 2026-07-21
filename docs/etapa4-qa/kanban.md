@@ -29,8 +29,8 @@ hallazgo **pre-existente** — ver ⚠).
 | KB3 | Crear proyecto | "Nuevo proyecto" → nombre + cliente → "Crear proyecto" | Aparece una tarjeta nueva en la columna Venta; toast "Proyecto creado" | ✅ (aparece en Venta) |
 | KB4 | Abrir proyecto | Click en una tarjeta | Entra al proyecto (Info Proyecto) | ✅ |
 | KB5 | Mover entre estados | Cambiar el estado del proyecto | La tarjeta se mueve de columna; el KPI se ajusta | 👁 (avance de estado / drag — sin acción 🤖 directa) |
-| KB6 | Eliminar proyecto | Eliminar (requiere tipear el nombre para confirmar) | Va a la Papelera (soft-delete `deleted_at`); "se puede restaurar" | 👁 (protegido tras Modo administrador — requiere la clave de admin) |
-| KB7 | Papelera / restaurar | "Papelera" → restaurar | El proyecto vuelve al Control Room | 👁 (depende de KB6) |
+| KB6 | Eliminar proyecto | Eliminar (requiere tipear el nombre para confirmar) | Va a la Papelera (soft-delete `deleted_at`); "se puede restaurar" | ✅ (QA auto 2026-07-20 con Modo admin — que NO pide clave; el botón se habilita solo con el nombre exacto; "movido a la papelera") |
+| KB7 | Papelera / restaurar | "Papelera" → restaurar | El proyecto vuelve al Control Room | ✅ (QA auto 2026-07-20: "Proyecto restaurado, volvió al Control Room") |
 | KB8 | Persistencia del proyecto nuevo | Crear proyecto → hard refresh | El proyecto debería seguir | ✅ **ARREGLADO** (branch `fix/persistencia-proyectos-crear-y-estado`): `dalTouchProyecto(nuevo)` ahora corre tras `navigateToProject`, así que el proyecto nuevo se guarda SIEMPRE apenas se crea (con o sin responsables). Verificado en la base + hard refresh. (El monolito/producción tiene el mismo bug → arreglo aparte) |
 | KB9 | Filtros | "Todos / Mis proyectos / Con alertas / Recientes / Lista" | Filtra/cambia la vista sin error | ✅ |
 | KB10 | Exportar proyecto | Dentro del proyecto: "Exportar este proyecto" | Descarga un `.json` de ese proyecto (no toca la BD) | ✅ (botón presente; la descarga la miras tú) |

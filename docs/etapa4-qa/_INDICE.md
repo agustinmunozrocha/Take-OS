@@ -15,16 +15,16 @@ crea en Modo QA cuando Agustín pide "dame pruebas para testear X".
 | Rodajes | `rodajes.js` | [rodajes.md](rodajes.md) | ✅ 22/22 ✅ · 0 bugs (QA auto 20-jul, cerrado) |
 | Plan de rodaje | `plan-rodaje.js` | [plan-rodaje.md](plan-rodaje.md) | ✅ 50/50 ✅ (0 bugs, cerrado) |
 | Hoja de Llamado | `plan-rodaje.js` · renderHojaLlamado | [hoja-llamado.md](hoja-llamado.md) | ✅ 33/33 ✅ (0 bugs, cerrado) |
-| Kanban | `kanban.js` | [kanban.md](kanban.md) | 🔄 6/10 ✅ · 0 bugs migración (QA auto 20-jul; ⚠ KB8 proyecto nuevo sin cargos no persiste = pre-existente/main) |
+| Kanban | `kanban.js` | [kanban.md](kanban.md) | 🔄 8/10 ✅ · 0 bugs (QA auto 20-jul; **KB8 persistencia ARREGLADA** fix/persistencia; KB6/KB7 ✅ vía Admin) |
 | Tareas | `tareas.js` | [tareas.md](tareas.md) | 🔄 12/13 ✅ · 0 bugs (QA auto 20-jul; TM13 permiso·Invitado) |
 | Locaciones | `locaciones.js` | [locaciones.md](locaciones.md) | ✅ 25/25 ✅ (0 bugs abiertos; LOC-16 arreglado) |
 | Documentos | `documentos.js` | [documentos.md](documentos.md) | 🔄 13/20 ✅ · 0 bugs (QA auto 20-jul; D8 tope, D9-D13/D15 infra/dnd) |
-| Legal | `legal.js` | — | ⬜ |
+| Legal | `legal.js` | [legal.md](legal.md) | 🔄 2/8 🤖 + 6 👁 · 0 bugs (QA auto 20-jul; generación gateada; contenido/PDF 👁·Gate C) |
 | Base de datos | `bd.js` / `bd-excel.js` | [bd.md](bd.md) | 🔄 14/35 ✅ · 0 bugs (QA auto 20-jul; permisos BD3/BD4 verificados; resto Excel/detalles → sesión dedicada) |
 | Buscador | `buscador.js` | [buscador.md](buscador.md) | ✅ 9/9 ✅ · 0 bugs (QA auto 20-jul, cerrado) |
 | Calculadoras | `calculadoras.js` | [calculadoras.md](calculadoras.md) | 🔄 4/6 ✅ · 0 bugs (QA auto 20-jul; calc tributaria exacta; crc/hec por código·preproducción) |
 | Configuración | `config.js` | [config.md](config.md) | 🔄 rebanada 4/7 ✅ + gates · 0 bugs (QA auto 20-jul; datos empresa/equipo tras Modo admin) |
-| Admin | `admin.js` | — | ⬜ |
+| Admin | `admin.js` | [admin.md](admin.md) | 🔄 4/6 ✅ · 0 bugs (QA auto 20-jul; Modo admin SIN clave; eliminar/restaurar ✅) |
 | Espacio | `espacio.js` | [espacio.md](espacio.md) | 🔄 7/8 ✅ · 0 bugs (QA auto 20-jul; ESP8 👁·derechos Gate C) |
 | Info proyecto | `info-proyecto.js` | [info-proyecto.md](info-proyecto.md) | ✅ 19/19 ✅ · Grupo 1 y 2 cerrados (2 pend. BD) |
 | Invitaciones | `invitaciones.js` | [invitaciones.md](invitaciones.md) | 🔄 4/9 ✅ + 5 👁 · 0 bugs (QA auto 20-jul; aceptar/rechazar 👁·destructivo) |
