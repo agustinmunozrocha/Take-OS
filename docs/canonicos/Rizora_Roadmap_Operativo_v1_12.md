@@ -1,14 +1,28 @@
 # Rizora — Roadmap Operativo y Modelo de Trabajo entre Chats
 
-**Versión:** 1.11
-**Fecha:** 10 de julio de 2026
+**Versión:** 1.12
+**Fecha:** 24 de julio de 2026
 **Autor:** Agustín Ignacio Muñoz Rocha · La Hectárea SpA / Primate Films
 **Asesoría:** arquitectura de backend
 **Estado:** Borrador para revisión.
 
-> **Documento canónico.** Versiónalo y consolídalo como el PRD y el ADR (ver §4). Esta es la v1.11.
+> **Documento canónico.** Versiónalo y consolídalo como el PRD y el ADR (ver §4). Esta es la v1.12.
 
 ---
+
+## Changelog — v1.11 → v1.12
+
+**Consolida el hito del 24-jul-2026: el corte a producción SE HIZO y el Gate B SE CERRÓ.** Es la consolidación de estado más grande desde v1.10; da vuelta el riesgo #1 y la Fase B.
+
+- **✅ El corte a producción — HECHO (era el "pendiente grande").** Producción corre la **arquitectura modular** (build de Vite publicada por GitHub Pages en modo `workflow` desde `frontend/dist`, workflow `deploy.yml` en cada push). **Rama única `main`**: las ramas de etapa (`etapa4-integracion`, etc.) se mergearon y borraron; la divergencia de 189 commits **desapareció**. El monolito `index.html` queda **dormido en `main` solo como rollback** (volver Pages a `legacy`); se eliminará tras un período de estabilidad. El registro `Cambios_post_modularizacion.md` quedó **saldado** (todo V11.31–V11.40 portado al modular; paridad verificada). Riesgo #1 de §6 → **CERRADO**.
+- **✅ Fase B / Gate B — COMPLETADA.** Ya **no existen políticas `mvp_`** (0 en producción): las **85 tablas** de `public` tienen **RLS real por organización y rol** (173 políticas, 142 `b_*`, sobre `auth_nivel`/`auth_ve_proyecto`/`auth_codigo_perfil` — SECURITY DEFINER, `search_path` fijo, fallan cerrado). El **aislamiento entre organizaciones se verificó** (admin de otra org: 0 filas ajenas; invitado: 0 contactos) y quedó vigilado por el test `supabase/tests/gateB_controles_seguridad.sql` (5 controles, verde en producción — correr tras cada deploy).
+- **✅ Endurecimiento nuevo de Gate B (migraciones `2026072412xxxx`, en producción):** (1) **guard server-side del soft-delete de `projects`** — exige `eliminar_proyecto='E'`; **cierra el hueco A01 del borrado blando** (ya no depende del cliente); (2) **REVOKE TRUNCATE/TRIGGER/REFERENCES** a `anon`/`authenticated` (TRUNCATE no pasa por RLS); (3) **políticas de `storage.objects` capturadas en migración** (+ fix `COALESCE` en `auth_nivel_org_txt`: nunca NULL → no fail-open). Revisado por el BD Expert.
+- **⚠ Siguen abiertos de A01:** el **externo que lee `contacts`** (ninguna policy mira `memberships.tipo`; un externo con perfil `bd=L` leería la base completa) y la **segregación por org de snapshots en memoria** (por verificar). Pasan a ser lo que queda de ese frente en Gate C.
+- **✅ Textos legales (Ley 21.719) — ENTREGADOS por los abogados el 24-jul-2026.** Deja de esperarse la aprobación legal; el pendiente pasa a ser **integrarlos en la app** (los cinco flujos ya están construidos en UI con textos provisionales) y su QA. Muy por delante del deadline (1-dic-2026).
+- **✅ CSP estricta en producción.** `script-src` sin `'unsafe-inline'` ya rige en producción (llegó con el corte).
+- **✅ R4 cumplido / cifras únicas.** Staging y producción con el **mismo set de 28 migraciones**; desaparecen las "cifras vivas duales". Censo de producción: **85 tablas (85 con RLS) · 173 policies · 82 funciones · 28 migraciones**.
+- **Dominio registrado: `rizoraapp.com`** (hoy con landing en Squarespace; la app sigue publicándose por GitHub Pages; conexión del dominio a la app pendiente). Desbloquea la prioridad #1 de integraciones (correo).
+- **Feature de producto (24-jul, en producción):** la "Caja de producción" del módulo Gastos pasó a **"Fondos por rendir"** con **movimientos entre cuentas** (empresa↔personas, estilo Tricount) y saldos por persona; los sobres pasaron a **"Fondos Asignados"**. Documentada en el PRD V3.8 (§06/§12).
 
 ## Changelog — v1.10 → v1.11
 
@@ -146,15 +160,15 @@ Recablear módulo por módulo de Firebase a Supabase (lectura → escritura), ha
 - [x] **Supabase Pro activo + backup restaurado de prueba** (restore validado el 8 junio 2026).
 - [x] `currentUser()` conectado a la identidad real de la sesión (no al selector simulado).
 
-### Fase B — Permisos operativos para el MVP (un solo tenant) · *EN CURSO*
-Implementar el sistema de perfiles del handoff de permisos: `memberships`, `permission_profiles` (8, sembrados), `profile_permissions` (la matriz), `project_members`. Reemplazar las políticas `mvp_` por **RLS por perfil** (aislamiento por productora + alcance interno/externo + nivel por perfil).
+### Fase B — Permisos operativos para el MVP (un solo tenant) · *COMPLETADA — 24 julio 2026*
+Implementar el sistema de perfiles del handoff de permisos: `memberships`, `permission_profiles` (8, sembrados), `profile_permissions` (la matriz), `project_members`. Reemplazar las políticas `mvp_` por **RLS por perfil** (aislamiento por productora + alcance interno/externo + nivel por perfil). **Hecho.**
 
-**🚪 Gate B — "Permisos reales para Primate":**
-- [ ] RLS por perfil reemplaza las políticas `mvp_`, probada con usuarios reales de cada perfil.
-- [ ] El front oculta lo que el perfil no puede ver (UX), pero el backend lo niega (seguridad) — probado intentando saltarse la UI.
-- [ ] Cada tabla nueva con su GRANT (gotcha del handoff).
+**🚪 Gate B — "Permisos reales para Primate" · CERRADO (24-jul-2026):**
+- [x] RLS por perfil reemplaza las políticas `mvp_` — **0 `mvp_` en producción**; 85/85 tablas con RLS real por organización y rol (políticas `b_*` sobre `auth_nivel`/`auth_ve_proyecto`/`auth_codigo_perfil`, fallan cerrado). Probado con los usuarios de prueba de cada perfil (staging) y verificado en producción.
+- [x] El front oculta lo que el perfil no puede ver (UX), pero el backend lo niega (seguridad) — probado intentando saltarse la UI (p. ej. el UPDATE directo de `deleted_at` por un Ejecutivo: **bloqueado server-side** por el guard).
+- [x] Cada tabla nueva con su GRANT (gotcha del handoff) — y desde el 24-jul, además, **cada CREATE TABLE debe repetir el REVOKE de TRUNCATE/TRIGGER/REFERENCES** (los default privileges de Supabase los re-otorgan; el test de controles lo vigila).
 
-> **Estado a junio 2026 (handoffs BD Expert + Code).** El **motor de organización activa en el cliente ya está construido** (`_setOrgActiva`, desde la V10.9.0): deriva la organización de la membresía activa del usuario y reemplaza el `ORG_ID` fijo, con una bandera que impide mostrar el Control Room a un usuario sin empresa. Lo que **queda para cerrar el Gate B** es el **RLS real por organización y por rol** (reemplazar las `mvp_`) y la **validación del aislamiento con varias organizaciones** (QA). En la base ya están las funciones de aprovisionamiento (ahora **autocontenidas**, ADR-022) y queda pendiente `consentir_invitacion`, que espera la aprobación legal del Instrumento 2 (ver Fase C). Detalle técnico en el ADR.
+> **Estado al cierre (24-jul-2026).** El motor de organización activa (`_setOrgActiva`, V10.9.0) + el RLS real por org/rol + el **aislamiento verificado entre organizaciones** (cruce de tenant: 0 filas ajenas; test `gateB_controles_seguridad.sql` verde en prod) cierran el gate. Queda como salvedad de A01 —trasladada al Gate C— el acceso de **externos a `contacts`** (ninguna policy mira `memberships.tipo`) y la segregación por org de los snapshots en memoria (por verificar). `consentir_invitacion` se destraba con los textos legales ya entregados (ver Fase C).
 > **Infraestructura endurecida (Prioridad #1 y #2, cerradas).** La base quedó **"en código"** (5 migraciones, reproducible) y el **entorno de prueba** está levantado como **branch de Supabase** (`staging`); la **seguridad basal del beta** se cerró (contraseñas filtradas, toggle de registro, OAuth External, CSP, revocación de funciones internas, auditoría dirigida). El detalle vive en el documento de **Arquitectura y Flujo de Trabajo v1.3**.
 > **Pen-test interno: cerrado.** Todos los hallazgos de BD remediados y verificados. El **XSS ya estaba cerrado** (la función `safeUrl` es robusta; no requería parche) y el **toggle de registro está cerrado** (hecho por Agustín).
 > **Hallazgos de testing (estado actualizado contra el build vivo V11.16.0).** De los dos que aparecieron probando el software:
@@ -164,17 +178,17 @@ Implementar el sistema de perfiles del handoff de permisos: `memberships`, `perm
 ### Fase C — Endurecer para multi-tenant + cumplimiento · *GATE CRÍTICO (recomendado, antes del beta)*
 **Esta fase es la intervención principal de este roadmap.** Es lo que hay que construir *antes* de que entre la primera productora externa, porque ahí los datos confidenciales de terceros (tu competencia) entran al sistema.
 
-- [ ] **Aislamiento multi-tenant endurecido y probado**: RLS filtrando por `organization_id` en serio, con tests que intenten cruzar tenants y fallen. (Hoy el aislamiento "depende de que un solo tenant use el sistema".) **⚠ Suman aquí dos huecos concretos hallados el 6-jul (hub OWASP A01):** el **borrado blando elude el permiso `eliminar_proyecto`** (el frontend hace `UPDATE deleted_at` directo en vez de la RPC endurecida) y el **externo lee la tabla `contacts` completa** (ninguna policy mira `memberships.tipo`); más **snapshots que no segregan por org**. Cerrar los tres es parte de sellar A01.
+- [~] **Aislamiento multi-tenant endurecido y probado — SUSTANCIALMENTE HECHO (24-jul-2026):** RLS filtrando por `organization_id` en serio en las 85 tablas, **con los tests de cruce de tenant hechos y en verde** (admin de otra org: 0 filas ajenas; vigilado por `supabase/tests/gateB_controles_seguridad.sql`). De los tres huecos del 6-jul (hub OWASP A01): ✅ el **borrado blando ya NO elude `eliminar_proyecto`** (guard server-side por trigger, migración `20260724120000`); ⚠ sigue abierto el **externo que lee `contacts`** (ninguna policy mira `memberships.tipo`); ⚠ **snapshots sin segregar por org** en memoria, por verificar. Cerrar esos dos es lo que queda de A01.
 - [ ] **Audit log construido** (quién hizo/intentó qué, especialmente sobre datos bancarios). Es requisito legal (Ley 21.719) además de operativo.
 - [ ] **Protección de datos bancarios** (cerrar la limitación "Base de Datos todo-o-nada" del handoff): mínimo, que datos bancarios no sean visibles para perfiles que no los necesitan. Mínimo privilegio + ley.
 - [ ] **Decisión de acceso del fundador (ADR-A)** tomada: modelo de no-abuso (break-glass + audit + reputación + legal) y, idealmente, **separación societaria** de Rizora + términos de servicio y consentimiento claros para las productoras beta.
-- [ ] **Aprobación legal de los dos instrumentos.** Existen en borrador (`terminos-cuenta-2026-06-09-v0.1-borrador` y `consentimiento-incorporacion-2026-06-09-v0.1-borrador`) y **no son aptos para producción ni venta** hasta que un abogado habilitado los apruebe.
+- [~] **Aprobación legal de los dos instrumentos — TEXTOS ENTREGADOS (24-jul-2026).** Los abogados entregaron los **documentos legales definitivos** (venían de los borradores `terminos-cuenta-2026-06-09-v0.1` y `consentimiento-incorporacion-2026-06-09-v0.1`). Lo que queda es **integrarlos en la app** (reemplazar los textos provisionales de los cinco flujos y de los instrumentos) y su QA (LG8/ESP8). Muy por delante del deadline legal (1-dic-2026).
 - [ ] **Cinco flujos de derechos del titular construidos** (Ley 21.719): (1) borrado/supresión de cuenta, (2) exportación/portabilidad, (3) revocar el consentimiento de incorporación a una productora, (4) verificación de edad (si aplica) y (5) aviso de cookies/analytics. *Prometer un derecho que la UI no entrega es, en sí mismo, un riesgo legal.*
 - [~] **Backlog de endurecimiento — cerrado salvo un ítem.** El 17-jun entró la migración de endurecimiento: ✅ revocado a `anon` el `EXECUTE` en las RPC de escritura (capa externa; cada función ya valida `auth.uid()` por dentro y los flujos de invitación quedaron anon-ejecutables), ✅ `search_path` fijado en ~11 funciones utilitarias, ✅ decidida la policy de `app_config`. **Queda solo** el header **`frame-ancestors`** (anti-clickjacking) del hosting. Sin hallazgos críticos. Detalle en ADR-024 y Arquitectura §6.
 
 **🚪 Gate C — "Listo para datos de terceros":** los siete puntos de arriba, cumplidos y probados. Sin este gate, el beta pone en riesgo lo más caro de todo el plan: la confianza y el cumplimiento legal.
 
-> **Estado a junio 2026 (verificado contra el build vivo V11.16.0).** El audit log ya es inmutable desde el cliente y el aislamiento por organización está construido en la base (ver ADR); falta endurecerlo con tests de cruce de tenant que deban fallar. La **infraestructura técnica de cumplimiento** (consentimiento versionado + copia exacta del texto, auditoría inmutable) está lista, y el **Centro de Privacidad con los cinco flujos de derechos** (exportar, consentimientos/revocar, eliminar, edad, cookies) **ya está construido y en producción** (UI). Por lo tanto, lo que falta del Gate C **NO es más UI**: es la **aprobación legal de los textos** (hoy provisionales), el **backlog de endurecimiento** (cerrado salvo `frame-ancestors`) y el header **`frame-ancestors`**. **Deadline Ley 21.719: 1 de diciembre de 2026 (inamovible).**
+> **Estado al 24-jul-2026 (verificado contra producción, build modular V11.41.0).** El audit log es inmutable desde el cliente y el aislamiento por organización está **construido Y verificado** (tests de cruce de tenant hechos; test de controles verde en prod — ver Gate B). La **infraestructura técnica de cumplimiento** (consentimiento versionado + copia exacta del texto, auditoría inmutable) está lista, y el **Centro de Privacidad con los cinco flujos de derechos** ya está construido y en producción (UI). Con los **textos legales ya entregados por los abogados (24-jul)**, lo que falta del Gate C es: **integrar esos textos en la app** (+ QA), el header **`frame-ancestors`**, la **cadena de suministro A03** (SRI, pin de `supabase-js`, doble `xlsx`, CI), y los dos remanentes de A01 (`contacts` vs externos; snapshots por org). **Deadline Ley 21.719: 1 de diciembre de 2026 — holgado.**
 > **Pen-test externo: desbloqueado** (el XSS ya estaba cerrado y el registro está cerrado en Auth). Puede arrancar sin esperar a que multi-tenant esté completo.
 
 ### Fase D — Beta de feedback con productoras (~4 meses, en definición)
@@ -192,7 +206,7 @@ Suscripción premium, Portal de Clientes, secuencia Chile → Latam → EE.UU. (
 > **Las cifras y la matriz de planes viven en el One-Pager de Planes (v3), que es la fuente viva de precios.** El Roadmap (y el PRD) solo referencian la estructura y la secuencia, para no quedar obsoletos en cada ajuste de precio.
 
 > **Prioridades de integración de APIs del producto** (constatado por Agustín, junio 2026):
-> 1. **Correo electrónico** *(en curso, prioridad máxima)* — con el Supabase Auth Expert; bloqueado por el registro del dominio.
+> 1. **Correo electrónico** *(en curso, prioridad máxima)* — con el Supabase Auth Expert; **desbloqueado: el dominio `rizoraapp.com` ya está registrado** (24-jul-2026; hoy sirve la landing en Squarespace — falta conectar correo y, más adelante, la app).
 > 2. **Google** *(siguiente)* — principalmente Google Calendar, además de Gmail; opcional por usuario (requiere que autorice el acceso).
 > 3. **WhatsApp Business** *(horizonte, etapa SaaS)* — la más burocrática y compleja (Meta Business verificado + aprobación de plantillas); la UI ya está construida, el backend es trabajo futuro.
 
@@ -372,15 +386,16 @@ Usado para mover y organizar archivos (ver el patrón del Coworker en §4.7). Re
 
 | Riesgo | Gravedad | Mitigación |
 |---|---|---|
-| **Divergencia producción ↔ staging (189 commits): la operación corre el monolito y todo el trabajo nuevo vive en una rama sin cortar** | **Alta** | Planificar y ejecutar el **corte a producción** de la rama modular como frente de primera clase (con verificación + diagnóstico del "404 real"); mientras no se corte, cada commit amplía la brecha. Ver Arquitectura §5 y ADR-015. |
-| Beta con datos de terceros antes del aislamiento/audit/acceso-fundador | **Alta** | Gate C antes de Fase D; o beta de alcance reducido. |
-| **Huecos concretos de A01 hallados el 6-jul (borrado blando elude permiso; externo lee `contacts`; snapshots sin segregar org)** | **Alta** | Usar RPC `eliminar_proyecto`; policy `contacts` para externos; segregar snapshots por org. Parte del Gate C / Track de Seguridad (hub OWASP A01). |
+| ~~Divergencia producción ↔ staging (189 commits)~~ **CERRADO (24-jul-2026):** el corte a producción se hizo; rama única `main`; `Cambios_post_modularizacion.md` saldado. | — | Queda solo el paso final de higiene: **eliminar el monolito dormido** (`index.html`) tras el período de estabilidad, y post-corte vigilar regresiones (los smoke tests del corte pasaron 10/10). |
+| Beta con datos de terceros antes del aislamiento/audit/acceso-fundador | **Alta** | Gate C antes de Fase D; o beta de alcance reducido. El grueso del aislamiento ya está verificado (Gate B cerrado). |
+| **Remanentes de A01: externo lee `contacts` (ninguna policy mira `memberships.tipo`) + snapshots sin segregar por org (por verificar)** — *el tercer hueco (borrado blando) quedó CERRADO server-side el 24-jul* | **Alta** | Policy de `contacts` que mire `memberships.tipo` (o lente equivalente); verificar/segregar snapshots por org. Parte del Gate C / Track de Seguridad (hub OWASP A01). |
 | Datos bancarios visibles a perfiles que no los necesitan en multi-tenant | **Alta** | Cerrar "BD todo-o-nada" en Gate C (mínimo privilegio + ley). |
-| **Cadena de suministro (A03): CDN sin SRI, `supabase-js` con major flotante, `xlsx` doble** | Media | Pin exacto + SRI + quitar la doble carga; atar `npm run gate` a CI. |
+| **Cadena de suministro (A03): CDN sin SRI, `supabase-js` con major flotante, `xlsx` doble** | Media | Pin exacto + SRI + quitar la doble carga; atar `npm run gate` a CI. **No cambió con el corte** — re-auditar sobre el build de Vite. |
+| **Degradación silenciosa de los controles de Gate B** (una tabla nueva renace con TRUNCATE; un trigger se deshabilita) | Media | Correr `supabase/tests/gateB_controles_seguridad.sql` tras **cada deploy** (staging y prod); repetir el REVOKE en toda migración con CREATE TABLE. |
 | Deriva entre documentos (contradicciones que se acumulan) | Media | Consolidación por ciclo + versionado + autoridad clara. |
-| **Modo solo-dev: sin segundo par de ojos** (revisión de PR = auto-revisión; pentest en pausa) — separación de funciones degradada temporalmente | Media | Compuertas `npm run gate` como red mínima; disciplina de auto-revisión (ADR-027); reactivar revisión humana y pentest al ocuparse el cargo técnico o contratando puntualmente. |
+| **Modo solo-dev: sin segundo par de ojos** (revisión de PR = auto-revisión; pentest en pausa) — separación de funciones degradada temporalmente | Media | Compuertas `npm run gate` + test de controles como red mínima; disciplina de auto-revisión (ADR-027); reactivar revisión humana y pentest al ocuparse el cargo técnico o contratando puntualmente. |
 | Agustín como cuello de botella / burnout | Media | Proceso ligero; levantar chats solo con trabajo sostenido; no acumular handoffs. |
-| Bug de RLS multi-tenant (una productora ve a otra) | **Alta** | Tests de cruce de tenant que deben fallar; parte del Gate C. |
+| Bug de RLS multi-tenant (una productora ve a otra) | **Alta** → mitigada | Los tests de cruce de tenant **existen y están en verde** (24-jul); mantenerlos corriendo tras cada deploy. |
 | Feedback del beta que infla el roadmap (construir todo lo que piden) | Media | Triage contra principios del PRD (anti-cortisol + moat) en el paso 3 del ciclo. |
 
 ---
@@ -393,4 +408,4 @@ Terminar la migración con red (Gate A) → permisos reales para Primate (Gate B
 
 ---
 
-*Documento canónico · v1.11 · 10 de julio de 2026 · Primate Films / La Hectárea SpA. Versiónalo y consolídalo como el PRD y el ADR. **Cifras vivas duales** (producción monolito vs. staging modular, ver changelog y hub OWASP v1.5): producción 77 tablas / 147 policies / 8→9 migraciones; staging 72 tablas / 157 policies / 76 funciones `SECURITY DEFINER` / 14 migraciones / 40 archivos frontend. **Pendiente grande: el corte a producción** (las ramas divergieron 189 commits).*
+*Documento canónico · v1.12 · 24 de julio de 2026 · Primate Films / La Hectárea SpA. Versiónalo y consolídalo como el PRD y el ADR. **Cifras vivas (entorno único — el corte a producción se hizo el 24-jul-2026):** producción **85 tablas (85 con RLS) · 173 policies (142 `b_*`, 0 `mvp_`) · 82 funciones · 28 migraciones · 40 archivos frontend modular (build V11.41.0)**; staging con el **mismo set de migraciones** (R4 cumplido). El monolito `index.html` queda dormido en `main` solo como rollback, pendiente de eliminación tras el período de estabilidad.*
