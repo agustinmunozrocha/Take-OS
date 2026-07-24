@@ -12,6 +12,7 @@ import { escapeHtml, safeUrl, showToast } from '../lib/helpers.js';
 import { BD_PERSONAS, EMPRESA_PERFIL, PROJECTS, STATE, STATES_WITH_REAL_COST, ORG_ID, PROJECTS_SOURCE, TAKEOS_PERFIL } from '../lib/state.js';
 import { _clientUuid } from '../lib/modelo.js';
 import { montoNetoDesde } from '../lib/data.js';
+import { IVA } from '../lib/rates.js';
 import { calcCostoEmpresa, fmtMoney } from '../lib/calc.js';
 import { closeModal, showModal, comboboxCloseDelayed, comboboxFilter, comboboxOpen } from '../lib/ui.js';
 import { MODULES, navigateToModule, renderModule } from '../lib/nav.js';
@@ -1389,7 +1390,10 @@ function goPPPend() {
       const real = Number(costoReal) || 0;
       if (real > 0) {
         const dteR = (dteReal != null && dteReal !== '') ? dteReal : dte;
-        byName[nombre].monto += montoNetoDesde(real, dteR);
+        // V11.40 (portado): Factura → el costo real es NETO (sin IVA); se transfiere el
+        // BRUTO = neto × (1+IVA). Boleta/BTE: montoNetoDesde da el líquido (retención).
+        // Exenta / s/d: sin cambio.
+        byName[nombre].monto += (dteR === 'factura') ? Math.round(real * (1 + IVA)) : montoNetoDesde(real, dteR);
         byName[nombre].conReal++;
       } else { byName[nombre].sinReal++; }
     };
@@ -1532,11 +1536,11 @@ function goCfoProntosPagos() {
   pend.forEach(o => { const k = o.project.id; (byProj[k] = byProj[k] || { project: o.project, items: [] }).items.push(o); });
   const projKeys = Object.keys(byProj);
 
-  const head = '<div class="go-card"><div class="go-card-h"><h3>Prontos pagos pendientes <span class="go-faint">· filas del Presupuesto marcadas con PP (confirmadas) · separados por proyecto · monto = neto del costo real según DTE real</span></h3>' +
+  const head = '<div class="go-card"><div class="go-card-h"><h3>Prontos pagos pendientes <span class="go-faint">· filas del Presupuesto marcadas con PP (confirmadas) · separados por proyecto · monto a transferir según el costo real y su DTE real (factura +IVA, boleta retiene)</span></h3>' +
     (pend.length ? '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm" data-accion="go.santanderPP">⬇ Exportar TODOS (Santander)</button><button class="btn btn-secondary btn-sm" data-accion="go.santanderCons">⬇ Consolidado (reembolsos + prontos pagos)</button></div>' : '') + '</div>' +
-    '<div class="go-card-b"><div class="go-help" style="margin:0;">El <b>monto neto</b> sale del costo real de cada fila y su DTE real (boleta retiene; factura no), no del cotizado. <b>Proforma</b> = aún sin costo real (no se exporta). Cada proyecto tiene su propio botón para exportar la nómina Santander solo de ese proyecto. Revisa la <b>fecha de rodaje</b>: no transfieras antes de que la persona trabaje.</div></div></div>';
+    '<div class="go-card-b"><div class="go-help" style="margin:0;">El <b>monto a transferir</b> sale del costo real de cada fila y su DTE real (factura suma IVA; boleta retiene), no del cotizado. <b>Proforma</b> = aún sin costo real (no se exporta). Cada proyecto tiene su propio botón para exportar la nómina Santander solo de ese proyecto. Revisa la <b>fecha de rodaje</b>: no transfieras antes de que la persona trabaje.</div></div></div>';
 
-  const thead = '<thead><tr><th>A quién pagar</th><th class="go-num">Monto neto</th><th>Fecha de rodaje</th><th>Datos de transferencia</th><th>Marcar pagado</th></tr></thead>';
+  const thead = '<thead><tr><th>A quién pagar</th><th class="go-num">Monto a transferir</th><th>Fecha de rodaje</th><th>Datos de transferencia</th><th>Marcar pagado</th></tr></thead>';
   const secciones = projKeys.length ? projKeys.map(k => {
     const g = byProj[k];
     return '<div class="go-card"><div class="go-card-h"><h3 class="go-sm">' + escapeHtml(goProjName(g.project)) + ' <span class="go-faint">· ' + g.items.length + ' por pagar</span></h3>' +
@@ -1545,7 +1549,7 @@ function goCfoProntosPagos() {
   }).join('') : '<div class="go-card"><div class="go-card-b go-faint" style="padding:18px;">Sin prontos pagos pendientes. Marca la píldora <b>PP</b> en las filas del Presupuesto (confirmadas) para que aparezcan aquí.</div></div>';
 
   const pagBlock = pagados.length ? '<div class="go-card"><div class="go-card-h"><h3 class="go-sm">Pagados <span class="go-faint">· fecha editable · para conciliar</span></h3></div>' +
-    '<div class="go-card-b go-tablewrap"><table class="go-tbl"><thead><tr><th>Fecha pago</th><th>A quién</th><th>Proyecto</th><th class="go-num">Monto neto</th><th></th></tr></thead><tbody>' +
+    '<div class="go-card-b go-tablewrap"><table class="go-tbl"><thead><tr><th>Fecha pago</th><th>A quién</th><th>Proyecto</th><th class="go-num">Monto a transferir</th><th></th></tr></thead><tbody>' +
     pagados.map(pagRow).join('') + '</tbody></table></div></div>' : '';
 
   return head + secciones + pagBlock;
