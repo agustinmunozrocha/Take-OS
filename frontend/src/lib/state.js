@@ -1,4 +1,4 @@
-// Estado global compartido de TakeOS — Etapa 1.
+// Estado global compartido de Rizora — Etapa 1.
 //
 // STATE es un OBJETO que se comparte por REFERENCIA: el codigo clasico y los
 // modulos apuntan al mismo objeto (STATE), asi que leer y mutar

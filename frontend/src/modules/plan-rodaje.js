@@ -1365,7 +1365,7 @@ function buildPlanRodajePrintHTML(project, diaId) {
     <div class="ph-total">Total rodaje: ${span != null ? prFmtDur(span) : '—'}</div>
     <table><thead>${head}</thead><tbody>${body || `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;padding:14px;">Plan sin filas.</td></tr>`}</tbody></table>
     ${bancoTable}
-    <div class="pfoot"><span>${footLeft}</span><span>Generado ${e(new Date().toLocaleString('es-CL'))} · TakeOS</span></div>
+    <div class="pfoot"><span>${footLeft}</span><span>Generado ${e(new Date().toLocaleString('es-CL'))} · Rizora</span></div>
   </body></html>`;
 }
 function exportPlanRodajePDF() {

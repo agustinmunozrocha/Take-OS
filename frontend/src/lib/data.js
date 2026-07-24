@@ -1,4 +1,4 @@
-// Constantes de datos de TakeOS — extraídas de index.html (Etapa B3).
+// Constantes de datos de Rizora — extraídas de index.html (Etapa B3).
 // Catálogos y presets puros + DEMO_PROJECTS (derivada: su inicializador ejecuta
 // buildProjectData(), auto-global del script clásico, disponible al evaluar este
 // módulo). Cada const se expone en window para el script clásico y los módulos

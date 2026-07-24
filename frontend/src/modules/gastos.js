@@ -32,7 +32,7 @@ import { gancho, define } from '../lib/ganchos.js';
    Internaliza la función de Rinde Gastos, 100% proyecto-céntrico.
    - Espacio "Gastos del proyecto" (scope project) → renderGastos()
    - Módulo CFO (scope global, consolida todos los proyectos) → renderCFO()
-   - Exportación a Chipax (.xlsx con SheetJS, ya cargado en TakeOS)
+   - Exportación a Chipax (.xlsx con SheetJS, ya cargado en Rizora)
 
    MODELO (project.data.gastosOp):
      { cajaProd, presupuestos:[{id,nombre,linea,resp,asignado}],
@@ -187,7 +187,7 @@ function goJefeProd(project) {
   return { nombre: nom, rut: rut, pass: pass };
 }
 
-/* ---------- modal propio (usa #modalRoot + closeModal de TakeOS) ---------- */
+/* ---------- modal propio (usa #modalRoot + closeModal de Rizora) ---------- */
 function goModal(html) { document.getElementById('modalRoot').innerHTML = '<div class="go-modal" data-accion="ui.backdrop">' + html + '</div>'; }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1737,7 +1737,7 @@ function goDescargarXlsx(projId) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   WIRING: conectar al sistema de módulos de TakeOS
+   WIRING: conectar al sistema de módulos de Rizora
    ════════════════════════════════════════════════════════════════════ */
 (function goWire() {
   try {

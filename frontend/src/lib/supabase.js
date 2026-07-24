@@ -1,4 +1,4 @@
-// Cliente Supabase de TakeOS — Etapa 1.
+// Cliente Supabase de Rizora — Etapa 1.
 //
 // La URL/KEY se inyectan por entorno vía import.meta.env (Vite las reemplaza
 // en build/dev): producción usa la base real, staging la de staging. Mismos

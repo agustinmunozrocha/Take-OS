@@ -43,7 +43,7 @@ export function _invMostrarResultado(res) {
     + '<div class="modal-header"><div class="modal-title">Invitación creada</div></div>'
     + '<div class="modal-body">'
     +   '<p style="margin:0 0 10px;font-size:13px;color:var(--ink-secondary);line-height:1.55;">Invitación para <strong>' + escapeHtml(res.email || '') + '</strong>'
-    +   (registrado ? ' — esa cuenta ya existe en TakeOS, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link creará su cuenta y verá la invitación.')
+    +   (registrado ? ' — esa cuenta ya existe en Rizora, así que además le aparecerá en su bandeja al entrar.' : ' — esa persona aún no tiene cuenta: al abrir el link creará su cuenta y verá la invitación.')
     +   '</p>'
     +   '<div style="display:flex;gap:8px;align-items:center;">'
     +     '<input class="input" id="invLinkOut" readonly value="' + escapeHtml(link) + '" style="flex:1;font-size:12px;">'
@@ -119,7 +119,7 @@ export async function abrirInvitacionRecibida(token) {
     + '#invitacionRecibida .iwarn{border:1px solid var(--warning);border-radius:8px;padding:11px 13px;margin:14px 0 0;background:rgba(234,179,8,.08);font-size:12.5px;color:var(--ink-secondary);line-height:1.55;}'
     + '</style>'
     + '<div class="iw">'
-    +   '<div class="ibrand"><div class="imk">T</div><b>TakeOS</b></div>'
+    +   '<div class="ibrand"><div class="imk">R</div><b>Rizora</b></div>'
     +   '<div class="icard">'
     +     '<div class="ifrom">' + escapeHtml(info.org_nombre || 'Una productora') + ' te invitó a colaborar</div>'
     +     (info.proyecto ? '<h2>' + escapeHtml(info.proyecto) + '</h2>' : '<h2>Únete al equipo</h2>')

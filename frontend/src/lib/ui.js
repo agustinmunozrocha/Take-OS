@@ -750,7 +750,7 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
    V6.10 — CAPA DE NUBE (histórica)
    Esta capa fue la sincronización en la nube original. Quedó retirada: la
    persistencia es 100% Supabase. Se conserva el contexto para referencia. Si la nube no
-   carga o no está configurado, TakeOS sigue funcionando en modo local
+   carga o no está configurado, Rizora sigue funcionando en modo local
    (localStorage) — FAIL-SAFE, nunca se rompe.
 
    v1 deliberadamente simple: estado completo en un solo documento

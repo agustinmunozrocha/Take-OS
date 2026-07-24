@@ -62,7 +62,7 @@ export function openConfigPanel() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><polyline points="9 15 12 12 15 15"/></svg>
                 Cargar OS
               </button>
-              <button class="topbar-save-btn" id="snapshotsBtn" data-accion="cfg.fn" data-args="[&quot;openSnapshotsModal&quot;]" title="Historial de snapshots automáticos. Antes de cualquier carga destructiva, TakeOS guarda uno — puedes revertir.">
+              <button class="topbar-save-btn" id="snapshotsBtn" data-accion="cfg.fn" data-args="[&quot;openSnapshotsModal&quot;]" title="Historial de snapshots automáticos. Antes de cualquier carga destructiva, Rizora guarda uno — puedes revertir.">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Snapshots
               </button>
@@ -193,7 +193,7 @@ export function openEmpresaPerfil(subInicial) {
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--ink-primary);">
                   <input type="checkbox" id="cfgUsaChipax" ${E.usaChipax ? 'checked' : ''} data-accion="cfg.chipax" data-on="change"> Usamos Chipax
                 </label>
-                <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.5;">Chipax es un sistema de gestión financiera y conciliación bancaria. Al activarlo, TakeOS habilita la <strong>exportación masiva de gastos validados</strong> en el formato que Chipax importa, para registrar la contabilidad sin digitar gasto por gasto.</div>
+                <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;line-height:1.5;">Chipax es un sistema de gestión financiera y conciliación bancaria. Al activarlo, Rizora habilita la <strong>exportación masiva de gastos validados</strong> en el formato que Chipax importa, para registrar la contabilidad sin digitar gasto por gasto.</div>
               </div>
             </div>
             ${field('googleCalendarId','ID Google Calendar', E.googleCalendarId, 'xxxx@group.calendar.google.com')}
@@ -472,7 +472,7 @@ function _empAbrirInvitar() {
     document.getElementById('modalRoot').innerHTML = '<div class="modal-backdrop" data-accion="ui.backdrop"><div class="modal" style="max-width:480px;">'
       + '<div class="modal-header"><div class="modal-title">Incorporar a alguien al equipo</div></div>'
       + '<div class="modal-body">'
-      +   '<div class="emp-field" style="margin-bottom:12px;"><label>Correo</label><input class="input" id="empInvEmail" type="email" placeholder="persona@correo.cl"><span class="hint" style="font-size:11.5px;color:var(--ink-faint);">Solo el correo: por privacidad no se busca entre los usuarios de TakeOS. Si ya tiene cuenta, la invitación le aparece adentro; si no, el link la lleva a crearla.</span></div>'
+      +   '<div class="emp-field" style="margin-bottom:12px;"><label>Correo</label><input class="input" id="empInvEmail" type="email" placeholder="persona@correo.cl"><span class="hint" style="font-size:11.5px;color:var(--ink-faint);">Solo el correo: por privacidad no se busca entre los usuarios de Rizora. Si ya tiene cuenta, la invitación le aparece adentro; si no, el link la lleva a crearla.</span></div>'
       +   '<div class="emp-field"><label>Perfil de acceso</label><select class="select" id="empInvPerfil">' + opts + '</select></div>'
       + '</div>'
       + '<div class="modal-footer"><button class="btn" data-accion="cfg.volver">Cancelar</button><button class="btn btn-primary" data-accion="cfg.fn" data-args="[&quot;_empEnviarInvitacion&quot;]">Crear invitación</button></div>'
@@ -1246,12 +1246,12 @@ function _cpGuardarDatos() {
 
 /* ── A3 · Paso «Términos y condiciones» ────────────────────────────────────
    Contrato de prestación de servicios entre la sociedad desarrolladora de
-   TakeOS y la productora. TEXTO PROVISIONAL (v0): el área legal fija el
+   Rizora y la productora. TEXTO PROVISIONAL (v0): el área legal fija el
    definitivo cuando la sociedad esté constituida; aquí NO se redactan cláusulas
    reales. No se avanza sin marcar el checkbox. El registro/versionado del
    consentimiento es server-side y se verá en el cableado (A7), no acá. */
 const _CP_TYC_TEXTO = [
-  ['1. Objeto', 'La sociedad desarrolladora pone a disposición de la productora la plataforma TakeOS para la gestión de su producción audiovisual, según el plan contratado.'],
+  ['1. Objeto', 'La sociedad desarrolladora pone a disposición de la productora la plataforma Rizora para la gestión de su producción audiovisual, según el plan contratado.'],
   ['2. Plan y pago', 'La productora contrata el plan seleccionado y autoriza su cobro según el ciclo elegido. Los precios se expresan en pesos chilenos más IVA.'],
   ['3. Datos y privacidad', 'El tratamiento de datos personales se rige por la normativa vigente, incluida la Ley 21.719. La productora es responsable de los datos que carga a la plataforma.'],
   ['4. Administración', 'Quien crea la productora queda como administrador. La productora no puede quedar sin al menos un administrador.'],
@@ -1264,7 +1264,7 @@ function _cpTerminosHTML() {
   var cuerpo = _CP_TYC_TEXTO.map(function (s) { return '<h4>' + s[0] + '</h4><p>' + s[1] + '</p>'; }).join('');
   return ''
     + '<h3 class="cp-h">Términos y condiciones de servicio</h3>'
-    + '<p class="cp-sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de TakeOS y tu productora.</p>'
+    + '<p class="cp-sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de Rizora y tu productora.</p>'
     + '<div class="cp-provisional">Texto provisional, solo para demostrar el flujo. El definitivo lo define el área legal cuando la sociedad desarrolladora esté constituida.</div>'
     + '<div class="cp-tyc">' + cuerpo + '</div>'
     + '<label class="cp-check">'
@@ -1707,7 +1707,7 @@ export function abrirPrivacidadDatos() {
   var prev = document.getElementById('privacidadDatos'); if (prev) prev.remove();
   var ov = document.createElement('div'); ov.id = 'privacidadDatos';
   ov.innerHTML = '<style>' + _PD_CSS + '</style>'
-    + '<div class="pd-top"><button class="pd-back" data-accion="cfg.fn" data-args="[&quot;_pdCerrar&quot;]">← Volver</button><span class="pd-brand">TakeOS · Privacidad y datos</span></div>'
+    + '<div class="pd-top"><button class="pd-back" data-accion="cfg.fn" data-args="[&quot;_pdCerrar&quot;]">← Volver</button><span class="pd-brand">Rizora · Privacidad y datos</span></div>'
     + '<div class="pd-wrap" id="pdWrap"></div>';
   document.body.appendChild(ov);
   _pdRender();
@@ -1754,7 +1754,7 @@ function _pdHubHTML() {
     +   card('', '🏢', 'Productoras con acceso a tus datos', 'Revisa quién tiene tus datos y revoca tu consentimiento cuando quieras.', 'Revocación', '', 'consentimientos')
     +   card('', '🪪', 'Verificación de edad', 'Declara tu mayoría de edad, por si algún flujo lo requiere.', 'Si aplica', ' warn', 'edad')
     +   card('', '🍪', 'Cookies y analítica', 'Decide qué datos de navegación permites recolectar.', 'Consentimiento', '', 'cookies')
-    +   card(' full', '🗑️', 'Eliminar mi cuenta', 'Elimina tu cuenta de TakeOS y suprime tus datos personales. Esta acción es irreversible.', 'Supresión', ' danger', 'eliminar')
+    +   card(' full', '🗑️', 'Eliminar mi cuenta', 'Elimina tu cuenta de Rizora y suprime tus datos personales. Esta acción es irreversible.', 'Supresión', ' danger', 'eliminar')
     + '</div>';
 }
 function _pdIr(v) { _pdVista = v; _pdRender(); var o = document.getElementById('privacidadDatos'); if (o && o.scrollTo) { try { o.scrollTo(0, 0); } catch (e) {} } }
@@ -2159,7 +2159,7 @@ function _pdEdadHTML() {
   }
   return back + '<div class="pd-flow">'
     + '<h3>Verificación de edad</h3>'
-    + '<div class="pd-legal"><b>Si aplica.</b> Los titulares de cuenta de TakeOS son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal, todavía abierta — por ahora es opcional y no bloquea nada.</div>'
+    + '<div class="pd-legal"><b>Si aplica.</b> Los titulares de cuenta de Rizora son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal, todavía abierta — por ahora es opcional y no bloquea nada.</div>'
     + '<div class="pd-field"><label class="pd-flabel" for="pdEdadFecha">Fecha de nacimiento</label><input class="input" type="date" id="pdEdadFecha"><div class="pd-ferr" id="pdEdadErr">Ingresa tu fecha de nacimiento; debes ser mayor de 18 años.</div></div>'
     + '<label class="pd-check"><input type="checkbox" id="pdEdadChk"> <span>Declaro que soy mayor de 18 años.</span></label>'
     + '<div class="pd-acts"><button class="btn" data-accion="cfg.fn" data-args="[&quot;_pdIr&quot;,&quot;hub&quot;]">Cancelar</button><button class="btn btn-primary" data-accion="cfg.fn" data-args="[&quot;_pdEdadConfirmar&quot;]">Confirmar</button></div>'

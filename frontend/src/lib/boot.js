@@ -1,4 +1,4 @@
-// Boot de TakeOS — extraído de index.html (Etapa C6, cierre del vaciado del <script>)
+// Boot de Rizora — extraído de index.html (Etapa C6, cierre del vaciado del <script>)
 // Importado AL FINAL de main.js: cuando evalúa, todos los bridges del sistema existen.
 // El veil ahora nace en el HTML estático (anti-flash CSS-first); aquí solo se gobierna.
 
@@ -98,7 +98,7 @@ window.confirmLogout = function () {
   showModal({
     danger: false,
     title: 'Cerrar sesion',
-    body: 'Vas a cerrar tu sesion de TakeOS en este navegador. \u00bfContinuar?',
+    body: 'Vas a cerrar tu sesion de Rizora en este navegador. \u00bfContinuar?',
     confirmLabel: 'Cerrar sesion',
     cancelLabel: 'Cancelar',
     onConfirm: () => { logoutTakeOS(); },
@@ -223,7 +223,7 @@ export function orgNombre() {
 }
 function aplicarMarcaOrg() {
   var nom = orgNombre();
-  try { document.title = nom ? ('TakeOS · ' + nom) : 'TakeOS'; } catch (e) {}
+  try { document.title = nom ? ('Rizora · ' + nom) : 'Rizora'; } catch (e) {}
   try { var bs = document.getElementById('brandSub'); if (bs) bs.textContent = nom; } catch (e) {}
   try { var bl = document.getElementById('brandLogo'); if (bl) bl.textContent = (nom ? nom.charAt(0).toUpperCase() : 'T'); } catch (e) {}
   try {
@@ -355,7 +355,7 @@ function _bootVeil(msg) {
     v.style.cssText = 'position:fixed;inset:0;z-index:100000;background:var(--bg-page,#111);display:grid;place-items:center;color:var(--ink-faint,#888);font-family:var(--font-sans),system-ui,sans-serif;transition:opacity .25s;';
     document.body.appendChild(v);
   }
-  v.innerHTML = '<div style="text-align:center;"><div style="font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink-primary,#eee);margin-bottom:10px;">TakeOS</div><div style="font-size:13px;">' + (msg || '') + '</div></div>';
+  v.innerHTML = '<div style="text-align:center;"><div style="font-weight:700;font-size:20px;letter-spacing:.02em;color:var(--ink-primary,#eee);margin-bottom:10px;">Rizora</div><div style="font-size:13px;">' + (msg || '') + '</div></div>';
   v.style.opacity = '1'; v.style.pointerEvents = 'auto';
   clearTimeout(v._t);
   v._t = setTimeout(_bootVeilOff, 1300);   // se quita sola: cortina, no muro
@@ -375,7 +375,7 @@ export async function cloudGate(onUnlock) {
      se descarta y se vuelve a pedir login. Esto cierra el bug de sesión
      cruzada (una sesión ajena guardada en el navegador entraba sola, sin
      pasar por Google) y aplica la política de Agustín: imposible entrar a
-     TakeOS sin autenticarse, como Chipax. */
+     Rizora sin autenticarse, como Chipax. */
   try {
     if (AUTH_RETORNO_OAUTH) {
       // Regreso fresco de Google: la sesión puede tardar un instante en quedar lista.
@@ -447,8 +447,8 @@ export async function cloudGate(onUnlock) {
   ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0e0f13;';
   ov.innerHTML = `
     <div style="text-align:center;max-width:340px;padding:24px;font-family:system-ui,sans-serif;">
-      <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">TakeOS</div>
-      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después TakeOS vuelve a pedir autenticación.</div>
+      <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">Rizora</div>
+      <div style="color:#7a7d85;font-size:13px;margin-bottom:22px;">Tu sesión dura ${AUTH_TTL_HORAS} horas; después Rizora vuelve a pedir autenticación.</div>
         <div id="cgInvHint" style="display:none;border:1px solid #4a7;border-radius:8px;padding:10px 12px;margin-bottom:18px;font-size:12.5px;color:#9c8;line-height:1.5;">Te invitaron a colaborar. Entra con Google y tu <strong>cuenta se crea sola</strong>; al entrar verás la invitación.</div>
       <button id="cloudGateGoogle"
         style="width:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border:1px solid #d7dae0;border-radius:8px;background:#fff;color:#1f1f1f;font-weight:600;font-size:14px;cursor:pointer;">
@@ -560,7 +560,7 @@ export async function cloudGate(onUnlock) {
    Tras el login, si la persona pertenece a MÁS DE UNA organización (o se
    fuerza con ?espacio=1), se muestra su espacio personal para elegir a dónde
    entrar. Si pertenece a una sola, entra directo (sin cambio para el equipo
-   actual de Primate). DEFENSIVO: ante cualquier error, arranca TakeOS normal.
+   actual de Primate). DEFENSIVO: ante cualquier error, arranca Rizora normal.
    Modo demostración: ?espacio=demo pinta la pantalla con datos ficticios
    (Game of Thrones) para evaluar la estética integrada sin depender de datos.
 

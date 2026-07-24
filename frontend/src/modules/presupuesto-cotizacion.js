@@ -261,7 +261,7 @@ function renderPresupuestoHistorico(project, version) {
   let detalle;
   if (!snap) {
     const r = version.resumen;
-    detalle = `<div class="cot-card" style="margin-bottom:12px;"><p style="margin:0;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;">Esta versión se creó antes de que TakeOS guardara el detalle completo del presupuesto por versión, así que solo se conserva su <strong>resumen</strong>. Las versiones que crees de ahora en adelante guardarán el detalle bloqueado.</p></div>` + (r ? presupHistSummaryHTML({ presupCliente: r.valor || 0, costoProd: { cot: r.costo || 0 }, gananciaFinal: { cot: r.ganancia || 0 } }) : '');
+    detalle = `<div class="cot-card" style="margin-bottom:12px;"><p style="margin:0;font-size:12.5px;color:var(--ink-secondary);line-height:1.5;">Esta versión se creó antes de que Rizora guardara el detalle completo del presupuesto por versión, así que solo se conserva su <strong>resumen</strong>. Las versiones que crees de ahora en adelante guardarán el detalle bloqueado.</p></div>` + (r ? presupHistSummaryHTML({ presupCliente: r.valor || 0, costoProd: { cot: r.costo || 0 }, gananciaFinal: { cot: r.ganancia || 0 } }) : '');
   } else {
     let fin = null;
     try { fin = calcSummaryFin({ state: 'venta', data: { servicios: snap.servicios || {}, gastos: snap.gastos || [], equipos: snap.equipos || [], talentos: snap.talentos || [], finanzas: snap.finanzas || {} } }); } catch (e) { fin = null; }
@@ -1885,7 +1885,7 @@ async function exportPresupuestoExcel() {
   const versiones = (cs.versiones || []).slice().sort((a, b) => (a.numero || 0) - (b.numero || 0));
 
   const wb = new ExcelJSlib.Workbook();
-  wb.creator = 'TakeOS';
+  wb.creator = 'Rizora';
   const usados = {};
   const nombreHoja = (v) => {
     let base = ('Presupuesto V' + (v.numero || '?')).slice(0, 28);
@@ -1913,7 +1913,7 @@ async function exportPresupuestoExcel() {
       ws.columns = [{ width: 28 }, { width: 18 }];
       ws.getCell('A1').value = 'PRESUPUESTO · ' + nombreProy; ws.getCell('A1').font = { bold: true, size: 15 };
       ws.getCell('A2').value = `${verLabel}   ·   ${estado}   ·   Exportado: ${fecha}`; ws.getCell('A2').font = { size: 10, color: { argb: _XL.faint } };
-      ws.getCell('A4').value = 'Esta versión se creó antes de que TakeOS guardara el detalle completo del presupuesto. Solo se conserva su resumen.';
+      ws.getCell('A4').value = 'Esta versión se creó antes de que Rizora guardara el detalle completo del presupuesto. Solo se conserva su resumen.';
       ws.getCell('A4').font = { italic: true, color: { argb: _XL.faint } };
       const rsum = v.resumen || {};
       let rr = 6;
@@ -3745,7 +3745,7 @@ function cotCondRestaurar() {
   markDirty(); gancho('_dalPerfilSaveSoon')();
   const ta = document.getElementById('cotCondTa'); if (ta) ta.value = cotCondTplDefault();
   cotCondPreviewVivo();
-  showToast({ kind: 'info', title: 'Texto original restaurado', body: 'Las condiciones vuelven al estándar de TakeOS.' });
+  showToast({ kind: 'info', title: 'Texto original restaurado', body: 'Las condiciones vuelven al estándar de Rizora.' });
 }
 function cotCondInsertarVar(v) {
   const ta = document.getElementById('cotCondTa'); if (!ta) return;
