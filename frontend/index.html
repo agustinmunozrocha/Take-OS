@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<!--
+  ════════════════════════════════════════════════════════════════════
+  SEGURIDAD · Content-Security-Policy (CSP) — Prioridad #2, §6 ítem 5
+  ════════════════════════════════════════════════════════════════════
+  D3 (jul-2026): script-src SIN 'unsafe-inline' — el Desacople eliminó los
+  ~991 manejadores on*= (delegación data-accion) y el <script> inline (módulos
+  ES). style-src conserva 'unsafe-inline' (miles de style= — proyecto aparte,
+  decisión documentada en el Plan de Desacople). Además cierra:
+  bloquea plugins/objetos (object-src 'none'), fija el origen base
+  (base-uri 'self') y restringe DESDE QUÉ ORÍGENES se cargan scripts,
+  estilos, fuentes, imágenes y datos.
+
+  Orígenes que la app realmente usa (verificados en el código, jun-2026):
+    · scripts:  cdn.jsdelivr.net (supabase-js + xlsx, <script src>) y
+                cdnjs.cloudflare.com (xlsx/exceljs cargados bajo demanda).
+    · estilos:  fonts.googleapis.com (CSS de Google Fonts).
+    · fuentes:  fonts.gstatic.com (woff2).
+    · datos:    *.supabase.co — REST (https) + realtime (wss).
+    · imágenes: 'self', data:, blob: y https: (URLs firmadas de Storage).
+    · iframes:  preview de cotización (srcdoc) e impresión (about:blank),
+                ambos same-origin; PDFs/descargas se abren vía blob:.
+
+  NOTA: 'frame-ancestors' (anti-clickjacking) NO aplica vía <meta> — el
+  navegador la ignora aquí. Debe ir como header de hosting:
+    Content-Security-Policy: frame-ancestors 'self';
+  (o el equivalente clásico  X-Frame-Options: SAMEORIGIN).
+
+  Meta post-modularización (camino 2): pasar handlers inline a
+  addEventListener y usar nonce/hash para retirar 'unsafe-inline'.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TakeOS</title>
+
+<!--
+  ════════════════════════════════════════════════════════════════════
+  TakeOS — Sistema operativo de producción audiovisual
+  ════════════════════════════════════════════════════════════════════
+
+  Versión:        V8.6.0 — Sistema de Tareas, comentarios y responsabilidades: botón «Tareas» por sección (asignar, adjuntar, comentar, completar) · @menciones (incl. notas de Presupuesto) · mega-repositorio «Mis tareas» en el Control Room · «Requieren atención» por usuario (tareas + señales) · señal del guion técnico → AD · sesión simulada hasta tener auth
+  Fecha:          Junio 2026
+  Autor:          Agustín Ignacio Muñoz Rocha
+  Razón social:   La Hectárea SpA
+  Marca:          Primate Films
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.5.3 → V8.6.0 (sistema de Tareas, comentarios y responsabilidades)
+  ════════════════════════════════════════════════════════════════════
+  Esta versión abre la capa de comunicación y trazabilidad de responsabilidades.
+  TAREAS POR SECCIÓN
+  - Junto al responsable de cada sección del proyecto aparece un botón «Tareas»
+    (con un contador de tareas abiertas). No saturamos la UI con botones de
+    responsable por todos lados: una sola entrada por sección.
+  - El botón abre un panel donde cualquiera puede CREAR una tarea: elegir a quién
+    se la asigna (una persona del proyecto), escribir el texto y ADJUNTAR archivos
+    (.xlsx, PDF, imagen). Ej.: «toma las personas de esta BD y agrégalas como
+    visitas externas» + adjunto .xlsx.
+  - Las tareas se distinguen de los COMENTARIOS: cualquiera puede responder una
+    tarea con un comentario (ej.: «Javi, vi la BD pero no lleva ni un nombre»).
+  - Cada tarea se marca como completada con un check.
+  @MENCIONES
+  - Al escribir @ en el texto de una tarea o de un comentario aparece un
+    autocompletado con las personas del proyecto; al elegir, se inserta @Nombre y
+    se resalta. Funciona también en la NOTA DE FILA del Presupuesto.
+  CONTROL ROOM · MEGA-REPOSITORIO «MIS TAREAS»
+  - Nuevo panel arriba del tablero que junta TODO lo asignado al usuario, en todos
+    los proyectos y en todas las secciones, agrupado por proyecto.
+  - AUTOASIGNACIÓN: «Auto-asignármela» crea una tarea para uno mismo (pendiente).
+  - Cada tarea trae «Abrir» (te lleva al proyecto, la sección y abre su panel).
+  CONTROL ROOM · «REQUIEREN ATENCIÓN» POR USUARIO
+  - La métrica «Requieren atención» ahora cuenta los PROYECTOS que requieren la
+    atención del usuario actual (tareas abiertas asignadas + señales que le
+    aplican), no un total genérico. Cada tarjeta de proyecto muestra un badge con
+    ese número.
+  ATENCIÓN MÁS ALLÁ DE TAREAS · SEÑALES
+  - Editar el guion técnico / plan de rodaje levanta una SEÑAL de atención para el
+    AD (el responsable del Plan de Rodaje), porque el plan se construye sobre el
+    guion técnico. Quien hace el cambio NO se autoalarma; los demás con ese rol sí.
+  - Las señales aparecen en «Mis tareas» con «Ir» (va a la sección) y «Visto»
+    (las descarta para ese usuario). El mecanismo es genérico y extensible a otras
+    secciones/roles.
+  SESIÓN SIMULADA (SIN AUTH TODAVÍA)
+  - Como aún no hay login, el «usuario actual» se simula con un selector
+    «Sesión (simulada)» en el Control Room, para poder demostrar todo el sistema
+    por-usuario. Cuando exista autenticación real, currentUser() pasa a leer la
+    sesión y el resto del sistema funciona sin cambios.
+  MEJORAS PROPIAS (con la latitud dada)
+  - Sesión simulada (selector de usuario) para que el comportamiento por-usuario
+    sea visible y probable desde ya, sin esperar el backend.
+  - Badge de atención por tarjeta de proyecto en el Control Room.
+  - Botón «Visto» para descartar señales; y el que edita el guion no se autoalarma.
+  MÓDULOS AFECTADOS
+  - Núcleo del proyecto (modelo: project.data.tareas y project.data.senales),
+    header de cada módulo (botón Tareas), Presupuesto (notas con @), Plan de Rodaje
+    (señal del guion), Control Room (mega-repositorio + métrica por usuario).
+  DECISIONES ESTRUCTURALES
+  - Una sola entrada de Tareas por sección (no botones de responsable everywhere).
+  - Atención del usuario = tareas + señales, unificado en un mismo contador.
+  - El usuario actual se centraliza en currentUser(); hoy simulado, mañana login.
+  BREAKING CHANGES
+  - Ninguno. Los proyectos existentes reciben tareas:[] y senales:[] vacíos.
+  PENDIENTES CONOCIDOS / NOTAS DE HORIZONTE
+  - Autenticación real: hasta entonces, el usuario actual se simula y los avisos
+    no se envían (las @menciones y las tareas no notifican todavía).
+  - Adjuntos: por ahora se guarda el NOMBRE del archivo (no el binario); el archivo
+    real viaja cuando exista almacenamiento dedicado (Supabase Storage).
+  - Señales: extensibles a más secciones/roles (hoy: guion técnico → AD).
+  - Formulario de intake nativo (independizarse de Google Forms).
+  ESTADO DE APROBACIÓN: Pendiente de aprobación.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.5.2 → V8.5.3 (subversiones de plantilla + link de formulario en BD)
+  ════════════════════════════════════════════════════════════════════
+  NOTIFICACIONES · SUBVERSIONES DE PLANTILLA (1)
+  - Una plantilla ahora puede tener SUBVERSIONES editables por separado, y el
+    sistema elige automáticamente cuál usar según el destinatario.
+  - Producción tiene dos subversiones: «Estándar» y «Pronto Pago». Se elige por la
+    marca PP del Presupuesto de cada persona (igual que la condición de pago, pero
+    ahora cada texto es editable de forma independiente, no por código).
+  - El editor de plantillas muestra sub-pestañas (Estándar / Pronto Pago) para
+    editar el cuerpo de cada subversión. La vista previa refleja la subversión en
+    edición.
+  - El modelo es genérico: a futuro una plantilla podrá tener subversiones por otra
+    dimensión (p.ej. crew / cliente / agencia para el correo de Hoja de Llamado).
+  - Migración: una Producción ya guardada conserva su texto actual como subversión
+    «Estándar» y recibe la «Pronto Pago» por defecto, sin perder personalizaciones.
+  BASE DE DATOS · LINK DEL FORMULARIO (2)
+  - Nuevo campo «Link del formulario» en la pestaña Base de Datos. Es el formulario
+    que envías a las personas para que llenen sus datos (alimenta la BD) y es el que
+    Notificaciones usa como {{LINK FORMULARIO}}.
+  - Corrige por qué los destinatarios salían «inválidos»: el editor de
+    Notificaciones editaba un campo distinto (cfg.linkFormulario) al que el sistema
+    leía (EMPRESA_PERFIL.linkFormularioPago). Ahora el campo de la BD escribe en el
+    que el sistema lee, y {{LINK FORMULARIO}} además cae de vuelta al del editor si
+    estuviera puesto ahí.
+  DECISIONES ESTRUCTURALES
+  - Las distinciones de un mismo correo (hoy pronto pago; mañana tipo de
+    destinatario) viven como subversiones de UNA plantilla, no como plantillas
+    separadas: un solo lugar que se edita, el sistema elige.
+  PENDIENTES CONOCIDOS / NOTAS DE HORIZONTE
+  - Formulario de intake NATIVO del software, para independizarse de Google Forms
+    (hoy el link apunta a un formulario externo).
+  - Diferido a V8.5.4 (pasada dedicada): sistema de Tareas — botón «Tareas» por
+    sección, crear/asignar con texto y adjunto, comentarios de respuesta, etiquetado
+    @ (también en notas de Presupuesto), repositorio de tareas del usuario en el
+    Control Room (across proyectos y secciones), autoasignación, y «Requieren
+    Atención» ligado al usuario (incluyendo señales más allá de tareas, como un
+    cambio de guion técnico que levanta la atención del AD).
+  - Saludo automático de cumpleaños: nota de horizonte (la base ya guarda DD/MM).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.5.1 → V8.5.2 (correcciones a Pagos Pendientes y Notificaciones)
+  ════════════════════════════════════════════════════════════════════
+  PRONTOS PAGOS · FECHAS (1)
+  - Nuevas columnas en la pestaña Prontos Pagos del CFO: «Fecha de rodaje» (de
+    Rodajes, solo lectura) y «Fecha de pago» (editable, por persona y proyecto).
+  - Alerta visible «⚠ antes del rodaje» si la fecha de pago es anterior al primer
+    día de rodaje. Evita el riesgo real de que el CFO transfiera a alguien antes de
+    que trabaje (el pronto pago se define en la cotización y llega directo aquí).
+  PRONTOS PAGOS · MONTO REAL — BUG GRAVE CORREGIDO (2)
+  - El Monto ya NO toma el costo cotizado. Ahora toma el NETO del COSTO REAL de
+    cada fila según su DTE REAL, con la misma lógica tributaria que los contratos:
+    boleta de honorarios retiene (neto = real × factor); factura sin retención
+    (neto = real). Se usa la función central montoNetoDesde.
+  - Ejemplo: costo real $117.994 con boleta → neto $100.000; costo real $100.000
+    con factura → neto $100.000.
+  PRONTOS PAGOS · PROFORMA (3)
+  - Si una fila marcada con PP aún no tiene costo real ingresado, el Monto muestra
+    «Proforma» (no un monto falso). Esas filas NO se incluyen en las exportaciones
+    Office Banking (no se puede transferir un monto que aún no es real). Si una
+    persona tiene parte de sus filas con costo real y parte sin, se marca el total
+    como parcial.
+  NOTIFICACIONES · COLUMNA PP (4)
+  - La tabla de destinatarios (pestaña Enviar) tiene una nueva columna «PP» a la
+    derecha de Validación, que marca quién tiene pronto pago. El cuerpo del correo
+    ya adaptaba la condición de pago por persona vía {{CONDICIÓN DE PAGO}} (V8.5.1);
+    ahora además se ve de un vistazo quién es pronto pago antes de enviar.
+  DECISIONES ESTRUCTURALES
+  - La transferencia de un pronto pago se calcula sobre el costo real y su DTE real,
+    nunca sobre el cotizado, para que el monto a transferir sea siempre el líquido
+    correcto. Sin costo real no hay monto: es Proforma y no se exporta.
+  PENDIENTES CONOCIDOS / DIFERIDOS
+  - Sistema de Tareas (pasada dedicada, ahora V8.5.3): botón «Tareas» por sección,
+    crear/asignar con texto y adjunto, comentarios de respuesta, etiquetado @
+    (también en notas de Presupuesto), repositorio de tareas del usuario en el
+    Control Room (across proyectos y secciones), autoasignación, y «Requieren
+    Atención» ligado al usuario (incluyendo señales más allá de tareas, como un
+    cambio de guion técnico que levanta la atención del AD).
+  - Saludo automático de cumpleaños: nota de horizonte (la base ya guarda DD/MM).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.5.0 → V8.5.1 (cierre del hilo Pronto Pago: Notificaciones + Finanzas)
+  ════════════════════════════════════════════════════════════════════
+  NOTIFICACIONES · PLANTILLA ÚNICA DE PRODUCCIÓN (1)
+  - Existe UNA sola plantilla de Producción. Detecta automáticamente si cada
+    destinatario tiene pronto pago y adapta el texto, sin plantillas duplicadas.
+  - Nueva variable {{CONDICIÓN DE PAGO}} (automática): se resuelve por persona.
+    Si tiene filas marcadas con PP (confirmadas) en el Presupuesto, escribe la
+    condición de pronto pago (transferencia el primer viernes tras la emisión);
+    si no, escribe la condición estándar (pago a 30 días de la emisión).
+  - Se eliminó la plantilla separada «Producción · Pronto Pago». (Los proyectos
+    que ya la tuvieran guardada no se rompen; simplemente dejó de crearse.)
+  FINANZAS · SECCIÓN PAGOS PENDIENTES (2)
+  - En Finanzas · CFO, los pagos pendientes ahora agrupan dos sub-pestañas:
+    «Reembolsos» (ya existía) y la nueva «Prontos Pagos».
+  - Prontos Pagos se deriva del Presupuesto: filas confirmadas marcadas con la
+    píldora PP, agregadas por persona y proyecto, de TODOS los proyectos. Muestra
+    a quién pagar, proyecto, monto y si tiene datos bancarios en la Base de Datos.
+  - KPI nuevo «Prontos pagos» en el encabezado del CFO.
+  EXPORTACIÓN OFFICE BANKING (3)
+  - Exportar prontos pagos (solo) a Excel Office Banking de Santander.
+  - Exportar consolidado (reembolsos + prontos pagos) en un único Excel.
+  - Mismo formato de 13 columnas que ya usaban los reembolsos. Los datos
+    bancarios del beneficiario salen de la Base de Datos; omite y avisa a quien no
+    tenga cuenta de destino. Pide la cuenta de origen si no está en el Perfil de
+    empresa.
+  DECISIONES ESTRUCTURALES
+  - El pronto pago marcado en el Presupuesto (V8.5.0) ahora alimenta de verdad
+    tanto las comunicaciones (una sola plantilla que se adapta) como las finanzas
+    (administración y exportación), sin duplicar plantillas ni datos.
+  PENDIENTES CONOCIDOS / NOTAS DE HORIZONTE
+  - Saludo automático de «Feliz Cumpleaños» (Crew/Talentos/Proveedores/Clientes):
+    NO implementado; queda como nota de horizonte. La base ya guarda el cumpleaños
+    como DD/MM (V8.5.0), lista para esa automatización sin migración.
+  - Diferido a V8.5.2 (pasada dedicada): sistema de Tareas — botón «Tareas» junto
+    al responsable de cada sección, crear/asignar tareas con texto y adjunto
+    (.xlsx/PDF/imagen), comentarios de respuesta, etiquetado @ a personas del
+    proyecto (también en las notas del Presupuesto), repositorio de todas las
+    tareas del usuario en el Control Room (across proyectos y secciones) y
+    autoasignación. Y «Requieren Atención» ligado al usuario que ingresa,
+    incluyendo señales más allá de tareas (p.ej. un cambio en el guion técnico
+    levanta atención del AD porque el Plan de Rodaje se construye sobre él).
+    Todo esto depende de autenticación para funcionar de verdad; en V8.5.2 se deja
+    la interfaz y el modelo de datos construidos.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.8 → V8.5.0 (consolidado V8.5: responsabilidad + finanzas + BD)
+  ════════════════════════════════════════════════════════════════════
+  RESPONSABLE POR SECCIÓN / PESTAÑA (1)
+  - Cada módulo muestra en su encabezado un campo «Responsable» con el combobox
+    estándar de la Base de Datos. Un único responsable por sección.
+  - Defaults por rol: Info Proyecto, Presupuesto y Cotización → Productor
+    Ejecutivo; Crew, Rodajes, Locaciones, Legal, Notificaciones y Gastos → Jefe de
+    Producción; Hoja de Llamado y Plan de Rodaje → Asistente de Dirección; Base de
+    Datos y Documentos → sin responsable.
+  - PE y JP se resuelven automáticamente desde Info Proyecto (quien esté asignado
+    como Productor Ejecutivo / Jefe de Producción). AD no vive aún en Info
+    Proyecto, así que parte como sugerencia de rol hasta asignar a una persona.
+  - Muestra nombre, cargo, correo y teléfono del responsable, con click para abrir
+    su ficha en la Base de Datos.
+  - NO se implementan responsables por tarea dentro de una sección (queda para
+    futuro, tal como pediste).
+  - El responsable se guarda por proyecto (project.data.responsables).
+  PRONTO PAGO POR FILA EN PRESUPUESTO (2)
+  - Cada fila del Presupuesto tiene una píldora «PP» (toggle) para marcar si el
+    ítem fue negociado bajo modalidad de pronto pago. Es por fila, no global.
+  - El dato se guarda (item.prontoPago) y queda listo para que Finanzas y
+    Notificaciones lo consuman en una versión futura, sin duplicar plantillas.
+  TIPO DE CUENTA — DESPLEGABLE (3)
+  - El campo «Tipo de cuenta» en la ficha de persona pasó de texto libre a un
+    desplegable: Cuenta Corriente, Cuenta Vista, Cuenta de Ahorro, Cuenta RUT,
+    Chequera Electrónica. Si una persona tenía un valor escrito a mano, se conserva
+    como opción «(texto)» para no perder el dato.
+  CUMPLEAÑOS — SOLO DÍA Y MES (4)
+  - «Cumpleaños» dejó de pedir el año: ahora son dos desplegables (día + mes) y se
+    guarda como DD/MM. Resuelve el caso real de «sé el día pero no el año» y deja la
+    base lista para el saludo automático de cumpleaños futuro sin migración. (La
+    fecha de nacimiento completa de los talentos, usada para la edad, no cambia.)
+  HORA EXTRA COMO MONTO (5)
+  - El campo «Valor Hora Extra» de Legal ahora es un monto en pesos con la misma
+    regla que Monto Neto (formato $X.XXX CLP, bloquea letras). Ya no es un %. Su
+    versión en palabras (hora_extra_texto) sale automáticamente como pesos.
+  INSUMO REGISTRADO (futuro)
+  - Formato Office Banking de Santander (13 columnas: cuenta origen/destino, moneda,
+    código banco destino, RUT, nombre, monto, glosas, correo) registrado para la
+    futura exportación de Pagos Pendientes. Mapea directo a los datos bancarios de
+    la BD, lo que refuerza estandarizar el tipo de cuenta.
+  DECISIONES ESTRUCTURALES
+  - El responsable es una capa formal de responsabilidad operativa por sección,
+    base para los RECI futuros y para notificar a quien responde por cada área.
+  - Pronto Pago se registra en el origen (Presupuesto) para alimentar después a
+    Finanzas y a las comunicaciones, sin duplicar plantillas.
+  PENDIENTES CONOCIDOS / DIFERIDOS (marcados como futuro en el propio documento)
+  - Responsables por tarea dentro de una sección.
+  - Plantilla única de Notificaciones (ej. «Confirmación de Rodaje») que mencione
+    el pronto pago automáticamente según el Presupuesto.
+  - Sección «Pagos Pendientes» en Finanzas con subsecciones Reembolsos y Prontos
+    Pagos, exportables por separado o consolidadas a Excel Office Banking.
+  - Automatización de «Feliz Cumpleaños».
+  - Fecha de pago del cliente por proyecto → activar «días de pago» en la ficha de
+    empresa.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.7 → V8.4.8 (feedback Legal + cambio de variable)
+  ════════════════════════════════════════════════════════════════════
+  GENERADOR — X A LA DERECHA + BOTÓN CERRAR (A)
+  - En «Ver / Generar documento» la X de cerrar se movió a la esquina superior
+    derecha (la izquierda estaba cargada con título y subtítulo) y se agregó un
+    botón «Cerrar» abajo, junto a «Exportar PDF» y «Generar».
+  CAMPOS DE MONTO — FORMATO $X.XXX CLP + SOLO NÚMEROS (B)
+  - Los campos de monto autoformatean a «$100.000 CLP» mientras escribes y
+    bloquean letras (solo dígitos). 100000 → $100.000 CLP; 120.000 → $120.000 CLP;
+    $56000 → $56.000 CLP. Se mantiene en CLP (nota de horizonte: documentos para
+    productoras fuera de Chile más adelante; por eso el «CLP» explícito).
+  VARIABLES «_texto» AUTOMÁTICAS + «PESOS CHILENOS» (C)
+  - Todas las variables que terminan en _texto (monto_texto, hora_extra_texto, …)
+    son automáticas: ya NO aparecen como campos a tipear. Se derivan de su variable
+    base: si es un monto, cifra → palabras («un millón quinientos mil pesos
+    chilenos»); si es un porcentaje, número → «… por ciento». Se agregó «chilenos»
+    al monto en palabras.
+  NOMBRE DEL PDF (D)
+  - El PDF generado se nombra: «<documento> - <contraparte> - S-F - v<N>».
+    (Se usa «S-F» en vez de «S/F» porque la barra rompe nombres de archivo.)
+  PLANTILLAS PRESET ELIMINADAS (E)
+  - Se eliminaron todas las plantillas predeterminadas (Cesión, Servicios, NDA,
+    Arriendo). Solo existen las plantillas que agregas tú. Los documentos ya
+    generados con una preset se conservan y se pueden ver/exportar; solo no se
+    pueden generar nuevos con ellas. Si no hay ninguna plantilla, «Generar
+    documento» avisa que primero crees una en la pestaña Plantillas.
+  RENOMBRE jornadas_trabajo → cantidad_jornadas (F)
+  - La variable jornadas_trabajo se renombró a cantidad_jornadas (se confundía con
+    fechas_rodaje). jornadas_trabajo queda como alias para no romper plantillas
+    que aún la usen, pero el nombre nuevo es cantidad_jornadas.
+  DECISIONES ESTRUCTURALES
+  - Toda variable «_texto» es derivada, nunca editable: una sola regla cubre
+    monto_texto, hora_extra_texto y cualquier futura variable en palabras.
+  - Las presets se quitan de la creación pero el motor de render se conserva para
+    poder seguir viendo documentos antiguos generados con ellas.
+  BREAKING: las plantillas que usaran jornadas_trabajo deben pasar a
+  cantidad_jornadas (hay alias temporal). Las presets dejan de poder generarse.
+  PENDIENTE V8.5: carga de logos PNG (Perfil de Empresa + INFO PROYECTO), con
+  compresión en cliente para no inflar el almacén en la nube.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.6 → V8.4.7 (feedback del editor de plantillas legales)
+  ════════════════════════════════════════════════════════════════════
+  VARIABLES DE PRODUCTORA (punto 1)
+  - El grupo «Productora (fijas)» del editor ahora ofrece dos variables que ya
+    existían en el motor pero no eran insertables: rut_representante_productora
+    (RUT de quien firma por la empresa) y domicilio_productora (domicilio de la
+    empresa). Convención de nombres respetada (solo letras, números y guion bajo).
+  MONTO EN PALABRAS AUTOMÁTICO (punto 2)
+  - monto_texto ahora se genera automáticamente a partir de monto_neto
+    (cifra → palabras: ej. «un millón quinientos mil pesos»; usa «de pesos»
+    cuando el monto termina en millones exactos; resuelve la apócope «un/veintiún»).
+  - Dejó de ser un campo editable en el generador: es derivado, no se ingresa a mano.
+  CONSOLIDACIÓN DE FECHAS DE RODAJE (punto 3)
+  - Se eliminó la variable fecha_rodaje (singular) que estaba en el grupo Fechas.
+  - Queda solo fechas_rodaje (plural), que admite una o varias fechas y se
+    autollena desde el módulo Rodajes (sigue siendo editable al generar). Así no
+    hay dos variables confusas para lo mismo.
+  TÍTULO DEL PREVIEW EN VIVO (punto 4)
+  - En el editor, el título del documento en la vista previa ahora se actualiza
+    en vivo mientras escribes el Nombre (antes solo se refrescaba al tocar el cuerpo).
+  GENERADOR ANTI-CIERRE (punto 5)
+  - El generador «Ver / Usar documento» ya no se cierra al hacer click fuera;
+    se cierra con la X de la esquina, igual que el editor de plantillas. Evita
+    perder el trabajo en curso por un click accidental.
+  ENCABEZADO SIN TRIÁNGULO (punto 6)
+  - Se quitó el símbolo de triángulo del encabezado del documento; queda solo el
+    nombre de la productora. Aplica al preview del editor, al preview del
+    generador y al PDF exportado.
+  DECISIONES ESTRUCTURALES
+  - monto_texto es 100% derivado de monto_neto; si una plantilla usa {{monto_texto}}
+    debe asegurarse de que el monto venga del presupuesto o del campo monto_neto.
+  BREAKING: ninguno. Las plantillas que usaban fecha_rodaje deben cambiarse a
+  fechas_rodaje (no se generaba aún ningún documento con la variable nueva, así que
+  el impacto real es nulo).
+  PENDIENTE — CARGA DE LOGOS PNG (anotado para V8.5):
+  - Desde Ajustes › Perfil de Empresa: subir el logo de la productora.
+  - Desde INFO PROYECTO: subir los logos de agencia y de cliente.
+  - Se usarán luego en la generación de documentos. Requiere compresión/redimensión
+    en el cliente (a un thumbnail pequeño) para no inflar el documento en la nube
+    (límite de 1 MiB/doc; las fotos ya tuvieron que moverse a localStorage por esto).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.5 → V8.4.6 («Legal editor v2»)
+  ════════════════════════════════════════════════════════════════════
+  NEGRITA REAL CON COMMAND+B (punto 12)
+  - El cuerpo del editor de plantillas legales pasó de un textarea (donde la
+    negrita se veía como **texto**) a un editor de texto enriquecido: ahora
+    seleccionas y pulsas el botón B o Command/Ctrl+B y el texto se ve en negrita
+    de verdad, sin asteriscos visibles.
+  - Internamente se sigue guardando en el mismo formato (**negrita**), así que el
+    renderizador del documento, la exportación a PDF y el generador NO cambian.
+    Al guardar, el contenido enriquecido se serializa de vuelta a ese formato; al
+    abrir una plantilla, se convierte a texto enriquecido para editar.
+  - Insertar variables sigue funcionando: el botón inserta el token en la
+    posición del cursor dentro del editor.
+  VISTA PREVIA EN VIVO EN EL EDITOR (punto 10)
+  - El editor de plantillas ahora muestra, al lado del cuerpo, una vista previa
+    del documento que se actualiza mientras escribes. Las variables se muestran
+    como placeholders resaltados (ej. {{nombre_contraparte}}), porque en el editor
+    todavía no hay una contraparte elegida; los valores reales se ven al generar.
+  - Las variables se reorganizaron como una tira horizontal arriba del cuerpo,
+    para dejar el cuerpo y la vista previa lado a lado.
+  VARIABLES DE FECHA CON CALENDARIO (punto 13)
+  - Nuevas variables de fecha insertables: fecha_firma, fecha_rodaje,
+    fecha_vigencia y fecha_termino (grupo «Fechas» en el editor).
+  - Al generar el documento, cualquier variable de fecha se completa con un
+    selector de calendario (no texto libre).
+  - Se guardan en formato ISO y se imprimen en el documento como fecha larga en
+    español (ej. «15 de marzo de 2026»).
+  DECISIONES ESTRUCTURALES
+  - El formato de almacenamiento del cuerpo legal NO cambió (sigue siendo texto
+    con **negrita** y {{variables}}); solo cambió la experiencia de edición. Esto
+    mantiene intactos el generador, el versionado y la exportación a PDF, y evita
+    una migración de los documentos ya creados.
+  - Las fechas se guardan en ISO internamente y se formatean a fecha larga solo
+    al mostrarlas/imprimirlas (misma filosofía que el resto del sistema).
+  BREAKING: ninguno. Las plantillas existentes se abren y editan sin cambios; los
+  documentos ya generados se conservan.
+  PENDIENTES CONOCIDOS
+  - Validación legal de los borradores por un abogado (responsabilidad del usuario).
+  - Próximo foco sugerido — V8.5: indicador «Pronto Pago» por fila en Presupuesto
+    + arquitectura «Pagos Pendientes» (reembolsos / prontos pagos) + exportación
+    Office Banking + correo de notificaciones adaptable.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.4 → V8.4.5 (ficha de personas en la Base de Datos)
+  ════════════════════════════════════════════════════════════════════
+  EMPRESA ASOCIADA — COMBOBOX ESTÁNDAR (punto 1)
+  - El campo «Empresa asociada» de la ficha de persona pasó de un desplegable
+    rígido a un combobox estándar que busca empresas de la Base de Datos. Al
+    guardar, el nombre se resuelve a la empresa correcta por su identificador.
+  FECHAS CON CALENDARIO (puntos 2 y 7)
+  - «Cumpleaños» ahora es un selector de calendario (type=date), no texto libre.
+    Las fechas ya guardadas en formato DD-MM-AAAA se convierten al abrir.
+  - En el perfil de talento, «Edad» se reemplaza por «Fecha de nacimiento»
+    (calendario). La edad se calcula sola en la tarjeta del talento, así no queda
+    obsoleta. (Las fichas viejas con Edad siguen mostrándola hasta que se editen.)
+  REGIÓN (punto 3)
+  - Nuevo campo «Región» en la ficha de persona (junto a dirección, comuna,
+    ciudad), con el desplegable de las 16 regiones de Chile.
+  BANCO DESPLEGABLE + CÓDIGO SBIF AUTOMÁTICO (punto 4)
+  - «Banco» es un desplegable con los bancos e instituciones de pago de Chile.
+  - El «Código banco (SBIF)» ya NO es editable por el usuario: se completa solo
+    según el banco elegido (campo de solo lectura).
+  CUENTA EXTRANJERA / OTRO MEDIO (punto 5)
+  - Nuevo botón «Cuenta extranjera / otro medio» en Datos de pago. Al activarlo,
+    se reemplazan los campos chilenos por un texto libre, para casos como
+    Global66, IBAN/SWIFT, cuenta extranjera con código SIF, efectivo, etc.
+  ROL HABITUAL Y DTE HABITUAL — SOLO SI ES CREW (punto 6)
+  - «Rol habitual» y «DTE habitual» ahora se muestran solo cuando el rol Crew
+    está marcado, igual que las preguntas de Talento aparecen al marcar Talento.
+  ÁREAS DE INTERÉS / HABILIDAD (punto 8)
+  - La etiqueta «Áreas de interés» pasó a «Áreas de interés / habilidad».
+  DECISIONES ESTRUCTURALES
+  - El código SBIF es derivado, no ingresado: se calcula del banco (el guardado
+    ya lo derivaba; ahora la UI lo refleja como solo lectura).
+  - Cuentas extranjeras = texto libre a propósito: hay demasiados formatos
+    (financieras, IBAN/SWIFT, efectivo) para forzar campos estructurados.
+  - Fechas en formato ISO (AAAA-MM-DD) internamente; se muestran con calendario.
+  BREAKING: ninguno. Compatible con saves existentes; las fichas antiguas migran
+  al abrirse (fecha de cumpleaños, empresa por id, edad→tarjeta).
+  PENDIENTE — «Legal editor v2» (V8.4.6):
+   · (10) preview del documento en vivo dentro del editor de plantillas.
+   · (12) negritas reales con Command+B (texto enriquecido, sin **texto**).
+   · (13) selectores de calendario para variables de fecha en Legal.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.3 → V8.4.4 (correcciones sobre V8.4.3)
+  ════════════════════════════════════════════════════════════════════
+  COMBOBOXES DE NOMBRE EN MODALES — ARREGLADOS (punto 1 · era una regresión)
+  - Los comboboxes de nombre de Empresas (dueños, representante, contactos) no
+    funcionaban: el `transform` del modal rompe `position: fixed`, así que el
+    desplegable se posicionaba fuera de la vista. Ahora usan anclaje por CSS
+    (clase cbx-anchored, position:absolute relativo al campo), el mismo patrón
+    del combobox de Legal que sí funcionaba. Aplica también al combobox de
+    personas en la ficha de Locación (estaba con el mismo problema).
+  - comboboxFilter: cuando el wrap está anclado, no aplica el posicionamiento
+    fixed (deja que el CSS lo ancle), evitando el desfase dentro de modales.
+  DROPDOWN — NO SE CIERRA AL SCROLEAR (punto 3)
+  - El listener global de scroll cerraba TODOS los desplegables (incluso al
+    scrollear la propia lista). Ahora: no cierra si el scroll ocurre dentro del
+    desplegable, y no cierra los desplegables anclados (que se mueven con el
+    contenido del modal). Los desplegables fijos de la página siguen cerrándose
+    al scrollear (ahí sí se desfasarían).
+  MENSAJE «+ Agregar a la BD» COMPACTO (punto 4)
+  - El mensaje «No está en la Base de Datos…» del combobox se redujo a solo el
+    botón «+ Agregar a la BD». La casilla queda compacta y sin scroll. Aplica al
+    combobox general y al de Legal.
+  COMENTARIOS DEL PRESUPUESTO — AUTOR + FECHA AL HOVER (punto 2)
+  - El tooltip que aparece al pasar el cursor sobre el ícono de comentario ahora
+    muestra el texto + autor + fecha (antes el autor/fecha solo se veían al abrir
+    con clic). Autor = «Tú» mientras no existan cuentas; al guardar se registra
+    la fecha y el autor placeholder.
+  PELOTA ÁMBAR «NO ESTÁ EN BD» — CLICKEABLE (punto 5)
+  - La pelota ámbar junto a un nombre que no está en la Base de Datos ahora
+    muestra solo «+ Agregar a la BD» al pasar el cursor y es clickeable: lleva a
+    crear el contacto (mismo flujo de Crew). Versión estática y dinámica.
+  VERSIÓN VISIBLE BAJO EL LOGO (punto 6)
+  - Debajo de «TakeOS / Primate Films» (arriba a la izquierda) ahora se muestra
+    la versión, ej. «v8.4.4». Se lee automáticamente de TAKEOS_VERSION, así que
+    se actualiza sola en cada versión.
+  DECISIONES ESTRUCTURALES
+  - Los desplegables dentro de modales (con transform) deben anclarse por CSS
+    (cbx-anchored), nunca por position:fixed calculado, porque el transform crea
+    un bloque contenedor que desfasa el fixed.
+  BREAKING: ninguno. Todo aditivo/correctivo, compatible con saves y proyectos.
+  PENDIENTE — «Legal editor v2» (próxima pasada, en conjunto):
+   · (10) preview del documento en vivo dentro del editor de plantillas.
+   · (12) negritas reales con Command+B (texto enriquecido, sin **texto**).
+   · (13) selectores de calendario para variables de fecha.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.2 → V8.4.3 (correcciones + features sobre V8.4.2)
+  ════════════════════════════════════════════════════════════════════
+  MODALES — ANTI-CIERRE ACCIDENTAL (punto 5 · PRIORIDAD)
+  - El editor de plantillas legales, las fichas y los formularios ya NO se
+    cierran al hacer click fuera del recuadro. Se cierran solo con sus botones
+    (Cancelar / Cerrar / ×). Evita perder trabajo (caso real: una plantilla
+    legal en progreso). Aplica de forma global a showModal y a los modales de
+    edición (plantilla legal, ficha de empresa, ficha de locación).
+  EMPRESAS — MÚLTIPLES DUEÑOS / SOCIOS (punto 1)
+  - Una empresa puede tener varios dueños o socios (lista con agregar/quitar);
+    cada uno con nombre, teléfono y mail. Migra automáticamente el dueño único
+    anterior a la lista.
+  COMBOBOX ESTÁNDAR EN NOMBRES (punto 2) + ADVERTENCIA CLICKEABLE (punto 4)
+  - Los campos de nombre de Empresas (dueños, representante y contactos) usan el
+    mismo combobox estándar del Presupuesto.
+  - La advertencia «No está en la Base de Datos» del combobox ahora es
+    clickeable: abre el alta de persona con el nombre ya escrito (mismo flujo de
+    Crew). Mejora global: aplica a todos los comboboxes del sistema.
+  - Eliminado el mensaje redundante de «registro mínimo» en la ficha de empresa
+    (punto 3); el flujo correcto es el del combobox/Crew.
+  PLAN DE RODAJE — LLAMADO GENERAL CLICKEABLE (punto 6)
+  - «Llamado general» sigue siendo de solo lectura (fuente única), pero ahora es
+    clickeable y lleva directo a Hoja de Llamado para editarlo allá.
+  PRESUPUESTO — TOOLTIP EN COMENTARIOS (punto 7) + AUTOR/FECHA (punto 8)
+  - El ícono de comentario se pone rojo cuando hay nota (ya existía) y ahora
+    muestra el texto al pasar el cursor (tooltip inmediato y estilizado); si es
+    muy largo se trunca con «clic para ver completo» y el clic abre el detalle.
+  - El comentario registra la fecha de última edición y la UI ya contempla el
+    autor (placeholder «Tú» hasta que existan cuentas).
+  COTIZACIÓN — DERECHOS EN «DATOS DE COTIZACIÓN» (punto 9)
+  - Datos de la cotización ahora muestra Tiempo de derechos, Plataformas y
+    Países / territorio (solo lectura; vienen de Info Proyecto › Derechos).
+  LEGAL — NUEVA VARIABLE {{fechas_rodaje}} (punto 11)
+  - Variable «Fecha(s) de rodaje» que toma automáticamente las fechas activas de
+    la pestaña Rodajes (soporta múltiples) y, como toda variable, es editable a
+    mano. Nota: se usa el token {{fechas_rodaje}} (los paréntesis de «fecha(s)»
+    no son válidos en nombres de variable). No existía {{fecha_filmacion}}, así
+    que no hubo nada que eliminar.
+  DECISIONES ESTRUCTURALES
+  - El combobox de contactos de empresa solo VINCULA personas existentes; la
+    creación se hace por la advertencia clickeable (flujo único, sin duplicados).
+  - El modelo de nota de fila se extendió con notaFecha (y notaAutor reservado)
+    sin romper notas antiguas (siguen siendo texto plano que se lee igual).
+  BREAKING: ninguno. Todo aditivo y compatible con saves y proyectos existentes.
+  PENDIENTE — «Legal editor v2» (próxima pasada, en conjunto):
+   · (10) preview del documento en vivo dentro del editor de plantillas.
+   · (12) negritas reales con Command+B (texto enriquecido, sin **texto**).
+   · (13) selectores de calendario para variables de fecha (firma, rodaje,
+     vigencia). Se hacen juntos porque comparten la reescritura del editor.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4.1 → V8.4.2 (features: Cotización · Documentos · Empresas)
+  ════════════════════════════════════════════════════════════════════
+  COTIZACIÓN — COSTEO INTERNO DESGLOSADO (punto 1)
+  - El Costeo Interno de cada oferta ahora muestra la construcción completa:
+    Subtotal de producción → + Gastos administrativos (con su %) → + Contingencias
+    → = Costo de producción → − Comisiones → Valor al cliente (neto) → Ganancia
+    (= valor − costo − comisiones) y % de margen. Permite auditar de un vistazo
+    cómo se arma el resultado de cada oferta.
+  COTIZACIÓN — REORDENAR ARRASTRANDO (punto 2)
+  - Entregables (Videos, Fotografía, Otros), Incluye y No incluye se reordenan
+    arrastrando (mismo patrón del Plan de Rodaje: tomar del ⠿, soltar donde va).
+  DOCUMENTOS — ADJUNTAR PDFs REALES (punto 3)
+  - Además del link, ahora se puede adjuntar un PDF (≤ ~600 KB) al documento,
+    abrirlo y quitarlo. El tope protege el sync en la nube (1 MiB/doc); para
+    archivos grandes o repositorio entre dispositivos: link o Supabase Storage.
+  BD EMPRESAS — EDICIÓN COMPLETA (punto 7)
+  - Nuevo botón "Editar": nombre de fantasía, razón social, RUT, tipo
+    (Cliente/Proveedor/Ambos), giro informal, giro SII, dueño (nombre/teléfono/
+    mail), representante (nombre/cargo/teléfono/mail) y observaciones.
+  - Contactos de la empresa = contactos de la Base de Datos vinculados por
+    empresaId (no una lista aparte). Se agregan con el combobox de siempre; si la
+    persona no está en la BD, se crea un registro mínimo (solo el nombre) y queda
+    vinculada — "poco es mejor que nada" para no perder data (futuros boletines).
+  BD EMPRESAS — FICHA TIPO CONTROL ROOM (punto 8)
+  - Nuevo botón "Ver ficha": proyectos vinculados, cerrados, activos, total
+    pagado y margen histórico (SOLO proyectos cerrados, desde finanzas reales),
+    ticket promedio, fecha del primer y último proyecto, lista de activos (como
+    proforma, no suman) y contactos. El promedio de días de pago se muestra como
+    "—" (honesto: aún no se registra la fecha de pago del cliente).
+  INFRAESTRUCTURA — VÍNCULO PROYECTO↔EMPRESA POR ID (base del punto 8)
+  - Cada proyecto guarda clienteEmpresaId (no depende del nombre). En Info
+    Proyecto se agregó "Empresa cliente (BD)": un selector de empresas de la BD,
+    con auto-sugerencia cuando el nombre del cliente coincide con una empresa.
+  DECISIONES ESTRUCTURALES
+  - Pagado/margen solo sobre proyectos cerrados y desde finanzas reales
+    (gananciaFinal.real); lo no cerrado es proforma y no suma (decisión del CFO).
+  - Contactos de empresa viven en la BD canónica (BD_CONTACTOS) por empresaId;
+    nada de listas embebidas que dupliquen la fuente de verdad.
+  - Los campos nuevos de empresa (dueno, representante, observaciones) viajan en
+    el save canónico (bdEmpresasById se serializa entero): round-trip sin tocar
+    el formato de guardado.
+  BREAKING: ninguno. Todo aditivo y compatible con saves y proyectos existentes.
+  PENDIENTES (futuro):
+   · V8.5: indicador "Pronto Pago" por fila en Presupuesto + arquitectura de
+     "Pagos Pendientes" (Reembolsos/Prontos Pagos) + exportación Office Banking.
+   · Registrar la fecha de pago del cliente para activar "días de pago" en la ficha.
+   · Repositorio de archivos entre dispositivos (Supabase Storage).
+   · Validación legal de borradores por un abogado.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.4 → V8.4.1 (correcciones: cluster Legal + BD Locaciones)
+  ════════════════════════════════════════════════════════════════════
+  LEGAL — VARIABLES CON NOMBRES DESCRIPTIVOS (punto 5)
+  - El editor de plantillas ahora ofrece variables autoexplicativas:
+    {{nombre_contraparte}}, {{rut_contraparte}}, {{domicilio_contraparte}},
+    {{correo_contraparte}}, {{nombre_proyecto}}, {{nombre_cliente}},
+    {{nombre_productora}}, {{monto_neto}}, {{monto_texto}}, {{nombre_locacion}},
+    etc. Los nombres cortos antiguos ({{nombre}}, {{rut}}…) siguen funcionando
+    como alias, así que ninguna plantilla existente se rompe.
+  - Se agregó la resolución del correo de la contraparte (legalPersonData ahora
+    expone el email del contacto canónico).
+  LEGAL — CURSOR AL INSERTAR VARIABLES (punto 4)
+  - Al hacer clic en una variable, el botón ya no roba el foco del textarea
+    (onmousedown preventDefault), por lo que la variable se inserta EN LA
+    POSICIÓN DEL CURSOR y se sigue escribiendo desde ahí.
+  LEGAL — TÍTULO DEL PDF = NOMBRE DE LA PLANTILLA (punto 9)
+  - Los documentos personalizados ahora llevan el nombre de la plantilla como
+    título (h4) bajo el membrete, en vez de quedar encabezados solo por la marca.
+  LEGAL — NOMBRE vs DESCRIPCIÓN (punto 10)
+  - El editor aclara que el Nombre se usa como título del documento exportado, y
+    que la Descripción es interna y no aparece en el documento final.
+  LEGAL — 'OFICIAL' → 'PREDETERMINADA / PRESET' (punto 11)
+  - Se eliminó la palabra "Oficial" (implicaba validación legal). Ahora son
+    "Predeterminadas" / "Preset", con advertencia clara: son ejemplos, no
+    sustituyen asesoría legal y deben revisarse con un abogado.
+  LEGAL — NEGRITA EN PLANTILLAS (punto 12)
+  - El cuerpo admite **negrita** (markdown), con un botón B en el editor que
+    envuelve la selección. Se renderiza como <strong> en pantalla y en el PDF.
+  LEGAL — EXPORTAR DOCUMENTOS VACÍOS (punto 13)
+  - Verificado: en modo "desde el sistema" no se exporta ni guarda con campos
+    obligatorios en blanco (incluye plantillas personalizadas). La excepción es
+    el modo "en set / posteriormente", que se define al crear la plantilla.
+  BD LOCACIONES — VER / EDITAR (punto 6)
+  - Bug corregido: openLocDetail exigía que la locación estuviera en el proyecto
+    actual (uso != null) y por eso no abría desde la pestaña Locaciones de la BD.
+    Ahora abre siempre; si la locación no está en este proyecto, se editan sus
+    datos de BD (nombre, dirección, contactos, fotos) y se indica que no está
+    agregada al proyecto (las secciones de estado/costo/uso se ocultan).
+  DECISIONES ESTRUCTURALES
+  - Variables descriptivas implementadas como alias en legalVarMap: el valor del
+    sistema se resuelve para el nombre corto y el descriptivo, y lo editado por
+    el usuario (ov) manda sobre ambos. Compatibilidad total hacia atrás.
+  - El render del cuerpo personalizado aplica **negrita** sobre el texto ya
+    escapado (anti-inyección) y antes de sustituir variables.
+  BREAKING: ninguno. Cambios aditivos y compatibles.
+  PENDIENTES (para las próximas pasadas):
+   · Cotización: desglose de Gastos administrativos/Contingencias/Comisiones en
+     Costeo Interno (punto 1) + reordenar Entregables/Incluye/No incluye (punto 2).
+   · Documentos: adjuntar PDFs reales (punto 3).
+   · BD Empresas: edición completa (punto 7) + ficha Control Room por empresa
+     (punto 8) — requieren extender el modelo de Empresas y decidir el vínculo
+     proyecto↔cliente; van como propuesta de diseño antes de construir.
+   · V8.5: indicador "Pronto Pago" por fila en Presupuesto y arquitectura de
+     "Pagos Pendientes" (diferido a esa versión, como se solicitó).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.3.4 → V8.4 (puntos 11, 12, 13 del lote)
+  ════════════════════════════════════════════════════════════════════
+  LEGAL — EDITOR DE PLANTILLAS EN MODO ADMINISTRADOR (punto 11)
+  - Con Modo Administrador activo, en Legal › Plantillas aparece "+ Nueva
+    plantilla" y, en cada plantilla personalizada, "Editar" y "Eliminar".
+  - El editor permite: nombre, descripción, contraparte (Persona o Locación),
+    modo de completado por defecto (desde el sistema / posteriormente) y el
+    CUERPO del documento como texto libre con variables {{insertables}}
+    ({{nombre}}, {{rut}}, {{monto}}, {{cliente}}, {{locNombre}}, {{marca}}, …).
+  - Un panel lateral de variables las inserta en el cuerpo con un clic.
+  - Las 4 plantillas OFICIALES (servicios, cesión, NDA, arriendo) se conservan
+    LITERALMENTE: se ven y se usan, pero no se editan ni se eliminan (badge
+    "oficial"). Las personalizadas llevan badge "personalizada".
+  - El generador (vista previa, campos, validación de obligatorios y exportación
+    a PDF) funciona igual para las personalizadas: los campos se derivan de las
+    variables que use el cuerpo y se autollenan desde el sistema.
+  - Sin Modo Administrador: las plantillas (oficiales y personalizadas) se pueden
+    ver y usar, pero no crear ni editar (mensaje de candado).
+  BASE DE DATOS — LOCACIONES COMO CATEGORÍA (punto 12)
+  - El módulo Base de Datos suma una cuarta pestaña: Locaciones (junto a
+    Personas, Empresas, Talentos), con el conteo de locaciones.
+  - Lista todas las locaciones canónicas (transversal a proyectos) con dirección,
+    región, contactos y fotos; cada una se abre con el detalle de siempre.
+  - "+ Nueva locación" crea el registro a nivel BD (sin atarlo a un proyecto);
+    para usarla en un proyecto se agrega desde el módulo Locaciones del proyecto.
+  BASE DE DATOS — NOMBRE Y DESCRIPCIÓN (punto 13)
+  - El módulo pasa de "Base de Datos de Personas" a "Base de Datos".
+  - El subtítulo y la descripción ahora reflejan personas, empresas, talentos,
+    locaciones y futuras entidades (antes solo personas).
+  DECISIONES ESTRUCTURALES
+  - Plantillas personalizadas en un store propio (BD_LEGAL_TPL), persistido en
+    la nube y localStorage (bdLegalTpl). Las oficiales siguen en código
+    (LEGAL_TPL) y nunca se tocan.
+  - Un getter unificado (legalTplGet) y un listador (legalAllTplEntries) hacen que
+    todo el módulo Legal trate oficiales y personalizadas por igual.
+  - El cuerpo personalizado se renderiza escapando el texto del usuario y luego
+    sustituyendo {{variables}} (anti-inyección); saltos de línea → párrafos.
+  - El alta de locación de la BD NO liga al proyecto (a diferencia de la del
+    módulo Locaciones), porque la BD es transversal.
+  BREAKING: ninguno. Las plantillas oficiales y los documentos existentes no
+  cambian; lo nuevo es aditivo (store de plantillas + pestaña + textos).
+  PENDIENTES: validación legal de borradores por abogado; fotos cross-device
+  (Supabase Storage); Fase 2 backend tras correr un proyecto
+  real end-to-end.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.3.3 → V8.3.4 (2 correcciones + el punto 2 pendiente)
+  ════════════════════════════════════════════════════════════════════
+  LEGAL — VALIDACIÓN REAL (corrección 1)
+  - El bug: la V8.3.3 validaba solo "Exportar PDF" y con una lista corta de
+    campos, así que GUARDAR/Generar nunca se bloqueaba y campos vacíos visibles
+    igual pasaban. Corregido:
+  - La validación se aplica AHORA a las dos acciones: "Exportar PDF" y
+    "Generar / Guardar nueva versión".
+  - En modo "Desde el sistema" se exigen TODOS los campos relevantes del
+    documento (según la plantilla): contraparte, RUT, domicilio, monto, rol,
+    cliente, campaña, derechos (tiempo/plataformas/territorio), o
+    locación/dirección/dueño/RUT/proyecto para arriendo. Si falta algo, no se
+    genera ni se exporta: se listan los faltantes y se vuelve al generador.
+  - El modo "En set / posteriormente" sigue permitiendo blancos a propósito.
+  PLAN DE RODAJE — INICIO EDITABLE EN LA TABLA (corrección 2)
+  - Se quitó el control "Inicio del plan" que estaba sobre la tabla.
+  - Ahora la columna "Inicio" tiene, SOLO en la primera fila con tiempo, una
+    celda roja tipeable idéntica a las de "Duración". Sin tooltip ni textos:
+    visualmente invita a editar la hora de inicio ahí mismo. El resto de los
+    inicios siguen siendo calculados (solo lectura).
+  PRESUPUESTO — VERSIONES HISTÓRICAS CON SU PRESUPUESTO REAL (punto 2 pendiente)
+  - Al crear una nueva versión, se congela un SNAPSHOT COMPLETO del presupuesto
+    de la versión saliente (servicios, gastos, técnica, talentos, finanzas).
+  - Al seleccionar una versión histórica en Presupuesto, ahora se muestra SU
+    presupuesto real —resumen financiero + detalle por departamento— en modo
+    SOLO LECTURA (bloqueado), no el de la última versión.
+  - Las versiones creadas antes de esta versión no tienen snapshot: muestran
+    solo su resumen, con una nota que lo explica.
+  DECISIONES ESTRUCTURALES
+  - El snapshot del presupuesto se guarda por versión (campo presupSnap); la
+    ÚLTIMA versión nunca lo usa (sigue el presupuesto en vivo) — se borra del
+    snapshot al promover la copia a última.
+  - El render histórico reutiliza calcSummaryFin sobre un proyecto "fake" armado
+    desde el snapshot (misma lógica de costo, sin duplicar).
+  BREAKING: ninguno. El presupuesto en vivo y el cotizado no se tocan; lo nuevo
+  es captura (snapshot) + vistas de solo lectura + validación.
+  PENDIENTES: puntos 11-13 (editor de plantillas en Modo Admin; Locaciones como
+  categoría de la BD; nombre/descripción de la BD) → V8.4.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.3.2 → V8.3.3 (correcciones · puntos 1,3-10 del nuevo lote)
+  ════════════════════════════════════════════════════════════════════
+  PRESUPUESTO
+  - Ícono de nota por fila: de lápiz (✎) a globo de comentario, para que se
+    lea como "nota/observación" y no como "editar".
+  - Comparador de versiones disponible también desde Presupuesto (botón en la
+    barra de versión), sin depender de la pestaña Cotización.
+  LEGAL
+  - Combobox de Contraparte: el desplegable se ancla bajo el input (antes
+    aparecía corrido por el transform del modal). Ahora se comporta como el de
+    Presupuesto.
+  - Exportar PDF se bloquea si faltan datos obligatorios y el documento está en
+    modo "Desde el sistema". Nuevo selector por documento: "Desde el sistema"
+    (exige datos) vs "En set / posteriormente" (permite blancos para llenar a
+    mano). Las plantillas traen un modo por defecto ('sistema'); el editor de
+    plantillas (V8.4) podrá fijarlo por plantilla.
+  LOCACIONES
+  - Campo "Relación" de los contactos: ahora ocupa una fila propia, ancha, con
+    placeholder de ejemplos (admite descripciones largas).
+  - "Región" pasó a desplegable con las 16 regiones de Chile (norte→sur).
+    Ciudad y Comuna siguen libres (sin catálogo aún).
+  - Anti-duplicados por proyecto: una misma locación existe una sola vez; el
+    estado evoluciona sobre el mismo registro. Colapsa por locId y por nombre
+    normalizado (confirmada > candidata > descartada). Al crear una locación con
+    nombre ya existente en la BD, se reutiliza en vez de duplicar.
+  - Fotos: aviso de que por ahora se guardan solo en el navegador.
+  PLAN DE RODAJE
+  - "Inicio del 1.er plano" → "Inicio del plan" (lo primero del día puede no ser
+    un plano). El control se movió de la información general superior al propio
+    bloque del cronograma.
+  PERSISTENCIA / NUBE
+  - Blindaje de fotos: el documento que se subía a la nube ya NO incluía las
+    fotos base64. La nube guardaba todo el estado como un único documento con
+    tope de 1 MiB; las fotos lo superaban y hacían fallar el push EN SILENCIO,
+    deteniendo además la sincronización de TODO lo demás. Ahora las fotos viven
+    en localStorage (este navegador) y se reinyectan al cargar; el resto sí
+    sincroniza con fiabilidad.
+  DECISIONES ESTRUCTURALES
+  - Fotos cross-device quedan pendientes de almacenamiento dedicado (Supabase
+    Storage). localStorage también tiene tope (~5-10 MB), así que
+    con muchas fotos puede saturarse: es una solución puente.
+  BREAKING: ninguno.
+  PENDIENTES: punto 2 (versiones históricas muestran su presupuesto real,
+  bloqueado) → V8.3.4 (requiere snapshot completo del presupuesto por versión +
+  render de solo lectura; núcleo financiero, se hace aislado y testeado).
+  Puntos 11-13 (editor de plantillas en Modo Admin; Locaciones como categoría de
+  la BD; nombre/descripción de la BD) → V8.4.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.3.1 → V8.3.2 (núcleo de cotización · puntos 1-3 de las notas)
+  ════════════════════════════════════════════════════════════════════
+  PRESUPUESTO
+  - Indicador de versión activa de cotización en la cabecera del módulo:
+    "Presupuesto · Versión N". Navegación entre versiones desde el propio
+    Presupuesto (chips), sin tener que ir a Cotización.
+  - Si estás parado en una versión HISTÓRICA, un aviso aclara que el
+    presupuesto en vivo —lo que editas— alimenta la última versión, no esa.
+    Cambiar de versión solo mueve el puntero activo; NO toca el cotizado.
+  COMPARADOR DE VERSIONES
+  - Ahora compara POR OFERTA, emparejando ofertas por nombre entre versiones
+    (Oferta base, Oferta Full, etc.), en vez de usar siempre la primera.
+    Selector de oferta + etiqueta visible "Comparando: <oferta>".
+  - Si una versión no tiene la oferta seleccionada, esa columna se marca como
+    "no comparable" (no rompe la comparación).
+  - Deltas estilo KPI: tira de titular (primera → última versión con la oferta,
+    con Δ del valor cotizado) y, en la tabla, cada métrica (Valor cotizado,
+    Costo de producción, Ganancia proyectada, Margen) muestra su delta contra
+    la primera versión con esa oferta, con color (verde/rojo según convenga).
+  DECISIONES ESTRUCTURALES
+  - Costeo por oferta reutiliza ofertaCosteo (base de la última → presupuesto
+    en vivo; alternativas → su snapshot; base histórica → resumen congelado de
+    esa versión). Una sola lógica de costo, sin duplicar.
+  - La barra de versión en Presupuesto reusa el componente visual del switcher
+    de Cotización; el puntero activo (activoId) es único y global.
+  BREAKING: ninguno. No se modifica ningún dato cotizado ni el versionado
+  existente; solo se agregan vistas y navegación.
+  PENDIENTES: puntos 12-14 (editor de plantillas en Modo Admin, Locaciones como
+  categoría visible de la BD, descripción de la BD) en V8.4.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.3.0 → V8.3.1 (correcciones · puntos 4-11 de las notas)
+  ════════════════════════════════════════════════════════════════════
+  LEGAL
+  - Combobox de contraparte con filtrado (igual que Presupuesto): se escribe
+    y filtra; ya no despliega toda la BD. Incluye talentos (que no viven en
+    BD_PERSONAS), resueltos desde la BD canónica con RUT y domicilio.
+  - "Honorario neto" → "Monto Neto": ahora se calcula desde Costo Real + DTE
+    Real (boleta descuenta retención 15,25%; factura no). Ej.: boleta
+    $94.395 → $80.000; factura $100.000 → $100.000.
+  - Lógica tributaria CENTRAL: funciones únicas montoNetoDesde / montoBrutoDesde
+    / dteTieneRetencion (la calculadora también las usa). Evita que cada
+    módulo recalcule distinto.
+  - Advertencia global visible en toda la sección Legal: documentos
+    preliminares, solo para probar el flujo, no usar en producción real.
+    Cuando se carguen las versiones oficiales, se respetan literalmente.
+  - Eliminar documentos: si no fue exportado, se borra directo; si fue
+    exportado a PDF, pide confirmación.
+  LOCACIONES
+  - Nuevos campos: Segunda línea de dirección (opcional) y Región. El alta
+    pide solo lo crítico; Orientación se movió a "Avanzado" en la ficha.
+  - "Dueño" reemplazado por "Contactos de la locación": varios contactos, cada
+    uno con Nombre, Mail, Teléfono, Observaciones y Relación (campo libre:
+    Dueño, Gerente, Encargado, Administrador, Recepcionista…). El dueño antiguo
+    se migra como un contacto con relación "Dueño". El contrato de Arriendo usa
+    el contacto principal como arrendador.
+  COTIZACIÓN
+  - Bloque Derechos (tiempo · plataformas · territorio) en la PORTADA del PDF,
+    leído de Info Proyecto. Si un campo está vacío, no aparece (proyectos sin
+    talentos).
+  DECISIONES ESTRUCTURALES
+  - Una sola fuente de verdad tributaria (helpers centrales). Los documentos
+    legales suman el flag `exported` para gobernar el borrado. BD_LOC suma
+    direccion2/region y `contactos[]`; `ensureLocShape` migra y normaliza al
+    vuelo (idempotente). `dueno` queda como dato legado migrable.
+  BREAKING: ninguno. dteReal ya existía en las filas del presupuesto.
+  PENDIENTES: puntos 1-3 (indicador de versión en Presupuesto + comparador por
+  oferta + deltas) van en V8.3.2 como pase dedicado al núcleo de cotización;
+  puntos 12-14 (editor de plantillas en Modo Admin, Locaciones como categoría
+  visible de la BD, descripción de la BD) en V8.4.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.2.0 → V8.3.0 (módulo nuevo + bloque Derechos)
+  ════════════════════════════════════════════════════════════════════
+  MAYORES
+  - NUEVO MÓDULO LEGAL (tab de proyecto). Dos sub-pestañas: Documentos
+    (generador + archivo del proyecto) y Plantillas (set fijo de 4).
+    Genera documentos legales desde plantillas fijas autollenando
+    variables desde BD Personas, Presupuesto, Info Proyecto y el bloque
+    Derechos; vista previa en vivo, ciclo Borrador→Generado→Enviado→
+    Firmado, versionado y export a PDF con marca.
+  - NUEVA CATEGORÍA "BD DE LEGAL" (BD_LEGAL), transversal y consultable,
+    junto a Personas/Empresas/Locaciones. Los documentos no mueren con el
+    proyecto: viven en el archivo global (nube + localStorage). El
+    tab del proyecto es una vista filtrada de BD_LEGAL.
+  - NUEVO BLOQUE "DERECHOS" en Info Proyecto (Tiempo · Plataformas ·
+    Países/territorio). Fuente única para cesiones, contratos, cotización
+    y futuras alertas de vencimiento.
+  MENORES
+  - Vista previa en vivo del documento con identidad de marca y variables
+    resaltadas; etiquetas de origen por variable (BD / Presupuesto /
+    Info Proyecto / Derechos); filtros de la vista (tipo, estado, búsqueda
+    por nombre o RUT).
+  PLANTILLAS (estado legal)
+  - Cesión de derechos / modelaje: VALIDADA (basada en el contrato real de
+    Primate).
+  - Contrato de servicios, NDA, Arriendo de locación: BORRADOR redactado
+    por TakeOS — DEBEN validarse con un abogado antes de producción. El
+    generador y la pestaña Plantillas muestran la advertencia.
+  - En V1 las plantillas son fijas (se rellenan, no se editan). Editar o
+    agregar advierte sobre validación legal; a futuro será solo Admin.
+  DECISIONES ESTRUCTURALES
+  - Documento legal = entidad de BD transversal (BD_LEGAL), no data que
+    muere con el proyecto. Versionado: cada regeneración crea versión
+    nueva (la última manda; las anteriores quedan en histórico). Nunca se
+    elimina. Datos de empresa/representante se leen de EMPRESA_PERFIL
+    (Primate Films / La Hectárea SpA), no hardcodeados.
+  - Firma electrónica: integración futura (en V1 se exporta PDF y se marca
+    el estado a mano).
+  BREAKING: ninguno (módulo nuevo). Info Proyecto suma el objeto
+  "derechos"; el render tolera su ausencia en proyectos viejos.
+  PENDIENTES: validación legal de los 3 borradores; firma electrónica;
+  almacenamiento de PDFs (base64 vs Supabase Storage); editor de
+  plantillas (futuro, solo Admin).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.1.1 → V8.2.0 (módulo nuevo + correcciones)
+  ════════════════════════════════════════════════════════════════════
+  MAYORES
+  - NUEVO MÓDULO LOCACIONES (tab de proyecto, entre Rodajes y Hoja de
+    Llamado). Dos sub-pestañas: Repositorio (fichas + galería de fotos +
+    estados Candidata/Confirmada/Descartada) y Plan de Scouting (hoja de
+    ruta de visitas con el mismo motor de tiempos del Plan de Rodaje).
+  - NUEVA ENTIDAD "BD DE LOCACIONES" (BD_LOC), transversal y canónica,
+    al mismo nivel que Personas/Empresas: sobrevive al cierre del
+    proyecto y se persiste en el store global (nube + localStorage).
+    El proyecto guarda solo su USO (project.data.locaciones / PROJ_LOC):
+    estado, costo, contratación, notas del proyecto.
+  MENORES
+  - Galería de fotos comprimidas (máx 1280 px, q0.6) con lightbox y borrado;
+    carga múltiple con feedback de ahorro. Filtros por estado y KPI bar.
+  - "Quiénes van" del Plan de Scouting: campos agregables con el mismo
+    combobox de la Base de Datos que usa el resto del sistema.
+  CORRECCIONES
+  1. HOJA DE LLAMADO — advertencia NO bloqueante antes de exportar si
+     faltan datos clave (PE, Director, Jefe de Producción, Cliente,
+     Productora, Llamado General, Hospital). Mismo patrón visual que el
+     Plan de Rodaje: "Corregir" o "Exportar de todas formas".
+  2. CREW — las advertencias "Sin BD" / "Agregar persona a la BD" ahora
+     son clickeables: abren el alta de Nueva persona con el nombre ya
+     rellenado.
+  3. CREW — columna de teléfono más ancha (sin cortar los números; la
+     tabla hace scroll horizontal si hace falta).
+  BREAKING
+  - Migración de project.data.hojaLlamado.locaciones → BD_LOC + PROJ_LOC
+    (conservando los LOC-NN). La Hoja de Llamado y el Plan de Rodaje dejan
+    de tener lista propia y consumen las locaciones CONFIRMADAS del módulo.
+    La asignación locación↔citación/día sigue ocurriendo en esos tabs.
+  PENDIENTES
+  - Almacenamiento de fotos: base64 (acotado) vs Supabase Storage. Decisión a tomar con Agustín antes de uso intensivo.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.1.0 → V8.1.1 (ajustes operacionales)
+  ════════════════════════════════════════════════════════════════════
+  1. PLAN DE RODAJE — la hora del primer plano es EDITABLE. Antes se
+     heredaba forzada del Llamado General (Hoja de Llamado) y quedaba
+     bloqueada. Ahora hay un campo "Inicio del 1.er plano" por plan:
+     propone el Llamado General como valor por defecto pero se puede
+     adelantar/atrasar (montaje, maquillaje, prep). Vacío = vuelve a
+     heredar. El motor de tiempos cascadea desde esa hora efectiva.
+     (prEffectiveStartMin / prSetHoraInicio)
+  2. HOJA DE LLAMADO — los campos vacíos ya NO aparecen. Se eliminan los
+     rellenos "No aplica" / "—" en Información general; si un campo no
+     tiene dato, su fila se oculta, y si un bloque completo queda vacío,
+     se oculta también su encabezado.
+  3. GASTOS — crear un presupuesto se autoriza con el RUT (sin DV) del
+     jefe de producción O con Modo administrador activo. El modal lo
+     refleja (contraseña opcional con Modo admin).
+
+  Sin breaking changes. Los saves de V8.1.0 abren sin migración.
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V8.0.0 → V8.1.0 (paquete de 9 correcciones)
+  ════════════════════════════════════════════════════════════════════
+  1. HOJA DE LLAMADO — versionado por cambio real: la versión de un día
+     solo avanza al exportar SI el contenido cambió respecto de la última
+     exportación (firma de contenido vía hash). Reimprimir lo mismo
+     mantiene la versión. (_hashStr / _callSheetSignature / exportHojaLlamadoPDF)
+  2. PRESUPUESTO — notas por fila: botón ✎ en cada fila abre una nota
+     interna (item.nota). No aparece en cotización ni documentos al cliente.
+  3. PRESUPUESTO — la columna "Confirmado" solo existe post-aprobación
+     (Preproducción+). En etapa Venta no se muestra (no hay nada que confirmar).
+  4. PRESUPUESTO/FINANZAS — comisiones en $ o %: mismo control que Riesgos.
+     Cálculo y lectura tolerantes; normalización idempotente al render.
+     Saves antiguos {label,pct} se migran a {label,mode,value} sin pérdida.
+  5a. PRESUPUESTO — sub-secciones dinámicas en Servicios: crear / renombrar
+      / eliminar. Borrado bloqueado si hay filas cotizadas post-aprobación
+      (regla madre). Nombres sanitizados (sin comillas ni < >).
+  5b. PRESUPUESTO — "Equipos" renombrado a "Técnica" (solo etiquetas
+      visibles; la clave de datos interna sigue siendo "equipos").
+  6. BASE DE DATOS — formulario completo de personas (crear): todos los
+     campos canónicos (identidad, roles, empresa, ubicación, datos de pago
+     con auto-código SBIF, perfil de talento condicional).
+  7. BASE DE DATOS — editar ficha existente, gated por Modo administrador.
+     Botón ✎ en la ficha expandida; sin Modo admin, explica y no edita.
+  8. FINANZAS (Reembolsos) — exportar nómina de transferencias masivas en
+     formato Santander (.xlsx, 13 columnas exactas). Datos del beneficiario
+     desde BD o datosPago; código de banco SBIF; cuenta origen desde Perfil
+     de empresa. Omite y avisa los reembolsos sin cuenta de destino.
+  9. GASTOS — el dropdown "Asociar a línea" lista las filas de "Gastos de
+     producción" del Presupuesto; "Crear nueva línea" agrega una fila ahí
+     (parte en $0, marcada EXTRA, sin tocar el cotizado).
+
+  REGLA MADRE: verificada. Ninguna corrección abre un camino para modificar
+  el cotizado tras aprobar (comisiones readonly post-aprobación; borrado de
+  sub-sección bloqueado con filas cotizadas; líneas nuevas de gasto en $0 EXTRA).
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V5.2.1 → V5.2.2 (resumen — changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  CORREGIDO:
+  ✗ Filas confirmadas no se ponían verdes en "Foto Fija" y "Dirección
+    de Fotografía". Causa: querySelector con CSS selector no acepta
+    espacios ni tildes en IDs sin escape. Resuelto usando
+    getElementById para el contenedor + querySelector relativo.
+  ✗ Delta gigante con DTE Opcional cuando costoReal = cotizado.
+    Causa: getCostoReal exigía DTE incluso en gastos/equipos donde es
+    opcional. Resuelto pasando sectionKey igual que calcCostoEmpresa.
+  ✗ Comisión por defecto en proyectos demo: genérica, sin nombres de
+    terceros hidratados. (V5.3: confirmado, no existe ninguna comisión
+    con nombre de proveedor por defecto.)
+
+  AÑADIDO (cambio de flujo crítico al aprobar proyecto):
+  + Bloqueo de cotizados al pasar Venta → Preproducción:
+    Rol, DTE, Valor, Cantidad quedan readonly. Nombre y Unidad siguen
+    editables (la persona puede cambiar sin afectar la cotización).
+  + Bloqueo de Presupuesto Cliente, Gastos Admin %, Comisiones %,
+    Riesgos % al aprobar.
+  + Modal de advertencia explícita al pasar Venta → Preproducción
+    explicando todo lo que se bloquea y las consecuencias.
+  + Bloqueo de retroceso Preproducción → Venta: modal "Acción
+    restringida — solo administradores".
+  + Sistema de "items extras": filas agregadas DESPUÉS de aprobación
+    se marcan automáticamente como extras, editables, con badge visual
+    "EXTRA". Permite ampliar el proyecto sin tocar la cotización
+    original.
+
+  MEJORADO:
+  ~ Columna de nombre/concepto del resumen financiero más ancha
+    (32% → 40%). Comisiones y riesgos con nombre largo dejan de
+    cortarse.
+  ════════════════════════════════════════════════════════════════════
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V5.2 → V5.2.1 (resumen — changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  CORREGIDO:
+  ✗ Input de búsqueda en BD Personas perdía foco en cada tecla.
+    renderBDPersonas() destruía el input y lo recreaba. Resuelto:
+    búsqueda hace render granular solo de la lista, sin tocar el input.
+  ✗ Indicador "● no en BD" no aparecía al cambiar el nombre de una fila
+    (solo aparecía después de eliminar/agregar otra fila). Resuelto:
+    afterRowChange actualiza el indicador en vivo. Tooltip cableado al
+    sistema data-tip que sí funciona.
+  ✗ Bug grave en delta: cotizado y real prácticamente iguales mostraba
+    "$0" PERO en color verde. Causa: el cotizado calculado con DTE de
+    boleta tenía decimales que el real entero no, generando delta de
+    fracciones (ej -0.20). El redondeo a "$0" no actualizaba el color.
+    Resuelto: aplicar Math.round() ANTES de elegir clase y signo.
+  ✗ Tooltip de Costo Real tenía la lógica al revés. Boleta = bruto
+    (incluye impuesto, es el costo empresa real). Factura = neto (sin
+    IVA, porque el IVA no es costo). Texto reescrito.
+
+  AÑADIDO:
+  + Departamento "Foto Fija" en presupuesto por default.
+  + Tooltip "?" al lado de "DTE (Opcional)" en Gastos explicando por qué.
+  + Sección "Riesgos y contingencias" en la tabla resumen, entre Gastos
+    Administrativos y Costo de Producción. Editable, agregar/eliminar
+    como las comisiones. Gastos Administrativos sigue fijo.
+
+  MODIFICADO:
+  ~ Mensaje del combobox cuando no hay coincidencias: ahora dice
+    explícitamente que NO se agrega a la BD automáticamente. Para
+    agregar con datos completos, hay que usar el formulario.
+  ════════════════════════════════════════════════════════════════════
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V5.1.1 → V5.2 (resumen — changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  CORREGIDO:
+  ✗ Tooltip "?" se recortaba al aparecer dentro de tablas con overflow.
+    Reescrito con position:fixed posicionado por JS sobre <body>.
+    z-index 9999. Visible siempre, sin clipping.
+  ✗ Unidad "Otra…" no permitía escribir manualmente. Ahora al seleccionar
+    "Otra…", la celda se transforma inmediatamente en input editable
+    con foco automático.
+
+  AÑADIDO:
+  + Combobox custom para campo Nombre en Presupuesto. Reemplaza el
+    <input list=datalist> que era frágil en algunos navegadores.
+    Patrón Google Sheets / Excel: input visible, dropdown filtrado al
+    enfocar, click selecciona, escritura libre si no hay match,
+    indicador "(no en BD)" debajo de la opción cuando aplica.
+  + Tooltips contextuales adicionales según feedback Agustín §6:
+    - Estado del proyecto: qué se desbloquea en cada uno.
+    - Etiquetas RECI (R, E, C, I).
+    - Margen %: cómo se calcula.
+    - Ganancia Final Real (spotlight): fórmula completa.
+    - Checkbox "Conf.": qué dispara.
+
+  MANTENIDO (feedback positivo):
+  ~ Calculadora tributaria: sin cambios. Quedó como debe.
+  ~ Spotlight Ganancia Final Real: sin cambios. Premium correcto.
+  ~ Patrón de signo de pregunta: aplicado más donde tenga sentido,
+    sin saturar la interfaz.
+  ════════════════════════════════════════════════════════════════════
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V5.1 → V5.1.1 (resumen — changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  CORREGIDO:
+  ✗ Bug crítico de pantallas en blanco: openGlobalBDPersonas creaba un
+    SEGUNDO elemento con id="moduleMain", rompiendo getElementById en
+    navegaciones posteriores (Info Proyecto, Presupuesto, etc. quedaban
+    pintando en el container equivocado). Resuelto separando containers
+    por vista: #moduleMain (proyecto) vs #bdGlobalMain (BD global).
+  ✗ Lógica de colores delta inconsistente: se invertía erróneamente
+    para filas de Ganancia. Ahora hay dos helpers — deltaClassCosto
+    (negativo=bueno) y deltaClassGanancia (positivo=bueno).
+
+  AÑADIDO:
+  + Comisiones dinámicas: editables, renombrables, con botón + Agregar
+    y × Eliminar. Default: 2 comisiones vacías en proyectos nuevos.
+  + Indicador visual "● no en BD" en celdas Nombre del Presupuesto
+    cuando el nombre ingresado no existe en la BD de Personas.
+    Permite cotizar con gente nueva sin bloqueos.
+  + Unidad de cobro "Fotografías" agregada al preset.
+  + Unidad personalizable: opción "Otra…" abre un input editable.
+  + Spotlight card "Ganancia Final Real" arriba de la tabla resumen
+    cuando hay datos reales (estado ≥ Preproducción).
+
+  MODIFICADO:
+  ~ DTE opcional en Gastos y Equipos (si está vacío, se asume cálculo
+    directo sin retención — la mayoría de gastos son cajas o facturas
+    con IVA). En Servicios y Talentos sigue siendo requerido para
+    calcular el costo empresa correcto.
+  ~ Columna "Nombre" renombrada a "Proveedor" en Gastos.
+  ~ Columna "Nombre" renombrada a "Rental / Proveedor" en Equipos.
+  ════════════════════════════════════════════════════════════════════
+
+  ════════════════════════════════════════════════════════════════════
+  CAMBIOS V5.0 → V5.1 (resumen — changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  CORREGIDO:
+  ✗ Bug crítico de autocomplete en Info Proyecto (PE/Director/JP):
+    los campos no permitían cambiar ni borrar a la persona seleccionada.
+    Reemplazado el patrón datalist+input por <select> nativo + botón "×".
+  ✗ BD Personas ahora es accesible globalmente desde el topbar del
+    Control Room, no solo desde dentro de un proyecto (PRD V2 §06).
+
+  RECUPERADO DEL MASTER SHEET V2.4.1:
+  + Tabla resumen financiero completa del Presupuesto:
+    Servicios + Gastos + Equipos + Talentos + Subtotal Producción +
+    Gastos administrativos (5%) + Costo Producción + Presupuesto Cliente
+    (NETO) + Ganancia parcial + Comisiones + Ganancia final NETO.
+  + Δ% y Δ$ por fila del resumen (cotizado vs real).
+  + Calculadora tributaria como widget (BHE 15.25% + IVA 19%):
+    ingresa monto + tipo, obtienes líquido y bruto.
+
+  UX EMOCIONAL (PRD V2 §20 — claridad y sensación de avance):
+  + Confeti animado al pasar Venta → Preproducción (proyecto aprobado).
+  + Modal de confirmación al pasar Cierre → Cerrado.
+  + Toasts contextuales al cambiar estado, explicando qué se desbloquea.
+  + Tooltip explicativo en columna "Costo Real" (boleta = líquido,
+    factura = neto).
+
+  AÑADIDO:
+  + Ingreso manual de emergencia en BD Personas (formulario mínimo
+    como fallback operacional — feedback Agustín §10).
+  + IDs internos slugificados (sin tildes ni espacios) para robustez
+    técnica. Las tildes se mantienen en la UI visible.
+
+  PENDIENTE para V5.2 / V6:
+  - Rodajes y Hoja de Llamado (Capa 3)
+  - Formulario formal de BD con validación de RUT y duplicados
+  - Edición de plantillas de correo desde UI
+  - Botones de exportación PDF
+  ════════════════════════════════════════════════════════════════════
+
+  PROPIEDAD INTELECTUAL PROTEGIDA. Documento confidencial.
+  Cualquier uso, reproducción o distribución no autorizada puede
+  tener consecuencias legales. Ver PRD V2.0 para detalle.
+
+  ════════════════════════════════════════════════════════════════════
+  ALCANCE DE ESTA CAPA (V5 — Capa 2):
+  ════════════════════════════════════════════════════════════════════
+
+  Esta capa entrega los 4 primeros módulos core funcionales sobre la
+  arquitectura del PRD V2.0 establecida en Capa 1:
+
+  1. Base de Datos de Personas (transversal a todos los proyectos)
+     - Repositorio único de contactos
+     - Búsqueda y filtrado
+     - Detalle expandible por persona
+     - Alimenta selects de los demás módulos
+
+  2. Info Proyecto (por proyecto)
+     - Datos del cliente y agencia
+     - Auto-lookup desde BD para PE, Director, Jefe de Producción
+     - Estado del proyecto con visualización
+     - Resumen financiero alimentado desde Presupuesto
+
+  3. Presupuesto (por proyecto)
+     - Construcción del equipo con lógica económica del V4
+     - Departamentos colapsables con estado persistente
+     - Columna "Costo Real" visible solo en estados ≥ preproducción
+     - Cálculos tributarios chilenos (boleta vs factura, IVA)
+     - BUG CORREGIDO: renders granulares — los cambios numéricos ya
+       NO disparan re-render completo. Solo recalculan totales del
+       depto + KPIs globales. El estado de secciones colapsadas se
+       persiste en STATE.ui.collapsed.
+
+  4. Crew (por proyecto)
+     - Espejo automático del Presupuesto (solo confirmados con nombre)
+     - Auto-lookup de teléfono, dirección, restricciones desde BD
+     - Selector de medio de transporte por persona
+     - Indicador visual si la persona no está en BD
+
+  ════════════════════════════════════════════════════════════════════
+  LO QUE NO HACE ESTA CAPA (intencional):
+  ════════════════════════════════════════════════════════════════════
+  - No hay sistema de aprobación con modal. El estado del proyecto
+    es la única señal usada para mostrar/ocultar Costo Real.
+  - No hay comisiones ni presupuesto-cliente en KPI bar. Mecánica
+    core primero; nice-to-have después.
+  - No hay módulo Correos / Notificaciones (V6).
+  - No hay edición de plantillas (V6).
+  - No hay versionado de documentos (V6).
+  - No hay persistencia entre sesiones (es prototipo virtualmente
+    operativo — ver sección 17 del PRD V2.0).
+
+  PENDIENTE PARA V5 CAPA 3:
+  - Rodajes y Hoja de Llamado
+
+  FUERA DE ALCANCE DE V5 (a iterar en V6/V7):
+  - Gastos completo, Correos automatizados, módulo Entregables completo,
+    Reportes Inteligentes de Cierre, integraciones externas
+
+  ════════════════════════════════════════════════════════════════════
+  PRINCIPIOS DE DISEÑO HEREDADOS DEL PRD V2.0:
+  ════════════════════════════════════════════════════════════════════
+
+  1. Proyecto-céntrico: la unidad mínima del sistema es el proyecto
+  2. Fuente única de verdad: cada dato vive en un único lugar
+  3. RECI: toda tarea tiene Responsable explícito
+  4. Versionado en lugar de eliminación
+  5. Independencia de la herramienta: el código no es la lógica
+
+  Paleta y tipografía actual = PROVISIONAL.
+  Al recibir Manual de Marca de Magdalena Ríos, modificar SOLO las
+  variables :root de CSS para actualizar todo el sistema.
+
+  ════════════════════════════════════════════════════════════════════
+  CHANGELOG V5.0-C1 → V5.0-C2 (resumen — ver changelog completo aparte)
+  ════════════════════════════════════════════════════════════════════
+  + Implementación funcional de BD Personas, Info Proyecto, Presupuesto, Crew
+  + Bug del Presupuesto corregido (renders granulares + UI state persistido)
+  + Constantes y fórmulas tributarias chilenas (IVA, boleta, factura)
+  + 3 proyectos demo hidratados (Venta, Preproducción, Producción)
+  + BD_PERSONAS global con 8 contactos demo
+  + Estado UI persistido (secciones colapsadas no se resetean)
+  + CSS adicional para forms, tablas presupuesto, alerts, KPIs
+  ~ MODULES dict actualizado: layer V5 Capa 2 para los 4 módulos implementados
+  ~ renderModule convertido en dispatcher real con fallback a stub
+
+  ════════════════════════════════════════════════════════════════════
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/src/styles.css">
+
+</head>
+<body>
+  <div id="bootVeil" style="position:fixed;inset:0;z-index:100000;background:var(--bg-page,#111);display:grid;place-items:center;color:var(--ink-faint,#888);font-family:var(--font-sans),system-ui,sans-serif;transition:opacity .25s;"></div> <!-- cortina anti-flash: nace visible; src/lib/boot.js la gobierna (C6) -->
+<!-- V10.0.0 · Capa de nube anterior retirada: el SDK ya no se carga. Supabase es la única fuente. -->
+<!-- V7.1: SheetJS para import/export .xlsx bidireccional de la BD -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- V8.6: Supabase JS — cliente para la nueva base de datos PostgreSQL. Expone la variable global "supabase". -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Etapa 1: punto de entrada de módulos (Vite). Convive con el script clásico inline. -->
+<script type="module" src="/src/main.js"></script>
+
+<div class="app">
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TOPBAR (siempre visible)
+       ════════════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand" data-accion="app.controlRoom">
+        <div class="brand-logo" id="brandLogo">T</div>
+        <div>
+          <span class="brand-name">Rizora</span>
+          <span class="brand-sub" id="brandSub"></span>
+          <span class="brand-ver" id="brandVer"></span>
+        </div>
+      </div>
+      <div class="topbar-divider"></div>
+      <nav class="breadcrumb" id="breadcrumb">
+        <span class="breadcrumb-current">Control Room</span>
+      </nav>
+      <div class="esw" id="eswWrap">
+        <button class="esw-btn" data-accion="app.swToggle" title="Cambiar de espacio">Cambiar de espacio <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="esw-menu" id="eswMenu" hidden></div>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="topbar-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="globalSearch" placeholder="Buscar proyectos, personas, módulos…" autocomplete="off" data-accion="app.buscar" data-on="input keydown focus blur" />
+        <div id="gsearchResults" class="gsearch-results" hidden></div>
+      </div>
+      <button class="topbar-admin-badge" id="adminBadge" data-accion="app.config" style="display:none;" title="Modo administrador ACTIVO. Acciones restringidas habilitadas. Click para abrir Configuración.">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Modo Admin
+      </button>
+      <button class="topbar-save-btn" id="undoBtn" data-accion="app.undo" disabled
+              title="Deshacer el último cambio en este proyecto">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+        Deshacer
+      </button>
+      <input type="file" id="loadFileInput" accept="application/json,.json" style="display:none;" data-accion="app.importSave" data-on="change">
+      <!-- V7.4: las herramientas globales (BD, Guardar/Cargar OS, Snapshots, tema, admin)
+           viven en el panel de Configuración. La barra solo deja Deshacer (uso frecuente). -->
+      <div class="notif-wrap" style="position:relative;">
+        <button class="topbar-user" id="notifBtn" data-accion="app.bell" title="Avisos" style="position:relative;padding:8px 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span id="notifBadge" style="display:none;position:absolute;top:3px;right:3px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:var(--accent,#c2410c);color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;box-sizing:border-box;">0</span>
+        </button>
+        <div id="notifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:344px;max-height:460px;background:var(--bg-card,#1b1c20);border:1px solid var(--rule,#2a2a28);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.4);z-index:1200;overflow:hidden;display:none;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 18px;border-bottom:1px solid var(--rule,#2a2a28);">
+            <span style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">Avisos</span>
+            <button data-accion="app.notifTodas" style="background:none;border:none;color:var(--accent,#c2410c);font-size:11.5px;cursor:pointer;font-family:inherit;">Marcar todas como leídas</button>
+          </div>
+          <div id="notifList" style="overflow:auto;max-height:400px;"></div>
+        </div>
+      </div>
+      <button class="topbar-user topbar-config-btn" data-accion="app.config" title="Configuración (⌘ , / Ctrl ,)">
+        <div class="user-avatar" id="userAvatar"></div>
+        <span class="user-name" id="userName">Mi cuenta</span>
+        <svg class="config-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button class="topbar-save-btn" id="logoutBtn" data-accion="app.logout" title="Cerrar sesión en TakeOS">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Salir
+      </button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       UI HELPERS V5.1: contenedores de toasts, modal y confeti
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="toast-container" id="toastContainer"></div>
+  <div id="modalRoot"></div>
+  <canvas class="confetti-canvas" id="confettiCanvas" width="100" height="100"></canvas>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       CONTROL ROOM (vista global)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="control-room" id="controlRoomView">
+
+    <div class="cr-header">
+      <div class="cr-title-block">
+        <span class="cr-eyebrow">Control Room</span>
+        <h1 class="cr-title" id="crGreeting">Buenos días.</h1>
+        <p class="cr-subtitle" id="crSubtitle">Vista global de todos tus proyectos.</p>
+      </div>
+      <div class="cr-actions">
+        <button class="btn btn-secondary" id="importProjectBtn" data-accion="app.importProyectoBtn"
+                title="Importar UN proyecto desde un archivo .json. NO toca la BD ni los demás proyectos.">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><polyline points="9 15 12 12 15 15"/></svg>
+          Importar proyecto
+        </button>
+        <input type="file" id="importProjectFileInput" accept="application/json,.json" style="display:none;" data-accion="app.importProyecto" data-on="change">
+        <button class="btn btn-secondary" data-accion="app.papelera" title="Proyectos eliminados (recuperables)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Papelera
+        </button>
+        <button class="btn btn-secondary" data-accion="app.cfo" title="Finanzas: consolida los gastos de todos los proyectos, valida, paga reembolsos y exporta a Chipax.">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+          Finanzas
+        </button>
+        <button class="btn btn-primary" data-accion="app.nuevoProyecto">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo proyecto
+        </button>
+      </div>
+    </div>
+
+    <!-- Métricas globales -->
+    <div class="cr-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Proyectos activos</div>
+        <div class="metric-value" id="metric-active">—</div>
+        <div class="metric-trend">en todas las etapas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Cerrados este mes</div>
+        <div class="metric-value" id="metric-closed-month">—</div>
+        <div class="metric-trend">mayo 2026</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Requieren atención</div>
+        <div class="metric-value" id="metric-alerts">—</div>
+        <div class="metric-trend">tareas y señales tuyas</div>
+      </div>
+    </div>
+
+    <!-- Filtros y vista -->
+    <div class="cr-toolbar">
+      <div class="filter-chips">
+        <button class="chip active" data-filter="all">Todos</button>
+        <button class="chip" data-filter="mine">Mis proyectos</button>
+        <button class="chip" data-filter="alerts">Con alertas</button>
+        <button class="chip" data-filter="recent">Recientes</button>
+      </div>
+      <div class="view-toggle">
+        <button class="active" data-view="kanban">Por etapa</button>
+        <button data-view="list">Lista</button>
+      </div>
+    </div>
+
+    <!-- Kanban por estados -->
+    <div id="crTareasPanel"></div>
+    <div class="kanban" id="kanbanContainer">
+      <!-- Renderizado por JS -->
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       VISTA DE PROYECTO (sidebar + módulos)
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="project-view hidden" id="projectView">
+
+    <aside class="sidebar">
+      <div class="sidebar-project" id="sidebarProject">
+        <!-- Renderizado por JS -->
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Identidad y equipo</div>
+        <div class="sidebar-item" data-module="info-proyecto" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+          Info Proyecto
+        </div>
+        <div class="sidebar-item" data-module="bd-personas" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Base de Datos
+        </div>
+        <div class="sidebar-item" data-module="presupuesto" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Presupuesto
+        </div>
+        <div class="sidebar-item" data-module="cotizacion" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+          Cotización
+        </div>
+        <div class="sidebar-item" data-module="crew" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3 3-3-3"/><path d="M19 14V4"/></svg>
+          Crew
+        </div>
+        <div class="sidebar-item" data-module="cargos" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/><path d="M12 12v3"/></svg>
+          Cargos
+        </div>
+        <div class="sidebar-item" data-module="documentos" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Documentos
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Producción</div>
+        <div class="sidebar-item" data-module="rodajes" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Rodajes
+        </div>
+        <div class="sidebar-item" data-module="locaciones" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Locaciones
+        </div>
+        <div class="sidebar-item" data-module="hoja-llamado" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Hoja de Llamado
+        </div>
+        <div class="sidebar-item" data-module="plan-rodaje" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="21"/><line x1="12" y1="13" x2="17" y2="13"/><line x1="12" y1="17" x2="17" y2="17"/></svg>
+          Plan de Rodaje
+        </div>
+        <div class="sidebar-item" data-module="legal" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4"/></svg>
+          Legal
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Comunicación y dinero</div>
+        <div class="sidebar-item" data-module="correos" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Notificaciones
+        </div>
+        <div class="sidebar-item" data-module="gastos" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+          Gastos
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Próximamente</div>
+        <div class="sidebar-item" data-module="entregables" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Entregables
+          <span class="sidebar-soon">SOON</span>
+        </div>
+        <div class="sidebar-item" data-module="reporte-cierre" data-accion="app.modulo">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 5-5"/></svg>
+          Reporte de Cierre
+          <span class="sidebar-soon">V6</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="module-main" id="moduleMain">
+      <!-- Renderizado por JS según módulo activo -->
+    </main>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       VISTA BD GLOBAL (V5.1.1 — fix bug pantallas en blanco)
+       ════════════════════════════════════════════════════════════════
+       Container DEDICADO. ANTES (V5.1) se creaba dinámicamente y se
+       movía #moduleMain entre vistas, generando dos elementos con el
+       mismo ID y rompiendo todo. Ahora vive separado, sin conflicto.
+       ════════════════════════════════════════════════════════════════ -->
+  <section class="bd-global-view hidden" id="bdGlobalView">
+    <main class="module-main" id="bdGlobalMain">
+      <!-- Renderizado por JS cuando se accede desde el topbar -->
+    </main>
+  </section>
+
+</div>
+
+<!-- El <script> clásico del monolito quedó VACÍO en la Etapa C6: todo el JS vive en src/ (main.js importa 20 módulos + 10 libs). Historia completa en git. -->
+
+<!-- MÓDULO GASTOS + CFO + EXPORT CHIPAX: CHIPAX_CUENTA, go*, cfo*, chipax*, renderGastos, renderCFO, openGlobalCFO, goWire → movido a src/modules/gastos.js (Etapa A4) -->
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "takeos-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode staging",
+    "build": "vite build",
+    "build:staging": "vite build --mode staging",
+    "preview": "vite preview",
+    "gate": "node scripts/check-inline-handlers.mjs && node scripts/check-free-idents.mjs"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.27.7": true,
+    "fsevents@2.3.3": true
+  }
+}
