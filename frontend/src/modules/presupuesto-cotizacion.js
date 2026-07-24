@@ -2587,6 +2587,7 @@ function cotVersionSwitcherHTML(project) {
       <div class="cot-card-title" style="margin:0;">Versiones de cotización <span class="tt" data-tip="Iteraciones de la negociación durante la etapa Venta. Cada versión es una copia completa (ofertas, precios, alcance). La anterior se preserva como historial.">?</span></div>
       <div class="cotver-actions">
         <button class="btn btn-secondary btn-sm" data-accion="pre.d" data-args="[&quot;cotAbrirComparador&quot;]" ${cs.versiones.length < 2 ? 'disabled title="Crea una segunda versión para comparar"' : ''}>Comparar</button>
+        <button class="btn btn-secondary btn-sm" data-accion="pre.d" data-args="[&quot;cotEliminarVersion&quot;]" ${(locked || cs.versiones.length < 2) ? 'disabled title="' + (locked ? 'El versionado es solo de la etapa Venta.' : 'Debe quedar al menos una versión.') + '"' : 'title="Elimina la versión activa (con confirmación)"'}>Eliminar versión</button>
         <button class="btn btn-primary btn-sm" data-accion="pre.d" data-args="[&quot;cotCrearVersion&quot;]" ${locked ? 'disabled title="El versionado es solo de la etapa Venta. El proyecto ya está aprobado."' : ''}>+ Nueva versión</button>
       </div>
     </div>
@@ -2632,6 +2633,41 @@ function cotCrearVersion() {
   markDirty();
   renderCotizacion();
   showToast({ kind: 'success', title: `Versión ${copia.numero} creada`, body: 'Es una copia de la anterior, lista para editar. La versión previa quedó preservada como historial.' });
+}
+
+/* Eliminar la versión de cotización ACTIVA (con advertencia). Útil cuando se creó
+   una versión por error. Solo en etapa Venta y si queda más de una versión (siempre
+   debe quedar al menos una). El borrado persiste: la RPC guardar_proyecto reemplaza
+   el set completo de quotation_versions con el arreglo que quede. */
+function cotEliminarVersion() {
+  const project = STATE.currentProject;
+  if (cotizadoLocked(project)) {
+    showToast({ kind: 'warning', title: 'Solo en etapa Venta', body: 'Las versiones solo se editan antes de aprobar el proyecto.' });
+    return;
+  }
+  const cs = ensureCotizaciones(project);
+  if (!cs.versiones || cs.versiones.length < 2) {
+    showToast({ kind: 'warning', title: 'No se puede eliminar', body: 'Debe quedar al menos una versión de cotización.' });
+    return;
+  }
+  const activa = cs.versiones.find(v => v.id === cs.activoId);
+  if (!activa) return;
+  showModal({
+    title: 'Eliminar versión de cotización',
+    body: '¿Seguro que quieres eliminar <b>' + escapeHtml(activa.label || 'esta versión') + '</b>?<br><br>Se borra esta versión y su copia congelada del presupuesto. Las demás versiones quedan intactas.<br><br>Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar versión', cancelLabel: 'Cancelar', danger: true,
+    onConfirm: function () {
+      const idx = cs.versiones.findIndex(v => v.id === cs.activoId);
+      if (idx < 0) return;
+      cs.versiones.splice(idx, 1);
+      // Activa la versión de mayor número que quede (la más reciente).
+      const ultima = cs.versiones.reduce((a, b) => ((b.numero || 0) >= (a.numero || 0) ? b : a), cs.versiones[0]);
+      cs.activoId = ultima.id;
+      markDirty();
+      renderCotizacion();
+      showToast({ kind: 'success', title: 'Versión eliminada', body: 'Quedaste en “' + (ultima.label || 'la última versión') + '”.' });
+    }
+  });
 }
 
 function cotSetActiveVersion(id) {
@@ -4465,6 +4501,7 @@ var _PRE_FN = {
   cotCondRestaurar: function () { return cotCondRestaurar.apply(null, arguments); },
   cotCondTplSet: function () { return cotCondTplSet.apply(null, arguments); },
   cotCrearVersion: function () { return cotCrearVersion.apply(null, arguments); },
+  cotEliminarVersion: function () { return cotEliminarVersion.apply(null, arguments); },
   cotDeleteOferta: function () { return cotDeleteOferta.apply(null, arguments); },
   cotDesbloquearMisma: function () { return cotDesbloquearMisma.apply(null, arguments); },
   cotDescWrap: function () { return cotDescWrap.apply(null, arguments); },

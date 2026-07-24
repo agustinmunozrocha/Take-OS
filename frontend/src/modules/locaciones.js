@@ -47,6 +47,16 @@ export function locFullAddress(l) { if (!l) return ''; return [l.direccion, l.di
 /* Locaciones del proyecto en estado Confirmada (las únicas que ofrecen
    Hoja de Llamado y Plan de Rodaje). */
 export function projLocConfirmadas(project) { return projLocList(project).filter(u => u.estado === 'confirmada' && bdLocFind(u.locId)); }
+/* Correlativo de PRESENTACIÓN de una locación DENTRO del proyecto: "LOC-01", "LOC-02"…
+   por orden en la lista de confirmadas del proyecto. Es SOLO la etiqueta que ve el
+   cliente en Hoja de Llamado y Plan de Rodaje: NO reemplaza el `locId` global (que es
+   la llave que liga la locación en la BD, el proyecto y los documentos legales). Así,
+   un proyecto con una sola locación muestra "LOC-01" aunque en la BD sea la LOC-20. */
+export function projLocLabel(project, locId) {
+  const confs = projLocConfirmadas(project);
+  const idx = confs.findIndex(u => u.locId === locId);
+  return 'LOC-' + String(idx >= 0 ? idx + 1 : 1).padStart(2, '0');
+}
 
 export function locacionOptions(project, selectedId) {
   // V8.2: las opciones salen de las locaciones CONFIRMADAS del proyecto

@@ -9,7 +9,7 @@ import { ensureProjectLoc } from '../lib/modelo.js';
 import { normalizeTime24 } from '../lib/calc.js';
 import { closeModal, hideTooltip, comboboxCloseDelayed, comboboxFilter, comboboxOpen } from '../lib/ui.js';
 import { CotPreview, _budgetColTh, _budgetColWGet } from './presupuesto-cotizacion.js';
-import { bdLocFind, projLocConfirmadas, projLocList, locacionOptions } from './locaciones.js';
+import { bdLocFind, projLocConfirmadas, projLocList, locacionOptions, projLocLabel } from './locaciones.js';
 import { markDirty } from './persistencia-local.js';
 import { fmtFechaLarga } from './rodajes.js';
 import { marcarSenal } from './tareas.js';
@@ -247,7 +247,7 @@ function renderPlanRodaje() {
 
 function prSwitcherHTML(project, dias, diaId, u, plan) {
   const dd = project.data.planRodaje.dias[diaId];
-  const diaChips = dias.map(d => `<button class="pr-chip ${d.diaId === diaId ? 'is-active' : ''}" ${accionHTML('pr.d', 'prSetDia', d.diaId)}><span class="pr-chip-id">${escapeHtml(d.diaId)}</span><span class="pr-chip-sub">${escapeHtml(_fechaCorta(d.fecha))}</span></button>`).join('');
+  const diaChips = dias.map(d => `<button class="pr-chip ${d.diaId === diaId ? 'is-active' : ''}" ${accionHTML('pr.d', 'prSetDia', d.diaId)}><span class="pr-chip-id">Día ${prDiaInfo(project, d.diaId).n}</span><span class="pr-chip-sub">${escapeHtml(_fechaCorta(d.fecha))}</span></button>`).join('');
   const uniChips = dd.unidades.map(x => `<button class="pr-chip pr-uni-chip ${x.id === u.id ? 'is-active' : ''}" ${accionHTML('pr.d', 'prSetUnidad', x.id)}><span class="pr-chip-id">${escapeHtml(x.label)}</span></button>`).join('');
   const varChips = u.variantes.map(v => `<button class="pr-chip pr-plan-chip ${v.id === plan.id ? 'is-active' : ''}" ${accionHTML('pr.d', 'prSetPlan', v.id)}><span class="pr-chip-id">${escapeHtml(v.label)}</span></button>`).join('');
   const tipUni = 'Equipos que ruedan en SIMULTÁNEO el mismo día, cada uno con su propio plan, llamados y tiempos. Ej.: Unidad 1 graba en exterior mientras la Unidad 2 graba en estudio a la misma hora. Cada unidad es independiente.';
@@ -281,7 +281,7 @@ function prHeaderHTML(project, diaId) {
         return `<div class="pr-h-field"><label>Locación / campamento base</label><input class="cot-input" value="${escapeHtml(dd.header.locacion || '')}" placeholder="Confírmala en Locaciones" data-accion="pr.d" data-args="[&quot;prSetHeader&quot;, &quot;locacion&quot;, &quot;\u00a7v\u00a7&quot;]" data-on="change"></div>`;
       }
       const cur = dd.header.locacion || '';
-      const opts = `<option value="">(sin asignar)</option>` + confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<option value="${escapeHtml(u.locId)}" ${cur === u.locId ? 'selected' : ''}>${escapeHtml(u.locId)} · ${escapeHtml(l.nombre || 'sin nombre')}</option>`; }).join('');
+      const opts = `<option value="">(sin asignar)</option>` + confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<option value="${escapeHtml(u.locId)}" ${cur === u.locId ? 'selected' : ''}>${escapeHtml(projLocLabel(project, u.locId))} · ${escapeHtml(l.nombre || 'sin nombre')}</option>`; }).join('');
       // si el valor guardado es texto legado (no un locId), lo mostramos como opción para no perderlo
       const legacy = (cur && !bdLocFind(cur)) ? `<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)} (texto)</option>` : '';
       return `<div class="pr-h-field"><label>Locación / campamento base</label><select class="cot-input" data-accion="pr.d" data-args="[&quot;prSetHeader&quot;, &quot;locacion&quot;, &quot;\u00a7v\u00a7&quot;]" data-on="change">${opts}${legacy}</select></div>`;
@@ -672,7 +672,7 @@ function renderHojaLlamado() {
       <div class="hl-doc-header">
         <div>
           <div class="hl-doc-title">HOJA DE LLAMADO</div>
-          <div class="hl-doc-sub">${escapeHtml(ip.nombreProyecto || project.name || '')} · ${escapeHtml(rodajeSel.diaId)}${rodajeSel.fecha ? ' · ' + escapeHtml(fmtFechaLarga(rodajeSel.fecha)) : ''}</div>
+          <div class="hl-doc-sub">${escapeHtml(ip.nombreProyecto || project.name || '')} · Día ${prDiaInfo(project, rodajeSel.diaId).n}${rodajeSel.fecha ? ' · ' + escapeHtml(fmtFechaLarga(rodajeSel.fecha)) : ''}</div>
           ${rodajeSel.descripcion ? `<div class="hl-doc-desc">${escapeHtml(rodajeSel.descripcion)}</div>` : ''}
         </div>
         <div class="hl-doc-version-block">
@@ -723,7 +723,7 @@ function renderHojaLlamado() {
             const total = projLocList(project).length;
             return `<div class="hl-empty">${total ? 'Hay locaciones en el proyecto, pero ninguna está <strong>Confirmada</strong>. Solo las confirmadas se pueden asignar a las citaciones.' : 'Sin locaciones confirmadas.'} Gestiónalas en el módulo <strong>Locaciones</strong>.</div>`;
           }
-          return `<div style="overflow-x:auto;"><table class="data-table hl-loc-table"><thead><tr><th style="width:80px;">ID</th><th>Nombre</th><th>Dirección</th><th>Comuna</th></tr></thead><tbody>${confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<tr><td><span class="dia-id-badge">${escapeHtml(u.locId)}</span></td><td>${escapeHtml(l.nombre || 'sin nombre')}</td><td>${escapeHtml(l.direccion || '—')}</td><td>${escapeHtml(l.comuna || '—')}</td></tr>`; }).join('')}</tbody></table></div><div class="config-hint" style="margin-top:6px;">Solo lectura. Las locaciones (datos, fotos, estado) se editan en el módulo <strong>Locaciones</strong>. Aquí se asignan a cada citación abajo.</div>`;
+          return `<div style="overflow-x:auto;"><table class="data-table hl-loc-table"><thead><tr><th style="width:80px;">ID</th><th>Nombre</th><th>Dirección</th><th>Comuna</th></tr></thead><tbody>${confs.map(u => { const l = bdLocFind(u.locId) || {}; return `<tr><td><span class="dia-id-badge">${escapeHtml(projLocLabel(project, u.locId))}</span></td><td>${escapeHtml(l.nombre || 'sin nombre')}</td><td>${escapeHtml(l.direccion || '—')}</td><td>${escapeHtml(l.comuna || '—')}</td></tr>`; }).join('')}</tbody></table></div><div class="config-hint" style="margin-top:6px;">Solo lectura. Las locaciones (datos, fotos, estado) se editan en el módulo <strong>Locaciones</strong>. Aquí se asignan a cada citación abajo.</div>`;
         })()}
       </div>
 
@@ -1005,7 +1005,7 @@ function buildHojaLlamadoPrintHTML(project, sel, margenMm) {
   ensureProjectLoc(project);
   const _printLocs = projLocConfirmadas(project).map(u => Object.assign({ _proy: u }, bdLocFind(u.locId) || {}));
   const locRows = _printLocs.map(l => `<tr>
-      <td><strong>${e(l.locId)}</strong></td>
+      <td><strong>${e(projLocLabel(project, l.locId))}</strong></td>
       <td>${e(l.nombre || '—')}</td>
       <td>${l.direccion ? `<a href="${safeUrl(mapsHref(l))}" class="maplink">${e([l.direccion, l.comuna].filter(Boolean).join(', '))}</a>` : '—'}</td>
       <td>${e(((l._proy && l._proy.notasProy) || l.notas || ''))}</td>

@@ -1,5 +1,26 @@
 # Changelog — Rizora
 
+## V11.43.0 — 24 de julio de 2026
+### Finanzas, Cotización, Locaciones, Plan de Rodaje y exportación a Chipax
+
+Rama `feat/medianos-cotizacion-locaciones-chipax`. Solo **frontend**. Sin cambios de base de datos. Dos correcciones del uso real + tres mejoras medianas.
+
+**Finanzas**
+- **Revertir la validación de un gasto ahora está donde se busca:** dentro de Finanzas → “Por proyecto” → “Ver validados”, cada gasto validado tiene un botón **“revertir validación”** que lo devuelve a la cola. (Antes el botón solo estaba dentro del proyecto, no en Finanzas.)
+- **Exportar a Chipax se reorganizó:** se quitó la pestaña global “Exportar a Chipax” y el botón **“Exportar gastos para Chipax”** pasó a vivir dentro del desglose “Ver validados” de cada proyecto (la exportación es por proyecto).
+- **El Excel de Chipax ahora sale idéntico al modelo oficial** (“Importar Gastos masivo a Chipax”): mismo preámbulo, encabezado en la fila 6, datos desde la fila 7, montos como número sin puntos ni comas, una sola hoja “Worksheet”, y el bloque de referencia a la derecha con las cuentas, líneas de negocio, tipos de documento y monedas válidas. Máximo 1000 registros por archivo, como pide Chipax.
+
+**Cotización**
+- **Se puede eliminar una versión de cotización** (con advertencia), para deshacer una versión creada por error. No deja borrar si es la única; el borrado persiste.
+
+**Locaciones (Hoja de Llamado y Plan de Rodaje)**
+- Las locaciones se numeran **LOC-01, LOC-02… reiniciando por proyecto**, en vez del correlativo global de la base (que mostraba “LOC-20” aunque fuera la única del proyecto). Es solo la etiqueta visible; la locación sigue ligada por su identificador interno.
+
+**Plan de Rodaje**
+- El selector de día del Plan de Rodaje mostraba el código crudo (“DIA-03”). Ahora muestra **“Día N” por días efectivos** (activos), igual que la Hoja de Llamado: si hay días desactivados, el único activo sale “Día 1”.
+
+Verificado: compuertas `npm run gate` en verde, build OK, y pruebas en el navegador de la reversión de validación desde Finanzas, la numeración de días y locaciones en la Hoja de Llamado, y la generación del Excel de Chipax comparándolo celda por celda contra el modelo.
+
 ## V11.42.0 — 24 de julio de 2026
 ### Tanda de arreglos: Gastos, Presupuesto y Hoja de Llamado
 
