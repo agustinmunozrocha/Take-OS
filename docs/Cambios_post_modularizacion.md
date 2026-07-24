@@ -22,6 +22,30 @@
 | 3 | 07-jul-2026 | `c2ef3f3` (fix) · `7d6c6c0` (merge) | V11.33.0 | **Login (ajuste del #2):** TakeOS es de **registro abierto** (cualquiera puede crearse cuenta). Se conserva la detección de error de login pero con mensaje **neutro** (*"No se pudo iniciar sesión…"*) y se **revierte** el copy invitado-céntrico del #2 (se restaura *"tu cuenta se crea sola"* y el modal). **El net del login a portar = #2 + #3.** Sin cambios de BD. | `AUTH_ERROR_OAUTH`/`cloudGate` (mensaje), hint `#cgInvHint`, modal `_invMostrarResultado` | ☐ |
 | 4 | 07-jul-2026 | `0ae6727` (fix) · `c8fee51` (merge) | V11.34.0 | **Rebrand TakeOS → Rizora (marca visible):** 80 ocurrencias CamelCase → "Rizora" (textos, títulos, `<title>`, valor de `TAKEOS_MARCA`, y 3 funciones renombradas parejo) + versión in-app a **V11.34.0**. **NO** se tocaron identificadores/claves internas (`takeos_*` del navegador, protocolo `TAKEOS_REQUISITOS`, URL del landing). Docs `.md` pendientes de rebrand. Sin BD. | Global en `index.html`; `TAKEOS_VERSION` (línea 24092), `TAKEOS_MARCA` (24303) | ☐ |
 
+## ACTUALIZACIÓN 24-jul-2026 — auditoría post-corte (Claude)
+
+Tras el corte a producción del modular, se auditó el hueco monolito (V11.40) vs
+modular (V11.14). **Conclusión: el equipo de etapa4 ya había portado casi todo.**
+
+- **Ya en el modular (verificado por código), marcar ☑:** #1 V11.31 (CFO persiste:
+  goValidar/goPagarReemb/etc. llaman dalTouchProyecto), #2/#3 V11.32-33 (login OAuth
+  con mensaje neutro, `'No se pudo iniciar sesión…'` en boot.js), #4 V11.34 (Rizora,
+  se ve en vivo). Además, del tramo NO anotado: V11.35 (editar/eliminar sobre — ✎/×),
+  V11.36 (scouting persiste, `project_scouting`), V11.37/38 (BD persistencia + esconder
+  pantalla a lectores), V11.39 (nombre P21a).
+- **Único hueco real = V11.40 — PORTADO Y PROBADO HOY** (rama `fix/portar-v1140-dte-real`,
+  commits 036bc23 · aa8d8d4):
+  - **DTE real ya persiste al recargar** (dal.js: se pide `dte_real` en el SELECT y se
+    lee en el mapeo; el write ya funcionaba). Era el bug que reportó Agustín.
+  - **Pronto pago con factura muestra el bruto** (neto × (1+IVA)) + columna "Monto a
+    transferir"; boletas retienen, exentas sin cambio. La exportación Santander usa el
+    mismo monto.
+- **Bonus — regresión visual del modular (no del monolito), arreglada** (commit b31dcc0):
+  los botones "revertir a pendiente" y "editar" del registro de Gastos ya no se encimaban.
+
+Los tres fixes se probaron con navegador contra staging. **La lista de arriba (☐) queda
+saldada:** todo V11.31–V11.40 está en el modular. Este registro deja de tener pendientes.
+
 ## Cómo usar este registro
 
 - **Al hacer un cambio nuevo al monolito de `main`:** agregar una fila con número
