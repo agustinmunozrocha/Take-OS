@@ -9,7 +9,7 @@ import { escapeHtml, showToast, safeUrl } from '../lib/helpers.js';
 // DIFERIDOS anti-ciclo (quedan vía window): boot (applyModuleReadonly/orgNombre),
 // dal, bd-excel, gastos (ciclo DURO: gancho('renderGastos')/_syncGastosCostoReal/goLinea* —
 // mueren en D2), info-proyecto (gancho('_markRowDirty')), legal, plan-rodaje, calculadoras, config.
-import { BD_PERSONAS, EMPRESA_PERFIL, STATES_WITH_LOCKED_BUDGET, STATES_WITH_REAL_COST } from '../lib/state.js';
+import { BD_PERSONAS, BD_TALENTOS, EMPRESA_PERFIL, STATES_WITH_LOCKED_BUDGET, STATES_WITH_REAL_COST } from '../lib/state.js';
 import { COTIZACION_CONDICIONES_DEFAULTS, DTE_LABEL, DTE_OPTIONS, UNIDAD_OPTIONS } from '../lib/data.js';
 import { calcCostoEmpresa, deltaClassCosto, deltaClassGanancia, displayMoneyInputValue, fmtDelta, fmtDeltaWithSymbol, fmtMoney, fmtPct, getCostoReal, parseMoneyCLP, readNum, onMoneyInput } from '../lib/calc.js';
 import { closeModal, showModal, comboboxCloseDelayed, comboboxFilter, comboboxOpen } from '../lib/ui.js';
@@ -734,9 +734,12 @@ function renderRoleRow(sectionKey, dept, item, idx, showReal) {
   const isConfirmed = item.confirmado;
   const roleOrItemField = sectionKey === 'servicios' ? 'rol' : 'item';
   const roleOrItemValue = sectionKey === 'servicios' ? item.rol : item.item;
-  // V5.1.1: indicador visual cuando el nombre ingresado no está en BD
-  const nameInBD = item.nombre && BD_PERSONAS[item.nombre];
-  const nameNotInBD = item.nombre && !BD_PERSONAS[item.nombre];
+  // V5.1.1: indicador visual cuando el nombre ingresado no está en BD.
+  // La persona puede estar guardada como crew (BD_PERSONAS) o como talento
+  // (BD_TALENTOS): ambas listas cuentan como "ya está en la BD", si no el
+  // indicador "+ Agregar a la BD" seguía apareciendo para talentos ya guardados.
+  const nameInBD = item.nombre && (BD_PERSONAS[item.nombre] || BD_TALENTOS[item.nombre]);
+  const nameNotInBD = item.nombre && !BD_PERSONAS[item.nombre] && !BD_TALENTOS[item.nombre];
   // V5.2.2: bloqueo de cotizados después de aprobación.
   // Filas marcadas como `extra` (agregadas post-aprobación) son siempre editables.
   // V5.3.1 (Nota 1 — REGLA MADRE): el DTE cotizado vuelve a quedar
@@ -1312,7 +1315,7 @@ export function afterRowChange(sectionKey, dept, idx) {
   const nameWrap = rowEl.querySelector('.cell-name-wrap');
   if (nameWrap) {
     const existingWarn = nameWrap.querySelector('.cell-name-warn');
-    const nameNotInBD = item.nombre && !BD_PERSONAS[item.nombre];
+    const nameNotInBD = item.nombre && !BD_PERSONAS[item.nombre] && !BD_TALENTOS[item.nombre];
     if (nameNotInBD && !existingWarn) {
       const span = document.createElement('span');
       span.className = 'cell-name-warn';

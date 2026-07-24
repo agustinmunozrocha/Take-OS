@@ -68,13 +68,14 @@ const CHIPAX_TIPODOC = {
   'Boleta': 'Boleta', 'Honorario': 'Boleta', 'Boleta de honorarios': 'Boleta',
   'Otro': 'Recibo'
 };
-const GO_MEDIOS = ['Tarjeta empresa (débito)', 'Tarjeta empresa (crédito)', 'Transferencia cuenta empresa', 'Fondos por rendir', 'Reembolso a colaborador', 'Otro'];
+const GO_MEDIOS = ['Tarjeta empresa (débito)', 'Tarjeta empresa (crédito)', 'Transferencia cuenta empresa', 'Fondos por rendir', 'Reembolso a quien gastó', 'Otro'];
 const GO_TIPOS = ['Factura', 'Factura Exenta', 'Boleta', 'Invoice', 'Otro'];   // Pasada 4 (#6) · tipos de documento del gasto
 const GO_ESTADOS = { pendiente: 'Pendiente', por_revisar: 'Por revisar', validado: 'Validado', en_observacion: 'En observación' };
 
 const GO_STATE = { cfoTab: 'validacion' };
 let GO_DRAFT = {};
 let GO_EDIT_ID = null;   // V11.x · id del gasto en edición (null = se está creando uno nuevo)
+let GO_CAJA_EDIT_ID = null;   // id del movimiento de fondos por rendir en edición (null = nuevo)
 let GO_PRES_EDIT_ID = null;   // id del presupuesto (sobre/caja) en edición (null = creando uno nuevo)
 let GO_SEQ = 0;
 function goNewId(prefix) { GO_SEQ++; return prefix + Date.now().toString(36) + GO_SEQ.toString(36); }
@@ -96,6 +97,9 @@ function goData(project) {
   // migración del modelo de movimiento ingreso/devolución → origen/destino. Se
   // normaliza en carga y migra hacia adelante al siguiente guardado (sin tocar BD).
   d.movimientos.forEach(m => { if (m && m.medio === 'Caja de producción') m.medio = 'Fondos por rendir'; });
+  // Compat · renombre del medio "Reembolso a colaborador" → "Reembolso a quien gastó"
+  // (misma persona; solo cambia la etiqueta para que se entienda con el campo "Quién gastó").
+  d.movimientos.forEach(m => { if (m && m.medio === 'Reembolso a colaborador') m.medio = 'Reembolso a quien gastó'; });
   d.cajaMovs.forEach(c => {
     if (!c) return;
     if (c.origen === undefined && c.destino === undefined) {
@@ -158,7 +162,7 @@ function goCajaSaldos(project) {
   }).sort((x, y) => y.saldo - x.saldo);
 }
 function goNeedsAction(m) { return m.estado === 'por_revisar' || m.estado === 'en_observacion'; }
-function goReembPend(project) { return goMovs(project).filter(m => m.medio === 'Reembolso a colaborador' && !m.fechaPago); }
+function goReembPend(project) { return goMovs(project).filter(m => m.medio === 'Reembolso a quien gastó' && !m.fechaPago); }
 function goProjName(project) { return (project.data.infoProyecto && project.data.infoProyecto.nombreProyecto) || project.name || '(sin nombre)'; }
 function goProjCliente(project) { return (project.data.infoProyecto && project.data.infoProyecto.cliente) || project.client || ''; }
 /* Nomenclatura oficial para Chipax: "{{PROYECTO}} de {{CLIENTE}}" */
@@ -385,7 +389,9 @@ function goRegFilaHTML(project, x) {
     ? `<span class="go-est pendiente" title="el productor sabe que falta info">Pendiente</span> <button class="go-mini" ${accionHTML('go.listo', x.id)}>marcar listo</button>`
     : (x.estado === 'por_revisar'
       ? `<span class="go-est por_revisar">${GO_ESTADOS.por_revisar}</span> <button class="go-mini" ${accionHTML('go.revertir', x.id)}>revertir a pendiente</button>`
-      : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado] || escapeHtml(x.estado)}</span>`);
+      : (x.estado === 'validado'
+        ? `<span class="go-est validado">${GO_ESTADOS.validado}</span> <button class="go-mini" ${accionHTML('go.revertirVal', x.id)}>revertir validación</button>`
+        : `<span class="go-est ${x.estado}">${GO_ESTADOS[x.estado] || escapeHtml(x.estado)}</span>`));
   return `<tr>
     <td class="go-sub">${escapeHtml((x.fecha || '').slice(5))}</td>
     <td>${escapeHtml(x.concepto)}<div class="go-sub">${escapeHtml(x.prov)}</div>${goComentCell(project, x)}</td>
@@ -404,26 +410,53 @@ function goRegFilaHTML(project, x) {
    ajustan por cada movimiento y, junto con la libreta d.cajaMovs, PERSISTEN vía
    guardar_operaciones_4b (columnas caja_prod / caja_devuelto / caja_movimientos).
    Los campos origen/destino viajan dentro del JSONB de cajaMovs (sin cambios de BD). */
-function goCajaMov() {
+function goCajaMov(editId) {
   if (!STATE.currentProject) return;
   const project = STATE.currentProject;
   const cuentas = ['La empresa'].concat(goContactos(project));
-  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Registrar movimiento de fondos por rendir</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
+  /* Si viene editId, precargamos el movimiento para modificarlo; si no, es uno
+     nuevo. El comprobante existente se conserva en GO_DRAFT salvo que se adjunte
+     otro (mismo mecanismo que la ficha de gasto). */
+  const c = editId ? (goData(project).cajaMovs || []).find(x => x.id === editId) : null;
+  GO_CAJA_EDIT_ID = c ? c.id : null;
+  GO_DRAFT = c ? { filePath: c.filePath || null, fileName: c.fileName || null, fileUrl: null } : { filePath: null, fileName: null, fileUrl: null };
+  const esEd = !!c;
+  const compBox = (c && c.filePath)
+    ? '<div class="go-attached"><div class="go-thumb">📄</div><div style="flex:1;">' + escapeHtml(c.fileName || 'comprobante') + '<div class="go-sub">comprobante actual · adjunta otro para reemplazarlo</div></div></div>'
+    : '';
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>${esEd ? 'Editar' : 'Registrar'} movimiento de fondos por rendir</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
       <div class="go-help" style="margin-bottom:10px;line-height:1.55;">Mueve fondos entre cuentas: de <b>la empresa</b> a una persona (entrega de fondo), entre dos personas (traspaso), o de una persona de vuelta a <b>la empresa</b> (devolución). Escribe el nombre; si la persona no está en la base de datos igual puedes ingresarla.</div>
       <div class="go-frow">
-        <div class="go-field half"><label>Desde (origen)</label><input class="go-inp" id="cm_origen" list="go_dl_cuentas" placeholder="La empresa o una persona…" autocomplete="off" data-accion="go.cmHint" data-on="input change"></div>
-        <div class="go-field half"><label>Hacia (destino)</label><input class="go-inp" id="cm_destino" list="go_dl_cuentas" placeholder="La empresa o una persona…" autocomplete="off" data-accion="go.cmHint" data-on="input change"></div>
+        <div class="go-field half"><label>Desde (origen)</label><input class="go-inp" id="cm_origen" list="go_dl_cuentas" placeholder="La empresa o una persona…" autocomplete="off" value="${c ? escapeHtml(c.origen || '') : ''}" data-accion="go.cmHint" data-on="input change"></div>
+        <div class="go-field half"><label>Hacia (destino)</label><input class="go-inp" id="cm_destino" list="go_dl_cuentas" placeholder="La empresa o una persona…" autocomplete="off" value="${c ? escapeHtml(c.destino || '') : ''}" data-accion="go.cmHint" data-on="input change"></div>
       </div>
       <div class="go-help" id="cm_tipo" style="margin:-4px 0 8px;color:var(--ink-secondary);"></div>
       <div class="go-frow">
-        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="cm_monto" placeholder="0" inputmode="numeric"></div>
-        <div class="go-field half"><label>Fecha</label><input class="go-inp" type="date" id="cm_fecha" value="${goToday()}"></div>
+        <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="cm_monto" placeholder="0" inputmode="numeric" value="${c ? (c.monto || '') : ''}"></div>
+        <div class="go-field half"><label>Fecha</label><input class="go-inp" type="date" id="cm_fecha" value="${c ? escapeHtml(c.fecha || goToday()) : goToday()}"></div>
       </div>
-      <div class="go-field"><label>Nota (opcional)</label><input class="go-inp" id="cm_nota" placeholder="ej. adelanto para arte / vuelto al cierre"></div>
+      <div class="go-field"><label>Nota (opcional)</label><input class="go-inp" id="cm_nota" placeholder="ej. adelanto para arte / vuelto al cierre" value="${c ? escapeHtml(c.nota || '') : ''}"></div>
+      <div class="go-field"><label>Comprobante de transferencia (opcional)</label>
+        <div class="go-dz" data-accion="go.dz" data-args="[&quot;cm_file&quot;]"><span class="go-big">📎</span>Adjunta foto o PDF del comprobante</div>
+        <input type="file" id="cm_file" data-box="cm_fileBox" accept="image/*,application/pdf" style="display:none" data-accion="go.file" data-on="change"><div id="cm_fileBox">${compBox}</div>
+      </div>
       <datalist id="go_dl_cuentas">${cuentas.map(c => '<option value="' + escapeHtml(c) + '">').join('')}</datalist>
     </div>
-    <div class="go-mf"><button class="btn btn-secondary" data-accion="ui.cerrar">Cancelar</button><button class="btn btn-primary" data-accion="go.cajaMovOk">Registrar movimiento</button></div></div>`);
+    <div class="go-mf">${esEd ? `<button class="btn btn-ghost btn-sm" style="color:var(--accent-deep);margin-right:auto;" ${accionHTML('go.cajaMovDel', GO_CAJA_EDIT_ID)}>Eliminar movimiento</button>` : ''}<button class="btn btn-secondary" data-accion="ui.cerrar">Cancelar</button><button class="btn btn-primary" data-accion="go.cajaMovOk">${esEd ? 'Guardar cambios' : 'Registrar movimiento'}</button></div></div>`);
+  if (esEd) { try { goCajaMovHint(); } catch (e) {} }
+}
+/* Recalcula los agregados d.cajaProd (salido de la empresa) y d.cajaDevuelto
+   (vuelto a la empresa) desde el libro de movimientos. Como ambos derivan solo de
+   cajaMovs, recomputar tras cada alta/edición/borrado los mantiene sin desajuste. */
+function goCajaRecalcAgg(d) {
+  const emp = 'La empresa';
+  let prod = 0, dev = 0;
+  (d.cajaMovs || []).forEach(c => {
+    if (c.origen === emp) prod += (c.monto || 0);
+    if (c.destino === emp) dev += (c.monto || 0);
+  });
+  d.cajaProd = prod; d.cajaDevuelto = dev;
 }
 function goCajaMovHint() {
   const o = goCanonCuenta((document.getElementById('cm_origen') || {}).value || '');
@@ -445,12 +478,47 @@ function goCajaMovSave() {
   if (!origen || !destino) { showToast({ kind: 'warning', title: 'Faltan cuentas', body: 'Indica desde qué cuenta sale el dinero y hacia cuál va.' }); return; }
   if (origen === destino) { showToast({ kind: 'warning', title: 'Origen igual a destino', body: 'El dinero debe moverse entre dos cuentas distintas.' }); return; }
   if (!Array.isArray(d.cajaMovs)) d.cajaMovs = [];
-  d.cajaMovs.push({ id: goNewId('c'), fecha: fecha, origen: origen, destino: destino, monto: monto, nota: nota });
-  if (origen === emp) d.cajaProd = (d.cajaProd || 0) + monto;          // más dinero salido de la empresa
-  if (destino === emp) d.cajaDevuelto = (d.cajaDevuelto || 0) + monto; // dinero de vuelta a la empresa
+  const editando = !!GO_CAJA_EDIT_ID;
+  const c = editando ? d.cajaMovs.find(x => x.id === GO_CAJA_EDIT_ID) : null;
+  const oldFilePath = c ? (c.filePath || null) : null;
+  if (c) {
+    c.fecha = fecha; c.origen = origen; c.destino = destino; c.monto = monto; c.nota = nota;
+    c.filePath = GO_DRAFT.filePath || null; c.fileName = GO_DRAFT.fileName || null;
+  } else {
+    d.cajaMovs.push({ id: goNewId('c'), fecha: fecha, origen: origen, destino: destino, monto: monto, nota: nota, filePath: GO_DRAFT.filePath || null, fileName: GO_DRAFT.fileName || null });
+  }
+  // si se reemplazó el comprobante, borra el archivo viejo del Storage
+  if (oldFilePath && oldFilePath !== (GO_DRAFT.filePath || null) && sb && sb.storage) { try { sb.storage.from('adjuntos-gastos').remove([oldFilePath]); } catch (e) {} }
+  goCajaRecalcAgg(d);
+  GO_CAJA_EDIT_ID = null;
   const tipo = goCajaTipo(origen, destino);
-  markDirty(); closeModal(); renderGastos();
-  showToast({ kind: 'success', title: 'Movimiento registrado', body: tipo + ' · ' + fmtMoney(monto) + ' · ' + escapeHtml(origen) + ' → ' + escapeHtml(destino) + ' (' + fecha + ').' });
+  markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(project); closeModal(); renderGastos();
+  showToast({ kind: 'success', title: editando ? 'Movimiento actualizado' : 'Movimiento registrado', body: tipo + ' · ' + fmtMoney(monto) + ' · ' + escapeHtml(origen) + ' → ' + escapeHtml(destino) + ' (' + fecha + ').' });
+}
+/* Eliminar un movimiento de fondos por rendir (con confirmación). Recalcula los
+   agregados y borra el comprobante del Storage. Reabre el historial actualizado. */
+function goCajaMovDel(id) {
+  const project = STATE.currentProject; if (!project) return;
+  const d = goData(project);
+  const c = (d.cajaMovs || []).find(x => x.id === id); if (!c) return;
+  showModal({
+    title: 'Eliminar movimiento',
+    body: '¿Seguro que quieres eliminar este movimiento?<br><br><b>' + escapeHtml(goCajaTipo(c.origen, c.destino)) + '</b> · ' + fmtMoney(c.monto || 0) + '<br>' + escapeHtml(c.origen || '—') + ' → ' + escapeHtml(c.destino || '—') + '<br><br>Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar movimiento', cancelLabel: 'Cancelar', danger: true,
+    onConfirm: function () {
+      const i = d.cajaMovs.findIndex(x => x.id === id);
+      if (i >= 0) {
+        const fp = d.cajaMovs[i].filePath;
+        d.cajaMovs.splice(i, 1);
+        if (fp && sb && sb.storage) { try { sb.storage.from('adjuntos-gastos').remove([fp]); } catch (e) {} }
+      }
+      goCajaRecalcAgg(d);
+      GO_CAJA_EDIT_ID = null;
+      markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(project); closeModal(); renderGastos();
+      showToast({ kind: 'success', title: 'Movimiento eliminado', body: 'Se quitó del libro de fondos por rendir.' });
+      try { goCajaHistorial(); } catch (e) {}
+    }
+  });
 }
 /* Historial de fondos por rendir (estilo Tricount): saldos por persona + libreta
    cronológica de movimientos y de gastos pagados con fondos. Todo persiste. */
@@ -469,7 +537,7 @@ function goCajaHistorial() {
   (d.cajaMovs || []).forEach(c => rows.push({
     fecha: c.fecha || '', tipo: goCajaTipo(c.origen, c.destino),
     detalle: (c.origen || '—') + ' → ' + (c.destino || '—') + (c.nota ? ' · ' + c.nota : ''),
-    monto: c.monto || 0, gasto: false
+    monto: c.monto || 0, gasto: false, id: c.id, comp: !!c.filePath
   }));
   goMovs(project).filter(goEsFondo).forEach(m => rows.push({
     fecha: m.fecha || '', tipo: 'Gasto',
@@ -477,9 +545,14 @@ function goCajaHistorial() {
     monto: m.monto || 0, gasto: true
   }));
   rows.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+  const acciones = r => {
+    if (r.gasto) return '<span class="go-faint" style="font-size:11px;">en Registro</span>';   // los gastos se editan/borran en el Registro de gastos
+    return (r.comp ? '<button class="go-mini" ' + accionHTML('go.cajaComp', r.id) + '>✓ ver</button> ' : '')
+      + '<button class="go-mini" ' + accionHTML('go.cajaMovEdit', r.id) + '>editar</button>';
+  };
   const ledger = rows.length
-    ? '<table class="go-tbl" style="width:100%;"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="go-num">Monto</th></tr></thead><tbody>'
-      + rows.map(r => '<tr><td class="go-sub">' + escapeHtml((r.fecha || '').slice(5) || '—') + '</td><td>' + escapeHtml(r.tipo) + '</td><td>' + escapeHtml(r.detalle) + '</td><td class="go-num" style="white-space:nowrap;' + (r.gasto ? 'color:var(--accent-deep);' : '') + '">' + (r.gasto ? '−' : '') + fmtMoney(r.monto) + '</td></tr>').join('')
+    ? '<table class="go-tbl" style="width:100%;"><thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="go-num">Monto</th><th></th></tr></thead><tbody>'
+      + rows.map(r => '<tr><td class="go-sub">' + escapeHtml((r.fecha || '').slice(5) || '—') + '</td><td>' + escapeHtml(r.tipo) + '</td><td>' + escapeHtml(r.detalle) + '</td><td class="go-num" style="white-space:nowrap;' + (r.gasto ? 'color:var(--accent-deep);' : '') + '">' + (r.gasto ? '−' : '') + fmtMoney(r.monto) + '</td><td class="go-actcell" style="white-space:nowrap;">' + acciones(r) + '</td></tr>').join('')
       + '</tbody></table>'
     : '<div class="go-faint" style="padding:14px;">Sin movimientos todavía. Registra el primero con “Registrar movimiento”.</div>';
   goModal('<div class="go-mc"><div class="go-mh"><h3>Fondos por rendir · movimientos y saldos</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>'
@@ -503,6 +576,17 @@ function goMarcarListo(id) {
 function goRevertirPendiente(id) {
   const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
   if (m) { m.estado = 'pendiente'; markDirty(); renderGastos(); showToast({ kind: 'info', title: 'Vuelto a Pendiente', body: 'Salió de la cola de validación de Finanzas.' }); }
+}
+/* Revertir la validación de un gasto: lo devuelve a "Por revisar" (vuelve a la cola
+   de validación del CFO). Simétrico a goValidar. Útil cuando se validó por error. */
+function goRevertirValidacion(id) {
+  const project = STATE.currentProject; const m = goMovs(project).find(x => x.id === id);
+  if (m && m.estado === 'validado') {
+    m.estado = 'por_revisar'; markDirty();
+    if (typeof dalTouchProyecto === 'function') dalTouchProyecto(project);
+    renderGastos();
+    showToast({ kind: 'info', title: 'Validación revertida', body: 'El gasto volvió a la cola de validación de Finanzas.' });
+  }
 }
 /* ── V11.x · comprobantes de gasto en Supabase Storage (bucket privado
    `adjuntos-gastos`). Antes el cliente guardaba una blob: URL efímera que moría
@@ -564,6 +648,34 @@ async function goVerComprobante(id) {
       <div class="go-mf"><a class="btn btn-secondary btn-sm" href="${safeUrl(url)}" target="_blank" rel="noopener" download="${escapeHtml(nombre)}">⬇ Descargar / abrir</a><button class="btn btn-secondary" data-accion="ui.cerrar">Cerrar</button></div></div>`);
   } catch (e) {
     console.warn('[storage] no se pudo abrir el comprobante', e);
+    goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
+      <div class="go-mb"><div class="go-help">No se pudo abrir el comprobante (problema de red o permisos). Reinténtalo en un momento.</div></div>
+      <div class="go-mf"><button class="btn btn-secondary" data-accion="ui.cerrar">Cerrar</button></div></div>`);
+  }
+}
+/* Visor del comprobante de un MOVIMIENTO de fondos por rendir (vive en cajaMovs,
+   con filePath en el mismo bucket adjuntos-gastos). Los movimientos solo tienen
+   comprobante si se subió de verdad, así que no hay caso "legado roto". */
+async function goVerCajaComprobante(id) {
+  const project = STATE.currentProject; if (!project) return;
+  const c = (goData(project).cajaMovs || []).find(x => x.id === id);
+  if (!c || !c.filePath) return;
+  const titulo = goCajaTipo(c.origen, c.destino) + ' · ' + fmtMoney(c.monto || 0);
+  goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(titulo)}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div><div class="go-mb"><div class="go-help">Cargando comprobante…</div></div></div>`);
+  try {
+    const { data, error } = await sb.storage.from('adjuntos-gastos').createSignedUrl(c.filePath, 3600);
+    if (error || !data || !data.signedUrl) throw (error || new Error('sin url'));
+    const url = data.signedUrl;
+    const nombre = c.fileName || c.filePath.split('/').pop() || 'comprobante';
+    const esImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(nombre);
+    const body = esImg
+      ? `<img src="${safeUrl(url)}" style="max-width:100%;border-radius:8px;">`
+      : `<div class="go-help" style="line-height:1.6;">No hay vista previa para este archivo (<b>${escapeHtml(nombre)}</b>), pero puedes <b>descargarlo</b>.</div>`;
+    goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante · ${escapeHtml(titulo)}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
+      <div class="go-mb">${body}</div>
+      <div class="go-mf"><a class="btn btn-secondary btn-sm" href="${safeUrl(url)}" target="_blank" rel="noopener" download="${escapeHtml(nombre)}">⬇ Descargar / abrir</a><button class="btn btn-secondary" data-accion="ui.cerrar">Cerrar</button></div></div>`);
+  } catch (e) {
+    console.warn('[storage] no se pudo abrir el comprobante del movimiento', e);
     goModal(`<div class="go-mc narrow"><div class="go-mh"><h3>Comprobante</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
       <div class="go-mb"><div class="go-help">No se pudo abrir el comprobante (problema de red o permisos). Reinténtalo en un momento.</div></div>
       <div class="go-mf"><button class="btn btn-secondary" data-accion="ui.cerrar">Cerrar</button></div></div>`);
@@ -805,7 +917,7 @@ function goOpenGasto(editId) {
   goModal(`<div class="go-mc"><div class="go-mh"><h3>${esEd ? 'Editar' : 'Agregar'} gasto · ${escapeHtml(goProjName(project))}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
       <div class="go-frow">
-        <div class="go-field half"><label>Fecha</label><input class="go-inp" type="date" id="f_fecha" value="${g ? escapeHtml(g.fecha) : goToday()}"></div>
+        <div class="go-field half"><label>Fecha del gasto</label><input class="go-inp" type="date" id="f_fecha" value="${g ? escapeHtml(g.fecha) : goToday()}"></div>
         <div class="go-field half"><label>Monto (CLP)</label><input class="go-inp" id="f_monto" placeholder="0" inputmode="numeric" value="${g ? (g.monto || '') : ''}"></div>
       </div>
       <div class="go-field"><label>Fondo · a qué se carga</label>
@@ -871,7 +983,7 @@ function goGastoHint() {
 }
 async function goOnFile(inp) {
   const f = inp.files[0]; if (!f) return;
-  const box = document.getElementById('f_fileBox');
+  const box = document.getElementById((inp && inp.dataset && inp.dataset.box) || 'f_fileBox');
   if (box) box.innerHTML = '<div class="go-sub">Subiendo comprobante a la nube…</div>';
   const up = await _uploadGastoComprobante(STATE.currentProject ? STATE.currentProject.id : '', f);
   if (!up || !up.path) {
@@ -1241,7 +1353,7 @@ function goCfoValidacion() {
 }
 function goCfoReembolsos() {
   const pend = []; PROJECTS.forEach(p => goReembPend(p).forEach(m => pend.push({ project: p, m: m })));
-  const pagados = []; PROJECTS.forEach(p => goMovs(p).forEach(m => { if (m.medio === 'Reembolso a colaborador' && m.fechaPago) pagados.push({ project: p, m: m }); }));
+  const pagados = []; PROJECTS.forEach(p => goMovs(p).forEach(m => { if (m.medio === 'Reembolso a quien gastó' && m.fechaPago) pagados.push({ project: p, m: m }); }));
   const hoy = goToday();
   const pendRows = pend.length ? pend.map(o => {
     const x = o.m; const st = x.objetivo ? (x.objetivo < hoy ? 'venc' : (x.objetivo === hoy ? 'hoy' : '')) : '';
@@ -1785,10 +1897,14 @@ registrarAcciones('go', {
   nuevoGasto: function () { goOpenGasto(); },
   cajaHist: function () { goCajaHistorial(); },
   cajaMov: function () { goCajaMov(); },
+  cajaMovEdit: function (a) { goCajaMov(a[0]); },
+  cajaMovDel: function (a) { goCajaMovDel(a[0]); },
+  cajaComp: function (a) { goVerCajaComprobante(a[0]); },
   cmHint: function () { goCajaMovHint(); },
   sort: function (a) { goRegSortBy(a[0]); },
   listo: function (a) { goMarcarListo(a[0]); },
   revertir: function (a) { goRevertirPendiente(a[0]); },
+  revertirVal: function (a) { goRevertirValidacion(a[0]); },
   hilo: function (a) { goResponderHilo(a[0]); },
   editar: function (a) { goOpenGasto(a[0]); },
   cajaMovOk: function () { goCajaMovSave(); },

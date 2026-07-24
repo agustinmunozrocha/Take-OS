@@ -1,5 +1,25 @@
 # Changelog — Rizora
 
+## V11.42.0 — 24 de julio de 2026
+### Tanda de arreglos: Gastos, Presupuesto y Hoja de Llamado
+
+Rama `fix/tanda-rapida-gastos-presupuesto-hoja`. Solo **frontend**. Sin cambios de base de datos. Siete arreglos y mejoras pedidos desde el uso real con el equipo.
+
+**Gastos**
+- El medio de pago **"Reembolso a colaborador" pasa a llamarse "Reembolso a quien gastó"**, para que se entienda junto al campo "Quién gastó". Los gastos ya registrados se migran solos a la etiqueta nueva.
+- En la ficha de gasto, el campo **"Fecha" ahora se llama "Fecha del gasto"**, para dejar claro que es la fecha en que ocurrió el gasto, no la de registro.
+- **Se puede revertir la validación de un gasto.** Un gasto validado por error ahora muestra un botón "revertir validación" que lo devuelve a la cola de validación de Finanzas.
+- **Los movimientos de fondos por rendir se pueden editar y eliminar** (antes, una vez registrados, no había forma de corregir un ingreso/movimiento mal hecho). Desde el Historial se edita o borra cada movimiento; los saldos por persona y los totales entregado/devuelto se recalculan solos.
+- **Se puede adjuntar un comprobante de transferencia** al registrar o editar un movimiento de fondos por rendir (foto o PDF), y verlo después desde el Historial.
+
+**Presupuesto**
+- Arreglado el botón **"agregar a la base de datos" que seguía apareciendo en las personas guardadas como talento** aunque ya estuvieran en la BD. El indicador ahora consulta también la lista de talentos, no solo la de crew.
+
+**Hoja de Llamado**
+- Los documentos se numeran según los **días efectivos de rodaje** (activos), no los tentativos. Si se desactivan días, el número de "Día N" del selector, del PDF y del nombre del archivo se corrige (el Plan de Rodaje ya lo hacía; ahora la Hoja de Llamado también).
+
+Verificado: compuertas `npm run gate` en verde, build OK, y pruebas en el navegador de los tres tipos de movimiento (entrega/traspaso/devolución) con edición, borrado y recálculo de saldos, los renombres, la reversión de validación y la numeración por días efectivos.
+
 ## V11.41.0 — 24 de julio de 2026
 ### La app se llama Rizora (rebrand de la marca visible)
 
