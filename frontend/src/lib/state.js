@@ -220,7 +220,7 @@ export let EMPRESA_PERFIL = {
    ════════════════════════════════════════════════════════════════════ */
 /* USUARIO_ACTUAL -> a src/lib/state.js (Etapa 1); en window */
 export let _TIENE_EMPRESA = false; // D3a: binding canónico; espejo window abajo
-export const TAKEOS_VERSION = 'V11.42.0';   // Versión actual del cliente Rizora. El historial de cambios vive en los changelogs (.md), no aquí.
+export const TAKEOS_VERSION = 'V11.43.0';   // Versión actual del cliente Rizora. El historial de cambios vive en los changelogs (.md), no aquí.
 // Bridges C6 (BD_LEGAL/TPL eran léxicas: los módulos las leen a pelo → ahora resuelven vía window)
 
 // ── Bridges C6 (barrido final) ──

@@ -68,6 +68,33 @@ const CHIPAX_TIPODOC = {
   'Boleta': 'Boleta', 'Honorario': 'Boleta', 'Boleta de honorarios': 'Boleta',
   'Otro': 'Recibo'
 };
+/* Listas de referencia del modelo oficial de Chipax ("Importar Gastos masivo a
+   Chipax.xlsx"). Se incrustan tal cual para que el .xlsx exportado sea idéntico al
+   modelo (bloque "…Disponibles" a la derecha). Cuentas/Tipos/Monedas son catálogos
+   estables de Chipax; las Líneas de Negocio son las de Primate Films en Chipax
+   (snapshot del 24-jul-2026): si se agregan/renombran proyectos allá, refrescar esta
+   lista desde el modelo actualizado. */
+const CHIPAX_REF_CUENTAS = [
+  ['Arriendo de Equipos', 'Costos'], ['Catering (No Servicio de Catering)', 'Costos'], ['Combustible', 'Gastos'],
+  ['Comisiones Tusk', 'Costos'], ['Educación', 'Gastos'], ['Excepcionales No Tributados', 'Gastos'],
+  ['Excepcionales Tributados', 'Gastos'], ['Gastos de Equipos', 'Gastos'], ['Gastos de Producción', 'Costos'],
+  ['Gastos Menores', 'Gastos'], ['Gastos Tributados no Egresados', 'Gastos'], ['Inversiones Menores', 'Gastos'],
+  ['Marketing', 'Gastos'], ['Oficina', 'Gastos'], ['Otros Costos Operacionales', 'Costos'], ['Previred', 'Gastos'],
+  ['Recursos Humanos', 'Gastos'], ['Reparaciones de Camioneta', 'Gastos'], ['Representación', 'Gastos'],
+  ['Seguro de Vehículo', 'Gastos'], ['Servicios', 'Gastos'], ['Servicios Para Proyecto', 'Costos'],
+  ['Softwares Administrativos', 'Gastos'], ['Softwares Operacionales', 'Gastos'], ['Sueldos', 'Gastos'],
+  ['TAG', 'Gastos'], ['Trámites ', 'Gastos']
+];
+const CHIPAX_REF_LINEAS = [
+  'Primate Films', 'ACHS IA de Cueca', 'BC Bags de Brandika Studio', 'Colchones de Hypnos', 'Comisiones de Tusk',
+  "Covered by Hellmann's de David The Agency", 'Fair Trade de Agro San Antonio', 'Fajas de La Fete',
+  'Fotos B Soul de Forus', 'Hypercare de Omar Alhussain', 'Invierno 2026 de Merrell', 'Johnnie Walker de Booz',
+  'Láminas de Llumar', 'Lenga Calafate de Tusk', 'Leon de cueca', 'Liquimax de Cueca', 'No Seai Ramón de CKR',
+  'Patagonia de Tusk', 'Rostros 2.0 de Hypnos', 'RTD de Carpintero Negro', 'Salus de Tusk', 'SOFTWARE INTERNO',
+  'Trucho de Soiree'
+];
+const CHIPAX_REF_TIPODOC = ['Boleta', 'Invoice', 'Recibo'];
+const CHIPAX_REF_MONEDAS = ['CLP', 'EUR', 'MXN', 'UF', 'USD'];
 const GO_MEDIOS = ['Tarjeta empresa (débito)', 'Tarjeta empresa (crédito)', 'Transferencia cuenta empresa', 'Fondos por rendir', 'Reembolso a quien gastó', 'Otro'];
 const GO_TIPOS = ['Factura', 'Factura Exenta', 'Boleta', 'Invoice', 'Otro'];   // Pasada 4 (#6) · tipos de documento del gasto
 const GO_ESTADOS = { pendiente: 'Pendiente', por_revisar: 'Por revisar', validado: 'Validado', en_observacion: 'En observación' };
@@ -1321,19 +1348,19 @@ function renderCFO() {
       <button class="go-tab ${GO_STATE.cfoTab === 'reembolsos' ? 'on' : ''}" data-accion="go.cfoTab" data-args="[&quot;reembolsos&quot;]">Reembolsos${reemb.length ? '<span class="b">' + reemb.length + '</span>' : ''}</button>
       <button class="go-tab ${GO_STATE.cfoTab === 'prontospagos' ? 'on' : ''}" data-accion="go.cfoTab" data-args="[&quot;prontospagos&quot;]">Prontos Pagos${pp.length ? '<span class="b">' + pp.length + '</span>' : ''}</button>
       <button class="go-tab ${GO_STATE.cfoTab === 'proyectos' ? 'on' : ''}" data-accion="go.cfoTab" data-args="[&quot;proyectos&quot;]">Por proyecto</button>
-      ${_usaChipax() ? `<button class="go-tab ${GO_STATE.cfoTab === 'export' ? 'on' : ''}" data-accion="go.cfoTab" data-args="[&quot;export&quot;]">Exportar a Chipax</button>` : ''}
     </div>
     <div id="go-cfo-body">${goCfoBody()}</div>
   </div>`;
 }
 function goSetCfoTab(t) { GO_STATE.cfoTab = t; renderCFO(); }
 function goCfoBody() {
-  if (GO_STATE.cfoTab === 'export' && !_usaChipax()) GO_STATE.cfoTab = 'validacion';
-  if (GO_STATE.cfoTab === 'validacion') return goCfoValidacion();
+  // La pestaña global "Exportar a Chipax" se retiró: el export ahora vive dentro del
+  // desglose "ver validados" de cada proyecto (pestaña "Por proyecto").
+  if (GO_STATE.cfoTab === 'export') GO_STATE.cfoTab = 'proyectos';
   if (GO_STATE.cfoTab === 'reembolsos') return goCfoReembolsos();
   if (GO_STATE.cfoTab === 'prontospagos') return goCfoProntosPagos();
   if (GO_STATE.cfoTab === 'proyectos') return goCfoProyectos();
-  return goCfoExportPanel();
+  return goCfoValidacion();
 }
 function goCfoValidacion() {
   const pend = goAllMovs().filter(o => goNeedsAction(o.m));
@@ -1680,10 +1707,11 @@ function goCfoProyectos() {
       const sub = val.map(m => {
         const e = goPresById(p, m.pres);
         const comp = goCompCell(m, 'goCfoVer', 'falta');
-        return `<tr><td class="go-sub">${escapeHtml((m.fecha || '').slice(5))}</td><td><span class="go-tag">${escapeHtml(e ? e.nombre : '—')}</span></td><td>${escapeHtml(m.concepto || '')}<div class="go-sub">${escapeHtml(m.prov || '')}</div></td><td>${escapeHtml(m.quien || '')}</td><td class="go-num">${fmtMoney(m.monto || 0)}</td><td>${comp}</td></tr>`;
+        return `<tr><td class="go-sub">${escapeHtml((m.fecha || '').slice(5))}</td><td><span class="go-tag">${escapeHtml(e ? e.nombre : '—')}</span></td><td>${escapeHtml(m.concepto || '')}<div class="go-sub">${escapeHtml(m.prov || '')}</div></td><td>${escapeHtml(m.quien || '')}</td><td class="go-num">${fmtMoney(m.monto || 0)}</td><td>${comp}</td><td class="go-actcell"><button class="go-mini" ${accionHTML('go.cfoRevertirVal', m.id)}>revertir validación</button></td></tr>`;
       }).join('');
-      tr += `<tr><td colspan="7" style="padding:0;"><div style="padding:6px 12px 14px;border-left:3px solid var(--accent);background:rgba(0,0,0,.02);"><div class="go-sub" style="margin:6px 0 8px;font-weight:600;">Gastos validados de ${escapeHtml(goProjName(p))} · descarga el comprobante o revisa el detalle sin entrar al proyecto</div>` +
-        `<table class="go-tbl"><thead><tr><th>Fecha</th><th>Fondo</th><th>Concepto</th><th>Quién gastó</th><th class="go-num">Monto</th><th>Comprobante</th></tr></thead><tbody>${sub}</tbody></table></div></td></tr>`;
+      const btnExport = _usaChipax() ? `<button class="btn btn-primary btn-sm" ${accionHTML('go.exportChipax', p.id)}>⬇ Exportar gastos para Chipax</button>` : '';
+      tr += `<tr><td colspan="7" style="padding:0;"><div style="padding:6px 12px 14px;border-left:3px solid var(--accent);background:rgba(0,0,0,.02);"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 8px;"><div class="go-sub" style="font-weight:600;">Gastos validados de ${escapeHtml(goProjName(p))} · revierte una validación hecha por error, descarga el comprobante o exporta a Chipax</div>${btnExport}</div>` +
+        `<table class="go-tbl"><thead><tr><th>Fecha</th><th>Fondo</th><th>Concepto</th><th>Quién gastó</th><th class="go-num">Monto</th><th>Comprobante</th><th></th></tr></thead><tbody>${sub}</tbody></table></div></td></tr>`;
     }
     return tr;
   }).join('') : '<tr><td colspan="7" class="go-faint" style="padding:18px;">No hay proyectos todavía.</td></tr>';
@@ -1691,18 +1719,19 @@ function goCfoProyectos() {
     `<table class="go-tbl"><thead><tr><th>Proyecto</th><th class="go-num">Cotizado</th><th class="go-num">Real</th><th class="go-num">Disponible</th><th class="go-num"># gastos</th><th class="go-num">Por validar</th><th>Validados</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function goToggleProyVal(projId) { GO_STATE.cfoProyVal = (GO_STATE.cfoProyVal === projId) ? null : projId; renderCFO(); }
-function goCfoExportPanel() {
-  return `<div class="go-card"><div class="go-card-b">
-    <div class="go-sectitle">Exportar a Chipax · consolidado</div>
-    <p class="go-muted" style="font-size:12.5px;margin-top:0;">Genera el .xlsx de importación masiva con los gastos <b>validados</b> de todos los proyectos.</p>
-    <button class="btn btn-primary" data-accion="go.exportCons">⬇ Preparar exportación consolidada</button>
-    <span class="btn btn-secondary" data-accion="go.mapeo" style="margin-left:8px;cursor:pointer;">⚙ Editar mapeo de cuentas</span>
-    <div class="go-help" style="margin-top:10px;">También puedes exportar un proyecto individual desde su Vista de Gastos. Máx. 100 registros por archivo; si hay más, se generan varios lotes.</div>
-  </div></div>`;
-}
-
 /* ---------- acciones CFO ---------- */
 function goValidar(id) { const r = goFindMov(id); if (r) { r.m.estado = 'validado'; markDirty(); if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project); renderCFO(); showToast({ kind: 'success', title: 'Gasto validado', body: 'Listo para exportar a Chipax.' }); } }
+/* Revertir validación desde Finanzas (vista global): devuelve el gasto validado a la
+   cola de validación. Usa goFindMov porque en el CFO no hay currentProject. */
+function goCfoRevertirValidacion(id) {
+  const r = goFindMov(id);
+  if (r && r.m.estado === 'validado') {
+    r.m.estado = 'por_revisar'; markDirty();
+    if (typeof dalTouchProyecto === 'function') dalTouchProyecto(r.project);
+    renderCFO();
+    showToast({ kind: 'info', title: 'Validación revertida', body: 'El gasto volvió a la cola de validación.' });
+  }
+}
 /* ── Hilo de "Observar" un gasto (gasto_comments · PR8) ────────────────────────
    Antes la observación era un único campo (m.coment) que rendidor y CFO se
    pisaban por turnos. Ahora es un HILO: lista de mensajes {autor, texto, ts} por
@@ -1814,35 +1843,64 @@ function goOpenExport(projId) {
   const project = projId ? PROJECTS.find(p => p.id === projId) : null;
   const rows = goChipaxRows(projId);
   const title = project ? ('Exportar a Chipax · ' + goProjName(project)) : 'Exportar a Chipax · consolidado (todos los proyectos)';
-  const lotes = Math.ceil(rows.length / 100) || 1;
+  const exceso = rows.length > CHIPAX_MAX ? (rows.length - CHIPAX_MAX) : 0;
   const body = rows.length ? rows.map(r => `<tr><td>${escapeHtml(r.Fecha)}</td><td>${escapeHtml(r.Periodo)}</td><td class="go-cuenta">${escapeHtml(r.Cuenta)}</td><td>${escapeHtml(r.Linea)}</td><td>${escapeHtml(r.Responsable)}</td><td>${escapeHtml(r.TipoDoc)}</td><td>${escapeHtml(r.Proveedor)}</td><td></td><td>${escapeHtml(r.Descripcion)}</td><td class="go-num">${r.Monto}</td><td>${r.Moneda}</td></tr>`).join('') : '<tr><td colspan="11" class="go-faint" style="padding:18px;">No hay gastos validados para exportar. Valida gastos en la pestaña Validación de Finanzas.</td></tr>';
   goModal(`<div class="go-mc wide"><div class="go-mh"><h3>${escapeHtml(title)}</h3><button class="go-x" data-accion="ui.cerrar">×</button></div>
     <div class="go-mb">
       <div class="go-expbar"><button class="btn btn-primary" ${accionHTML('go.descargarXlsx', projId || null)} ${rows.length ? '' : 'disabled'}>⬇ Descargar .xlsx</button>
-        <span class="go-batchnote">${rows.length} gastos validados · ${lotes} ${lotes > 1 ? 'lotes de 100' : 'lote'} · formato de importación masiva de Chipax</span></div>
-      <div class="go-help" style="margin-bottom:10px;">Solo gastos <b>validados</b>. <b>Línea de Negocio</b> = “${escapeHtml(project ? goLineaNegocio(project) : 'Proyecto de Cliente')}”. <b>Tipo Doc</b>: Factura/Exenta→Invoice · Boleta/Honorario→Boleta · Otro→Recibo. Montos sin formato.</div>
+        <button class="btn btn-secondary" data-accion="go.mapeo" style="margin-left:8px;">⚙ Editar mapeo de cuentas</button>
+        <span class="go-batchnote">${rows.length} gastos validados · un archivo con el formato exacto del modelo de Chipax</span></div>
+      <div class="go-help" style="margin-bottom:10px;">Sale idéntico al modelo <b>“Importar Gastos masivo a Chipax”</b> (encabezado en la fila 6, datos desde la fila 7, montos sin puntos ni comas, y el bloque de referencia con las cuentas, líneas de negocio, tipos de documento y monedas válidas). Solo gastos <b>validados</b>. <b>Línea de Negocio</b> = “${escapeHtml(project ? goLineaNegocio(project) : 'Proyecto de Cliente')}” — debe calzar con una de las líneas de negocio de Chipax.${exceso ? ` <b style="color:var(--accent-deep);">Hay ${rows.length} gastos; Chipax admite máx. ${CHIPAX_MAX}: se exportarán los primeros ${CHIPAX_MAX}.</b>` : ''}</div>
       <div class="go-expscroll"><table class="go-tbl"><thead><tr><th>Fecha</th><th>Periodo</th><th>Cuenta</th><th>Línea de Negocio</th><th>Responsable</th><th>Tipo Doc</th><th>Proveedor</th><th>N° Doc</th><th>Descripción</th><th class="go-num">Monto</th><th>Moneda</th></tr></thead><tbody>${body}</tbody></table></div>
     </div>
     <div class="go-mf"><button class="btn btn-secondary" data-accion="ui.cerrar">Cerrar</button></div></div>`);
 }
+/* Construye la matriz de celdas (AOA) calcada del modelo oficial de Chipax:
+   fila 1-4 preámbulo · fila 5 en blanco · fila 6 encabezado (11 columnas A–K) ·
+   fila 7+ datos · a la derecha (columnas M–Q) el bloque "…Disponibles" de referencia
+   con sus valores. Índices 0-based: fila 6 = idx 5, datos desde idx 6; columnas A=0…K=10,
+   L=11 (separador), M=12 (Cuentas), N=13 (Tipo de Cuenta), O=14 (Líneas), P=15 (Tipo Doc),
+   Q=16 (Monedas). */
+const CHIPAX_MAX = 1000;   // Chipax importa hasta 1000 registros por archivo
+function goChipaxAOA(rows) {
+  const aoa = [];
+  const set = (r, c, v) => { while (aoa.length <= r) aoa.push([]); const row = aoa[r]; while (row.length <= c) row.push(''); row[c] = v; };
+  set(0, 0, 'Plantilla para importar Gastos a Chipax');
+  set(1, 0, 'Ingresa montos sin fórmulas ni formato (puntos ni comas) para que Chipax importe los datos correctamente.');
+  set(2, 0, 'Máximo 1000 registros');
+  set(3, 0, '* Campos obligatorios.');
+  const HEAD = ['Fecha (AAAA-MM-DD) *', 'Periodo Clasificación (AAAA-MM) *', 'Cuenta *', 'Línea de Negocio *', 'Responsable *', 'Tipo de Documento *', 'Proveedor *', 'Número de Documento', 'Descripción *', 'Monto *', 'Moneda *'];
+  HEAD.forEach((h, i) => set(5, i, h));   // fila 6 (idx 5)
+  rows.forEach((x, i) => {
+    const r = 6 + i;                        // datos desde fila 7 (idx 6)
+    set(r, 0, x.Fecha); set(r, 1, x.Periodo); set(r, 2, x.Cuenta); set(r, 3, x.Linea); set(r, 4, x.Responsable);
+    set(r, 5, x.TipoDoc); set(r, 6, x.Proveedor); set(r, 7, x.NumDoc); set(r, 8, x.Descripcion);
+    set(r, 9, (typeof x.Monto === 'number') ? x.Monto : (parseInt(String(x.Monto).replace(/\D/g, ''), 10) || 0));   // monto numérico, sin separadores
+    set(r, 10, x.Moneda);
+  });
+  // Bloque de referencia (derecha): etiqueta fila 6 (idx 5), sub-encabezado fila 8 (idx 7), valores fila 9+ (idx 8+)
+  set(5, 12, 'Cuentas Disponibles'); set(5, 14, 'Líneas de Negocio Disponibles'); set(5, 15, 'Tipo de Documento Disponibles'); set(5, 16, 'Monedas Disponibles');
+  set(7, 12, 'Nombre'); set(7, 13, 'Tipo de Cuenta'); set(7, 14, 'Nombre'); set(7, 15, 'Nombre'); set(7, 16, 'Nombre');
+  CHIPAX_REF_CUENTAS.forEach((c, i) => { set(8 + i, 12, c[0]); set(8 + i, 13, c[1]); });
+  CHIPAX_REF_LINEAS.forEach((l, i) => set(8 + i, 14, l));
+  CHIPAX_REF_TIPODOC.forEach((t, i) => set(8 + i, 15, t));
+  CHIPAX_REF_MONEDAS.forEach((m, i) => set(8 + i, 16, m));
+  return aoa;
+}
 function goDescargarXlsx(projId) {
-  const rows = goChipaxRows(projId);
+  let rows = goChipaxRows(projId);
   if (!rows.length) { showToast({ kind: 'warning', title: 'Nada que exportar', body: 'No hay gastos validados.' }); return; }
   const project = projId ? PROJECTS.find(p => p.id === projId) : null;
-  const header = ['Fecha (AAAA-MM-DD) *', 'Periodo Clasificación (AAAA-MM) *', 'Cuenta *', 'Línea de Negocio *', 'Responsable *', 'Tipo de Documento *', 'Proveedor *', 'Número de Documento', 'Descripción *', 'Monto *', 'Moneda *'];
   const baseName = (project ? goProjName(project) : 'Consolidado') + ' · Chipax';
+  let recortado = 0;
+  if (rows.length > CHIPAX_MAX) { recortado = rows.length - CHIPAX_MAX; rows = rows.slice(0, CHIPAX_MAX); }
   try {
     if (typeof XLSX === 'undefined') throw new Error('SheetJS no disponible');
     const wb = XLSX.utils.book_new();
-    const lotes = Math.ceil(rows.length / 100) || 1;
-    for (let i = 0; i < lotes; i++) {
-      const chunk = rows.slice(i * 100, i * 100 + 100);
-      const aoa = [header].concat(chunk.map(r => [r.Fecha, r.Periodo, r.Cuenta, r.Linea, r.Responsable, r.TipoDoc, r.Proveedor, r.NumDoc, r.Descripcion, r.Monto, r.Moneda]));
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      XLSX.utils.book_append_sheet(wb, ws, lotes > 1 ? ('Lote ' + (i + 1)) : 'Gastos Chipax');
-    }
+    const ws = XLSX.utils.aoa_to_sheet(goChipaxAOA(rows));
+    XLSX.utils.book_append_sheet(wb, ws, 'Worksheet');   // el modelo usa una sola hoja "Worksheet"
     XLSX.writeFile(wb, baseName + '.xlsx');
-    showToast({ kind: 'success', title: 'Archivo generado', body: baseName + '.xlsx (' + rows.length + ' gastos).' });
+    showToast({ kind: 'success', title: 'Archivo generado', body: recortado ? (baseName + '.xlsx · se exportaron los primeros ' + CHIPAX_MAX + '; quedaron ' + recortado + ' fuera (Chipax admite máx. ' + CHIPAX_MAX + ').') : (baseName + '.xlsx (' + rows.length + ' gastos).') });
   } catch (e) {
     showToast({ kind: 'error', title: 'No se pudo generar', body: 'La descarga necesita SheetJS. El preview ya muestra el formato exacto.' });
   }
@@ -1893,6 +1951,7 @@ registrarAcciones('go', {
   crearPresup: function () { goOpenPresup(); },
   regFiltro: function (a, el) { goRegFilter(el.value); },
   exportChipax: function (a) { goOpenExport(a[0]); },
+  cfoRevertirVal: function (a) { goCfoRevertirValidacion(a[0]); },
   quick: function () { goOpenQuick(); },
   nuevoGasto: function () { goOpenGasto(); },
   cajaHist: function () { goCajaHistorial(); },
