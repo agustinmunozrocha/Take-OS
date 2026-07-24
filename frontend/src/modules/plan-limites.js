@@ -13,7 +13,7 @@ import { registrarAcciones } from '../lib/delegacion.js';
    pestaña nueva (NO a crear cuenta ni a precios). Anti-cortisol: discreto,
    descartable por sesión, sin pop-up. Medición vía analytics_events.
    ════════════════════════════════════════════════════════════════════ */
-export const TAKEOS_MARCA = 'TakeOS';                          // placeholder configurable (marca en standby)
+export const TAKEOS_MARCA = 'Rizora';                          // placeholder configurable (marca en standby)
 const TAKEOS_LANDING_URL = 'https://agustinmunozrocha.github.io/takeos-landing/';   // landing real (Agustín, jun 2026)
 const _CTA_PROD_DISMISS_KEY = 'takeos_cta_prod_dismissed';   // por sesión
 export async function _ctaProdEvento(nombre, props) {

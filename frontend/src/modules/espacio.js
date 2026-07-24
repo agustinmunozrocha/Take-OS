@@ -329,10 +329,10 @@ export function renderEspacioUsuario(data){
       }
     </style>
       <div class="esp-top"><div class="esp-top-in">
-        <div class="esp-brand"><div class="esp-mark">T</div><span class="esp-bname">TakeOS</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
+        <div class="esp-brand"><div class="esp-mark">R</div><span class="esp-bname">Rizora</span><span class="esp-ver">${demo?'Demo':'Tu espacio'}</span></div>
         <div class="esp-right">
           <div class="esp-acct" data-accion="esp.perfil"><div class="who"><b>${u.nombre||'tu cuenta'}</b><span>${u.email||''}</span></div><div class="esp-av">${u.iniciales||'U'}</div></div>
-          <button class="esp-logout" data-accion="app.logout" title="Cerrar sesión en TakeOS"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Salir</button>
+          <button class="esp-logout" data-accion="app.logout" title="Cerrar sesión en Rizora"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Salir</button>
         </div>
       </div></div>
       <div class="esp-wrap">
@@ -394,7 +394,7 @@ export function _espInyectarHerramientas() {
       + card('Guion Técnico', 'En construcción')
       + card('Hoja de Llamado', 'Próximamente en tu cuenta personal')
       + '</div>'
-      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de TakeOS, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
+      + '<p style="font-size:11px;color:var(--ink-faint);margin:8px 0 0;">Las herramientas creativas y de producción de Rizora, disponibles con tu cuenta personal aunque no pertenezcas a una productora. Gratis durante Early Bird; después serán parte del plan personal.</p>';
     cont.appendChild(sec);
   } catch (e) {}
 }

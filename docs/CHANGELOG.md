@@ -1,5 +1,16 @@
 # Changelog — Rizora
 
+## V11.41.0 — 24 de julio de 2026
+### La app se llama Rizora (rebrand de la marca visible)
+
+Rama `chore/rebrand-app-rizora`. Solo **frontend**, solo textos visibles. Sin cambios de base de datos ni de comportamiento.
+
+Tras el corte a la arquitectura modular y el registro del dominio **rizoraapp.com**, la marca que ve el usuario pasó de "TakeOS" a **"Rizora"** en toda la app: el título de la pestaña del navegador, las pantallas de inicio de sesión, los toasts, los tooltips, los textos legales y de privacidad, los pies de los PDF, las marcas de letra (la "T" pasó a "R") y los nombres de los archivos que se exportan (por ejemplo `Rizora_BD_2026-07-24.xlsx`).
+
+**Lo que NO cambió, a propósito:** los identificadores internos que la app usa por debajo conservan su nombre para no romper nada — las claves de guardado del navegador (`takeos_autosave_v1`, etc.), las constantes de código (`TAKEOS_VERSION`, `TAKEOS_MARCA`…) y, sobre todo, el "formato" con que se marcan los proyectos y respaldos guardados (`takeos-save` / `takeos-project`). Esto último es clave: **los proyectos y exports que guardaste antes siguen abriendo sin problema**, porque la app los reconoce por ese formato interno, que no se tocó.
+
+Verificado: compuertas `npm run gate` en verde, build OK, y arranque en navegador mostrando "Rizora" sin errores.
+
 ## V11.40.0 — 19 de julio de 2026
 ### Presupuesto: el "documento real" ya no se pierde al recargar · Pronto pago con factura muestra el bruto
 

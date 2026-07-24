@@ -1,4 +1,4 @@
-// Punto de entrada de módulos de TakeOS — Etapa 2.
+// Punto de entrada de módulos de Rizora — Etapa 2.
 //
 // Importa las piezas extraídas a src/lib/ y src/modules/ y las re-expone en
 // window (el "puente") para que el <script> clásico inline y los onclick

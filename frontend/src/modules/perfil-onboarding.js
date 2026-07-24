@@ -123,7 +123,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       ? bancoSelectHTML(bancoNombre, { id: 'perfilBanco' })
       : '<input class="input" id="perfilBanco" value="' + v(bancoNombre) + '">';
     var ov = document.createElement('div'); ov.id = 'perfilUsuario';
-    var pubChip = '<span class="pf-chip pub" tabindex="0" role="note" aria-label="Información pública">Público<span class="pf-chip-tip">Público dentro de TakeOS: solo tu nombre y tu rol pueden ser visibles para otras productoras. Todo lo demás es privado.</span></span>';
+    var pubChip = '<span class="pf-chip pub" tabindex="0" role="note" aria-label="Información pública">Público<span class="pf-chip-tip">Público dentro de Rizora: solo tu nombre y tu rol pueden ser visibles para otras productoras. Todo lo demás es privado.</span></span>';
     var privChip = '<span class="pf-chip priv" tabindex="0" role="note" aria-label="Información privada">Privado<span class="pf-chip-tip">Privado: solo tú ves estos datos. Otra productora puede verlos únicamente si tú lo autorizas de forma explícita al aceptar una invitación. Mientras tanto quedan completamente protegidos, y puedes revocar ese acceso cuando quieras.</span></span>';
     ov.innerHTML = `<style>
       #perfilUsuario{position:fixed;inset:0;z-index:99998;overflow-y:auto;background:var(--bg-page);color:var(--ink-primary);font-family:var(--font-sans),system-ui,sans-serif;}
@@ -158,7 +158,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
       @media (max-width:640px){ #perfilUsuario .pf-grid{grid-template-columns:1fr;} #perfilUsuario .pf-top-in,#perfilUsuario .pf-wrap,#perfilUsuario .pf-bar-in{padding-left:16px;padding-right:16px;} }
     </style>
       <div class="pf-top"><div class="pf-top-in">
-        <div class="pf-brand"><div class="pf-mark">T</div><span>TakeOS</span></div>
+        <div class="pf-brand"><div class="pf-mark">R</div><span>Rizora</span></div>
         <span class="pf-eyebrow">${modoOnboarding ? 'Bienvenida/o' : 'Tu perfil'}</span>
       </div></div>
       <div class="pf-wrap">
@@ -180,7 +180,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <div class="pf-grid">
             <div class="pf-f"><label>Nombre <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_nombre" value="${v(prof.nombre)}"></div>
             <div class="pf-f"><label>Apellidos <span style="color:var(--negative,#c0392b);">*</span></label><input class="input" id="pf_apellido" value="${v(prof.apellido)}"></div>
-            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="${v(prof.rol_publico)}" placeholder="Ej: Director de Fotografía, Productora, Gaffer…"><span style="font-size:11px;color:var(--ink-faint);">Tu carta de presentación dentro de TakeOS.</span></div>
+            <div class="pf-f full"><label>Rol que normalmente desempeñas</label><input class="input" id="pf_rol" value="${v(prof.rol_publico)}" placeholder="Ej: Director de Fotografía, Productora, Gaffer…"><span style="font-size:11px;color:var(--ink-faint);">Tu carta de presentación dentro de Rizora.</span></div>
           </div>
         </div>
 
@@ -189,7 +189,7 @@ function _perfilRender(prof, cuenta, email, modoOnboarding) {
           <div class="pf-grid">
             <div class="pf-f" id="pf_rutWrap" style="${EXTRANJERO ? 'display:none;' : ''}"><label>RUT${astPerfil}</label><input class="input" id="pf_rut" value="${v(prof.rut)}" placeholder="12.345.678-9" inputmode="text"><span id="pf_rutErr" style="display:none;font-size:11px;color:var(--negative,#c0392b);">RUT inválido: revisa el dígito verificador.</span></div>
             <div class="pf-f" id="pf_docWrap" style="${EXTRANJERO ? '' : 'display:none;'}"><label>Documento de identidad / pasaporte</label><input class="input" id="pf_doc" value="" disabled placeholder="Pasaporte u otro documento"><span style="font-size:11px;color:var(--ink-faint);">Se habilita con la próxima extensión de la base.</span></div>
-            <div class="pf-f"><label>Correo${astPerfil}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a TakeOS, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
+            <div class="pf-f"><label>Correo${astPerfil}</label><input class="input" id="pf_email" value="${v(prof.email || email)}" data-original="${v(prof.email || email)}"><span id="pf_emailWarn" style="display:none;font-size:11px;color:var(--warning);line-height:1.45;">⚠ Cambiar este correo no cambia tu correo de acceso a Rizora, pero sí el de notificaciones y documentos. Hazlo con cuidado.</span></div>
             <div class="pf-f"><label>Celular${astPerfil}</label><input class="input" id="pf_telefono" value="${v(prof.telefono)}" placeholder="+56 9 ..." inputmode="tel"></div>
             <div class="pf-f"><label>Fecha de nacimiento${astEdad}</label><input class="input" id="pf_fnac" type="date" value="${v(prof.fecha_nacimiento)}"></div>
           </div>

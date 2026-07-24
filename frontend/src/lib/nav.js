@@ -188,7 +188,7 @@ export const MODULES = {   // MODULES se asigna al cierre de la definición (lí
     layer: 'Visión estratégica · V6+',
     scope: 'project',
     render: null,
-    description: 'PDF de business intelligence generado automáticamente al cerrar un proyecto. Métricas, gráficos, conclusiones por IA. Diferenciador estratégico de TakeOS como SaaS. Ver sección 14 del PRD V2.'
+    description: 'PDF de business intelligence generado automáticamente al cerrar un proyecto. Métricas, gráficos, conclusiones por IA. Diferenciador estratégico de Rizora como SaaS. Ver sección 14 del PRD V2.'
   }
 };
 define('MODULES', MODULES);   // ui.js lo consume vía valor() (ui→nav sería ciclo: nav importa sectionResponsableHTML de ui)

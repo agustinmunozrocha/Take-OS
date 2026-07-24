@@ -303,7 +303,7 @@ async function exportBDExcelV71() {   // nombre conservado por compat con el bot
   XLSX.utils.book_append_sheet(wb, wsE, 'EMPRESAS');
 
   const now = new Date(), pad = n => String(n).padStart(2, '0');
-  const fname = `TakeOS_BD_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.xlsx`;
+  const fname = `Rizora_BD_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast({ kind: 'success', title: 'BD exportada',
     body: `${Object.keys(BD_CONTACTOS).length} contactos · ${Object.keys(BD_EMPRESAS_BYID).length} empresas en <strong>${escapeHtml(fname)}</strong>.` });
@@ -338,7 +338,7 @@ async function downloadBDPlantilla() {
 
   // Hoja Instrucciones
   const instr = [
-    ['Planilla de migración — Base de Datos · TakeOS'],
+    ['Planilla de migración — Base de Datos · Rizora'],
     [''],
     ['Cómo usarla:'],
     ['1. Llena la pestaña CONTACTOS (una fila por persona) y, si corresponde, EMPRESAS.'],
@@ -361,7 +361,7 @@ async function downloadBDPlantilla() {
   wi['!cols'] = [{ wch: 92 }];
   XLSX.utils.book_append_sheet(wb, wi, 'Instrucciones');
 
-  XLSX.writeFile(wb, 'TakeOS_Planilla_BD.xlsx');
+  XLSX.writeFile(wb, 'Rizora_Planilla_BD.xlsx');
   showToast({ kind: 'success', title: 'Planilla descargada', body: 'Llénala (pestañas CONTACTOS y EMPRESAS) y vuelve a "Importar BD".' });
 }
 

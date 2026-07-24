@@ -102,7 +102,7 @@ function docSet(id, field, val) {
 }
 function docDelete(id) {
   showModal({
-    title: 'Eliminar documento', body: '¿Quitar este documento del registro? No borra el archivo original (vive en su link), solo la referencia en TakeOS.',
+    title: 'Eliminar documento', body: '¿Quitar este documento del registro? No borra el archivo original (vive en su link), solo la referencia en Rizora.',
     confirmLabel: 'Eliminar', cancelLabel: 'Cancelar', danger: true,
     onConfirm: () => { const docs = ensureDocs(STATE.currentProject); const i = docs.items.findIndex(x => x.id === id); if (i >= 0) { docs.items.splice(i, 1); markDirty(); renderDocumentos(); } }
   });

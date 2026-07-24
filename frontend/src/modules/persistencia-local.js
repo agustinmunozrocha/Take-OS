@@ -32,7 +32,7 @@ window._persisResetOrg = function () {
    ════════════════════════════════════════════════════════════════════
    Modelo: el HTML es la "consola"; el .json exportado es el "cartucho de
    guardado". Desacopla DATOS de CÓDIGO: puedes recibir versiones nuevas
-   del TakeOS y volver a cargar el mismo .json sin perder el proyecto.
+   del Rizora y volver a cargar el mismo .json sin perder el proyecto.
 
    Capas:
    1. Export/Import .json  → mecanismo DURABLE y portable (el respaldo serio).
@@ -57,7 +57,7 @@ function hasLS() {
 /* Construye el objeto serializable del estado completo. */
 function buildSaveObject() {
   return {
-    app: 'TakeOS',
+    app: 'Rizora',
     format: 'takeos-save',
     version: SAVE_FORMAT_VERSION,
     savedAt: new Date().toISOString(),
@@ -104,7 +104,7 @@ export function restoreLocalLocPhotos() {
 
 /* Valida la forma mínima de un save antes de aplicarlo. */
 function validateSaveObject(obj) {
-  if (!obj || obj.format !== 'takeos-save') return 'No parece un archivo de guardado de TakeOS.';
+  if (!obj || obj.format !== 'takeos-save') return 'No parece un archivo de guardado de Rizora.';
   if (!Array.isArray(obj.projects)) return 'El archivo no contiene proyectos válidos.';
   for (const p of obj.projects) {
     if (!p || typeof p.id !== 'string' || !p.data) return 'Hay proyectos con estructura inválida.';
@@ -207,7 +207,7 @@ export function importSaveFromInput(input) {
     const err = validateSaveObject(obj);
     if (err) { showToast({ kind: 'error', title: 'Archivo inválido', body: escapeHtml(err) }); return; }
     if (obj.version > SAVE_FORMAT_VERSION) {
-      showToast({ kind: 'warning', title: 'Guardado más nuevo', body: 'Este archivo fue creado por una versión más nueva de TakeOS. Se intentará cargar igual.' });
+      showToast({ kind: 'warning', title: 'Guardado más nuevo', body: 'Este archivo fue creado por una versión más nueva de Rizora. Se intentará cargar igual.' });
     }
     const savedWhen = obj.savedAt ? new Date(obj.savedAt).toLocaleString('es-CL') : 'fecha desconocida';
     const idsActuales = new Set(PROJECTS.map(p => p && p.id).filter(Boolean));
@@ -244,7 +244,7 @@ export function importSaveFromInput(input) {
    SNAPSHOTS ANTI-DESTRUCCIÓN  (V7.1)
    ─────────────────────────────────────────────────────────────────────
    Antes de cualquier operación destructiva (cargar respaldo "todo el OS"
-   que reemplaza PROJECTS+BD), TakeOS guarda un snapshot del estado actual.
+   que reemplaza PROJECTS+BD), Rizora guarda un snapshot del estado actual.
    El usuario puede revertir desde el menú "Snapshots".
 
    Almacenamiento: localStorage clave 'takeos_snapshots' = JSON array.
@@ -295,7 +295,7 @@ function restoreSnapshot(index) {
     danger: true,
     title: 'Revertir al snapshot',
     body: `Vas a reemplazar el estado actual por el snapshot <strong>${escapeHtml(snap.label)}</strong> (${escapeHtml(new Date(snap.createdAt).toLocaleString('es-CL'))}).<br><br>
-      TakeOS va a crear otro snapshot antes de revertir, por si te arrepientes de revertir también. Operación segura, pero confirmá.`,
+      Rizora va a crear otro snapshot antes de revertir, por si te arrepientes de revertir también. Operación segura, pero confirmá.`,
     confirmLabel: 'Sí, revertir',
     cancelLabel: 'Cancelar',
     onConfirm: () => {
@@ -361,7 +361,7 @@ function deleteSnapshotFromModal(index) {
    ─────────────────────────────────────────────────────────────────────
    Permite guardar y cargar UN solo proyecto sin tocar la BD ni los demás
    proyectos. Formato distinto del save "todo el OS":
-     { app: 'TakeOS', format: 'takeos-project', version: 1, ... }
+     { app: 'Rizora', format: 'takeos-project', version: 1, ... }
    ═══════════════════════════════════════════════════════════════════════ */
 const PROJECT_FORMAT_VERSION = 1;
 
@@ -373,7 +373,7 @@ function exportSingleProject(projectId) {
   }
   try {
     const data = {
-      app: 'TakeOS',
+      app: 'Rizora',
       format: 'takeos-project',
       version: PROJECT_FORMAT_VERSION,
       savedAt: new Date().toISOString(),
@@ -424,7 +424,7 @@ export function importSingleProjectFromInput(input) {
       return;
     }
     if (!obj || obj.format !== 'takeos-project' || !obj.project || typeof obj.project.id !== 'string') {
-      showToast({ kind: 'error', title: 'Archivo inválido', body: 'No parece un archivo de proyecto de TakeOS.' });
+      showToast({ kind: 'error', title: 'Archivo inválido', body: 'No parece un archivo de proyecto de Rizora.' });
       return;
     }
 

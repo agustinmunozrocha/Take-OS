@@ -3060,7 +3060,7 @@ textarea.cot-input { resize: vertical; min-height: 64px; line-height: 1.5; }
 
 /* ===== go-cfo-styles (antes <style id="go-cfo-styles">) ===== */
 /* ════════ MÓDULO GASTOS + CFO (V8) · estilos namespaced .go-* ════════
-   Mapea a los tokens de TakeOS → respeta tema claro y oscuro. */
+   Mapea a los tokens de Rizora → respeta tema claro y oscuro. */
 .go-wrap{font-size:13.5px;}
 .go-note{font-size:11.5px;color:var(--ink-faint);border:1px dashed var(--rule-strong);border-radius:8px;padding:8px 12px;margin-bottom:16px;line-height:1.5;}
 .go-empty{padding:40px;text-align:center;color:var(--ink-muted);}

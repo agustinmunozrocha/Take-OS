@@ -218,7 +218,7 @@ export function renderLegal() {
   const project = STATE.currentProject; if (!project) return;
   const st = _legalState();
   const content = document.getElementById('moduleContent');
-  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de TakeOS sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en un contrato real de referencia). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
+  const banner = `<div class="lgl-warn" style="margin-bottom:14px;">⚠ <div><b>Documentos preliminares — no usar en producción real.</b> Por ahora las plantillas de Rizora sirven para probar el flujo (UX) y <b>no están validadas legalmente</b>, salvo la estructura de la Cesión (basada en un contrato real de referencia). Cuando se carguen las versiones oficiales, se respetarán literalmente, sin resumir ni reinterpretar.</div></div>`;
   const subtabs = `<div class="lgl-subtabs">
     <button class="lgl-subtab ${st.sub === 'docs' ? 'on' : ''}" data-accion="lgl.sub" data-args="[&quot;docs&quot;]">Documentos</button>
     <button class="lgl-subtab ${st.sub === 'tpl' ? 'on' : ''}" data-accion="lgl.sub" data-args="[&quot;tpl&quot;]">Plantillas</button>
@@ -499,7 +499,7 @@ function drawLegalGen() {
   const body = `<div class="modal-backdrop"><div class="modal" style="max-width:960px;width:96vw;max-height:90vh;overflow:auto;">
     <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;"><div><div class="modal-title">${g.docId ? 'Ver / editar documento' : 'Generar documento'}</div><div style="font-size:12px;color:var(--ink-mut);margin-top:3px;">Variables autollenadas desde el sistema · exporta a PDF con marca</div></div><button class="go-x" data-accion="ui.cerrar" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-mut);line-height:1;">×</button></div>
     <div class="modal-body">
-      ${t.draft ? `<div class="lgl-warn">⚠ <div>Esta plantilla es un <b>borrador redactado por TakeOS</b>. Antes de usarla en producción, valídala con un abogado. El contenido legal es responsabilidad del usuario.</div></div>` : ''}
+      ${t.draft ? `<div class="lgl-warn">⚠ <div>Esta plantilla es un <b>borrador redactado por Rizora</b>. Antes de usarla en producción, valídala con un abogado. El contenido legal es responsabilidad del usuario.</div></div>` : ''}
       <div class="lgl-gen-grid">
         <div>
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:7px;">Plantilla</div>

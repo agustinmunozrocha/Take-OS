@@ -1,4 +1,4 @@
-// Estado global compartido de TakeOS — Etapa 1.
+// Estado global compartido de Rizora — Etapa 1.
 //
 // STATE es un OBJETO que se comparte por REFERENCIA: el codigo clasico y los
 // modulos apuntan al mismo objeto (STATE), asi que leer y mutar
@@ -220,7 +220,7 @@ export let EMPRESA_PERFIL = {
    ════════════════════════════════════════════════════════════════════ */
 /* USUARIO_ACTUAL -> a src/lib/state.js (Etapa 1); en window */
 export let _TIENE_EMPRESA = false; // D3a: binding canónico; espejo window abajo
-export const TAKEOS_VERSION = 'V11.14.0';   // Versión actual del cliente TakeOS. El historial de cambios vive en los changelogs (.md), no aquí.
+export const TAKEOS_VERSION = 'V11.41.0';   // Versión actual del cliente Rizora. El historial de cambios vive en los changelogs (.md), no aquí.
 // Bridges C6 (BD_LEGAL/TPL eran léxicas: los módulos las leen a pelo → ahora resuelven vía window)
 
 // ── Bridges C6 (barrido final) ──
