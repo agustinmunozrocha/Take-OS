@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TakeOS · Mockup — Derechos del titular (Ley 21.719)</title>
+<title>Rizora · Mockup — Derechos del titular (Ley 21.719)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@ body{ font-family:var(--font-sans); background:var(--bg-page); color:var(--ink-p
 button{ font-family:inherit; }
 ul{ margin:0; padding:0; list-style:none; }
 
-/* Componentes base (calcados de TakeOS) */
+/* Componentes base (calcados de Rizora) */
 .input, .select{
   width:100%; font-family:inherit; font-size:13px; color:var(--ink-primary);
   background:var(--bg-surface); border:1px solid var(--rule); border-radius:var(--radius-sm);
@@ -261,7 +261,7 @@ ul{ margin:0; padding:0; list-style:none; }
 
 <script>
 /* ===================================================================
-   TakeOS — Mockup de los cinco flujos de derechos del titular (Ley 21.719)
+   Rizora — Mockup de los cinco flujos de derechos del titular (Ley 21.719)
    HTML único · JS vanilla · estado en memoria · sin backend.
    Centro de privacidad y datos dentro del panel personal (identidad global
    por usuario, no por productora). Cada flujo anota su costura de integración.
@@ -348,7 +348,7 @@ function vistaHub(){
         <button class="right-card" onclick="ir('edad')">
           <div class="ico">🪪</div>
           <div class="rt">Verificación de edad</div>
-          <div class="rd">Confirma que eres mayor de edad para usar TakeOS.</div>
+          <div class="rd">Confirma que eres mayor de edad para usar Rizora.</div>
           <span class="right-tag warn">Si aplica</span>
         </button>
 
@@ -362,7 +362,7 @@ function vistaHub(){
         <button class="right-card" onclick="ir('eliminar')" style="grid-column:1/-1">
           <div class="ico">🗑️</div>
           <div class="rt">Eliminar mi cuenta</div>
-          <div class="rd">Elimina tu cuenta de TakeOS y suprime tus datos personales. Esta acción es irreversible.</div>
+          <div class="rd">Elimina tu cuenta de Rizora y suprime tus datos personales. Esta acción es irreversible.</div>
           <span class="right-tag danger">Supresión</span>
         </button>
       </div>
@@ -614,11 +614,11 @@ function vistaEdad(){
   } else {
     cuerpo = `
       <h3>Verificación de edad</h3>
-      <div class="legal-note"><b>Si aplica.</b> Los titulares de cuenta de TakeOS son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal.</div>
+      <div class="legal-note"><b>Si aplica.</b> Los titulares de cuenta de Rizora son profesionales adultos, así que este paso podría no aplicar o reducirse a una declaración. Es una decisión de producto y legal.</div>
       <div class="field" id="f-nac">
         <label for="i-nac">Fecha de nacimiento</label>
         <input class="input" id="i-nac" type="date" value="${estado.persona.nacimiento}">
-        <div class="msg-err">Debes ser mayor de 18 años para usar TakeOS.</div>
+        <div class="msg-err">Debes ser mayor de 18 años para usar Rizora.</div>
       </div>
       <label class="check-row">
         <input type="checkbox" id="chk-edad">

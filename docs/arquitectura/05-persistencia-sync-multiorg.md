@@ -1,4 +1,4 @@
-# Informe técnico — Persistencia, sincronización y multi-tenancy · TakeOS (`frontend/src/`)
+# Informe técnico — Persistencia, sincronización y multi-tenancy · Rizora (`frontend/src/`)
 
 Verificado sobre el árbol de trabajo en rama `etapa4-integracion` (commit HEAD `4c8067b`). Todas las cifras están contadas con comandos (se indica cuál); todas las firmas son copias literales.
 

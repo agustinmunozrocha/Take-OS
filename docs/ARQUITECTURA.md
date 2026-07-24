@@ -1,4 +1,4 @@
-# TakeOS — Informe Técnico de Arquitectura
+# Rizora — Informe Técnico de Arquitectura
 
 **Fecha:** 6 de julio de 2026 · **Base de medición:** rama `etapa4-integracion` @ `4c8067b` · **Audiencia:** ingeniería.
 **Base de medición de los 17 capítulos:** `4c8067b` — un snapshot fechado; **no se reescriben tras correcciones.** El estado vigente es esta portada + el addendum de abajo.
@@ -27,7 +27,7 @@
 
 ---
 
-## 1 · Qué es TakeOS, técnicamente
+## 1 · Qué es Rizora, técnicamente
 
 SaaS de gestión de producción audiovisual (presupuestos, cotizaciones, plan de rodaje, gastos/CFO, BD de contactos, locaciones, legal, notificaciones) construido como **SPA vanilla JavaScript con ES Modules, sin framework**. Stack completo:
 

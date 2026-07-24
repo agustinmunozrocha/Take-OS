@@ -1,4 +1,4 @@
-# Informe técnico — Modelo de estado y modelo de datos de dominio (TakeOS)
+# Informe técnico — Modelo de estado y modelo de datos de dominio (Rizora)
 
 Repositorio: `/home/juandlc/Trabajo/Take-OS` · rama `etapa4-integracion` · cliente `TAKEOS_VERSION = 'V11.14.0'` (`frontend/src/lib/state.js:222`). Todas las rutas son relativas a `frontend/src/` salvo indicación contraria. Todas las cifras fueron contadas con el comando indicado entre paréntesis.
 

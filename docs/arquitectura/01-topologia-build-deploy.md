@@ -1,4 +1,4 @@
-# Topología del repositorio, build y despliegue — TakeOS
+# Topología del repositorio, build y despliegue — Rizora
 
 Rama analizada: `etapa4-integracion` (HEAD `4c8067b`, 2026-07-03). Todo lo contado se contó con el comando indicado entre paréntesis.
 
@@ -12,9 +12,9 @@ Rama analizada: `etapa4-integracion` (HEAD `4c8067b`, 2026-07-03). Todo lo conta
 ├── .github/workflows/deploy.yml   (58 líneas — único workflow)
 ├── .claude/                   (NO trackeado: settings.json, settings.local.json — «?? .claude/» en git status)
 ├── docs/                      (19 archivos trackeados)
-│   ├── CHANGELOG.md · CLAUDE.md · TakeOS_ADR_Backend_v1_10.md
-│   ├── TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_6.md · TakeOS_PRD_V3_6.md
-│   ├── TakeOS_Roadmap_Operativo_v1_8.md · TakeOS_Seguridad_OWASP_Top_10_2025_v1_3.md
+│   ├── CHANGELOG.md · CLAUDE.md · Rizora_ADR_Backend_v1_14.md
+│   ├── Rizora_Arquitectura_y_Flujo_de_Trabajo_v1_10.md · Rizora_PRD_V3_8.md
+│   ├── Rizora_Roadmap_Operativo_v1_12.md · Rizora_Seguridad_OWASP_Top_10_2025_v1_7.md
 │   ├── Marketing/Landing_Preliminar_Software_v3.html
 │   ├── Planes/   (5 .md: HANDOFF_Code_PlanG…, PENDIENTES_Migracion_Vite, Plan_Macro_Frentes…, Plan_Modularizacion_Vite, RESUMEN_Sesion_Modularizacion)
 │   └── mockups/  (4 .html + Handoff_Code_Integracion_Mockups.md)
@@ -37,7 +37,7 @@ Rama analizada: `etapa4-integracion` (HEAD `4c8067b`, 2026-07-03). Todo lo conta
 Tamaños (archivos trackeados por carpeta: `git ls-files | cut -d/ -f1 | sort | uniq -c`): **docs 19 · frontend 49 · .github 1 · supabase 24 · raíz 1 = 94 archivos trackeados**.
 
 Líneas:
-- `docs/` completo: **8.709 líneas** en 19 archivos (`wc -l docs/*.md docs/Planes/*.md docs/mockups/* docs/Marketing/*`). Mayores: `TakeOS_PRD_V3_6.md` 1.005, `mockup_creacion_productora.html` 1.145, `TakeOS_ADR_Backend_v1_10.md` 663.
+- `docs/` completo: **8.709 líneas** en 19 archivos (`wc -l docs/*.md docs/Planes/*.md docs/mockups/* docs/Marketing/*`). Mayores: `Rizora_PRD_V3_8.md` 1.005, `mockup_creacion_productora.html` 1.145, `Rizora_ADR_Backend_v1_14.md` 663.
 - `supabase/` SQL: **16 archivos .sql, 9.349 líneas** (`find supabase -name '*.sql' -not -path '*/.temp/*' | wc -l` y `… -exec cat {} + | wc -l`). La migración dominante es `20260616150834_remote_schema.sql` (277.039 bytes, volcado del esquema remoto). Última migración: `20260629120000_archivar_bd_soft_delete.sql` (122 líneas).
 - `frontend/src/`: **40 archivos .js, 25.327 líneas** (`find frontend/src -name '*.js' | wc -l`; `… -exec cat {} + | wc -l`) + `styles.css` 3.230 líneas + `index.html` 1.556 líneas (`wc -l`).
 

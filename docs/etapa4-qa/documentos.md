@@ -35,7 +35,7 @@ D15 pendiente (requiere un adjunto base64 legado).
 | D14 ⭐ | Abrir archivo (Storage) | Doc con adjunto en Storage → "Abrir ↗" | Genera link firmado (1 h) y abre en pestaña nueva | ✅ (link firmado supabase con token; exp − iat = 3600 s = 1 h) |
 | D15 | Abrir archivo (legado base64) | Doc con dataUrl → "Abrir ↗" | Decodifica a PDF y lo abre; revoca el link a los 60 s | ⬜ (pendiente: requiere un adjunto base64 legado) |
 | D16 ⭐ | Quitar archivo | Doc con adjunto → "Quitar archivo" → confirmar | Borra el binario (si estaba en Storage); el registro (título/link/notas) se conserva | ✅ (modal "Quitar PDF"; adjunto borrado, título/link/notas conservados) |
-| D17 | Eliminar documento | Fila → "Eliminar" → confirmar | Se quita la fila (modal aclara "solo la referencia") | ✅ (modal "solo la referencia en TakeOS") |
+| D17 | Eliminar documento | Fila → "Eliminar" → confirmar | Se quita la fila (modal aclara "solo la referencia") | ✅ (modal "solo la referencia en Rizora") |
 | D18 ⭐ | Persistencia metadata al recargar | Editar título/notas/link → esperar ~2 s (autosave) → recargar | Los valores vuelven idénticos | ✅ (confirmado en project_documents + hard refresh) |
 | D19 ⭐ | Persistencia adjunto al recargar | Adjuntar PDF → recargar | El adjunto sigue; "Abrir ↗" funciona | ✅ (adjunto persiste + link firmado funciona) |
 | D20 ⭐ | Orden al recargar | Crear varios docs → recargar | Se muestran ordenados (ver Notas sobre `posicion`) | ✅ (posicion 0/1 asignada por la RPC y estable tras recarga) |
