@@ -1,4 +1,4 @@
-# TakeOS — Modularización con Vite · Resumen técnico y handoff
+# Rizora — Modularización con Vite · Resumen técnico y handoff
 
 > **Para quién es esto:** alguien que llega **sin contexto** y necesita entender la
 > arquitectura, qué cambió en la estructura, cómo está montado el desarrollo y cómo
@@ -8,7 +8,7 @@
 
 ## 1. TL;DR
 
-TakeOS era **un solo archivo** `index.html` (~26.700 líneas) con todo dentro: HTML +
+Rizora era **un solo archivo** `index.html` (~26.700 líneas) con todo dentro: HTML +
 18 bloques `<style>` + ~1.292 funciones JS inline + 876 manejadores `onclick=""`
 inline. Lo estamos partiendo en **módulos ES** con **Vite**, **sin reescribir
 lógica** y **sin romper producción**, de forma **incremental** (una pieza por commit,

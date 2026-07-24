@@ -1,8 +1,8 @@
 # Handoff — Dev Mockups Flujos → **Claude Code**
-## Integración de tres mockups de flujo al TakeOS real
+## Integración de tres mockups de flujo al Rizora real
 
 **De:** chat **Dev Mockups Flujos**
-**Para:** **Claude Code** (repo TakeOS)
+**Para:** **Claude Code** (repo Rizora)
 **Producto / decisiones / árbitro:** Agustín Muñoz Rocha
 **Fecha:** 13 de junio de 2026
 **Reemplaza:** el handoff anterior de integración (versión previa al cambio a Claude Code).
@@ -13,7 +13,7 @@
 
 ## 0 · Qué es esto
 
-Tres **mockups autónomos** (un HTML cada uno, JS vanilla, tokens reales de TakeOS) que prototipan tres flujos de punta a punta. **Son mockups: fijan el flujo y la UX, no son código de producción.** Ninguno llama a backend; todo se simula en memoria. Tu trabajo es **integrarlos al monolito real**, cableando cada paso a su pieza real y respetando las doctrinas del repo.
+Tres **mockups autónomos** (un HTML cada uno, JS vanilla, tokens reales de Rizora) que prototipan tres flujos de punta a punta. **Son mockups: fijan el flujo y la UX, no son código de producción.** Ninguno llama a backend; todo se simula en memoria. Tu trabajo es **integrarlos al monolito real**, cableando cada paso a su pieza real y respetando las doctrinas del repo.
 
 **Archivos que Agustín te adjunta junto a este handoff:**
 1. `TakeOS_Mockup_Creacion_Productora.html`
@@ -221,7 +221,7 @@ Confirmados por búsqueda en el build. **Las líneas son aproximadas: ubica por 
 **Unidad B6 — Cookies y analítica**
 - **DÓNDE:** banner de primera visita + flujo de preferencias.
 - **QUÉ:** banner (aceptar todas / solo esenciales / configurar) + panel de preferencias (esenciales fijas, analítica y marketing opcionales).
-- **LÍMITES:** el consentimiento de cookies se **registra versionado en el servidor** (no en localStorage; los artifacts de TakeOS no usan storage del navegador). Define el contrato y déjalo para el BD Expert.
+- **LÍMITES:** el consentimiento de cookies se **registra versionado en el servidor** (no en localStorage; los artifacts de Rizora no usan storage del navegador). Define el contrato y déjalo para el BD Expert.
 - **ÉXITO:** el banner aparece en primera visita y deja de aparecer tras decidir; las preferencias se guardan (contra el endpoint cuando exista).
 - **Dependencia:** PENDIENTE (registro de consentimiento de cookies → BD Expert).
 

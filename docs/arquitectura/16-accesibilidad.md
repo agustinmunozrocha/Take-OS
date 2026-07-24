@@ -1,4 +1,4 @@
-# Auditoría de accesibilidad — TakeOS `frontend/` (solo lectura)
+# Auditoría de accesibilidad — Rizora `frontend/` (solo lectura)
 
 ## 0. Línea base cuantitativa
 

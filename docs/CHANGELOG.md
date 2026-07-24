@@ -1,4 +1,4 @@
-# Changelog — TakeOS
+# Changelog — Rizora
 
 ## V11.40.0 — 19 de julio de 2026
 ### Presupuesto: el "documento real" ya no se pierde al recargar · Pronto pago con factura muestra el bruto
@@ -95,11 +95,11 @@ Rama `chore/rebrand-rizora`. Solo **frontend** (`index.html`).
 - **Sin cambios de base de datos.** El rebrand de los documentos (.md) queda pendiente para una pasada aparte.
 
 ## V11.33.0 — 7 de julio de 2026
-### Login: mensaje de error neutral (TakeOS es de registro abierto)
+### Login: mensaje de error neutral (Rizora es de registro abierto)
 
 Rama `fix/login-copy-registro-abierto`. Solo **frontend**. Ajuste del copy introducido en V11.32.0.
 
-Se confirmó la dirección de producto: el registro de TakeOS es **abierto** — cualquiera puede crearse una cuenta y usar el software, esté o no invitado a una productora. El mensaje de error de login que había quedado en V11.32.0 asumía un modelo "solo invitados" (*"tu acceso aún no está habilitado; pídele a quien te invitó…"*), que ya no aplica.
+Se confirmó la dirección de producto: el registro de Rizora es **abierto** — cualquiera puede crearse una cuenta y usar el software, esté o no invitado a una productora. El mensaje de error de login que había quedado en V11.32.0 asumía un modelo "solo invitados" (*"tu acceso aún no está habilitado; pídele a quien te invitó…"*), que ya no aplica.
 
 - El error de login (cuando Google/Auth devuelve un `#error=…`) **se sigue mostrando** en vez de rebotar sin mensaje, pero ahora con un texto **neutral**: *"No se pudo iniciar sesión (…). Reintenta."*, sin referencias a invitaciones.
 - Se **restauró el copy original** del recuadro de invitación (*"Entra con Google y tu cuenta se crea sola; al entrar verás la invitación"*) y del modal "Invitación creada" — ambos correctos con el registro abierto.
@@ -112,7 +112,7 @@ Rama `fix/oauth-error-signup-legible`. Solo **frontend**. Bugfix de la pantalla 
 
 Cuando un invitado nuevo (sin cuenta) apretaba "Iniciar sesión con Google", elegía su cuenta y **volvía al login sin ninguna explicación**. La causa está en la configuración de Auth de Supabase —el registro de usuarios nuevos está deshabilitado, así que Google rechaza la creación de la cuenta con un error `422: Signups not allowed`—, pero el frontend **se tragaba ese error en silencio**: solo reconocía el retorno *exitoso* de Google, y cualquier retorno con error lo trataba como "no hay sesión" y reabría el login. Nadie —ni el invitado ni quien lo invitó— entendía qué había pasado.
 
-- La app ahora **detecta el retorno de Google con error** (`#error=…&error_code=…&error_description=…`) y le muestra al invitado un **mensaje claro** en la pantalla de login en vez de rebotarlo mudo: *"Tu acceso a TakeOS aún no está habilitado. Pídele a quien te invitó que active tu cuenta y vuelve a entrar."* para el caso del registro cerrado, o un mensaje genérico con el detalle para cualquier otro error de login.
+- La app ahora **detecta el retorno de Google con error** (`#error=…&error_code=…&error_description=…`) y le muestra al invitado un **mensaje claro** en la pantalla de login en vez de rebotarlo mudo: *"Tu acceso a Rizora aún no está habilitado. Pídele a quien te invitó que active tu cuenta y vuelve a entrar."* para el caso del registro cerrado, o un mensaje genérico con el detalle para cualquier otro error de login.
 - Se limpia el `#error=…` de la barra de dirección para que un refresco no lo repita.
 - Se corrige el texto que le **prometía** al invitado que "tu cuenta se crea sola" (y el equivalente en el modal de "Invitación creada"): ahora dice que verá su invitación al entrar y que, si su acceso aún no está activo, se le avisará ahí mismo.
 - **Sin cambios de base de datos.** El *ingreso efectivo* del invitado se destraba aparte (activando el registro en la config de Auth de Supabase, y —como paso durable— provisionando la cuenta del invitado desde el servidor). Este cambio hace que, mientras tanto, el fallo deje de ser invisible.

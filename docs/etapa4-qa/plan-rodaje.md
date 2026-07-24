@@ -111,6 +111,6 @@ Cobertura: 50/50 ✅ (0 bugs). MÓDULO CERRADO.
   el banco de planos y el export PDF se compararon contra el monolito y coinciden;
   la delegación (`pr.d`, `pr.fila`, `pr.filaDrag`, `pr.imgDnD`) mapea completo y el
   estado se persiste como blob JSON íntegro.
-- **Diferencias intencionales** (no bugs): pie del PDF con rebrand "TakeOS"; la celda
+- **Diferencias intencionales** (no bugs): pie del PDF con rebrand "Rizora"; la celda
   de hora de inicio ya no lleva `stopPropagation` (efecto nulo: seleccionar la fila
   solo cambia una clase CSS).

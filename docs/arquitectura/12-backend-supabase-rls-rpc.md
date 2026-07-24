@@ -1,4 +1,4 @@
-# Backend Supabase de Take-OS: esquema, RLS y contratos RPC
+# Backend Supabase de Rizora: esquema, RLS y contratos RPC
 
 **Corpus**: `/home/juandlc/Trabajo/Take-OS/supabase/migrations/` — 14 archivos `.sql`, 9.157 líneas (`wc -l supabase/migrations/*.sql`). Volcado base: `20260616150834_remote_schema.sql` (7.354 líneas). Cifras de este informe: 78 tablas (`grep -c "CREATE TABLE"` sumado: 72 en el dump + 5 `default_*` en `20260616170000` + 1 `gasto_comments` en `20260628130000`), 157 `CREATE POLICY` (`grep -rhoi "CREATE POLICY" ... | wc -l`; 149 sobre `public`, 8 sobre `storage.objects`), 76 ocurrencias textuales de `SECURITY DEFINER` (`grep -rho "SECURITY DEFINER" ... | wc -l`; corresponden a 62 funciones distintas cuya definición vigente es DEFINER, de 77 funciones totales en `public` — las 15 restantes son INVOKER: `fn_norm_*`, `fn_jsarr`, `fn_title`, `set_updated_at`, `trg_norm_user_*`, `trg_touch/`, `trg_user_tool_documents_meta`; conteo por script Python sobre los `CREATE FUNCTION`), 104 `FOREIGN KEY` en el dump (`grep -c "FOREIGN KEY" 20260616150834_remote_schema.sql`).
 

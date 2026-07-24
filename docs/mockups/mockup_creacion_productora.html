@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TakeOS · Mockup — Crear productora</title>
+<title>Rizora · Mockup — Crear productora</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -46,7 +46,7 @@ button{ font-family:inherit; }
 ul{ margin:0; padding:0; list-style:none; }
 a{ color:inherit; }
 
-/* ============ Componentes base (calcados de TakeOS) ============ */
+/* ============ Componentes base (calcados de Rizora) ============ */
 .input, .select, .textarea{
   width:100%; font-family:inherit; font-size:13px;
   color:var(--ink-primary); background:var(--bg-surface);
@@ -395,7 +395,7 @@ a{ color:inherit; }
 
 <script>
 /* ===================================================================
-   TakeOS — Mockup del flujo de creación de productora
+   Rizora — Mockup del flujo de creación de productora
    HTML único · JS vanilla · estado en memoria (sin localStorage)
    No llama a ningún backend. Cada paso anota su costura de integración.
    =================================================================== */
@@ -518,7 +518,7 @@ function pantallaPanel(){
   app.innerHTML = `
     <div class="stage">
       <div class="flow-top">
-        <div class="brandline"><span class="dot"></span> TakeOS · Panel personal</div>
+        <div class="brandline"><span class="dot"></span> Rizora · Panel personal</div>
         <div class="plan-chip"><div class="avatar" style="width:24px;height:24px;font-size:11px">${ini}</div> ${estado.persona.nombre} ${estado.persona.apellido}</div>
       </div>
 
@@ -745,13 +745,13 @@ function pantallaTerminos(){
       ${stepper(2)}
       <div class="card">
         <h3>Términos y condiciones de servicio</h3>
-        <p class="sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de TakeOS y tu productora.</p>
+        <p class="sub">Equivalen a un contrato de prestación de servicios entre la sociedad desarrolladora de Rizora y tu productora.</p>
 
         <div class="tyc-provisional">Texto provisional, solo para demostrar el flujo. El definitivo lo define el área legal cuando la sociedad desarrolladora esté constituida.</div>
 
         <div class="tyc-box">
           <h4>1. Objeto</h4>
-          <p>La sociedad desarrolladora pone a disposición de la productora la plataforma TakeOS para la gestión de su producción audiovisual, según el plan contratado.</p>
+          <p>La sociedad desarrolladora pone a disposición de la productora la plataforma Rizora para la gestión de su producción audiovisual, según el plan contratado.</p>
           <h4>2. Plan y pago</h4>
           <p>La productora contrata el plan seleccionado y autoriza su cobro según el ciclo elegido. Los precios se expresan en pesos chilenos más IVA.</p>
           <h4>3. Datos y privacidad</h4>
@@ -885,7 +885,7 @@ function pantallaControl(){
     <div class="stage" style="max-width:1180px">
       <div class="shell">
         <nav class="sidebar">
-          <div class="sb-brand"><span class="dot"></span> TakeOS</div>
+          <div class="sb-brand"><span class="dot"></span> Rizora</div>
           <div class="nav-item active"><span class="ico">▦</span> Proyectos</div>
           <div class="nav-item" id="nav-empresa"><span class="ico">◍</span> Panel de Empresa <span class="priv">Privado</span></div>
           <div class="nav-item"><span class="ico">◷</span> Calendario</div>

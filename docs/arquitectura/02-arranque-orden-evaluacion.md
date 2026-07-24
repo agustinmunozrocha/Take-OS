@@ -1,4 +1,4 @@
-# Ciclo de vida de arranque y orden de evaluación — TakeOS (`frontend/src/`)
+# Ciclo de vida de arranque y orden de evaluación — Rizora (`frontend/src/`)
 
 Base analizada: rama `etapa4-integracion`, HEAD `4c8067b`. Cifras contadas sobre el árbol de trabajo. 40 archivos `.js` bajo `frontend/src/` (`find frontend/src -name '*.js' | wc -l` → 40: `main.js` + 14 en `lib/` + 25 en `modules/`). 365 sentencias `import` estáticas en total (`grep -hE "^import " main.js lib/*.js modules/*.js | wc -l`), 0 `import()` dinámicos (`grep -rn "import(" lib modules main.js` → vacío).
 

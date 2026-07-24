@@ -1,4 +1,4 @@
-# Perfil de rendimiento — TakeOS `frontend/` (commit `4c8067b`, rama `etapa4-integracion`)
+# Perfil de rendimiento — Rizora `frontend/` (commit `4c8067b`, rama `etapa4-integracion`)
 
 Metodología: solo lectura sobre `/home/juandlc/Trabajo/Take-OS/frontend`; todas las cifras medidas con el comando indicado entre paréntesis. Los pesos de CDN se descargaron con `python3 urllib` y se comprimieron con `gzip.compress(nivel 9)` como proxy del transfer real (jsdelivr sirve brotli, que sería algo menor). Las únicas cifras estimadas (no medibles sin runtime) están marcadas **[estimación]**.
 

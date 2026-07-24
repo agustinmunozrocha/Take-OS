@@ -1,6 +1,6 @@
 > ⚠ **Actualizado en FASE HF (6-jul, `e855ec2`) — `lib/delegacion.js` cambió su contrato tras este análisis.** El código citado abajo es el de `4c8067b`. Diferencias vigentes: (1) la lista de tipos escuchados en burbuja **suma** `dragstart`, `dragend`, `mouseup` (para migrar los 47 `on*=` del drag&drop, cap. 13 Bug 2); (2) `despachar()` ya no descarta el evento si el `closest([data-accion])` no escucha ese tipo: **asciende** por los ancestros hasta encontrar uno que sí (restaura el burbujeo nativo — un `<tr>` con `data-on="click dragover…"` recibe el dragover que nace sobre un input hijo). Todo lo demás del contrato (firma `(args, el, ev)`, `registrarAcciones`/`accionHTML`, despachadores de 2.º nivel) sigue vigente. El §Hallazgos que trata los `on*=` supervivientes como muertos queda superseded.
 
-# Sistema de intercomunicación modular de Take-OS (frontend/src)
+# Sistema de intercomunicación modular de Rizora (frontend/src)
 
 Base analizada: rama `etapa4-integracion`, 40 archivos JS, 25.327 líneas (`wc -l frontend/src/lib/*.js frontend/src/modules/*.js frontend/src/main.js`). Tres mecanismos conviven con roles disjuntos: **imports ESM** (aristas hacia abajo), **delegación de eventos** (DOM → módulo) y **ganchos** (aristas hacia arriba / inversión de dependencias). `main.js` es el manifiesto de eval (`frontend/src/main.js:6-42`) y termina con `lib/boot.js` como última entrada, con la advertencia explícita de que su eval real se adelanta por el grafo de imports (`frontend/src/main.js:42`).
 

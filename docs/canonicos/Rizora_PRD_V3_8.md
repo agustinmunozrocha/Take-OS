@@ -6,9 +6,9 @@
 
 | | |
 |---|---|
-| **Versión** | V3.7 |
-| **Fecha** | 10 de julio de 2026 |
-| **Estado** | Borrador para aprobación · **V3.7 renombra el producto a Rizora** (orden de Agustín, 10-jul) sin cambios de producto: Rizora es el **SaaS**; **La Hectárea SpA** es la sociedad sobre la que opera **Primate Films** (la productora); ⚠ queda pendiente definir la sociedad sobre la cual operará Rizora. Rige la política "cargos, no nombres" (ADR-027). Las menciones "V3.6" en el cuerpo son registro histórico de esa versión · V3.6 corrigió el **cupo de colaboradores a "por proyecto"** (§22), actualiza el estado real del frontend verificado contra el build vivo (Centro de Privacidad y cinco flujos de derechos **ya construidos en UI**, refresco resuelto, acceso de externos y transferencia de administración en producción) y registra el cierre del flujo "BD en código" (detalle técnico en ADR v1.8 / Arquitectura v1.4) · reemplaza V2.0 |
+| **Versión** | V3.8 |
+| **Fecha** | 24 de julio de 2026 |
+| **Estado** | Borrador para aprobación · **V3.8 consolida el hito del 24-jul-2026:** el software de producción pasó a la **arquitectura modular** (el corte se ejecutó; detalle técnico en ADR v1.14 / Arquitectura v1.10), **§19 y §25 sincerados** al stack real (Vite + Supabase; Firestore es historia), y entra al PRD la feature **«Fondos por rendir»** (§06/§12): la ex "Caja de producción" con movimientos entre cuentas y saldos por persona. Además: **textos legales entregados por los abogados el 24-jul** (integración en la app pendiente — §16) y **dominio oficial `rizoraapp.com`** registrado (hoy con landing; la app sigue en GitHub Pages) · V3.7 renombró el producto a Rizora (Rizora es el **SaaS**; **La Hectárea SpA** es la sociedad sobre la que opera **Primate Films**; ⚠ pendiente la sociedad de Rizora; rige "cargos, no nombres", ADR-027) · reemplaza V2.0 |
 | **Autor** | Agustín Ignacio Muñoz Rocha |
 | **Razón social** | La Hectárea SpA |
 | **Marca comercial** | Primate Films |
@@ -39,6 +39,8 @@ Este documento es estrictamente confidencial. Su acceso está restringido al equ
 ---
 
 ## 00.B — Changelog · V2.0 → V3.0
+
+> **Actualización V3.8 · 24 de julio de 2026.** Cuatro cosas. **(1) El corte a producción se hizo:** Rizora corre en producción sobre la **arquitectura modular** (build de Vite publicada por GitHub Pages; rama única; el monolito quedó como rollback dormido). Se sinceran **§19 (stack)** y **§25 (despliegue)**: la persistencia es **Supabase** (Firestore quedó retirado en la V10 — las menciones del cuerpo son historia), y el deploy es build + workflow, no subir un archivo a mano. **(2) Fondos por rendir (§06/§12):** la "Caja de producción" del módulo Gastos se renombró a **"Fondos por rendir"** —el término viejo estaba sobrecargado (caja física / caja chica / fondo por rendir)— y pasó de "una sola cuenta con ingreso/devolución" a un **libro de movimientos entre cuentas** (la empresa ↔ personas ↔ entre personas, modelo Tricount) con **saldos por persona**; los sobres del módulo pasan a llamarse **"Fondos Asignados"** (botón "Asignar fondo"). **(3) Textos legales:** los abogados entregaron los **documentos legales definitivos** (Ley 21.719) el 24-jul; el pendiente pasa a ser integrarlos en la app (§16). **(4) Dominio:** **`rizoraapp.com`** registrado (hoy sirve la landing; la app de producción sigue en GitHub Pages). No cambian el modelo de negocio ni los planes.
 
 > **Actualización V3.6 · junio 2026.** Tres cosas. **(1) Cupo de colaboradores por proyecto (§22):** el límite que da cada plan (ej. 12 en Producción) se mide **por proyecto**, no por organización; se canoniza la regla **cargos = colaboradores** y que los **internos no consumen cupo**. **(2) Estado real del frontend** (verificado contra el build vivo): el **Centro de Privacidad y los cinco flujos de derechos** ya están **construidos en UI y en producción** (con textos legales aún provisionales → lo que falta del cumplimiento es **legal**, no UI); el **bug de refresco** está resuelto; el **acceso restringido a externos** (con la lente "personas de mis proyectos") y la **transferencia de administración** están en producción. Toca §16, §21 y §07. **(3) Flujo "BD en código" cerrado:** queda registrado que el detalle técnico (Orden A, despliegue por Branching al mergear) vive en ADR v1.8 y Arquitectura v1.4. No cambian el modelo de negocio ni los planes. El resto se mantiene igual al V3.5.
 
@@ -197,7 +199,7 @@ Rizora hereda y formaliza los principios definidos en la Biblia Primate. Estos d
 7. **Flexibilidad en zonas controladas.** Las excepciones existen, pero solo en zonas diseñadas para eso. No se permiten modificaciones improvisadas a la estructura.
 8. **Bajo mantenimiento técnico.** Lo que cambia seguido vive en lugares editables por usuarios no técnicos. El código maneja estructura, no contenido.
 9. **Versionado en vez de eliminación.** Los documentos versionables se versionan numéricamente; las versiones anteriores no se eliminan. La última manda. (Alcance acotado, ver §20.)
-10. **Independencia de la herramienta.** La lógica del sistema es independiente de la tecnología que la implementa. Hoy HTML+Firestore; mañana, Supabase. Los principios no cambian.
+10. **Independencia de la herramienta.** La lógica del sistema es independiente de la tecnología que la implementa. Ayer HTML+Firestore, hoy Supabase con frontend modular — y el principio sobrevivió intacto a ambas migraciones. Los principios no cambian.
 
 > **Un principio operativo nuevo, heredado de la práctica — Norte anti-cortisol.** De cada feature se pregunta: «¿esto reduce un momento de ansiedad del fundador que opera?». Las guardas de validación —el sistema que impide cometer el error— son ese norte hecho función. Es el filtro de diseño que ordena las prioridades del roadmap.
 
@@ -298,7 +300,7 @@ El cambio más concreto del V3 vive aquí. El V2 subrepresentaba lo construido: 
 
 **05 · Crew** — Lista oficial de personas confirmadas. Se alimenta automáticamente del Presupuesto, filtrando solo a los confirmados. Información operativa por persona, selección de plantilla de correo (con subversión por destinatario), estado de envío.
 
-**06 · Gastos** — Registro de todos los gastos del proyecto, espejo de la cuenta bancaria de producción más detalle de cada movimiento. Categorización, vinculación con proveedores de la BD, estado de DTE recibido, reconciliación con presupuesto cotizado. **Reemplaza a Rinde Gastos** (ver decisión de arbitraje 3 y §12).
+**06 · Gastos** — Registro de todos los gastos del proyecto, espejo de la cuenta bancaria de producción más detalle de cada movimiento. Categorización, vinculación con proveedores de la BD, estado de DTE recibido, reconciliación con presupuesto cotizado. **Reemplaza a Rinde Gastos** (ver decisión de arbitraje 3 y §12). Incluye los **Fondos Asignados** (sobres de plata por persona o área, cargados contra líneas del Presupuesto) y los **Fondos por rendir** (V3.8): la plata que se entrega a una persona para que gaste con comprobantes y devuelva el sobrante, con **movimientos entre cuentas** y **saldos por persona** (detalle en §12).
 
 **07 · Rodajes** — Gestión de días activos de rodaje. Cada día tiene fecha, estado, descripción e ID único (DIA-01…). Soporta múltiples días, activación/desactivación sin eliminar, vinculación con Hoja de Llamado.
 
@@ -310,7 +312,7 @@ El cambio más concreto del V3 vive aquí. El V2 subrepresentaba lo construido: 
 
 **11 · Legal** *(antes «Contratos y Cesiones»)* — Generación de documentos legales: cesiones de derechos, contratos de servicio, NDA, arriendo de locación y personalizadas. Editor de plantillas en Modo Administrador, variables dinámicas (persona, monto, fechas, derechos) alimentadas del Presupuesto y la BD, y versionado. *El contenido de las plantillas legales lo valida un asesor legal —fuera del alcance de este PRD.*
 
-**12 · Documentos** *(nuevo)* — Pestaña de repositorio del proyecto: links + adjuntos. Hoy los adjuntos usan base64 (solo archivos chicos, por el límite de Firestore). La Fase 2 (Supabase Storage) habilita adjuntos nativos sin ese límite, sin quitar la opción de links.
+**12 · Documentos** *(nuevo)* — Pestaña de repositorio del proyecto: links + adjuntos. Los adjuntos nativos van a **Supabase Storage** (ya sin el viejo límite de base64 que imponía Firestore), sin quitar la opción de links.
 
 **13 · Notificaciones** *(antes «Correos y Notificaciones»)* — Sistema de comunicación basado en plantillas editables con variables dinámicas y **subversiones por destinatario** (ver §09). *Estado real:* hoy se redacta y previsualiza; el envío automatizado y la confirmación de asistencia están diseñados pero dependen de infra de correo/WhatsApp diferida a Fase 2 (ver §08).
 
@@ -526,7 +528,7 @@ Rizora genera documentos exportables que combinan información del sistema con p
 
 > **Principio de formato:** Los documentos exportados deben tener identidad visual consistente con el **Manual de Marca de Primate Films**: tipografías (Playfair, Gotham, Montserrat), colores, layout y espaciado. Ver §21 sobre la autoridad del Manual.
 
-> **Principio nuevo · binarios:** **«base64 como puente, object storage como destino».** Todo binario (fotos, comprobantes, PDFs, adjuntos de tareas) usa base64 mientras es chico y cabe en Firestore; el destino real es object storage (Supabase Storage) en la Fase 2. Esto aplica de forma transversal, no por módulo.
+> **Principio · binarios:** **«base64 como puente, object storage como destino».** El destino de todo binario (fotos, comprobantes, PDFs, adjuntos de tareas) es **Supabase Storage**; base64 quedó como puente para lo chico. *(El principio nació cuando la persistencia era Firestore, con su tope de 1 MiB; el destino ya es el presente.)* Aplica de forma transversal, no por módulo.
 
 > **Evolución del módulo (idea de horizonte — §24).** Conectado con el futuro módulo de **Post-producción**, Entregables pasará a organizar las entregas **por bloques con ID** (entrega 1, 2, 3…), llevar la cuenta de **rondas de corrección**, marcar entregas como históricas al ejecutarlas (con advertencia si ya se mostró al cliente) y guardar **nativo en Supabase** solo el entregable **final aprobado** (las entregas en proceso viven como enlaces externos). Detalle en §24.
 
@@ -556,10 +558,12 @@ El rol financiero de Rizora es operativo: registrar, calcular, conciliar interna
 
 | Capacidad | Detalle |
 |---|---|
-| **Pronto Pago** | Concepto entero, inexistente en el V2. Marca por fila en el Presupuesto → condición de pago en los correos (subversión) → sub-pestaña Prontos Pagos en el CFO → export. |
+| **Pronto Pago** | Concepto entero, inexistente en el V2. Marca por fila en el Presupuesto → condición de pago en los correos (subversión) → sub-pestaña Prontos Pagos en el CFO → export. El **monto a transferir** respeta el DTE: factura suma IVA (bruto), boleta retiene (líquido). |
 | **Pagos Pendientes** | Reembolsos + Prontos Pagos, con KPI, en el módulo global CFO. |
+| **Fondos Asignados** *(V3.8)* | "Sobres" de plata por persona o área (Arte, Vestuario, Producción…), cargados contra líneas del Presupuesto, con responsable, monto asignado y gastado/disponible. Cada gasto se imputa a un fondo. *(Antes se llamaban "presupuestos" dentro de Gastos; se renombraron para no chocar con el módulo Presupuesto.)* |
+| **Fondos por rendir** *(V3.8)* | Plata que la empresa (o una persona) entrega a otra para que gaste con comprobantes y **rinda** el sobrante. Modelado como un **libro de movimientos entre cuentas** —de la empresa a una persona (entrega), entre personas (traspaso), o de vuelta a la empresa (devolución)— inspirado en Tricount, con **saldo por persona** (recibido − gastado − devuelto). Reemplaza el modelo viejo de "Caja de producción" (una sola cuenta con botones ingreso/devolución), que asumía erróneamente un único rendidor. El nombre "caja de producción" se retiró por ambiguo (designaba a la vez la caja física, la caja chica y el fondo por rendir). |
 | **Office Banking** | Export Santander de 13 columnas para transferencias masivas. Salida real construida, no integración bidireccional. |
-| **Lógica tributaria central** | Boleta de honorarios **retiene 15,25%**; factura no. Es un principio del sistema —la comparten Legal, Presupuesto y Prontos Pagos—, no de un solo módulo. |
+| **Lógica tributaria central** | Boleta de honorarios **retiene 15,25%**; factura suma **IVA**. Es un principio del sistema —la comparten Legal, Presupuesto, Prontos Pagos y Fondos por rendir—, no de un solo módulo. Las tasas viven en `tax_rates` (ADR-018), nunca hardcodeadas. |
 
 > **Postura unificada sobre Rinde Gastos (decisión de arbitraje 3):** El V2 se contradecía. El V3 cierra: el módulo **Gastos + CFO reemplaza a Rinde Gastos**. Es un rastreador operativo proyecto-céntrico con validación, reembolsos y export. Rinde Gastos queda como herramienta legada en transición y sale del horizonte de integración (§18).
 
@@ -637,7 +641,7 @@ Esto convierte al audit log (§10) y a la observabilidad (logs, métricas, alert
 
 > **Corrección de precisión (V3.3) — plazo de notificación de brechas.** La Ley 21.719 **no fija "72 horas"**: exige notificar a la Agencia "por los medios más expeditos y **sin dilaciones indebidas**", y avisar a los titulares cuando la brecha afecte datos sensibles, de menores de 14 años o de carácter económico/bancario. Las **72 horas** son de **otros marcos** (el RGPD europeo y la **Ley 21.663** / Ley Marco de Ciberseguridad, en su reporte a la ANCI). El estándar a usar para la Ley 21.719 es "sin dilaciones indebidas". (Detalle en ADR-012.)
 
-> **Estado de los instrumentos legales (actualizado V3.6).** Existen **dos instrumentos en borrador, NO aptos para producción ni venta** hasta que un abogado habilitado los apruebe: (1) **Términos + Privacidad de cuenta** y (2) **Consentimiento de incorporación** a una productora. La infraestructura técnica de cumplimiento ya está lista (consentimiento versionado con copia exacta del texto; auditoría inmutable; aislamiento por organización — ADR-020, ADR-012). Y los **cinco flujos de derechos del titular** —borrado/supresión de cuenta, exportación/portabilidad, revocación del consentimiento, verificación de edad (si aplica) y aviso de cookies/analytics— ya están **construidos en UI y en producción** (Centro de Privacidad). Por lo tanto, lo que **falta NO es construir interfaz**, sino la **aprobación legal de los textos** (hoy provisionales) y el endurecimiento del aislamiento. *Prometer en los términos un derecho que la interfaz no entrega es, en sí mismo, un riesgo legal; aquí la interfaz ya está, falta que el texto lo respalde.* (Roadmap · Gate C.)
+> **Estado de los instrumentos legales (actualizado V3.8 · 24-jul-2026).** Los **abogados entregaron los documentos legales definitivos** (Ley 21.719): (1) **Términos + Privacidad de cuenta** y (2) **Consentimiento de incorporación** a una productora. La infraestructura técnica de cumplimiento ya estaba lista (consentimiento versionado con copia exacta del texto; auditoría inmutable; aislamiento por organización **verificado** — ADR-020, ADR-012, Gate B cerrado), y los **cinco flujos de derechos del titular** —borrado/supresión de cuenta, exportación/portabilidad, revocación del consentimiento, verificación de edad (si aplica) y aviso de cookies/analytics— ya están **construidos en UI y en producción** (Centro de Privacidad). Por lo tanto, lo que **queda NO es construir interfaz ni esperar al abogado**, sino **integrar los textos entregados en la app** (reemplazar los provisionales por los definitivos) y su QA. *Prometer en los términos un derecho que la interfaz no entrega es un riesgo legal; aquí la interfaz ya está, y ahora el texto que la respalda también — falta unirlos.* Muy por delante del deadline (1-dic-2026). (Roadmap · Gate C.)
 
 > **Qué requiere validación legal antes de lanzar:** Los detalles legales —delegado de protección de datos, evaluaciones de impacto, contratos de tratamiento— deben revisarse con un **abogado especializado** antes de lanzar. Las implicancias de ingeniería —cifrar, minimizar, registrar, aislar— son estables y ya están cubiertas (§15, §17, §19). (Detalle en ADR-012.)
 
@@ -691,9 +695,9 @@ Rizora es un sistema operativo central, pero no debe convertirse en una isla. Pr
 
 El V2 difería casi todo al desarrollador. Eso cambió: la asesoría de backend cerró varias decisiones. Esta sección separa lo **decidido** (que el dev implementa, salvo argumento sólido en contra, levantado formalmente) de lo **aún abierto**. El PRD se mantiene narrativo; cada decisión remite al ADR para el porqué y las alternativas descartadas.
 
-**Stack actual (sincerado).** HTML + CSS + JavaScript puro, sin frameworks. Dependencias reales y justificadas: **Firestore SDK** (sync en la nube), **SheetJS/xlsx** (exports Chipax / Office Banking / BD), **Google Fonts**. Persistencia hoy: Firestore + localStorage (este último como capa real y puente para binarios, con tope de ~5–10 MB). Deploy en **GitHub Pages** (migrado desde Netlify). El principio de «independencia del host» se mantiene como principio.
+**Stack actual (sincerado · V3.8, 24-jul-2026).** JavaScript puro con **ES Modules, sin framework**, **bundleado con Vite** (Rollup): el código fuente vive en `frontend/src/` (40 archivos: 14 en `lib/` + 25 módulos de negocio) y se compila a `frontend/dist/`, que es lo que se publica. Dependencias reales y justificadas: **`@supabase/supabase-js`** (cliente de base/auth/storage), **SheetJS/xlsx** (exports Chipax / Office Banking / BD), **Google Fonts**. **Persistencia: Supabase** (PostgreSQL + Auth + Storage); `localStorage` queda solo como autosave/puente local, no como fuente de verdad. **Deploy en GitHub Pages en modo `workflow`** (un GitHub Action construye con Vite y publica `dist` en cada push a `main`). *(Historia: hasta la V10 la persistencia fue Firestore + localStorage y el frontend era un `index.html` monolítico; Firestore se clausuró y su SDK se retiró en la V10, y el monolito se jubiló con el corte del 24-jul — queda dormido como rollback. Las menciones a «Firestore» en el cuerpo de este PRD son registro histórico.)* El principio de «independencia del host» se mantiene.
 
-**Destino · Fase 2.** **Supabase / PostgreSQL** + Supabase Storage + Supabase Auth, **con backend / Edge Functions para la lógica crítica** (financiera y de autorización). No es «el navegador habla directo a la base con RLS sola»: la lógica sensible corre del lado servidor (decisión de arbitraje 1).
+**El backend.** **Supabase / PostgreSQL** + Supabase Storage + Supabase Auth, **con RPCs / Edge Functions para la lógica crítica** (financiera y de autorización). No es «el navegador habla directo a la base con RLS sola»: la lógica sensible corre del lado servidor (decisión de arbitraje 1). El aislamiento multi-tenant por organización y rol está **activo y verificado** desde el 24-jul-2026 (Gate B cerrado — ver ADR-004/013 y el hub OWASP).
 
 ### Lo que ya está resuelto · decisiones aceptadas
 
@@ -959,7 +963,7 @@ Todo cambio relevante en Rizora —software o documentación— debe registrarse
 
 > **Por qué es innegociable:** Rizora se construye de forma incremental, muchas veces a partir de notas de voz consolidadas. Sin changelog formal, el conocimiento se fragmenta y el proyecto se vuelve dependiente de la memoria de una persona. El changelog es lo que permite que el cimiento —este PRD— y el software evolucionen sin perderse a sí mismos.
 
-> **Recordatorio de despliegue (para versiones de software):** Aplica a entregas del archivo `index.html`, no a este PRD: renombrar el archivo nuevo a `index.html` → en el repo, «Add file» → «Upload files» → arrastrar `index.html` (el mismo nombre reemplaza al existente) → «Commit changes». GitHub Pages se actualiza solo en ~1–2 min. La URL no cambia; Firestore no se ve afectado.
+> **Recordatorio de despliegue (para versiones de software · actualizado V3.8):** El despliegue ya no es "subir un `index.html` a mano". El software vive en `frontend/src/` y se publica así: se trabaja en una **rama de feature** → Pull Request → **merge a `main`** → el workflow de GitHub Pages (`deploy.yml`) **construye con Vite y publica `frontend/dist`** en ~1–2 min (la URL no cambia). Los cambios de **base de datos** van por **migración** y se aplican a producción **al mergear** (Branching de Supabase; ver ADR-023) — un deploy de frontend no toca la base. *(El flujo viejo de arrastrar `index.html` en la web de GitHub quedó obsoleto con el corte del 24-jul.)*
 
 ---
 

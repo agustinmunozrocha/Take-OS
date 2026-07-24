@@ -79,7 +79,7 @@ La forma `(D3)` entre paréntesis aparece 1 vez (`grep -rhoE '\(D[0-9][a-c]?\)'`
 
 ### 2.2 try/catch
 
-**452 `try {`** y 458 `catch (` (`grep -rhoE '\btry\s*\{' | wc -l`) — densidad 1 try cada 56 líneas. Concentración por archivo (`grep -rc "try\s*{"`): config.js 74, dal.js 72, boot.js 53, presupuesto-cotizacion.js 25, gastos.js 24, espacio.js 24. El patrón mayoritario es el *catch-vacío defensivo de una línea*: `try { … } catch (e) {}` (herencia del monolito: "ante cualquier error, arranca TakeOS normal", lib/boot.js:563).
+**452 `try {`** y 458 `catch (` (`grep -rhoE '\btry\s*\{' | wc -l`) — densidad 1 try cada 56 líneas. Concentración por archivo (`grep -rc "try\s*{"`): config.js 74, dal.js 72, boot.js 53, presupuesto-cotizacion.js 25, gastos.js 24, espacio.js 24. El patrón mayoritario es el *catch-vacío defensivo de una línea*: `try { … } catch (e) {}` (herencia del monolito: "ante cualquier error, arranca Rizora normal", lib/boot.js:563).
 
 ### 2.3 Cadenas async y promesas huérfanas
 
@@ -155,7 +155,7 @@ Script propio: parseo de los mapas de `registrarAcciones` con eliminación previ
 
 - **Sin README en la raíz ni en frontend/** (`find -maxdepth 3 -iname "README*"`): solo `supabase/queries/README.md` y `supabase/catalogos_globales/README.md`.
 - **`docs/CLAUDE.md`** (94 líneas): "instrucciones permanentes para Claude Code… la biblia de producción del agente", v0.2 jun-2026. Define stack, documentos canónicos y jerarquía de autoridad ("PRD en producto → ADR en técnica → Agustín arbitra"). Ver Hallazgos H7/H8: ubicación y contenido desactualizados.
-- **`docs/` canónicos**: `TakeOS_PRD_V3_6.md` (112 KB), `TakeOS_ADR_Backend_v1_10.md` (76 KB), `TakeOS_Arquitectura_y_Flujo_de_Trabajo_v1_6.md` (75 KB), `TakeOS_Roadmap_Operativo_v1_8.md` (47 KB), `TakeOS_Seguridad_OWASP_Top_10_2025_v1_3.md` (46 KB), `CHANGELOG.md` (421 líneas, al día: V11.31.0 — 30-jun-2026).
+- **`docs/` canónicos**: `Rizora_PRD_V3_8.md` (112 KB), `Rizora_ADR_Backend_v1_14.md` (76 KB), `Rizora_Arquitectura_y_Flujo_de_Trabajo_v1_10.md` (75 KB), `Rizora_Roadmap_Operativo_v1_12.md` (47 KB), `Rizora_Seguridad_OWASP_Top_10_2025_v1_7.md` (46 KB), `CHANGELOG.md` (421 líneas, al día: V11.31.0 — 30-jun-2026).
 - **`docs/Planes/`** (5 archivos): planes de la modularización (`Plan_Modularizacion_Vite.md`, `PENDIENTES_Migracion_Vite.md` — deuda documentada: 404 de producción, cutover pendiente —, `HANDOFF_Code_PlanG_cablear_backend.md`, `RESUMEN_Sesion_Modularizacion.md`).
 - **Cabeceras de archivo: 40/40** (`head -1` de cada .js): todos abren con comentario que declara *qué es* + *era de extracción*, p.ej. `// DAL — Capa de Acceso a Datos Supabase — extraído de index.html (Etapa B1)` (dal.js:1), `// Plan de Rodaje + Hoja de Llamado — extraído de index.html (Etapa A2)` (plan-rodaje.js:1). Única cabecera indirecta: presupuesto-cotizacion.js:1 (línea decorativa; el título va en la línea 2: `// MOD PRESUPUESTO + COTIZACIÓN — Etapa 2 de modularización con Vite`).
 
