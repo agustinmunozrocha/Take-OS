@@ -394,8 +394,8 @@ function goRegFilaHTML(project, x) {
     <td class="go-num">${fmtMoney(x.monto)}</td>
     <td class="go-sub">${escapeHtml(x.tipo)}</td>
     <td>${comp}</td>
-    <td>${est}</td>
-    <td>${(x.estado === 'en_observacion' || goHiloDe(project, x.id).length) ? `<button class="go-mini" ${accionHTML('go.hilo', x.id)}>💬 responder</button> ` : ''}<button class="go-mini" ${accionHTML('go.editar', x.id)}>editar</button></td></tr>`;
+    <td class="go-actcell">${est}</td>
+    <td class="go-actcell">${(x.estado === 'en_observacion' || goHiloDe(project, x.id).length) ? `<button class="go-mini" ${accionHTML('go.hilo', x.id)}>💬 responder</button> ` : ''}<button class="go-mini" ${accionHTML('go.editar', x.id)}>editar</button></td></tr>`;
 }
 /* ── Fondos por rendir: movimientos entre cuentas ─────────────────────────────
    Un movimiento va de una cuenta ORIGEN a una cuenta DESTINO ('La empresa' o una
