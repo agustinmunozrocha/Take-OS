@@ -1045,7 +1045,7 @@ function _dalBudgetRow(r, esServicio) {
     cantidad: (r.cantidad != null ? Number(r.cantidad) : 0),
     unidad: r.unidad || '',
     dte: r.dte || null,
-    dteReal: null,                         // gap: el esquema Tanda 3 no tiene columna de DTE real
+    dteReal: r.dte_real || null,           // V11.40 (portado): la columna dte_real SÍ existe y se persiste; leerla al recargar
     confirmado: !!r.confirmado,
     costoReal: _dalNum(r.costo_real),
     extra: !!r.es_extra,
@@ -1381,7 +1381,7 @@ function _dalProyectoSelect() {
     + 'project_commissions(label,mode,value,posicion),'
     + 'project_risks(label,mode,value,posicion),'
     + 'project_income_extras(label,monto,posicion),'
-    + 'budget_line_items(client_uuid,version,section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,confirmado,costo_real,es_extra,es_pp,hora_extra,he_config,nota,nota_fecha,nota_autor,no_rodaje,posicion,departments(nombre)),'
+    + 'budget_line_items(client_uuid,version,section,department_id,contact_id,nombre,concepto,valor,cantidad,unidad,dte,dte_real,confirmado,costo_real,es_extra,es_pp,hora_extra,he_config,nota,nota_fecha,nota_autor,no_rodaje,posicion,departments(nombre)),'
     + 'project_quotation(fecha_emision,representante_cliente,condiciones,descripcion_proyecto,jornadas_rodaje,meta),'
     + 'quotation_offers(id_externo,es_base,nombre,valor_cliente,descripcion,incluye,no_incluye,entregables,presupuesto_alt,posicion),'
     + 'quotation_versions(numero,es_activa,snapshot,nota),'
