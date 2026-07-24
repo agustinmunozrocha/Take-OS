@@ -652,7 +652,7 @@ function renderHojaLlamado() {
         <select data-accion="pr.d" data-args="[&quot;selectHojaDia&quot;,&quot;§v§&quot;]" data-on="change">
           ${diasActivos.map(r => `
             <option value="${escapeHtml(r.diaId)}" ${r.diaId === sel ? 'selected' : ''}>
-              ${escapeHtml(r.diaId)}${r.fecha ? ' · ' + escapeHtml(fmtFechaLarga(r.fecha)) : ' · (sin fecha)'}
+              Día ${prDiaInfo(project, r.diaId).n}${r.fecha ? ' · ' + escapeHtml(fmtFechaLarga(r.fecha)) : ' · (sin fecha)'}
             </option>
           `).join('')}
         </select>
@@ -939,6 +939,8 @@ function buildHojaLlamadoPrintHTML(project, sel, margenMm) {
   const ip = project.data.infoProyecto;
   const hl = project.data.hojaLlamado;
   const rodaje = project.data.rodajes.find(r => r.diaId === sel) || { diaId: sel };
+  const diaNum = prDiaInfo(project, sel).n;   // número por días EFECTIVOS (activos), no el diaId estable
+  const diaLbl = 'Día ' + diaNum;
   const dia = ensureHojaDia(sel);
   const ig = dia.infoGeneral || {};
   const e = escapeHtml;
@@ -1009,7 +1011,7 @@ function buildHojaLlamadoPrintHTML(project, sel, margenMm) {
       <td>${e(((l._proy && l._proy.notasProy) || l.notas || ''))}</td>
     </tr>`).join('');
 
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>CALL SHEET · ${e(ip.nombreProyecto || project.name || '')} · ${e(rodaje.diaId)} · ${e(verLabel)}</title>
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>CALL SHEET · ${e(ip.nombreProyecto || project.name || '')} · ${e(diaLbl)} · ${e(verLabel)}</title>
   <style>
     @page { size: A4; margin: ${mar}mm; }
     @media screen { body { padding: ${mar}mm; } }
@@ -1040,7 +1042,7 @@ function buildHojaLlamadoPrintHTML(project, sel, margenMm) {
       <div>
         <div class="title">HOJA DE LLAMADO</div>
         <div class="sub">${e(ip.nombreProyecto || project.name || '')} · ${e(ip.cliente || '')}</div>
-        <div class="sub">${e(rodaje.diaId)}${fecha ? ' · ' + e(fecha) : ''}</div>
+        <div class="sub">${e(diaLbl)}${fecha ? ' · ' + e(fecha) : ''}</div>
         ${rodaje.descripcion ? `<div class="desc">${e(rodaje.descripcion)}</div>` : ''}
       </div>
       <div class="ver">
@@ -1237,8 +1239,7 @@ function _hlDoExportPDF() {
 
   const html = buildHojaLlamadoPrintHTML(project, sel, _hlPrevMargen);
   const ip = project.data.infoProyecto;
-  const rodaje = project.data.rodajes.find(r => r.diaId === sel) || { diaId: sel };
-  const diaLabel = (rodaje.diaId || sel || '').replace('-', ' ');
+  const diaLabel = 'Día ' + prDiaInfo(project, sel).n;   // días efectivos, no el diaId estable
   const fileName = `Call Sheet - ${ip.nombreProyecto || project.name || 'Proyecto'} - ${diaLabel} - V${dia.version}`;
   printViaIframe(html, fileName);
 
