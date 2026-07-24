@@ -35,14 +35,22 @@ RETURNS text
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-  SELECT pp.nivel
-  FROM memberships m
-  JOIN profile_permissions pp ON pp.profile_id = m.profile_id
-  WHERE m.user_id = auth.uid()
-    AND m.estado = 'activo'
-    AND m.organization_id::text = p_org_text
-    AND pp.modulo = p_modulo
-  LIMIT 1;
+  -- COALESCE(..., 'none'): mismo contrato que auth_nivel (NUNCA devuelve NULL).
+  -- Sin esto, usada con negación (nivel <> 'E') daría NULL → el IF no dispara →
+  -- fail-open silencioso. (Fix bloqueante · BD Expert, 24-jul-2026.)
+  -- Se compara la org por TEXTO a propósito: el primer segmento del path de
+  -- Storage puede no ser un uuid válido; castear a uuid lanzaría excepción en
+  -- vez de denegar.
+  SELECT COALESCE(
+    (SELECT pp.nivel
+     FROM memberships m
+     JOIN profile_permissions pp ON pp.profile_id = m.profile_id
+     WHERE m.user_id = auth.uid()
+       AND m.estado = 'activo'
+       AND m.organization_id::text = p_org_text
+       AND pp.modulo = p_modulo
+     LIMIT 1),
+    'none');
 $$;
 
 DO $$

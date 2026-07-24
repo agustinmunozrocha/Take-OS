@@ -36,6 +36,16 @@
 | `20260724121000_gateB_revoke_truncate_trigger_references.sql` | REVOKE TRUNCATE/TRIGGER/REFERENCES a anon y authenticated en todo `public`. |
 | `20260724122000_gateB_storage_policies_captura.sql` | Captura reproducible de las 8 políticas de `storage.objects` + 2 helpers (`auth_es_miembro_org_txt`, `auth_nivel_org_txt`). No-op donde ya existen. |
 
+### Revisión del BD Expert (24-jul) — aprobada, con 1 fix aplicado
+Las 3 migraciones fueron **revisadas y aprobadas** por el BD Expert contra staging. Cerró
+un **fix bloqueante**: `auth_nivel_org_txt` devolvía NULL sin membresía (la canónica
+`auth_nivel` devuelve `'none'`); inofensivo hoy (las policies la usan con `='E'`/`IN('E','L')`
+→ falla cerrado), pero peligroso si se usa con negación (`<> 'E'` → fail-open). **Fix aplicado**:
+`COALESCE(..., 'none')` (comparando la org por texto a propósito — el path puede no ser uuid).
+Además se movió la condición del guard al **`WHEN`** del trigger (no corre en cada save de
+projects). Y se sumó el test **`supabase/tests/gateB_controles_seguridad.sql`** (vigila los 5
+controles; **verde en staging** tras el fix). Correrlo post-deploy en staging y en prod.
+
 ### Pruebas de seguridad ejecutadas en staging (todas ✅)
 1. **Bypass cerrado**: `perfil@ejecutivo.com` UPDATE de `deleted_at` → excepción
    `takeos_auth` del guard (y su UPDATE normal sí pasó → el bloqueo es específico).
@@ -86,9 +96,11 @@ Estado real verificado por MCP esta noche (no el de las notas viejas):
 ## 2) CHECKLIST DEL CORTE (lo que apruebas en la mañana — irreversible)
 
 **Pre-vuelo (5 min, yo lo hago contigo):**
-- [ ] Revisar y aprobar la rama `chore/gateB-rls-endurecimiento` (diff pequeño:
-      3 migraciones nuevas + renombres + este doc).
+- [x] Revisar y aprobar la rama `chore/gateB-rls-endurecimiento` — **aprobada por el
+      BD Expert** (fix del `COALESCE` aplicado + test verde en staging).
 - [ ] Merge de esa rama → `etapa4-integracion`.
+- [ ] (post-corte) Correr `supabase/tests/gateB_controles_seguridad.sql` en PROD tras
+      el deploy → debe imprimir "Gate B OK — los 5 controles en pie."
 
 **El corte:**
 - [ ] 1. Merge `etapa4-integracion` → `main` + push. Esto dispara DOS cosas:
